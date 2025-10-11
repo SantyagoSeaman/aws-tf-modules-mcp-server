@@ -1,0 +1,137 @@
+[project]
+name = "aws-tf-modules-mcp-server"
+version = "0.1.0"
+description = "MCP server for AI agents (Claude Code, Copilot, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastmcp>=2.12.4",
+    "nltk>=3.9.2",
+    "numpy>=2.3.3",
+    "pyyaml>=6.0.3",
+    "rank-bm25>=0.2.2",
+    "sentence-transformers>=5.1.1",
+]
+authors = [
+    {name = "Alexander Makeev", email = "makeev.alex@gmail.com"},
+]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Systems Administration",
+]
+keywords = ["terraform", "aws", "mcp", "mcp-server", "claude", "claude-code", "copilot", "ai-agents", "semantic-search", "hybrid-search", "fastmcp", "sentence-transformers", "infrastructure"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-timeout>=2.2.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.4.0",
+    "pre-commit>=3.0.0",
+    "mypy>=1.8.0",
+    "types-PyYAML>=6.0.0",
+]
+
+[project.scripts]
+tfmod-search = "tfmod_search_cli:main"
+tfmod-mcp-server = "tfmod_mcp_server:main"
+
+[project.urls]
+Homepage = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"
+"Bug Reports" = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/issues"
+"Source" = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--tb=short",
+]
+markers = [
+    "integration: Integration tests that may take longer to run",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+exclude = [
+    ".git",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # Pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+]
+ignore = [
+    "E501",  # line too long, handled by formatter
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["tfmod_search_lib", "tfmod_mcp_server", "tfmod_search_cli"]
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+explicit_package_bases = true
+mypy_path = "src"
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
