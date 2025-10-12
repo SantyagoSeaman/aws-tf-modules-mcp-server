@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/vpc/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpc
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 6.4.0
 - **Purpose**: Terraform module that creates and manages AWS VPC resources including subnets, route tables, NAT gateways, internet gateways, and network configurations
 - **Service**: AWS VPC (Virtual Private Cloud)
 - **Category**: Networking, Infrastructure, Network Security
@@ -63,25 +63,19 @@ Key architectural capabilities include AWS IP Address Manager (IPAM) integration
 9. **Hub-and-Spoke Topologies**: Central VPC for shared services with spoke VPCs for applications
 10. **Zero-Trust Networking**: Implement micro-segmentation with private subnets and VPC endpoints
 
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.0
-
-### Provider Requirements
-- **AWS Provider**: >= 6.0
-
 ## Submodules
 
 ### 1. vpc-endpoints
 - **Purpose**: Create VPC endpoints for private connectivity to AWS services
 - **Source**: `terraform-aws-modules/vpc/aws//modules/vpc-endpoints`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/vpc-endpoints
 - **Key Features**: Interface and gateway endpoints, security group configuration, subnet association, tagging support
 - **Use Cases**: Private S3 access, DynamoDB connectivity, SSM access without internet gateway, compliance requirements
 
 ### 2. flow-log
 - **Purpose**: Create VPC flow logs for network traffic monitoring and analysis
 - **Source**: `terraform-aws-modules/vpc/aws//modules/flow-log`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/flow-log
 - **Key Features**: CloudWatch Logs integration, S3 logging, Kinesis Firehose support, custom log formats
 - **Use Cases**: Security monitoring, troubleshooting connectivity issues, network analysis, compliance auditing
 

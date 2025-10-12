@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/eks/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eks
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 21.3.2
 - **Purpose**: Terraform module that creates and manages AWS Elastic Kubernetes Service (EKS) clusters with support for multiple node group types, Fargate profiles, and Karpenter autoscaling
 - **Service**: AWS EKS (Elastic Kubernetes Service)
 - **Category**: Container Orchestration, Compute, Kubernetes
@@ -67,49 +67,47 @@ Key architectural capabilities include support for hybrid node deployments combi
 9. **Hybrid Cloud Deployments**: Connect on-premises nodes to EKS control plane
 10. **Auto-Scaling Applications**: Dynamically scale workloads with Karpenter or Cluster Autoscaler
 
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.5.7
-
-### Provider Requirements
-- **AWS Provider**: >= 6.15
-
 ## Submodules
 
 ### 1. eks-managed-node-group
 - **Purpose**: Create AWS-managed node groups with automated lifecycle management
 - **Source**: `terraform-aws-modules/eks/aws//modules/eks-managed-node-group`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/eks-managed-node-group
 - **Key Features**: Launch template support, Spot/On-Demand instances, auto-scaling, custom AMIs
 - **Use Cases**: Production workloads, managed updates, simplified operations, multi-AZ deployments
 
 ### 2. self-managed-node-group
 - **Purpose**: Create self-managed node groups with complete configuration control
 - **Source**: `terraform-aws-modules/eks/aws//modules/self-managed-node-group`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/self-managed-node-group
 - **Key Features**: Custom launch templates, user data scripts, Auto Scaling Groups, custom AMIs
 - **Use Cases**: Custom configurations, legacy compatibility, specialized workloads, advanced customization
 
 ### 3. fargate-profile
 - **Purpose**: Create Fargate profiles for serverless container execution
 - **Source**: `terraform-aws-modules/eks/aws//modules/fargate-profile`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/fargate-profile
 - **Key Features**: Namespace selectors, label selectors, IAM role management, subnet configuration
 - **Use Cases**: Serverless workloads, batch processing, temporary jobs, cost-efficient small workloads
 
 ### 4. karpenter
 - **Purpose**: Create IAM resources and infrastructure for Karpenter autoscaling
 - **Source**: `terraform-aws-modules/eks/aws//modules/karpenter`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter
 - **Key Features**: IAM roles, Pod Identity, Spot termination handling, node provisioning
 - **Use Cases**: Dynamic autoscaling, diverse instance types, cost optimization, rapid scaling
 
 ### 5. hybrid-node-role
 - **Purpose**: Create IAM roles for hybrid nodes connecting to EKS
 - **Source**: `terraform-aws-modules/eks/aws//modules/hybrid-node-role`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/hybrid-node-role
 - **Key Features**: IAM role configuration, on-premises integration, edge computing support
 - **Use Cases**: Hybrid cloud, edge deployments, on-premises Kubernetes nodes, distributed infrastructure
 
 ### 6. _user_data
 - **Purpose**: Generate user data scripts for node bootstrapping
 - **Source**: `terraform-aws-modules/eks/aws//modules/_user_data`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/_user_data
 - **Key Features**: Cluster bootstrap configuration, custom scripts, AMI compatibility
 - **Use Cases**: Node initialization, custom configuration, cluster join automation
 

@@ -5,7 +5,7 @@
 
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
 
-**Ready to Use**: Includes a pre-built search index with embeddings for 6 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
+**Ready to Use**: Includes a pre-built search index with embeddings for 54 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
 
 ## 🚀 Features
 
@@ -30,6 +30,7 @@ A **Model Context Protocol (MCP)** server that provides intelligent search capab
 - [Development](#-development)
 - [Testing](#-testing)
 - [Architecture](#-architecture)
+  - [Indexed Modules](#indexed-modules)
 - [Contributing](#-contributing)
 - [License](#-license)
 
@@ -72,7 +73,7 @@ pip install -r pyproject.toml
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_gte_small_index.pkl` with embeddings for 6 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_gte_small_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
@@ -211,7 +212,7 @@ List all available Terraform modules in the catalog.
       "keywords": ["vpc", "subnet", "networking", "aws"]
     }
   ],
-  "count": 6
+  "count": 54
 }
 ```
 
@@ -351,12 +352,97 @@ This repository includes:
 - **Pre-built Search Index** (`model/tfmod_gte_small_index.pkl`):
   - Ready-to-use search index with pre-computed embeddings using `thenlper/gte-small` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
-  - File size: ~678 KB
+  - Includes 54 curated Terraform AWS modules
+  - File size: ~4.36 MB
 
 - **Curated Module Documentation** (`modules/terraform-aws-modules/`):
-  - Compiled documentation for 6 popular Terraform AWS modules: VPC, S3 Bucket, EKS, Lambda, IAM, Security Group
+  - Compiled documentation for 54 Terraform AWS modules covering compute, storage, networking, databases, security, and more
   - Sourced from official [terraform-aws-modules](https://github.com/terraform-aws-modules) project
   - Formatted as Markdown with YAML front-matter metadata
+  - Each module includes comprehensive documentation with best practices, use cases, and examples
+
+### Indexed Modules
+
+The search index includes 54 Terraform AWS modules across multiple service categories. Each module is documented with comprehensive descriptions, best practices, use cases, and integration examples.
+
+**Compute & Containers:**
+- `app-runner` - Containerized web application deployments
+- `autoscaling` - EC2 Auto Scaling Groups
+- `batch` - AWS Batch for batch computing workloads
+- `ec2-instance` - EC2 virtual machines
+- `ecs` - Elastic Container Service
+- `eks` - Elastic Kubernetes Service
+- `eks-pod-identity` - EKS Pod Identity configuration
+- `lambda` - Serverless functions
+
+**Networking:**
+- `alb` - Application Load Balancer
+- `customer-gateway` - VPN customer gateway
+- `elb` - Classic Load Balancer
+- `transit-gateway` - Transit Gateway for network hub
+- `vpc` - Virtual Private Cloud
+- `vpn-gateway` - VPN Gateway and Site-to-Site VPN
+
+**Storage:**
+- `ebs-optimized` - EBS optimization validation
+- `ecr` - Elastic Container Registry
+- `efs` - Elastic File System
+- `fsx` - FSx file systems (Lustre, ONTAP, OpenZFS, Windows)
+- `s3-bucket` - S3 object storage
+
+**Databases:**
+- `dms` - Database Migration Service
+- `dynamodb-table` - DynamoDB NoSQL database
+- `elasticache` - ElastiCache (Redis, Memcached)
+- `memory-db` - MemoryDB for Redis
+- `opensearch` - OpenSearch search and analytics
+- `rds` - Relational Database Service
+- `rds-aurora` - Aurora serverless databases
+- `rds-proxy` - RDS Proxy for connection pooling
+- `redshift` - Redshift data warehouse
+
+**Security & Identity:**
+- `acm` - AWS Certificate Manager
+- `iam` - Identity and Access Management
+- `key-pair` - EC2 key pairs
+- `kms` - Key Management Service
+- `secrets-manager` - Secrets Manager
+- `security-group` - VPC security groups
+
+**Monitoring & Logging:**
+- `cloudwatch` - CloudWatch logs and metrics
+- `datadog-forwarders` - Datadog log forwarding
+- `managed-service-grafana` - Amazon Managed Grafana
+- `managed-service-prometheus` - Amazon Managed Prometheus
+
+**Application Integration:**
+- `apigateway-v2` - API Gateway HTTP and WebSocket APIs
+- `appsync` - GraphQL API service
+- `eventbridge` - Event-driven architecture
+- `msk-kafka-cluster` - Managed Streaming for Kafka
+- `sns` - Simple Notification Service
+- `sqs` - Simple Queue Service
+- `step-functions` - Serverless workflow orchestration
+
+**Networking & Content Delivery:**
+- `cloudfront` - CloudFront CDN
+- `global-accelerator` - Global Accelerator for performance
+- `network-firewall` - AWS Network Firewall
+- `route53` - DNS and domain management
+
+**Developer Tools & Automation:**
+- `appconfig` - Application configuration management
+- `atlantis` - Terraform pull request automation
+- `notify-slack` - Slack notification integration
+- `ssm-parameter` - Systems Manager Parameter Store
+
+All modules include detailed documentation with:
+- Module metadata and version information
+- Comprehensive feature descriptions
+- Real-world use cases
+- Security and operational best practices
+- Integration examples and code snippets
+- Links to official AWS documentation
 
 ### Components
 

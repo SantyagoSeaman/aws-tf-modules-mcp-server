@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/s3-bucket/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-s3-bucket
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 5.7.0
 - **Purpose**: Terraform module that creates and manages AWS S3 buckets with comprehensive configuration options for security, replication, lifecycle management, and notifications
 - **Service**: AWS S3 (Simple Storage Service)
 - **Category**: Storage, Object Storage, Data Management
@@ -63,37 +63,33 @@ Key architectural capabilities include support for multiple bucket types (standa
 9. **Compliance and Audit Storage**: Store immutable records with object lock and versioning
 10. **DevOps Artifact Storage**: Store Terraform state files, deployment packages, and build artifacts
 
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.5.7
-
-### Provider Requirements
-- **AWS Provider**: >= 6.5
-
 ## Submodules
 
 ### 1. notification
 - **Purpose**: Configure S3 bucket event notifications to Lambda, SNS, SQS, and EventBridge
 - **Source**: `terraform-aws-modules/s3-bucket/aws//modules/notification`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest/submodules/notification
 - **Key Features**: Lambda triggers, SNS topic notifications, SQS queue delivery, EventBridge integration
 - **Use Cases**: Event-driven processing, real-time file processing, data pipeline triggers, audit trail generation
 
 ### 2. object
 - **Purpose**: Create and manage S3 objects with extensive configuration options
 - **Source**: `terraform-aws-modules/s3-bucket/aws//modules/object`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest/submodules/object
 - **Key Features**: Object creation, metadata management, storage class selection, encryption configuration
 - **Use Cases**: Uploading configuration files, creating initial objects, managing static content, deploying application assets
 
 ### 3. account-public-access
 - **Purpose**: Configure account-level S3 public access block settings
 - **Source**: `terraform-aws-modules/s3-bucket/aws//modules/account-public-access`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest/submodules/account-public-access
 - **Key Features**: Block public ACLs, block public policies, ignore public ACLs, restrict public buckets
 - **Use Cases**: Organization-wide security baseline, preventing data leaks, compliance enforcement, security guardrails
 
 ### 4. table-bucket
 - **Purpose**: Create and manage S3 table buckets and tables for analytics workloads
 - **Source**: `terraform-aws-modules/s3-bucket/aws//modules/table-bucket`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest/submodules/table-bucket
 - **Key Features**: Table bucket creation, encryption configuration, maintenance settings, table management
 - **Use Cases**: Analytics data storage, tabular data management, data warehouse integration, metadata catalogs
 

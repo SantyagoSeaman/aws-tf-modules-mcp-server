@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/lambda/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-lambda
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 8.1.0
 - **Purpose**: Terraform module that creates and manages AWS Lambda functions, layers, and aliases with comprehensive support for building, packaging, and deploying serverless applications
 - **Service**: AWS Lambda (Serverless Compute)
 - **Category**: Compute, Serverless, Application Integration
@@ -63,22 +63,6 @@ Key architectural capabilities include controlled deployment strategies (rolling
 8. **Data Transformation**: Execute ETL jobs and data transformation pipelines
 9. **IoT Data Processing**: Process telemetry and sensor data from IoT devices
 10. **ChatOps and Automation**: Implement chatbots, Slack bots, and automation workflows
-
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.5.7
-
-### Provider Requirements
-- **AWS Provider**: >= 6.0
-
-### System Requirements
-- **Python**: >= 3.6 (required for packaging and dependency management when building .zip archives)
-- **Docker**: Optional, required for Docker-based builds with custom runtimes or complex dependencies
-
-### Additional Requirements
-- **AWS CLI**: Recommended for testing and debugging Lambda functions
-- **Runtime-Specific Tools**: pip (Python), npm/yarn (Node.js), Maven/Gradle (Java), etc., depending on runtime used
 
 ## Main Module: Lambda Function
 

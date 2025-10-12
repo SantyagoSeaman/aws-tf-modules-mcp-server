@@ -30,6 +30,9 @@ Generate the following bullet points in order:
 5. **Latest Version**:
  - Format: - **Latest Version**: {version-number OR "Check registry for current version"}
  - Include actual version if available, otherwise use placeholder text
+ - Version can be found on registry module web-page in block "Provision Instructions"
+ - Alternatively, try to find on Github releases page
+ - Example: 5.0.0, 3.2.1, Check registry
 
 6. **Purpose**:
  - Format: - **Purpose**: {One-sentence description of what the module creates/manages}
@@ -169,23 +172,6 @@ Output: 10-25 bulleted items with bold titles and descriptions.
 Format: {number}. **{Title}**: {Description (5-10 words)}
 -->
 
-## Requirements
-
-<!-- TEMPLATE INSTRUCTIONS:
-Extract and organize requirements from the source module documentation.
-
-Structure:
-- Create subsections (###) for each requirement category found
-- Use bullet points for individual requirements
-- Bold key terms or requirement names
-- Include version numbers, constraints, or specifications where applicable
-
-Format each item as:
-- **{Requirement Name/Type}**: {Specification or version}
-
-If no specific requirements are documented, state: "No specific requirements documented."
--->
-
 ## Submodules
 
 <!-- SUBMODULES TEMPLATE:
@@ -194,104 +180,105 @@ Generate a numbered list of submodules. For each submodule:
 2. Include exactly 4 bullet points:
  - **Purpose**: One-line description of what it creates
  - **Source**: Full Terraform module source path
+ - **Documentation Link**: Direct link to submodule documentation on registry.terraform.io (example: https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/vault)
  - **Key Features**: Comma-separated list of 2-4 key capabilities
  - **Use Cases**: Comma-separated list of 2-4 practical use cases
 -->
 
-  <!-- TEMPLATE INSTRUCTIONS:
-  For each submodule in the source module, create a detailed documentation section.
+<!-- TEMPLATE INSTRUCTIONS:
+For each submodule in the source module, create a detailed documentation section.
 
-  Structure for each submodule:
+Structure for each submodule:
 
-  ### Submodule Heading:
-  - Format: ## Submodule {number}: {submodule-name}
-  - Number sequentially starting from 1
-  - Use exact submodule name from source documentation
+### Submodule Heading:
+- Format: ## Submodule {number}: {submodule-name}
+- Number sequentially starting from 1
+- Use exact submodule name from source documentation
 
-  ### Required Subsections (in order):
+### Required Subsections (in order):
 
-  1. **Description** (### Description):
-     - 1-3 sentence overview of what the submodule does
-     - Focus on primary purpose and resources created
-     - Mention key differentiators from other submodules
+1. **Description** (### Description):
+ - 1-3 sentence overview of what the submodule does
+ - Focus on primary purpose and resources created
+ - Mention key differentiators from other submodules
 
-  2. **Key Features** (### Key Features):
-     - Bulleted list of 3-7 key capabilities
-     - Each bullet is a concise feature description
-     - Focus on what the submodule enables or provides
-     - Use active language (e.g., "Password complexity requirements")
+2. **Key Features** (### Key Features):
+ - Bulleted list of 3-7 key capabilities
+ - Each bullet is a concise feature description
+ - Focus on what the submodule enables or provides
+ - Use active language (e.g., "Password complexity requirements")
 
-  3. **Input Variables** (### Input Variables):
-     - Markdown table with columns: Variable | Type | Default | Description
-     - Extract from module variables.tf or documentation
-     - Include only important/commonly-used variables
-     - Use code formatting for values: `string`, `true`, `""`
-     - Keep descriptions concise (one line)
-     - Order: required variables first, then optional by importance
-     - Don't create subsections for required/optional variables
-     - Don't create long full lists; focus on main inputs
+3. **Input Variables** (### Input Variables):
+ - Markdown table with columns: Variable | Type | Default | Description
+ - Extract from module variables.tf or documentation
+ - Include only important/commonly-used variables
+ - Use code formatting for values: `string`, `true`, `""`
+ - Keep descriptions concise (one line)
+ - Order: required variables first, then optional by importance
+ - Don't create subsections for required/optional variables
+ - Don't create long full lists; focus on main inputs
 
-  4. **Outputs** (### Outputs):
-     - Markdown table with columns: Output | Description
-     - Extract from module outputs.tf or documentation
-     - Include only important/commonly-used output
-     - Descriptions should be clear and concise
-     - Don't create subsections for required/optional variables
-     - Don't create long full lists; focus on main inputs
+4. **Outputs** (### Outputs):
+ - Markdown table with columns: Output | Description
+ - Extract from module outputs.tf or documentation
+ - Include only important/commonly-used output
+ - Descriptions should be clear and concise
+ - Don't create subsections for required/optional variables
+ - Don't create long full lists; focus on main inputs
 
-  5. **Usage Example** or **Usage Examples** (### Usage Example / ### Usage Examples):
-     - If single example: ### Usage Example
-     - If multiple examples: ### Usage Examples, with #### Example {number}: {title} for each
-     - Provide 1-2 realistic, practical examples
-     - Use HCL code blocks with ```hcl
-     - Include common configurations and use cases
-     - Add inline comments for clarity where helpful
-     - Show integration with other resources when relevant
-     - Examples should be copy-paste ready with minimal modifications
+5. **Usage Example** or **Usage Examples** (### Usage Example / ### Usage Examples):
+ - If single example: ### Usage Example
+ - If multiple examples: ### Usage Examples, with #### Example {number}: {title} for each
+ - Provide 1-2 realistic, practical examples
+ - Use HCL code blocks with ```hcl
+ - Include common configurations and use cases
+ - Add inline comments for clarity where helpful
+ - Show integration with other resources when relevant
+ - Examples should be copy-paste ready with minimal modifications
 
-  Guidelines:
-  - Maintain consistent formatting across all submodules
-  - Extract information from source documentation, README, or code
-  - If information is missing, use "Not documented" or omit optional subsections
-  - Ensure code examples use correct module source paths
-  - Include version constraints in examples (e.g., version = "~> 5.0")
-  - For complex submodules, provide multiple examples showing different use cases
-  - Keep variable/output tables scannable and well-formatted
+Guidelines:
+- Maintain consistent formatting across all submodules
+- Extract information from source documentation, README, or code
+- If information is missing, use "Not documented" or omit optional subsections
+- Ensure code examples use correct module source paths
+- Include version constraints in examples (e.g., version = "~> 5.0")
+- For complex submodules, provide multiple examples showing different use cases
+- Keep variable/output tables scannable and well-formatted
 
-  Example structure:
-  ## Submodule 1: {name}
+Example structure:
+## Submodule 1: {name}
 
-  ### Description
-  {1-3 sentences about what this submodule does}
+### Description
+{1-3 sentences about what this submodule does}
 
-  ### Key Features
-  - {Feature 1}
-  - {Feature 2}
-  - {Feature 3}
+### Key Features
+- {Feature 1}
+- {Feature 2}
+- {Feature 3}
 
-  ### Main Input Variables
+### Main Input Variables
 
-  | Variable | Type | Default | Description |
-  |----------|------|---------|-------------|
-  | `var_name` | `type` | `default` | Description |
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `var_name` | `type` | `default` | Description |
 
-  ### Main Outputs
+### Main Outputs
 
-  | Output | Description |
-  |--------|-------------|
-  | `output_name` | What this outputs |
+| Output | Description |
+|--------|-------------|
+| `output_name` | What this outputs |
 
-  ### Usage Example
+### Usage Example
 
-  ```hcl
-  module "example" {
-    source = "..."
+```hcl
+module "example" {
+source = "..."
 
-    # Configuration
-  }
+# Configuration
+}
 
-  Repeat this structure for each submodule found in the source documentation.
-  -->
+Repeat this structure for each submodule found in the source documentation.
+-->
 
 ## Best Practices
 

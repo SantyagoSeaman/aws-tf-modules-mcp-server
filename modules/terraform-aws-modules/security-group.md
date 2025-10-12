@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/security-group/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-security-group
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 5.3.0
 - **Purpose**: Terraform module that creates AWS VPC security groups with support for predefined rules for common services and custom rule configurations
 - **Service**: AWS VPC Security Groups (Virtual Private Cloud Security Groups)
 - **Category**: Networking, Security, Firewall
@@ -56,67 +56,56 @@ Key architectural capabilities include support for dynamic rule generation, mult
 9. **Message Queue Security**: Secure Kafka, RabbitMQ, and messaging infrastructure
 10. **Compliance Requirements**: Implement network segmentation for regulatory compliance
 
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.0 (for latest versions)
-- **Terraform 0.13-0.15**: Use v4.5.0 or newer
-- **Terraform 0.12**: Use v3.* to v4.4.0
-- **Terraform 0.11**: Use v2.*
-
-### Provider Requirements
-- **AWS Provider**: >= 3.29
-
 ## Modules Overview
 
 This security group module includes 50+ predefined service modules and a main module for custom configurations. Below are the major categories:
 
 ### Web and Application Services
-- **http-80**: HTTP access on port 80
-- **http-8080**: HTTP access on port 8080
-- **https-443**: HTTPS access on port 443
-- **https-8443**: HTTPS access on port 8443
+- **[http-80](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/http-80)**: HTTP access on port 80
+- **[http-8080](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/http-8080)**: HTTP access on port 8080
+- **[https-443](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/https-443)**: HTTPS access on port 443
+- **[https-8443](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/https-8443)**: HTTPS access on port 8443
 
 ### Database Services
-- **mysql**: MySQL/Aurora database access (port 3306)
-- **postgresql**: PostgreSQL database access (port 5432)
-- **mongodb**: MongoDB database access (port 27017)
-- **redis**: Redis cache access (port 6379)
-- **mssql**: Microsoft SQL Server access (port 1433)
-- **oracle-db**: Oracle database access (port 1521)
-- **redshift**: AWS Redshift access (port 5439)
+- **[mysql](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/mysql)**: MySQL/Aurora database access
+- **[postgresql](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/postgresql)**: PostgreSQL database access
+- **[mongodb](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/mongodb)**: MongoDB database access
+- **[redis](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/redis)**: Redis cache access
+- **[mssql](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/mssql)**: Microsoft SQL Server access
+- **[oracle-db](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/oracle-db)**: Oracle database access
+- **[redshift](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/redshift)**: AWS Redshift access
 
 ### Remote Access
-- **ssh**: SSH access (port 22)
-- **rdp**: Remote Desktop Protocol (port 3389)
-- **winrm**: Windows Remote Management (port 5985-5986)
+- **[ssh](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/ssh)**: SSH access
+- **[rdp](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/rdp)**: Remote Desktop Protocol
+- **[winrm](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/winrm)**: Windows Remote Management
 
 ### Messaging and Queue Services
-- **kafka**: Apache Kafka (port 9092)
-- **rabbitmq**: RabbitMQ messaging (port 5672, 15672)
-- **activemq**: Apache ActiveMQ (port 8161, 61616)
+- **[kafka](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/kafka)**: Apache Kafka
+- **[rabbitmq](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/rabbitmq)**: RabbitMQ messaging
+- **[activemq](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/activemq)**: Apache ActiveMQ
 
 ### Monitoring and Logging
-- **prometheus**: Prometheus monitoring (port 9090)
-- **grafana**: Grafana dashboards (port 3000)
-- **elasticsearch**: Elasticsearch (port 9200, 9300)
-- **kibana**: Kibana (port 5601)
-- **zabbix**: Zabbix monitoring (port 10050-10051)
+- **[prometheus](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/prometheus)**: Prometheus monitoring
+- **[grafana](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/grafana)**: Grafana dashboards
+- **[elasticsearch](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/elasticsearch)**: Elasticsearch
+- **[kibana](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/kibana)**: Kibana
+- **[zabbix](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/zabbix)**: Zabbix monitoring
 
 ### Distributed Systems
-- **consul**: HashiCorp Consul (port 8300-8302, 8500, 8600)
-- **vault**: HashiCorp Vault (port 8200)
-- **etcd**: etcd key-value store (port 2379-2380)
-- **zookeeper**: Apache ZooKeeper (port 2181, 2888, 3888)
-- **kubernetes-api**: Kubernetes API server (port 6443)
+- **[consul](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/consul)**: HashiCorp Consul
+- **[vault](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/vault)**: HashiCorp Vault
+- **[etcd](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/etcd)**: etcd key-value store
+- **[zookeeper](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/zookeeper)**: Apache ZooKeeper
+- **[kubernetes-api](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/kubernetes-api)**: Kubernetes API server
 
 ### Other Services
-- **openvpn**: OpenVPN access (port 1194)
-- **ldap**: LDAP directory (port 389)
-- **ldaps**: LDAPS secure (port 636)
-- **ntp**: Network Time Protocol (port 123)
-- **smtp**: Email SMTP (port 25)
-- **smtps**: Email SMTPS (port 465)
+- **[openvpn](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/openvpn)**: OpenVPN access
+- **[ldap](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/ldap)**: LDAP directory
+- **[ldaps](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/ldaps)**: LDAPS secure
+- **[ntp](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/ntp)**: Network Time Protocol
+- **[smtp](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/smtp)**: Email SMTP
+- **[smtps](https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest/submodules/smtps)**: Email SMTPS
 
 ## Main Module: Custom Security Groups
 

@@ -1,11 +1,28 @@
 # Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.1.1] - 2025-10-12
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+[0.1.1]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.1
+
+### Changed
+- **Expanded Module Catalog**: Search index now includes 54 Terraform AWS modules
+- **Search Index**: Rebuilt index with all 54 modules
+  - 1,535 unique keywords indexed
+  - Enhanced semantic search coverage across AWS services
+
+### Documentation
+- Each new module includes:
+  - Comprehensive descriptions with 2-3 paragraphs
+  - 10-25 key features per module
+  - 8-10 real-world use cases
+  - 20-70+ best practices across multiple categories
+  - Integration examples and code snippets
+  - Links to official AWS documentation
+  - AI agent implementation notes
 
 ## [0.1.0] - 2025-10-11
+
+[0.1.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.0
 
 ### Added
 - Initial release of TFModSearch MCP Server
@@ -27,5 +44,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Fast Indexing**: Pre-built search index with BM25 and embeddings
 - **Type Safety**: Full type hints with mypy checking
 - **Comprehensive Documentation**: README, tests documentation, inline comments
-
-[0.1.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.0

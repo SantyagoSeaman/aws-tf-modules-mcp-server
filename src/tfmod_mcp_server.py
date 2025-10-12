@@ -72,6 +72,7 @@ Search for Terraform AWS modules using natural language queries, keywords, or ex
 - Use descriptive queries for better results: "object storage with versioning" > "storage"
 - Include key requirements: "vpc with multiple availability zones"
 - Try exact module names first if known: "vpc", "s3-bucket"
+- Use direct links to documentation for sub-modules with full lists of inputs/outputs
 
 ## Available Tools (continued)
 
@@ -224,9 +225,9 @@ class ServerState:
     thread-safe access to server state.
 
     Attributes:
-        index: The loaded search index
-        weights: Search scoring weights configuration
-        index_path: Path to the index file
+        _index: The loaded search index
+        _weights: Search scoring weights configuration
+        _index_path: Path to the index file
     """
 
     def __init__(
@@ -699,7 +700,7 @@ def modules_list() -> ModulesListOutput:
     description=(
         "Search for Terraform AWS modules by keywords, exact name, or free-text query. "
         "Returns top-3 ranked results with module name, path, keywords, description, and relevance score. "
-        "After finding modules, use get_module tool to retrieve full documentation."
+        "After finding modules, use get_module tool to retrieve brief documentation."
     ),
     tags={"search", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="Search for Terraform AWS modules by keywords, exact name, or free-text query."),
@@ -768,12 +769,14 @@ def search_modules(
 
 @app.tool(
     description=(
-        "Get full documentation for a specific Terraform module. "
-        "Use this after search_modules to retrieve complete module documentation including "
+        "Get compacted documentation for a specific Terraform module. "
+        "Use this tool after search_modules to retrieve module documentation including "
         "usage examples, inputs, outputs, and configuration details."
+        "To get original documentation including full lists inputs/outputs for each sub-module, "
+        "use direct links to registry.terraform.io from documentation."
     ),
     tags={"documentation", "terraform", "aws", "modules"},
-    annotations=ToolAnnotations(title="Get full documentation for a Terraform module"),
+    annotations=ToolAnnotations(title="Get compacted documentation for a Terraform module"),
 )
 def get_module(
     module_identifier: Annotated[

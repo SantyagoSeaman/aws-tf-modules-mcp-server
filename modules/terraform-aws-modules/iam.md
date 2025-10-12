@@ -6,7 +6,7 @@
 - **Source**: `terraform-aws-modules/iam/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-iam
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest
-- **Latest Version**: Check registry for current version
+- **Latest Version**: 6.2.1
 - **Purpose**: Terraform module that creates and manages AWS IAM resources including users, groups, roles, policies, and OIDC providers
 - **Service**: AWS IAM (Identity and Access Management)
 - **Category**: Security, Identity Management, Access Control
@@ -61,62 +61,61 @@ Key architectural features include support for multiple authentication providers
 9. **Temporary Credential Management**: Enable assume-role patterns for short-lived credentials
 10. **Security Audit and Compliance**: Track IAM resource creation and configuration through infrastructure as code
 
-## Requirements
-
-### Terraform Version
-- **Terraform**: >= 1.5.7
-
-### Provider Requirements
-- **AWS Provider**: >= 6.0
-- **TLS Provider**: >= 3.0 (for OIDC provider submodule)
-
 ## Submodules
 
 ### 1. iam-account
 - **Purpose**: Configure account-wide settings including account alias and password policy
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-account`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-account
 - **Key Features**: Account alias management, password complexity rules, password expiration settings, reuse prevention
 - **Use Cases**: Setting organizational security baseline, enforcing password standards, configuring account identity
 
 ### 2. iam-user
 - **Purpose**: Create IAM users with login profiles, access keys, and SSH keys
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-user`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-user
 - **Key Features**: PGP-encrypted credentials, access key generation, SSH key upload, inline policy support
 - **Use Cases**: Creating human user accounts, generating API credentials, managing developer access, secure credential distribution
 
 ### 3. iam-group
 - **Purpose**: Create IAM groups and assign users with attached policies
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-group`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-group
 - **Key Features**: User membership management, policy attachment, self-management permissions, MFA enforcement
 - **Use Cases**: Role-based access control, team-based permissions, delegated credential management, department-level access
 
 ### 4. iam-role
 - **Purpose**: Create IAM roles for service accounts, cross-account access, and federated identity
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-role`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role
 - **Key Features**: GitHub OIDC support, SAML federation, custom trust policies, multi-policy attachment
 - **Use Cases**: GitHub Actions authentication, service-to-service access, cross-account roles, federated SSO access
 
 ### 5. iam-policy
 - **Purpose**: Create custom IAM policies with JSON policy documents
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-policy`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-policy
 - **Key Features**: Custom policy definition, policy path configuration, tagging support
 - **Use Cases**: Defining granular permissions, implementing least-privilege access, creating reusable policies
 
 ### 6. iam-read-only-policy
 - **Purpose**: Generate read-only access policies for AWS services
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-read-only-policy`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-read-only-policy
 - **Key Features**: Service-specific read access, configurable scope
 - **Use Cases**: Audit access, monitoring roles, reporting accounts, read-only developer access
 
 ### 7. iam-oidc-provider
 - **Purpose**: Create OpenID Connect providers for external identity integration
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-oidc-provider`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-oidc-provider
 - **Key Features**: GitHub support, Bitbucket integration, custom OIDC provider URLs, client ID configuration
 - **Use Cases**: GitHub Actions trust relationship, Bitbucket Pipelines authentication, third-party identity federation
 
 ### 8. iam-role-for-service-accounts
 - **Purpose**: Create IAM roles for EKS service accounts with pre-configured controller policies
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role-for-service-accounts
 - **Key Features**: IRSA support, multiple cluster integration, pre-built controller policies, namespace-scoped permissions
 - **Use Cases**: Kubernetes pod permissions, EKS controller authentication, multi-cluster service accounts, cloud-native application access
 
