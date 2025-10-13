@@ -1,8 +1,3 @@
----
-module_name: rds-proxy
-keywords: [rds-proxy, aws-rds-proxy, database-proxy, connection-pooling, connection-management, rds, aurora, mysql, postgresql, database-scaling, secrets-manager, iam-authentication, database-authentication, connection-reuse, serverless-database, lambda-rds, database-failover, high-availability, connection-throttling, credential-management, tls-encryption, database-security, connection-limits, session-pinning, read-write-endpoint, read-only-endpoint, proxy-endpoint, cloudwatch-logs, database-monitoring, sql-logging, connection-timeout, idle-connections, max-connections, vpc-security, security-groups, subnet-groups, kms-encryption, iam-role, iam-policy, database-resilience, traffic-management, connection-efficiency, database-performance, cpu-optimization, memory-optimization, application-scaling, microservices-database, container-database, kubernetes-database, ecs-database, fargate-database, connection-overhead, query-performance, database-bottleneck, connection-storm, serverless-aurora, database-credentials, secret-rotation, cross-az, multi-az]
----
-
 # Terraform AWS RDS Proxy Module
 
 ## Module Information

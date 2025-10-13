@@ -1,8 +1,3 @@
----
-module_name: step-functions
-keywords: [step-functions, sfn, state-machine, workflow, orchestration, serverless, aws-states-language, asl, express, standard, iam, cloudwatch, logging, encryption, kms, lambda-integration, dynamodb-integration, sqs-integration, ecs-integration, service-integrations, event-driven, workflow-automation, distributed-systems, microservices-orchestration, saga-pattern, error-handling, retry-logic, parallel-execution, map-state, choice-state, wait-state, task-orchestration, long-running-workflows, etl-workflows, data-processing, batch-processing]
----
-
 # Terraform AWS Step Functions Module
 
 ## Module Information

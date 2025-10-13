@@ -1,8 +1,3 @@
----
-module_name: ecr
-keywords: [ecr, elastic-container-registry, container-registry, docker, container-images, image-repository, private-registry, public-registry, image-scanning, vulnerability-scanning, lifecycle-policy, image-retention, image-tagging, tag-mutability, immutable-tags, mutable-tags, kms-encryption, aes256-encryption, repository-policy, registry-policy, iam-access, cross-account-access, replication, multi-region, pull-through-cache, upstream-registry, dockerhub, image-pull, image-push, registry-scanning, continuous-scanning, scan-on-push, ecr-public, repository-template, force-delete, catalog-data, operating-systems, architectures]
----
-
 # Terraform AWS ECR Module
 
 ## Module Information

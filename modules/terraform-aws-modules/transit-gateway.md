@@ -1,8 +1,3 @@
----
-module_name: transit-gateway
-keywords: [transit-gateway, tgw, aws-transit-gateway, vpc-interconnection, network-hub, vpc-peering, centralized-routing, multi-vpc, hybrid-cloud, vpc-attachments, route-tables, bgp, border-gateway-protocol, vpn-connection, direct-connect, site-to-site-vpn, inter-region-peering, cross-region, transit-gateway-peering, resource-access-manager, ram, multi-account, cross-account, shared-services, network-segmentation, transit-routing, centralized-egress, centralized-ingress, inspection-vpc, network-firewall-integration, route-propagation, static-routes, dynamic-routes, dns-support, ipv6-support, multicast, ecmp, equal-cost-multipath, appliance-mode, sd-wan, network-appliances, mtu, jumbo-frames, encryption, inter-az-traffic, availability-zones, high-availability, disaster-recovery, multi-region, global-network, autonomous-system-number, asn, network-topology, hub-and-spoke, mesh-network, centralized-security, shared-vpc, transit-vpc, network-transit-hub, vpc-routing, route-table-association, route-table-propagation, attachment-subnet, network-acl, security-group-referencing, blackhole-routes, packet-inspection, traffic-filtering, egress-vpc, ingress-vpc]
----
-
 # Terraform AWS Transit Gateway Module
 
 ## Module Information

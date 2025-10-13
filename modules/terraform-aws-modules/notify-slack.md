@@ -1,8 +1,3 @@
----
-module_name: notify-slack
-keywords: [slack, notifications, sns, lambda, cloudwatch, alerts, monitoring, guardduty, webhook, chatops, incident-response, serverless, python, kms-encryption, event-driven, alarm-notifications, security-alerts, chatbot, messaging, integration, aws-events, slack-integration, sns-topic, lambda-function, encrypted-webhook, cloudwatch-alarms, guardduty-findings, malware-protection, event-notifications, alerting, real-time-notifications, devops, sre, monitoring-integration, slack-webhook, notification-service, alert-routing, event-handler, aws-notifications, slack-channel, automated-alerts, security-monitoring, operational-alerts]
----
-
 # Terraform AWS Notify Slack Module
 
 ## Module Information

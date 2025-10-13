@@ -1,8 +1,3 @@
----
-module_name: dms
-keywords: aurora, cdc, certificate, change-data-capture, cloudwatch-logs, data-migration, data-replication, database-migration, db2, documentdb, dynamodb, endpoint, etl, event-subscription, full-load, heterogeneous-migration, homogeneous-migration, iam-role, kafka, kinesis, mongodb, msk, multi-az, mysql, neptune, ongoing-replication, opensearch, oracle, postgresql, redshift, replication-instance, replication-task, s3, sap-ase, schema-conversion, serverless, sql-server, subnet-group, target-endpoint, timestream
----
-
 # Terraform AWS DMS Module
 
 ## Module Information

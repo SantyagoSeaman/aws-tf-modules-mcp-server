@@ -1,8 +1,3 @@
----
-module_name: cloudwatch
-keywords: [cloudwatch, monitoring, metrics, alarms, logs, log-groups, log-streams, metric-filters, metric-alarms, composite-alarms, cis-benchmark, security-monitoring, observability, dashboards, log-analytics, metric-stream, anomaly-detection, log-subscription, kinesis, firehose, lambda, sns, cloudtrail, application-monitoring, infrastructure-monitoring, performance-monitoring, resource-monitoring, threshold-alarms, log-retention, kms-encryption, log-data-protection, query-definition, log-insights, metric-math, alarm-actions, sns-notifications, email-alerts, pagerduty, opsgenie, datadog, splunk, elasticsearch, time-series, aggregation, statistics, percentiles, cloudwatch-agent, container-insights, lambda-insights, application-insights, synthetics, service-lens, x-ray, distributed-tracing]
----
-
 # Terraform AWS CloudWatch Module
 
 ## Module Information

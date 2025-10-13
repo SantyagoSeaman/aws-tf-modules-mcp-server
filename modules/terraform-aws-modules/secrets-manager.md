@@ -1,8 +1,3 @@
----
-module_name: secrets-manager
-keywords: [secrets-manager, aws-secrets-manager, secret-management, password-management, credentials-storage, api-keys, database-credentials, secret-rotation, automatic-rotation, lambda-rotation, kms-encryption, encryption-at-rest, secret-versioning, secret-replication, multi-region, cross-region, resource-policy, iam-policy, secret-recovery, deletion-protection, recovery-window, random-password, password-generation, secret-string, binary-secret, replica-secret, secret-arn, version-staging, rotation-schedule, rotation-lambda, access-control, least-privilege, secrets-retrieval, application-secrets, configuration-secrets, environment-variables]
----
-
 # Terraform AWS Secrets Manager Module
 
 ## Module Information

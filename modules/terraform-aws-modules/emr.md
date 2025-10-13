@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-emr
-keywords: [emr, elastic-mapreduce, hadoop, spark, hive, presto, trino, big-data, data-processing, analytics, mapreduce, instance-fleet, instance-group, cluster, master-node, core-node, task-node, spot-instances, serverless, studio, eks, virtual-cluster, emr-containers, notebook, data-lake, etl, batch-processing, distributed-computing, yarn, hdfs, s3]
----
-
 # AWS EMR Terraform Module
 
 ## Module Information
@@ -12,6 +7,7 @@ keywords: [emr, elastic-mapreduce, hadoop, spark, hive, presto, trino, big-data,
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.83
 - **License**: Apache-2.0
+- **Keywords**: emr, elastic-mapreduce, hadoop, spark, hive, presto, big-data, data-processing, analytics, cluster, instance-fleet, instance-group, master-node, core-node, task-node, emr-studio, notebook, jupyter, auto-scaling, spot-instances, s3, hdfs, data-lake, etl
 
 ## Description
 

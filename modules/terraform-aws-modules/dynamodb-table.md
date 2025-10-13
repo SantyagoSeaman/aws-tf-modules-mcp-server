@@ -1,8 +1,3 @@
----
-module_name: dynamodb-table
-keywords: [dynamodb, nosql, database, table, key-value, document-store, partition-key, sort-key, hash-key, range-key, global-secondary-index, gsi, local-secondary-index, lsi, autoscaling, provisioned-capacity, on-demand, pay-per-request, billing-mode, read-capacity, write-capacity, throughput, point-in-time-recovery, pitr, backup, restore, encryption, kms, server-side-encryption, sse, dynamodb-streams, stream, kinesis, lambda-trigger, ttl, time-to-live, attribute, projection, eventual-consistency, strong-consistency, global-table, multi-region, replication, cross-region, table-class, standard, infrequent-access, deletion-protection, resource-policy, transactional-reads, transactional-writes, batch-operations, query, scan, partition, item, capacity-units, rcu, wcu]
----
-
 # Terraform AWS DynamoDB Table Module
 
 ## Module Information

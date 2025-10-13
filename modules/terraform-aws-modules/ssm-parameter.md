@@ -1,8 +1,3 @@
----
-module_name: ssm-parameter
-keywords: [ssm, parameter-store, systems-manager, configuration-management, secrets-management, secure-string, kms-encryption, parameters, configuration, secrets, credentials, hierarchical-storage, version-control, change-tracking, tags, compliance, audit, access-control, iam, string, stringlist, securestring, plaintext, encrypted, centralized-config, application-config]
----
-
 # Terraform AWS SSM Parameter Module
 
 ## Module Information

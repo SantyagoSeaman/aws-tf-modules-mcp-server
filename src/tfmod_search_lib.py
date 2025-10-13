@@ -23,17 +23,13 @@ from collections import defaultdict
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any
 
 import nltk
 import numpy as np
-import yaml
 from nltk.tokenize import word_tokenize
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
-# Regex to extract YAML front-matter
-FRONTMATTER_RE = re.compile(r"^---\s*\n(.*?)\n---\s*\n(.*)$", re.S)
 # Project root and NLTK data directory constants
 _PROJECT_ROOT = Path(__file__).parent.parent.resolve()
 _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
@@ -140,6 +136,127 @@ class SearchIndex:
     kw_idf: dict[str, float]
     module_names: list[str]
     doc_kw_sets: list[set]
+
+
+class ModuleDocumentParser:
+    """
+    Parser for Terraform module documentation in Markdown format.
+
+    Extracts module metadata (name, keywords) from structured Markdown sections
+    using regex-based text parsing. Supports two strategies:
+    1. Parse from "## Module Information" section (preferred)
+    2. Search for "keywords:" anywhere in document body (fallback)
+    """
+
+    def __init__(self, logger: logging.Logger):
+        """Initialize parser with logger."""
+        self.logger = logger
+
+    def parse(self, text: str, filename: str) -> tuple[str, list[str], str]:
+        """
+        Parse module documentation to extract metadata.
+
+        Args:
+            text: Full text content of the Markdown file
+            filename: Name of the file being parsed (for logging)
+
+        Returns:
+            Tuple of (module_name, keywords, body_text)
+            - module_name: Extracted module name (empty string if not found)
+            - keywords: List of extracted keywords (empty list if not found)
+            - body_text: Document body text (full text by default)
+        """
+        module_name = ""
+        keywords: list[str] = []
+        body = text
+        parse_strategy = None
+
+        # Strategy 1: Parse from "## Module Information" section
+        module_info = self._parse_module_information_section(text)
+        if module_info:
+            module_name, keywords, parse_strategy = module_info
+
+        # Strategy 2: Fallback - search for "keywords:" anywhere in body
+        if not keywords:
+            keywords_fallback = self._parse_inline_keywords(body)
+            if keywords_fallback:
+                keywords = keywords_fallback
+                if not parse_strategy:
+                    parse_strategy = "inline keywords search"
+
+        # Log parsing result
+        if module_name or keywords:
+            self.logger.debug(
+                f"Parsed {filename}: module={module_name}, " f"keywords={len(keywords)}, strategy={parse_strategy}"
+            )
+        else:
+            self.logger.warning(
+                f"File {filename} missing module_name or keywords " f"(name={module_name}, kw_count={len(keywords)})"
+            )
+
+        return module_name, keywords, body
+
+    def _parse_module_information_section(self, text: str) -> tuple[str, list[str], str] | None:
+        """
+        Parse module name and keywords from "## Module Information" section.
+
+        Looks for:
+        - **Module Name**: value
+        - **Keywords**: comma, separated, values
+
+        Args:
+            text: Full document text
+
+        Returns:
+            Tuple of (module_name, keywords, strategy_name) or None if section not found
+        """
+        # Find the Module Information section
+        module_info_match = re.search(r"## Module Information\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL | re.IGNORECASE)
+
+        if not module_info_match:
+            return None
+
+        module_info_section = module_info_match.group(1)
+        module_name = ""
+        keywords: list[str] = []
+
+        # Extract Module Name: look for "- **Module Name**: VALUE" (with or without backticks)
+        # Use [^`]+ to explicitly exclude backticks from capture
+        name_match = re.search(
+            r"^\s*-\s*\*\*Module Name\*\*:\s*`?([^`]+?)`?\s*$", module_info_section, re.IGNORECASE | re.MULTILINE
+        )
+        if name_match:
+            module_name = name_match.group(1).strip()  # Remove whitespace
+
+        # Extract Keywords: look for "- **Keywords**: comma, separated, values"
+        kw_match = re.search(r"^\s*-\s*\*\*Keywords\*\*:\s*(.+?)$", module_info_section, re.IGNORECASE | re.MULTILINE)
+        if kw_match:
+            kw_text = kw_match.group(1).strip()
+            # Split by commas
+            parts = kw_text.split(",")
+            keywords = [k.strip() for k in parts if k.strip()]
+
+        if module_name or keywords:
+            return module_name, keywords, "Module Information section"
+
+        return None
+
+    def _parse_inline_keywords(self, text: str) -> list[str] | None:
+        """
+        Search for "keywords:" anywhere in document and extract values.
+
+        Args:
+            text: Document text to search
+
+        Returns:
+            List of keywords or None if not found
+        """
+        km = re.search(r"(?im)^keywords?\s*:\s*(.+)$", text)
+        if km:
+            parts = re.split(r"[,|;/]+", km.group(1))
+            keywords = [k.strip() for k in parts if k.strip()]
+            return keywords
+        return None
 
 
 # -----------------------------
@@ -363,20 +480,22 @@ def resolve_index_path(index_path: str | None = None) -> Path:
 
 
 # -----------------------------
-# Parse Markdown + front-matter
+# Parse Markdown
 # -----------------------------
 def parse_markdown_file(p: Path, logger: logging.Logger) -> DocRecord | None:
     """
     Parse a Markdown file to extract module information.
 
-    Supports three strategies (in order of preference):
-    1. Parse from "## Module Information" section (new format)
-    2. Parse from YAML front-matter (legacy format)
-    3. Search for "keywords:" anywhere in body (fallback)
+    Uses ModuleDocumentParser with two strategies:
+    1. Parse from "## Module Information" section (preferred)
+    2. Search for "keywords:" anywhere in body (fallback)
 
     Args:
         p: Path to the markdown file
         logger: Logger instance for logging operations
+
+    Returns:
+        DocRecord with module metadata or None if parsing fails
     """
     logger.debug(f"Parsing markdown file: {p.name}")
 
@@ -386,61 +505,14 @@ def parse_markdown_file(p: Path, logger: logging.Logger) -> DocRecord | None:
         logger.warning(f"Failed to read file {p.name}: {e}")
         return None
 
-    module_name = ""
-    keywords = []
-    body = text  # Default to full text
-    parse_strategy = None
+    # Use ModuleDocumentParser to extract metadata
+    parser = ModuleDocumentParser(logger)
+    module_name, keywords, body = parser.parse(text, p.name)
 
-    # Strategy 1: Try to parse from "## Module Information" section
-    module_info_match = re.search(r"## Module Information\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL | re.IGNORECASE)
-
-    if module_info_match:
-        module_info_section = module_info_match.group(1)
-
-        # Extract Module Name: look for "- **Module Name**: VALUE"
-        name_match = re.search(
-            r"^\s*-\s*\*\*Module Name\*\*:\s*(.+?)$", module_info_section, re.IGNORECASE | re.MULTILINE
-        )
-        if name_match:
-            module_name = name_match.group(1).strip()
-            parse_strategy = "Module Information section"
-
-        # Extract Keywords: look for "- **Keywords**: comma, separated, values"
-        kw_match = re.search(r"^\s*-\s*\*\*Keywords\*\*:\s*(.+?)$", module_info_section, re.IGNORECASE | re.MULTILINE)
-        if kw_match:
-            kw_text = kw_match.group(1).strip()
-            # Split by commas
-            parts = kw_text.split(",")
-            keywords = [k.strip() for k in parts if k.strip()]
-
-    # Strategy 2: Fall back to YAML front-matter
-    if not module_name or not keywords:
-        fm: dict[str, Any] = {}
-        m = FRONTMATTER_RE.match(text)
-        if m:
-            try:
-                fm = yaml.safe_load(m.group(1)) or {}
-                if not parse_strategy:
-                    parse_strategy = "YAML front-matter"
-            except Exception as e:
-                logger.debug(f"Failed to parse YAML front-matter in {p.name}: {e}")
-                fm = {}
-            body = m.group(2)  # Use body without front-matter
-
-        if not module_name:
-            module_name = str(fm.get("module_name", "")).strip()
-
-        if not keywords:
-            keywords = fm.get("keywords") or []
-
-    # Strategy 3: Last resort - search for "keywords:" anywhere in body
-    if not keywords:
-        km = re.search(r"(?im)^keywords?\s*:\s*(.+)$", body)
-        if km:
-            parts = re.split(r"[,\|;/]+", km.group(1))
-            keywords = [k.strip() for k in parts if k.strip()]
-            if not parse_strategy:
-                parse_strategy = "inline keywords search"
+    # Fallback to filename if module_name not found
+    if not module_name:
+        module_name = p.stem  # Use filename without extension
+        logger.debug(f"Using filename as module name for {p.name}: {module_name}")
 
     # Normalize module name
     module_name = normalize_modname(module_name)
@@ -452,11 +524,6 @@ def parse_markdown_file(p: Path, logger: logging.Logger) -> DocRecord | None:
     if not body.strip():
         logger.warning(f"File {p.name} has no content, skipping")
         return None
-
-    if not module_name or not keywords:
-        logger.warning(f"File {p.name} missing module_name or keywords (name={module_name}, kw_count={len(keywords)})")
-    else:
-        logger.debug(f"Parsed {p.name}: module={module_name}, keywords={len(keywords)}, strategy={parse_strategy}")
 
     return DocRecord(path=str(p), module_name=module_name, keywords=keywords, text=body)
 
@@ -779,8 +846,9 @@ def compute_scores(
     # Use the same model as index (cached to avoid HTTP requests)
     model = _get_sentence_transformer(index.model_name, logger)
     q_vec = model.encode([q], convert_to_numpy=True, normalize_embeddings=True)[0].astype(np.float32, copy=False)
-    cos = cosine_sim_matrix(q_vec, index.doc_vectors)
-    cos = (cos + 1.0) / 2.0
+    cos_raw = cosine_sim_matrix(q_vec, index.doc_vectors)
+    cos_raw = (cos_raw + 1.0) / 2.0  # Scale from [-1, 1] to [0, 1]
+    cos = minmax(cos_raw)  # Normalize to spread small differences
 
     if known_keywords:
         kw_vals = []
@@ -798,7 +866,12 @@ def compute_scores(
 
     if kw_arr.max() > 0:
         logger.debug("Using full hybrid scoring (keyword matches found)")
-        final = w_kw * kw + w_exact * exact_hits + w_bm25 * bm + w_sem * cos
+        final = (
+            w_kw * kw
+            + w_exact * exact_hits
+            + w_bm25 * (math.log(len(q_kw) + 1, 3)) * bm
+            + w_sem * (math.log(len(q_kw) + 1, 3)) * cos
+        )
     else:
         logger.debug("No keyword matches, using BM25 + semantic only")
         final = w_bm25 * bm + w_sem * cos

@@ -1,8 +1,3 @@
----
-module_name: rds
-keywords: [rds, relational-database, database, db-instance, mysql, postgresql, postgres, oracle, mssql, sql-server, mariadb, aurora, db-subnet-group, db-parameter-group, db-option-group, subnet-group, parameter-group, option-group, database-instance, managed-database, cloud-database, db-engine, multi-az, high-availability, backup, snapshot, automated-backup, point-in-time-recovery, storage-encryption, kms, encryption, replica, read-replica, cross-region, replication, blue-green-deployment, enhanced-monitoring, performance-insights, cloudwatch, monitoring, iam-authentication, iam-role, security-group, vpc, storage-autoscaling, storage-type, gp2, gp3, io1, iops, provisioned-iops, maintenance-window, backup-window, s3-import, role-association, automated-backups-replication, deletion-protection, final-snapshot, engine-version, instance-class, allocated-storage, db-name, master-username, master-password, secrets-manager, license-model, character-set, timezone, ca-certificate, ssl, tls]
----
-
 # Terraform AWS RDS Module
 
 ## Module Information

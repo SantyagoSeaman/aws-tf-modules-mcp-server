@@ -1,8 +1,3 @@
----
-module_name: eks-pod-identity
-keywords: [eks, pod-identity, iam, kubernetes, service-account, rbac, irsa, oidc, cluster-autoscaler, external-dns, external-secrets, load-balancer-controller, cert-manager, ebs-csi, efs-csi, vpc-cni, aws-gateway-controller, cloudwatch-observability, velero, node-termination-handler, app-mesh, prometheus, mountpoint-s3, least-privilege, credential-management, pod-security, aws-sdk, daemon-set]
----
-
 # Terraform AWS EKS Pod Identity Module
 
 ## Module Information

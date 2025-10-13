@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-appconfig
-keywords: [appconfig, configuration-management, feature-flags, dynamic-configuration, deployment-strategy, configuration-profile, application-configuration, hosted-configuration, validators, json-schema, lambda-validator, rollout, gradual-deployment, environment, canary-deployment, blue-green, configuration-validation, runtime-configuration, application-tuning, feature-toggles, a-b-testing]
----
-
 # AWS AppConfig Terraform Module
 
 ## Module Information
@@ -12,6 +7,7 @@ keywords: [appconfig, configuration-management, feature-flags, dynamic-configura
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.0
 - **License**: Apache-2.0
+- **Keywords**: appconfig, application-configuration, feature-flags, configuration-management, deployment-strategy, validation, canary-deployment, linear-deployment, exponential-deployment, configuration-profile, environment, deployment, rollback, monitoring, cloudwatch-alarms
 
 ## Description
 

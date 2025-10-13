@@ -1,8 +1,3 @@
----
-module_name: msk-kafka-cluster
-keywords: apache-kafka, auto-scaling, autoscaling, broker-nodes, bootstrap-brokers, cdc, client-authentication, cloudwatch-logs, cluster-configuration, cluster-policy, data-streaming, ebs-storage, encryption-at-rest, encryption-in-transit, enhanced-monitoring, event-streaming, firehose, glue-schema-registry, iam-authentication, jmx-exporter, kafka, kafka-cluster, kafka-connect, kafka-version, kinesis-firehose, kms-encryption, kraft, message-broker, monitoring, msk, msk-connect, msk-serverless, node-exporter, open-monitoring, provisioned, real-time-streaming, s3-logs, sasl-iam, sasl-scram, schema-registry, secrets-manager, security-group, serverless, storage-autoscaling, streaming-data, tiered-storage, tls, topic, vpc-connectivity, zookeeper
----
-
 # Terraform AWS MSK Kafka Cluster Module
 
 ## Module Information

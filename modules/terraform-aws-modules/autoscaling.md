@@ -1,8 +1,3 @@
----
-module_name: autoscaling
-keywords: [autoscaling, asg, auto-scaling-group, ec2, scaling, launch-template, instance-refresh, lifecycle-hooks, mixed-instances, spot-instances, scaling-policy, target-tracking, scheduled-scaling, load-balancer, elb, alb, nlb, capacity, high-availability, elasticity, instance-lifecycle, health-check, warmup, cooldown, termination-policy, availability-zones, multi-az, instance-type, ami, user-data, tags, metrics, cloudwatch, monitoring, desired-capacity, min-size, max-size, scale-out, scale-in, cpu-utilization, network-traffic, application-load, instance-protection, capacity-rebalancing, hibernation, spot-fleet, on-demand, instance-weighting, launch-configuration, placement-group, suspended-processes, termination-protection, imdsv2, metadata-service, iam-instance-profile, security-groups, key-pair, ebs-optimized, detailed-monitoring, instance-maintenance, warm-pool, predictive-scaling]
----
-
 # Terraform AWS Auto Scaling Module
 
 ## Module Information

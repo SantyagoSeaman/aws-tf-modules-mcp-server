@@ -1,8 +1,3 @@
----
-module_name: apigateway-v2
-keywords: [api-gateway, apigateway-v2, http-api, websocket-api, serverless, rest-api, lambda-integration, api-management, jwt-authorizer, cors, custom-domain, route53, acm, ssl-certificate, oauth2, openid-connect, api-routing, vpc-link, private-integration, proxy-integration, http-proxy, aws-proxy, api-gateway-stage, access-logging, cloudwatch-logs, throttling, rate-limiting, request-validation, response-transformation, api-key, usage-plan, authorizer, lambda-authorizer, request-authorizer, mutual-tls, mtls, client-certificate, stage-variables, deployment, auto-deploy, api-versioning, subdomain, domain-mapping, route-configuration, integration-configuration, websocket-routes, websocket-integrations, event-driven, real-time-api, bidirectional-communication, serverless-api, microservices-api, api-security, api-observability, api-monitoring]
----
-
 # Terraform AWS API Gateway v2 Module
 
 ## Module Information

@@ -1,8 +1,3 @@
----
-module_name: managed-service-grafana
-keywords: amg, analytics, api-key, authentication, aws-sso, cloudwatch, dashboard, data-source, data-visualization, elasticsearch, enterprise-license, free-trial, grafana, grafana-workspace, iam-role, monitoring, network-access-control, observability, opensearch, permissions, prometheus, saml, security-group, service-account, service-managed, single-sign-on, timestream, token, user-management, visualization, vpc-configuration, workspace, x-ray
----
-
 # Terraform AWS Managed Service for Grafana Module
 
 ## Module Information

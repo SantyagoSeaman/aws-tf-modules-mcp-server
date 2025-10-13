@@ -1,8 +1,3 @@
----
-module_name: vpn-gateway
-keywords: [vpn, vpn-gateway, site-to-site-vpn, customer-gateway, virtual-private-gateway, transit-gateway, ipsec, vpn-connection, vpn-tunnel, bgp, static-routes, hybrid-cloud, on-premises, network-connectivity, secure-tunnel, encryption, ikev2, tunnel-configuration, route-propagation, high-availability, redundancy, failover, cloudwatch-logs, acceleration, preshared-key, phase1, phase2, dpd, nat-traversal]
----
-
 # Terraform AWS VPN Gateway Module
 
 ## Module Information

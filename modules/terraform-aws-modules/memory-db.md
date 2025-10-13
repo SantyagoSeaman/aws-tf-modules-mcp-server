@@ -1,8 +1,3 @@
----
-module_name: memory-db
-keywords: acl, access-control-list, backup, cache, cluster, compliance, data-durability, data-tiering, database, encryption, engine-version, high-availability, high-performance, hipaa, in-memory, in-transit-encryption, key-value, kms-encryption, low-latency, maintenance-window, memorydb, microservices, microsecond-latency, multi-az, node-type, parameter-group, pci-dss, primary-database, redis, redis-compatible, replicas, replication, security-group, shards, snapshot, snapshot-retention, soc-compliance, subnet-group, tls, user-management, valkey, valkey-compatible, vpc
----
-
 # Terraform AWS MemoryDB Module
 
 ## Module Information

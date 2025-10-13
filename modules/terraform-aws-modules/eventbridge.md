@@ -1,8 +1,3 @@
----
-module_name: eventbridge
-keywords: [eventbridge, event-bus, event-driven, serverless, event-routing, event-bridge, event-pattern, cloudwatch-events, scheduled-events, cron, rate-expression, event-rule, event-target, event-source, event-archive, event-replay, api-destination, event-pipe, event-connection, lambda-target, sqs-target, sns-target, kinesis-target, step-functions, ecs-task, cloudwatch-logs, event-filtering, event-transformation, cross-account-events, saas-integration, webhooks, event-schema, schema-registry, dead-letter-queue, dlq, retry-policy, input-transformer, event-bus-policy, partner-event-source, custom-event-bus, default-event-bus, event-source-mapping, idempotency, event-deduplication, cloudtrail-events, aws-events, third-party-events, event-driven-architecture, async-communication, decoupling, microservices-events, event-ingestion, event-processing, event-distribution, real-time-events, scheduled-tasks, cron-jobs, event-scheduler]
----
-
 # Terraform AWS EventBridge Module
 
 ## Module Information

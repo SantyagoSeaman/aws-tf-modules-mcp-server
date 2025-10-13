@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-opensearch
-keywords: [opensearch, elasticsearch, search, analytics, logs, monitoring, kibana, dashboards, cluster, domain, serverless, collection]
----
-
 # AWS OpenSearch Terraform Module
 
 ## Module Information
@@ -12,6 +7,7 @@ keywords: [opensearch, elasticsearch, search, analytics, logs, monitoring, kiban
 - **Terraform**: >= 1.5.7
 - **AWS Provider**: >= 6.15
 - **License**: Apache-2.0
+- **Keywords**: opensearch, elasticsearch, search, analytics, log-analytics, observability, cluster, domain, data-node, master-node, ultrawarm, cold-storage, index, shard, replica, kibana, dashboards, vpc, encryption, cognito, saml, iam, access-policy, snapshot
 
 ## Description
 

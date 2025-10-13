@@ -1,8 +1,3 @@
----
-module_name: app-runner
-keywords: [app-runner, apprunner, container, containerized, docker, web-app, web-application, paas, platform-as-a-service, serverless, auto-scaling, autoscaling, github, ecr, source-code, deployment, ci-cd, continuous-deployment, vpc, vpc-connector, private-network, ingress, custom-domain, health-check, observability, x-ray, tracing, iam-role, encryption, kms, secrets-manager, environment-variables, instance-configuration, networking, load-balancer, managed-service, automated-deployment, scaling, cpu, memory, concurrency, connection, code-repository, image-repository, certificate, dns, route53]
----
-
 # Terraform AWS App Runner Module
 
 ## Module Information

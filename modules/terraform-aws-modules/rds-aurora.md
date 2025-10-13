@@ -1,8 +1,3 @@
----
-module_name: rds-aurora
-keywords: [aurora, rds, database, postgresql, mysql, serverless, global-cluster, autoscaling, multi-az, limitless, dsql, read-replica, cluster, relational-database, aws-aurora, aurora-postgresql, aurora-mysql, db-cluster, database-cluster, managed-database, cloud-database, aurora-serverless, serverless-v2, enhanced-monitoring, performance-insights, s3-import, backup, encryption, kms, snapshot, failover, high-availability, disaster-recovery, cross-region, replication, endpoint, custom-endpoint, scaling, capacity, monitoring, cloudwatch, iam-authentication, security-group, subnet-group, parameter-group, cluster-parameter-group, db-instance, writer-endpoint, reader-endpoint]
----
-
 # Terraform AWS RDS Aurora Module
 
 ## Module Information

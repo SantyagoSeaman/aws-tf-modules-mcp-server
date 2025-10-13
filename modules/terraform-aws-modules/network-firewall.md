@@ -1,8 +1,3 @@
----
-module_name: network-firewall
-keywords: [network-firewall, aws-network-firewall, vpc-firewall, stateful-firewall, stateless-firewall, intrusion-detection, intrusion-prevention, ids, ips, suricata, firewall-policy, firewall-rules, rule-groups, stateful-rules, stateless-rules, domain-filtering, ip-filtering, protocol-detection, deep-packet-inspection, dpi, network-security, vpc-security, perimeter-security, traffic-filtering, packet-inspection, firewall-logging, cloudwatch-logs, s3-logging, flow-logs, alert-logs, kms-encryption, resource-policy, subnet-mapping, availability-zones, firewall-endpoint, vpc-endpoint, nat-gateway-protection, internet-gateway-filtering, vpn-filtering, direct-connect-security, network-segmentation, micro-segmentation, threat-detection, threat-prevention, malware-detection, signature-based-detection, anomaly-detection, rule-evaluation, rule-order, rule-priority, stateful-inspection, connection-tracking, session-management, protocol-analysis, application-layer-filtering, network-layer-filtering, egress-filtering, ingress-filtering, east-west-traffic, north-south-traffic, centralized-firewall, distributed-firewall, firewall-manager, multi-account-firewall, cross-account-firewall, compliance, pci-dss, hipaa, network-monitoring, security-monitoring]
----
-
 # Terraform AWS Network Firewall Module
 
 ## Module Information

@@ -1,8 +1,3 @@
----
-module_name: customer-gateway
-keywords: [customer-gateway, cgw, site-to-site-vpn, vpn, vpn-connection, hybrid-cloud, on-premises, ipsec, bgp, bgp-asn, border-gateway-protocol, virtual-private-gateway, vgw, transit-gateway, tgw, vpn-tunnel, encryption, secure-connection, network-integration, datacenter, private-connectivity, redundancy, failover, high-availability, ikev2, nat-traversal, routing, external-ip, gateway-device, vpn-appliance, networking]
----
-
 # Terraform AWS Customer Gateway Module
 
 ## Module Information

@@ -1,8 +1,3 @@
----
-module_name: redshift
-keywords: [redshift, data-warehouse, analytics, olap, columnar-storage, mpp, massively-parallel-processing, petabyte-scale, sql, business-intelligence, bi, etl, data-lake, s3-integration, spectrum, kms-encryption, vpc-routing, snapshot, cluster, node-type, parameter-group, subnet-group, authentication, iam-role, scheduled-actions, usage-limits, maintenance-window, backup, restore, monitoring, cloudwatch, serverless, provisioned]
----
-
 # Terraform AWS Redshift Module
 
 ## Module Information

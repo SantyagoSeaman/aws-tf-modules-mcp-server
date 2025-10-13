@@ -1,8 +1,3 @@
----
-module_name: route53
-keywords: [route53, dns, hosted-zone, domain, nameserver, records, routing-policy, geolocation, weighted-routing, failover, latency-routing, alias-records, private-zone, public-zone, dnssec, delegation-sets, resolver-endpoint, resolver-firewall, cross-account, vpc-association, mx-records, cname, a-record, aaaa-record, txt-record, srv-record, ptr-record, ns-record, soa-record, caa-record, multivalue-routing, geoproximity-routing, health-checks, traffic-management, dns-query-logging, domain-registration, subdomain, zone-association, resolver-rules, dns-filtering, inbound-resolver, outbound-resolver, hybrid-dns, on-premises-dns, dns-firewall, domain-list, query-routing, do53, doh, dns-over-https, ipv4, ipv6, dual-stack, kms-encryption, ram-sharing]
----
-
 # Terraform AWS Route53 Module
 
 ## Module Information

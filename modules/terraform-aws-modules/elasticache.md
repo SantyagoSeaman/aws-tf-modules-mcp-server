@@ -1,8 +1,3 @@
----
-module_name: elasticache
-keywords: [elasticache, redis, memcached, valkey, cache, in-memory, key-value, data-store, caching, session-management, replication-group, cluster-mode, global-replication, serverless-cache, user-group, multi-az, automatic-failover, encryption, transit-encryption, at-rest-encryption, parameter-group, subnet-group, security-group, pub-sub, leaderboard, messaging, performance, low-latency, high-throughput, read-replica, sharding, snapshot, backup, cloudwatch, monitoring, kms-encryption]
----
-
 # Terraform AWS ElastiCache Module
 
 ## Module Information

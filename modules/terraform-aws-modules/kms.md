@@ -1,8 +1,3 @@
----
-module_name: kms
-keywords: [kms, key-management, encryption, cmk, customer-master-key, key-rotation, key-policy, encryption-at-rest, data-encryption, crypto, cryptographic-keys, aws-kms, symmetric-encryption, asymmetric-encryption, key-aliases, key-grants, multi-region-keys, external-keys, key-material, cloud-security, data-protection, compliance, access-control, iam-policy, key-administrators, key-users, envelope-encryption, encryption-sdk, server-side-encryption, client-side-encryption, key-store, hsm, hardware-security-module, fips, dnssec, signing-keys, ecc, rsa, aes, key-lifecycle, key-deletion, bring-your-own-key, byok, automatic-rotation, manual-rotation, cloudwatch-logs, s3-encryption, ebs-encryption, rds-encryption, secrets-manager, parameter-store]
----
-
 # Terraform AWS KMS Module
 
 ## Module Information

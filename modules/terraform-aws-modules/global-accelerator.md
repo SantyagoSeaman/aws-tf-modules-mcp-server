@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-global-accelerator
-keywords: [global-accelerator, anycast, static-ip, edge-network, low-latency, high-availability, traffic-routing, endpoint-groups, listeners, health-checks, flow-logs, tcp, udp, dual-stack, ipv4, ipv6, byoip, client-affinity, custom-routing, multi-region, traffic-distribution, disaster-recovery, failover, performance-optimization, aws-edge-locations]
----
-
 # AWS Global Accelerator Terraform Module
 
 ## Module Information
@@ -12,6 +7,7 @@ keywords: [global-accelerator, anycast, static-ip, edge-network, low-latency, hi
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.84
 - **License**: Apache-2.0
+- **Keywords**: global-accelerator, anycast, static-ip, edge-location, aws-global-network, performance, latency-reduction, availability, endpoint-health, multi-region, failover, alb, nlb, ec2, elastic-ip, tcp, udp, listener, endpoint-group, health-check, traffic-distribution, client-ip-preservation, byoip, dual-stack, ipv4, ipv6, flow-logs, custom-routing, gaming, voip, iot
 
 ## Description
 

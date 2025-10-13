@@ -1,8 +1,3 @@
----
-module_name: fsx
-keywords: [fsx, file-system, lustre, ontap, netapp, openzfs, windows-file-server, smb, nfs, iscsi, nvme, storage, high-performance-computing, hpc, machine-learning, ml, scratch, persistent, ssd, hdd, intelligent-tiering, throughput, iops, s3-integration, data-repository, active-directory, multi-az, single-az, backup, snapshot, encryption, kms, compression, deduplication, tiering, cloudwatch, multi-protocol, svm, storage-virtual-machine, volume, subnet, security-group, vpc, efs, efa, elastic-fabric-adapter, zfs, cifs, data-lake, analytics, video-processing, financial-modeling, sagemaker, batch, eks, ecs, containers, file-share, shared-storage]
----
-
 # Terraform AWS FSx Module
 
 ## Module Information

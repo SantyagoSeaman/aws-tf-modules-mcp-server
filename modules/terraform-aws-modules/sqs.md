@@ -1,8 +1,3 @@
----
-module_name: sqs
-keywords: [sqs, simple-queue-service, queue, message-queue, messaging, fifo-queue, standard-queue, dead-letter-queue, dlq, message-broker, async-processing, event-driven, decoupling, microservices, kms-encryption, server-side-encryption, sse-sqs, queue-policy, visibility-timeout, message-retention, long-polling, content-based-deduplication, deduplication, message-group, redrive-policy, maxReceiveCount, delay-seconds, receive-wait-time, message-delay, queue-attributes, sns-subscription, event-sourcing, task-queue, job-queue, batch-processing, distributed-systems, resilient-architecture, fault-tolerance, message-ordering, exactly-once-processing, at-least-once-delivery, kms-data-key, encryption-at-rest, cloudwatch-metrics, queue-monitoring]
----
-
 # Terraform AWS SQS Module
 
 ## Module Information

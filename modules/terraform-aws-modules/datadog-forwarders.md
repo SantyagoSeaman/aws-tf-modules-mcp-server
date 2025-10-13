@@ -1,8 +1,3 @@
----
-module_name: datadog-forwarders
-keywords: [datadog, monitoring, observability, log-forwarding, metrics, traces, lambda, cloudwatch, rds-monitoring, vpc-flow-logs, privatelink, vpc-endpoints, s3-logs, cloudtrail, elb-logs, cloudfront-logs, kinesis, sns, custom-metrics, enhanced-monitoring, log-aggregation, aws-integration, serverless-monitoring, infrastructure-monitoring, application-monitoring, security-monitoring]
----
-
 # Terraform AWS Datadog Forwarders Module
 
 ## Module Information

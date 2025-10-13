@@ -1,8 +1,3 @@
----
-module_name: efs
-keywords: [efs, elastic-file-system, nfs, network-file-system, shared-storage, file-storage, mount-targets, access-points, posix, file-system-encryption, kms-encryption, at-rest-encryption, in-transit-encryption, performance-mode, general-purpose, max-io, throughput-mode, bursting, elastic, provisioned-throughput, lifecycle-policy, infrequent-access, ia-storage, backup-policy, aws-backup, replication, cross-region, multi-az, availability-zones, security-groups, file-system-policy, iam-policy, nfs-mount, linux, container-storage, ecs, eks, kubernetes, persistent-storage, stateful-applications]
----
-
 # Terraform AWS EFS Module
 
 ## Module Information

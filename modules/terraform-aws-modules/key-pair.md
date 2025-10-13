@@ -1,8 +1,3 @@
----
-module_name: key-pair
-keywords: [key-pair, ec2-key-pair, ssh-key, public-key, private-key, rsa, ed25519, key-generation, tls-private-key, openssh, pem, key-import, key-material, ssh-access, ec2-access, instance-access, ssh-authentication, key-fingerprint, key-management, cryptography, asymmetric-encryption, public-key-cryptography, key-rotation, ssh-login, remote-access, bastion-host, jumpbox, secure-access, 4096-bit, key-algorithm, key-pair-creation]
----
-
 # Terraform AWS Key Pair Module
 
 ## Module Information

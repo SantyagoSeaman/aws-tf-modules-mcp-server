@@ -1,8 +1,3 @@
----
-module_name: ec2-instance
-keywords: [ec2, instance, virtual-machine, compute, spot-instance, on-demand, ami, ebs, elastic-block-store, instance-profile, iam-role, security-group, vpc, subnet, public-ip, private-ip, elastic-ip, network-interface, user-data, metadata, monitoring, tags, key-pair, ssh, linux, windows, t3, t2, m5, c5, instance-type, availability-zone, placement-group, tenancy, cpu-credits, ebs-optimized, source-dest-check, termination-protection, hibernation, capacity-reservation, ipv6, secondary-ip, elastic-network-interface, root-volume, additional-volumes, encrypted-volumes, kms, spot-price, spot-request, launch-template, associate-public-ip]
----
-
 # Terraform AWS EC2 Instance Module
 
 ## Module Information

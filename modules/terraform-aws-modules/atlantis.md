@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-atlantis
-keywords: [atlantis, terraform-automation, pull-request-automation, infrastructure-as-code, ci-cd, ecs, fargate, alb, application-load-balancer, github-integration, gitlab-integration, bitbucket-integration, webhook, terraform-plan, terraform-apply, collaboration, code-review, efs, persistent-storage, secrets-manager, iam-roles, container, docker, devops, gitops]
----
-
 # AWS Atlantis Terraform Module
 
 ## Module Information
@@ -12,6 +7,7 @@ keywords: [atlantis, terraform-automation, pull-request-automation, infrastructu
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.0
 - **License**: Apache-2.0
+- **Keywords**: atlantis, terraform-automation, pull-request, gitops, ci-cd, github, gitlab, bitbucket, ecs-fargate, application-load-balancer, alb, webhook, terraform-plan, terraform-apply, infrastructure-as-code, collaboration, code-review, version-control, secrets-manager, efs, persistent-storage
 
 ## Description
 

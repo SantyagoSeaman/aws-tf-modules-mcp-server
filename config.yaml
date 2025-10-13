@@ -4,13 +4,13 @@
 # These control how different search components are weighted
 search_weights:
   # Weight for keyword overlap with IDF weighting
-  w_kw: 2.0
+  w_kw: 1.0
 
   # Weight for exact module name match boost
   w_exact: 3.0
 
   # Weight for BM25 text relevance
-  w_bm25: 1.0
+  w_bm25: 2.0
 
   # Weight for semantic similarity (cosine similarity of embeddings)
-  w_sem: 1.0
+  w_sem: 3.0

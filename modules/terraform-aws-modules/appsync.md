@@ -1,8 +1,3 @@
----
-module_name: appsync
-keywords: [appsync, graphql, api, serverless, lambda, dynamodb, http, resolver, datasource, authentication, api-key, iam, cognito, oidc, openid, schema, mutation, query, subscription, real-time, websocket, cloudwatch, x-ray, caching, elasticache, domain, custom-domain, route53, certificate, acm, eventbridge, rds, aurora, opensearch, elasticsearch, javascript, vtl, mapping-template, pipeline, function, field-resolver, authorization, federation, merged-api]
----
-
 # Terraform AWS AppSync Module
 
 ## Module Information

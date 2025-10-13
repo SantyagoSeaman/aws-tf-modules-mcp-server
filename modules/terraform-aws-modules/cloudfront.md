@@ -1,8 +1,3 @@
----
-module_name: cloudfront
-keywords: [cloudfront, cdn, content-delivery-network, edge-locations, distribution, origin, cache-behavior, ssl, tls, certificate, acm, viewer-protocol, s3-origin, custom-origin, lambda-edge, cloudfront-functions, geo-restriction, waf, web-application-firewall, origin-access-identity, origin-access-control, oac, oai, cache-policy, origin-request-policy, response-headers-policy, real-time-logs, logging, field-level-encryption, http2, http3, ipv6, price-class, ttl, time-to-live, invalidation, aliases, cname, domain-name, route53, dns, https, compression, gzip, brotli, custom-error-response, signed-urls, signed-cookies, trusted-signers, trusted-key-groups, viewer-certificate, minimum-protocol-version, security-policy, standard-logging, monitoring-subscription, realtime-metrics]
----
-
 # Terraform AWS CloudFront Module
 
 ## Module Information

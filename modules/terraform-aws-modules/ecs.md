@@ -1,8 +1,3 @@
----
-module_name: ecs
-keywords: [ecs, elastic-container-service, containers, docker, fargate, ec2, cluster, service, task-definition, container-definitions, capacity-provider, auto-scaling, autoscaling, asg, service-discovery, service-connect, load-balancer, alb, nlb, target-group, task-execution-role, task-role, iam, cloudwatch-logs, awslogs, container-insights, deployment, rolling-update, blue-green, canary, circuit-breaker, microservices, orchestration, scheduling, placement-constraints, placement-strategy, network-mode, awsvpc, bridge, host, task-networking, ecs-exec, execute-command, secrets-manager, parameter-store, environment-variables, health-checks, readiness-probe, liveness-probe, volumes, efs, ebs, bind-mounts, task-metadata, spot-instances, fargate-spot, cpu-architecture, arm64, x86, graviton, container-registry, ecr, private-registry]
----
-
 # Terraform AWS ECS Module
 
 ## Module Information

@@ -1,8 +1,3 @@
----
-module_name: ebs-optimized
-keywords: [ebs-optimized, ebs, elastic-block-store, ec2, instance-type, storage, performance, throughput, iops, bandwidth, dedicated-bandwidth, instance-optimization, validation, helper-module, utility, lookup, compatibility, storage-optimization, volume-performance, general-purpose-ssd, provisioned-iops, gp3, io1, io2, instance-configuration, launch-configuration, auto-scaling, compute, ebs-volume]
----
-
 # Terraform AWS EBS Optimized Module
 
 ## Module Information

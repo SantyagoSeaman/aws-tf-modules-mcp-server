@@ -1,8 +1,3 @@
----
-module_name: managed-service-prometheus
-keywords: [prometheus, amp, amazon-managed-service-prometheus, monitoring, observability, metrics, container-monitoring, kubernetes, eks, time-series, promql, alertmanager, recording-rules, alerting-rules, rule-groups, workspace, serverless-monitoring, cloudwatch, kms-encryption, multi-az, high-availability, scalability, prometheus-compatible, metric-ingestion, metric-storage, prometheus-endpoint]
----
-
 # Terraform AWS Managed Service for Prometheus Module
 
 ## Module Information

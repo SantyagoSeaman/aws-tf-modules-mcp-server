@@ -1,8 +1,3 @@
----
-module_name: elb
-keywords: access-logs, availability-zone, classic-load-balancer, connection-draining, cross-zone-load-balancing, elb, health-check, http, https, idle-timeout, instance-attachment, layer-4, layer-7, listener, load-balancer, monitoring, previous-generation, route53, security-group, ssl, ssl-certificate, ssl-policy, sticky-sessions, subnet, tagging, tcp, tls, traffic-distribution, zone-id
----
-
 # Terraform AWS ELB Module
 
 ## Module Information

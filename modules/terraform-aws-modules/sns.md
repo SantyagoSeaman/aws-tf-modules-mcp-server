@@ -1,8 +1,3 @@
----
-module_name: sns
-keywords: [sns, simple-notification-service, notifications, pub-sub, messaging, topics, subscriptions, sqs, lambda, email, sms, http, https, fifo, content-based-deduplication, kms-encryption, data-protection, topic-policy, fan-out, event-driven, asynchronous, message-filtering, delivery-policy, feedback, dead-letter-queue, dlq, application-endpoint, mobile-push, platform-application, message-attributes, raw-message-delivery, redrive-policy, tracing, x-ray, cloudwatch, monitoring]
----
-
 # Terraform AWS SNS Module
 
 ## Module Information

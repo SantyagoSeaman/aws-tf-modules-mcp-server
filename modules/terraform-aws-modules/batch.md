@@ -1,8 +1,3 @@
----
-module_name: batch
-keywords: [batch, aws-batch, batch-computing, batch-processing, compute-environment, job-queue, job-definition, container-jobs, docker, ecs, fargate, eks, kubernetes, spot-instances, on-demand-instances, ec2-compute, managed-compute, batch-scheduler, job-scheduling, parallel-computing, distributed-computing, hpc, high-performance-computing, machine-learning, ml-training, data-analytics, etl, extract-transform-load, scientific-computing, genomics, financial-modeling, rendering, video-processing, log-analysis, big-data, vcpu, compute-resources, instance-types, launch-template, autoscaling, resource-optimization, job-priority, fair-share-scheduling, retry-strategy, job-dependencies, job-array, multi-node-parallel, container-properties, environment-variables, command, resource-requirements, timeout, iam-role, execution-role, instance-role, spot-fleet, allocation-strategy, bid-percentage, compute-resources-tags, cloudwatch-logs, log-configuration, job-state, job-lifecycle, batch-api, cli, sdk, cost-optimization, spot-interruption, ec2-launch-templates, security-groups, subnets, vpc, ami, elastic-container-registry, ecr, docker-images, compute-optimization, workload-distribution, dynamic-provisioning, automatic-scaling]
----
-
 # Terraform AWS Batch Module
 
 ## Module Information
