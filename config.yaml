@@ -3,6 +3,11 @@
 # Default embedding model: BAAI/bge-base-en-v1.5
 # Model is configured at index build time via CLI --model argument
 
+# Logging level for application loggers
+# Third-party loggers (fakeredis, docket, asyncio) are always set to WARNING
+# Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL
+log_level: INFO
+
 # Optional query instruction for BGE models
 # BGE v1.5 works well without instruction, but this can improve short query retrieval
 # Set to null/empty to disable (default), or use the BGE instruction:

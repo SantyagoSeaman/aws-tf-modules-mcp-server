@@ -1019,6 +1019,10 @@ def setup_logging(log_filename: str = "lib.log", log_level: str = "INFO") -> log
     root_logger.addHandler(console_handler)
     root_logger.addHandler(file_handler)
 
+    # Silence noisy third-party loggers (FastMCP internals)
+    for noisy_logger in ["fakeredis", "docket", "asyncio"]:
+        logging.getLogger(noisy_logger).setLevel(logging.WARNING)
+
     return logging.getLogger(__name__)
 
 

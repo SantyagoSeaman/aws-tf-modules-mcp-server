@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.2.1] - 2026-01-26
+
+[0.2.1]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.1
+
+### Added
+
+- **Configurable Log Level**: New `log_level` option in `config.yaml` (default: INFO)
+  - Configurable via config file or CLI `--log_level` argument
+  - New `ConfigLoader.load_log_level()` method with standard precedence (CLI > YAML > default)
+
+- **Quick Install via uvx**: Added simplified installation method using `uvx`
+  - No repository cloning required
+  - Single config line: `"command": "uvx", "args": ["git+https://github.com/..."]`
+  - Added uv installation instructions
+
+### Fixed
+
+- **Silenced Noisy Third-Party Loggers**: FastMCP internal loggers now set to WARNING
+  - `fakeredis`, `docket`, `asyncio` no longer spam DEBUG output
+  - Server startup is now clean and quiet
+
+### Documentation
+
+- Updated README with `uvx` as recommended installation method
+- Added troubleshooting note for full path to `uvx` when not in PATH
+- Updated CLAUDE.md with new `log_level` config option
+
 ## [0.2.0] - 2026-01-25
 
 [0.2.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.0

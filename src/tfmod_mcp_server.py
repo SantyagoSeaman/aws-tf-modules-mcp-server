@@ -258,6 +258,46 @@ class ConfigLoader:
 
         return query_instruction
 
+    @staticmethod
+    def load_log_level(
+        config_path: Path | None = None,
+        cli_override: str | None = None,
+        logger: logging.Logger | None = None,
+    ) -> str:
+        """
+        Load log level with precedence: CLI > YAML > default (INFO).
+
+        Args:
+            config_path: Path to YAML configuration file
+            cli_override: CLI argument override for log_level
+            logger: Logger instance for logging operations
+
+        Returns:
+            Log level string (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        """
+        log_level = "INFO"  # Default
+
+        # Load from YAML if exists
+        if config_path and config_path.exists():
+            try:
+                with open(config_path) as f:
+                    config = yaml.safe_load(f)
+                    if config and "log_level" in config:
+                        log_level = config["log_level"]
+                        if logger:
+                            logger.info(f"Loaded log_level from config: {config_path}")
+            except Exception as e:
+                if logger:
+                    logger.warning(f"Error loading log_level from {config_path}: {e}")
+
+        # Apply CLI override (takes precedence)
+        if cli_override is not None:
+            log_level = cli_override
+            if logger:
+                logger.info(f"Applied CLI override for log_level: {log_level}")
+
+        return log_level.upper()
+
 
 class ServerState:
     """
@@ -1058,13 +1098,20 @@ def main() -> None:
         # Initialize NLTK before any operations
         initialize_nltk()
 
-        # Set up logging to startup.log first
-        logger = setup_logging("startup.log", log_level=logging.getLevelName(logging.DEBUG))
+        # Parse command-line arguments first (needed for config path)
+        args = parse_arguments()
+
+        # Load log level from config with CLI override
+        config_path = Path(args.config) if args.config else None
+        log_level = ConfigLoader.load_log_level(
+            config_path=config_path,
+            cli_override=args.log_level,
+        )
+
+        # Set up logging to startup.log with configured level
+        logger = setup_logging("startup.log", log_level=log_level)
         logger.info("=" * 80)
         logger.info("MCP Server starting up...")
-
-        # Parse command-line arguments
-        args = parse_arguments()
 
         # Initialize server state (all startup errors go to startup.log)
         initialize_server(args, logger)

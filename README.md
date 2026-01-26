@@ -38,12 +38,45 @@ A **Model Context Protocol (MCP)** server that provides intelligent search capab
 
 ## 📦 Installation
 
+### Quick Install (No Clone Required)
+
+The easiest way to use this MCP server is with `uvx` - no need to clone the repository.
+
+**Install uv first** (if not already installed):
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+Then add to your MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "uvx",
+      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+    }
+  }
+}
+```
+
+> **Note**: If you get "command not found" error, use the full path to `uvx`:
+> ```bash
+> # Find uvx location
+> which uvx
+> # Example output: /Users/username/.local/bin/uvx
+> ```
+> Then use the full path in your config:
+> ```json
+> "command": "/Users/username/.local/bin/uvx"
+> ```
+
 ### Prerequisites
 
 - Python 3.13 or higher
 - [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
-### Using uv (Recommended)
+### Local Installation (For Development)
 
 ```bash
 # Clone the repository
@@ -98,7 +131,27 @@ python src/tfmod_search_cli.py search \
 
 #### Claude Code CLI Integration
 
-Add the MCP server to Claude Code using the CLI:
+**Option 1: Using uvx (Recommended - No Clone Required)**
+
+Add to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "uvx",
+      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+    }
+  }
+}
+```
+
+> **Note**: If `uvx` is not found, use the full path (run `which uvx` to find it):
+> ```json
+> "command": "/Users/username/.local/bin/uvx"
+> ```
+
+**Option 2: Using Local Installation**
 
 ```bash
 # Add the MCP server (replace with your actual path)
@@ -129,6 +182,26 @@ Or manually add to your Claude Code settings (`~/.claude/settings.json`):
 
 Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
 
+**Option 1: Using uvx (Recommended - No Clone Required)**
+
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "uvx",
+      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+    }
+  }
+}
+```
+
+> **Note**: If `uvx` is not found, use the full path (run `which uvx` to find it):
+> ```json
+> "command": "/Users/username/.local/bin/uvx"
+> ```
+
+**Option 2: Using Local Installation**
+
 ```json
 {
   "mcpServers": {
@@ -147,6 +220,24 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 Add the MCP server to GitHub Copilot in VS Code (requires VS Code 1.99+):
 
 **Step 1**: Create `.vscode/mcp.json` in your project root (or open user-level config via Command Palette: "MCP: Open User Configuration"):
+
+**Option 1: Using uvx (Recommended - No Clone Required)**
+
+```json
+{
+  "servers": {
+    "terraform-modules": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+    }
+  }
+}
+```
+
+> **Note**: If `uvx` is not found, use the full path (run `which uvx` to find it).
+
+**Option 2: Using Local Installation**
 
 ```json
 {

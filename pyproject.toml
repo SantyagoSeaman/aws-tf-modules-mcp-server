@@ -40,8 +40,8 @@ dev = [
 ]
 
 [project.scripts]
-tfmod-search = "tfmod_search_cli:main"
-tfmod-mcp-server = "tfmod_mcp_server:main"
+tfmod-search-cli = "tfmod_search_cli:main"
+aws-tf-modules-mcp-server = "tfmod_mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"
