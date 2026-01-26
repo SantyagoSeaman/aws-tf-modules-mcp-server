@@ -6,43 +6,34 @@
 - **Source**: `terraform-aws-modules/datadog-forwarders/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-datadog-forwarders
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/datadog-forwarders/aws/latest
-- **Latest Version**: 7.0.0
-- **Purpose**: Terraform module that creates AWS Lambda functions and VPC endpoints to forward logs, metrics, and traces from AWS services to Datadog for centralized monitoring and observability
+- **Latest Version**: 4.12.0
+- **Purpose**: Creates AWS Lambda functions and VPC endpoints to forward logs, metrics, and traces from AWS services to Datadog
 - **Service**: AWS Lambda, Datadog Integration
 - **Category**: Monitoring, Observability, Logging
-- **Keywords**: datadog, monitoring, observability, log-forwarding, metrics, traces, lambda, cloudwatch, rds-monitoring, vpc-flow-logs, privatelink, vpc-endpoints, s3-logs, cloudtrail, elb-logs, cloudfront-logs, kinesis, sns, custom-metrics, enhanced-monitoring, log-aggregation, aws-integration, serverless-monitoring, infrastructure-monitoring, application-monitoring, security-monitoring
-- **Use For**: AWS log aggregation to Datadog, CloudWatch logs forwarding, RDS enhanced monitoring integration, VPC flow log analysis, S3 bucket log collection, CloudTrail security monitoring, ELB access log forwarding, Lambda metrics collection, custom metrics shipping, trace data forwarding, Datadog PrivateLink integration, multi-account log centralization
+- **Keywords**: datadog, log-forwarding, lambda, cloudwatch-logs, rds-monitoring, vpc-flow-logs, privatelink, s3-logs, cloudtrail, metrics, traces, observability
+- **Use For**: AWS log aggregation to Datadog, CloudWatch logs forwarding, RDS enhanced monitoring integration, VPC flow log analysis, S3 bucket log collection, CloudTrail security monitoring, Datadog PrivateLink integration
 
 ## Description
 
-This Terraform module provides comprehensive deployment and management of Datadog forwarder Lambda functions and associated infrastructure for shipping AWS logs, metrics, and traces to Datadog. The module creates three specialized forwarder functions: a general-purpose log forwarder for CloudWatch logs, S3 events, Kinesis streams, and various AWS service logs; an RDS enhanced monitoring forwarder for database performance metrics; and a VPC flow log forwarder for network traffic analysis. Each forwarder is implemented as a Python-based Lambda function with configurable memory, timeout, and runtime settings.
+This module deploys Datadog forwarder Lambda functions for shipping AWS logs, metrics, and traces to Datadog. It creates three specialized forwarders: a log forwarder for CloudWatch logs, S3 events, and various AWS service logs; an RDS enhanced monitoring forwarder for database performance metrics; and a VPC flow log forwarder for network traffic analysis. Lambda artifacts are vendored within the module, eliminating external downloads during CI/CD.
 
-The module handles the complete infrastructure setup including S3 buckets for Lambda deployment packages, IAM roles and policies with least-privilege access, CloudWatch log groups for function logging, and optional KMS encryption for sensitive data. It supports secure API key management through AWS Secrets Manager, preventing hardcoding of credentials in Terraform configurations. The forwarders automatically subscribe to relevant CloudWatch log groups and process incoming data in real-time, transforming and forwarding it to Datadog's ingestion endpoints.
+The module manages complete infrastructure including S3 buckets for Lambda packages, IAM roles with least-privilege access, and CloudWatch log groups. It supports secure API key management through AWS Secrets Manager and KMS encryption for sensitive data. Forwarders use ARM64 architecture by default for cost optimization.
 
-Additionally, the module provides optional PrivateLink VPC endpoints for secure, private connectivity to Datadog services including metrics, agent, logs, API, processes, and traces endpoints. This enables organizations to send telemetry data to Datadog without traversing the public internet, improving security and reducing data transfer costs. The module is highly configurable with extensive input variables for customizing forwarder behavior, Lambda function settings, networking configuration, and resource tagging, making it suitable for diverse AWS environments from small single-account deployments to complex multi-account enterprise architectures.
+Optional PrivateLink VPC endpoints provide secure, private connectivity to Datadog services (metrics, agent, logs, API, processes, traces) without traversing the public internet. The module supports flexible IAM management - bring your own roles/policies or let the module create them.
 
 ## Key Features
 
-- **Three Specialized Forwarders**: Log forwarder, RDS enhanced monitoring forwarder, and VPC flow log forwarder for different data types
-- **Comprehensive Log Source Support**: CloudWatch logs, S3 events, Kinesis streams, CloudTrail, VPC flow logs, ELB access logs, and CloudFront logs
-- **RDS Enhanced Monitoring**: Dedicated forwarder for RDS database performance metrics and enhanced monitoring data
-- **VPC Flow Log Processing**: Specialized forwarder for network traffic analysis and security monitoring
-- **PrivateLink VPC Endpoints**: Optional private connectivity for Datadog agent, metrics, logs, API, processes, and traces
-- **Secure API Key Management**: Integration with AWS Secrets Manager for storing Datadog API and application keys
-- **KMS Encryption Support**: Optional KMS encryption for Lambda environment variables and sensitive data
-- **Configurable Lambda Settings**: Customizable memory size, timeout, runtime version, and architecture (x86_64/arm64)
-- **Automatic Log Subscription**: Automatic CloudWatch Logs subscription filter creation for log forwarding
-- **S3 Bucket Management**: Automated S3 bucket creation for Lambda deployment packages with versioning support
-- **IAM Role Automation**: Pre-configured IAM roles and policies with least-privilege access for each forwarder
-- **CloudWatch Log Groups**: Dedicated log groups for forwarder function logging and troubleshooting
-- **Multiple Datadog Sites**: Support for different Datadog sites (US, EU, Gov, etc.) via configurable endpoint
-- **Custom Metrics Support**: Forward custom metrics from Lambda functions and applications
-- **Trace Forwarding**: Support for forwarding distributed traces to Datadog APM
-- **Enhanced Lambda Metrics**: Generate enhanced metrics for Lambda function performance
-- **Conditional Resource Creation**: Individual enable/disable flags for each forwarder type
-- **Flexible Tagging**: Comprehensive tagging support for all created resources
-- **Version Control**: Pinnable forwarder version for consistent deployments
-- **Multi-Architecture Support**: Lambda functions support both x86_64 and ARM64 (Graviton) architectures
+- **Three Specialized Forwarders**: Log forwarder, RDS enhanced monitoring forwarder, and VPC flow log forwarder
+- **Comprehensive Log Sources**: CloudWatch logs, S3 events, CloudTrail, VPC flow logs, ELB/CloudFront access logs
+- **PrivateLink VPC Endpoints**: Six endpoint types (metrics, agent, log forwarder, API, processes, traces)
+- **Vendored Lambda Artifacts**: Lambda zip files packaged within module (no external downloads during CI/CD)
+- **Secrets Manager Integration**: Secure API key management via `dd_api_key_secret_arn`
+- **KMS Encryption**: Required for RDS and VPC flow log forwarders
+- **ARM64 Default Architecture**: Cost-optimized Graviton architecture (x86_64 also supported)
+- **Flexible IAM Management**: Bring your own roles/policies or let the module create them
+- **Multiple Datadog Sites**: Support for US (`datadoghq.com`), EU (`datadoghq.eu`), and Gov regions
+- **Conditional Resource Creation**: Individual enable/disable flags for each forwarder and endpoint
+- **VPC Deployment**: Forwarders can run inside VPC with security groups and subnets
 
 ## Main Use Cases
 
@@ -85,135 +76,182 @@ Additionally, the module provides optional PrivateLink VPC endpoints for secure,
 
 ## Main Input Variables
 
+### Required
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `kms_alias` | `string` | KMS key alias for encrypting Datadog API key |
+
+**Note**: Either `dd_api_key_secret_arn` (recommended) OR `dd_api_key` must be provided.
+
+### Datadog Configuration
+
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `tags` | `map(string)` | `{}` | Map of tags to add to all resources |
-| `dd_api_key` | `string` | `null` | Datadog API key |
-| `dd_api_key_secret_arn` | `string` | `null` | ARN of Secrets Manager secret containing Datadog API key |
-| `dd_app_key` | `string` | `null` | Datadog application key |
-| `dd_site` | `string` | `"datadoghq.com"` | Datadog site to send data to |
-| `kms_alias` | `string` | `null` | Alias of KMS key for encryption |
-| `create_log_forwarder` | `bool` | `true` | Create log forwarder resources |
-| `log_forwarder_name` | `string` | `"datadog-log-forwarder"` | Log forwarder Lambda function name |
-| `log_forwarder_runtime` | `string` | `"python3.12"` | Log forwarder Lambda runtime |
-| `log_forwarder_memory_size` | `number` | `1024` | Log forwarder memory size in MB |
-| `log_forwarder_timeout` | `number` | `120` | Log forwarder timeout in seconds |
-| `log_forwarder_version` | `string` | `"4.12.0"` | Datadog forwarder version |
+| `dd_api_key_secret_arn` | `string` | `""` | ARN of Secrets Manager secret containing Datadog API key |
+| `dd_api_key` | `string` | `""` | Datadog API key (alternative to Secrets Manager) |
+| `dd_app_key` | `string` | `""` | Datadog application key |
+| `dd_site` | `string` | `"datadoghq.com"` | Datadog site (`datadoghq.com`, `datadoghq.eu`) |
+
+### Feature Toggles
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_log_forwarder` | `bool` | `true` | Create log forwarder Lambda |
 | `create_rds_em_forwarder` | `bool` | `true` | Create RDS enhanced monitoring forwarder |
-| `rds_em_forwarder_name` | `string` | `"datadog-rds-enhanced-monitoring-forwarder"` | RDS forwarder function name |
-| `rds_em_forwarder_runtime` | `string` | `"python3.12"` | RDS forwarder Lambda runtime |
-| `rds_em_forwarder_memory_size` | `number` | `256` | RDS forwarder memory size in MB |
 | `create_vpc_fl_forwarder` | `bool` | `true` | Create VPC flow log forwarder |
-| `vpc_fl_forwarder_name` | `string` | `"datadog-vpc-flow-log-forwarder"` | VPC flow log forwarder function name |
-| `vpc_fl_forwarder_runtime` | `string` | `"python3.12"` | VPC flow log forwarder runtime |
-| `vpc_fl_forwarder_memory_size` | `number` | `256` | VPC flow log forwarder memory size in MB |
-| `vpc_id` | `string` | `null` | VPC ID for VPC endpoints |
-| `subnet_ids` | `list(string)` | `[]` | Subnet IDs for VPC endpoints |
-| `security_group_ids` | `list(string)` | `[]` | Security group IDs for VPC endpoints |
-| `create_metrics_vpce` | `bool` | `false` | Create Datadog metrics VPC endpoint |
-| `create_agent_vpce` | `bool` | `false` | Create Datadog agent VPC endpoint |
-| `create_log_forwarder_vpce` | `bool` | `false` | Create Datadog log forwarder VPC endpoint |
-| `create_api_vpce` | `bool` | `false` | Create Datadog API VPC endpoint |
-| `create_processes_vpce` | `bool` | `false` | Create Datadog processes VPC endpoint |
-| `create_traces_vpce` | `bool` | `false` | Create Datadog traces VPC endpoint |
+| `create_bucket` | `bool` | `true` | Create S3 bucket for Lambda artifacts |
+| `create_metrics_vpce` | `bool` | `false` | Create metrics VPC endpoint |
+| `create_agent_vpce` | `bool` | `false` | Create agent VPC endpoint |
+| `create_log_forwarder_vpce` | `bool` | `false` | Create log forwarder VPC endpoint |
+| `create_api_vpce` | `bool` | `false` | Create API VPC endpoint |
+| `create_processes_vpce` | `bool` | `false` | Create processes VPC endpoint |
+| `create_traces_vpce` | `bool` | `false` | Create traces VPC endpoint |
+
+### Log Forwarder Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `log_forwarder_version` | `string` | `"4.12.0"` | Datadog forwarder version |
+| `log_forwarder_name` | `string` | `"datadog-log-forwarder"` | Lambda function name |
+| `log_forwarder_memory_size` | `number` | `1024` | Memory in MB |
+| `log_forwarder_timeout` | `number` | `120` | Timeout in seconds |
+| `log_forwarder_runtime` | `string` | `"python3.12"` | Lambda runtime |
+| `log_forwarder_architectures` | `list(string)` | `["arm64"]` | CPU architecture |
+| `log_forwarder_reserved_concurrent_executions` | `number` | `100` | Reserved concurrency |
+| `log_forwarder_s3_log_bucket_arns` | `list(string)` | `[]` | S3 buckets to read logs from |
+| `log_forwarder_subnet_ids` | `list(string)` | `null` | VPC subnet IDs |
+| `log_forwarder_security_group_ids` | `list(string)` | `null` | VPC security group IDs |
+| `log_forwarder_log_retention_days` | `number` | `7` | CloudWatch log retention |
+
+### RDS Enhanced Monitoring Forwarder
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `rds_em_forwarder_name` | `string` | `"datadog-rds-enhanced-monitoring-forwarder"` | Lambda function name |
+| `rds_em_forwarder_memory_size` | `number` | `256` | Memory in MB |
+| `rds_em_forwarder_timeout` | `number` | `10` | Timeout in seconds |
+| `rds_em_forwarder_reserved_concurrent_executions` | `number` | `10` | Reserved concurrency |
+
+### VPC Flow Log Forwarder
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `vpc_fl_forwarder_name` | `string` | `"datadog-vpc-flow-log-forwarder"` | Lambda function name |
+| `vpc_fl_forwarder_memory_size` | `number` | `256` | Memory in MB |
+| `vpc_fl_forwarder_timeout` | `number` | `10` | Timeout in seconds |
+| `vpc_fl_forwarder_s3_log_bucket_arns` | `list(string)` | `[]` | S3 buckets containing VPC flow logs |
+| `vpc_fl_forwarder_read_cloudwatch_logs` | `bool` | `false` | Allow reading CloudWatch logs |
+
+### VPC Endpoints
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `vpc_id` | `string` | `null` | VPC ID for endpoint creation |
+| `*_vpce_subnet_ids` | `list(string)` | `[]` | Subnet IDs for each endpoint type |
+| `*_vpce_security_group_ids` | `list(string)` | `[]` | Security group IDs for each endpoint |
+
+### Common
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `tags` | `map(string)` | `{}` | Tags to add to all resources |
 
 ## Main Outputs
 
+### Log Forwarder
+
 | Output | Description |
 |--------|-------------|
-| `log_forwarder_lambda_arn` | Log forwarder Lambda function ARN |
-| `log_forwarder_role_arn` | Log forwarder IAM role ARN |
-| `log_forwarder_s3_bucket_arn` | S3 bucket ARN for log forwarder deployment package |
-| `log_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN for log forwarder |
-| `rds_em_forwarder_lambda_arn` | RDS enhanced monitoring forwarder Lambda function ARN |
-| `rds_em_forwarder_role_arn` | RDS enhanced monitoring forwarder IAM role ARN |
-| `rds_em_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN for RDS forwarder |
-| `vpc_fl_forwarder_lambda_arn` | VPC flow log forwarder Lambda function ARN |
-| `vpc_fl_forwarder_role_arn` | VPC flow log forwarder IAM role ARN |
-| `vpc_fl_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN for VPC flow log forwarder |
-| `metrics_vpce_id` | Datadog metrics VPC endpoint ID |
-| `agent_vpce_id` | Datadog agent VPC endpoint ID |
-| `log_forwarder_vpce_id` | Datadog log forwarder VPC endpoint ID |
-| `api_vpce_id` | Datadog API VPC endpoint ID |
-| `processes_vpce_id` | Datadog processes VPC endpoint ID |
-| `traces_vpce_id` | Datadog traces VPC endpoint ID |
+| `log_forwarder_lambda_arn` | Lambda function ARN |
+| `log_forwarder_lambda_qualified_arn` | Qualified ARN with version |
+| `log_forwarder_role_arn` | IAM role ARN |
+| `log_forwarder_s3_bucket_id` | S3 bucket name for artifacts |
+| `log_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN |
+
+### RDS Enhanced Monitoring Forwarder
+
+| Output | Description |
+|--------|-------------|
+| `rds_em_forwarder_lambda_arn` | Lambda function ARN |
+| `rds_em_forwarder_role_arn` | IAM role ARN |
+| `rds_em_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN |
+
+### VPC Flow Log Forwarder
+
+| Output | Description |
+|--------|-------------|
+| `vpc_fl_forwarder_lambda_arn` | Lambda function ARN |
+| `vpc_fl_forwarder_role_arn` | IAM role ARN |
+| `vpc_fl_forwarder_cloudwatch_log_group_arn` | CloudWatch log group ARN |
+
+### VPC Endpoints
+
+| Output | Description |
+|--------|-------------|
+| `*_endpoint_id` | VPC endpoint ID |
+| `*_endpoint_arn` | VPC endpoint ARN |
+| `*_endpoint_dns_entry` | DNS entries for endpoint |
 
 ## Submodule 1: log_forwarder
 
 ### Description
 
-The log forwarder submodule creates an AWS Lambda function that ships logs, custom metrics, and traces from various AWS services to Datadog. It supports forwarding from CloudWatch Logs, S3 buckets, Kinesis data streams, CloudTrail, VPC flow logs, SNS topics, ELB access logs, and CloudFront logs. The function automatically processes incoming events, transforms them into Datadog-compatible format, and sends them to the configured Datadog site using the provided API key.
+Standalone log forwarder Lambda function that ships logs, custom metrics, and traces from CloudWatch Logs, S3 buckets, and other AWS services to Datadog. Use this submodule when you only need the log forwarder without RDS or VPC flow log forwarders.
 
 ### Key Features
 
-- Forward logs from CloudWatch Logs, S3, CloudTrail, VPC, SNS, CloudFront, and ELB
-- Process S3 bucket events and Kinesis data stream events
+- Forward logs from CloudWatch Logs, S3, CloudTrail, SNS, CloudFront, and ELB
 - Generate enhanced Lambda metrics for function performance monitoring
-- Support for custom metrics forwarding from applications
-- Automatic retry logic for failed submissions
+- ARM64 architecture default for cost optimization
 - Configurable Lambda runtime, memory, and timeout settings
-- S3 bucket management for deployment package storage
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `dd_api_key` | `string` | `null` | Datadog API key |
-| `dd_api_key_secret_arn` | `string` | `null` | ARN of Secrets Manager secret with API key |
+| `dd_api_key_secret_arn` | `string` | `""` | ARN of Secrets Manager secret with API key |
+| `dd_api_key` | `string` | `""` | Datadog API key (alternative) |
 | `dd_site` | `string` | `"datadoghq.com"` | Datadog site endpoint |
 | `forwarder_version` | `string` | `"4.12.0"` | Datadog forwarder version |
 | `name` | `string` | `"datadog-log-forwarder"` | Lambda function name |
-| `runtime` | `string` | `"python3.12"` | Lambda runtime |
-| `memory_size` | `number` | `1024` | Lambda memory size in MB |
+| `memory_size` | `number` | `1024` | Lambda memory in MB |
 | `timeout` | `number` | `120` | Lambda timeout in seconds |
-| `architecture` | `string` | `"arm64"` | Lambda architecture (x86_64 or arm64) |
+| `architectures` | `list(string)` | `["arm64"]` | Lambda architecture |
 | `reserved_concurrent_executions` | `number` | `100` | Reserved concurrent executions |
-| `tags` | `map(string)` | `{}` | Tags for resources |
+| `s3_log_bucket_arns` | `list(string)` | `[]` | S3 buckets to read logs from |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `lambda_arn` | ARN of the forwarder Lambda function |
-| `lambda_qualified_arn` | Versioned ARN of Lambda function |
-| `role_arn` | ARN of Lambda execution role |
-| `role_name` | Name of Lambda execution role |
-| `s3_bucket_arn` | ARN of S3 bucket for deployment package |
-| `s3_bucket_id` | ID of S3 bucket |
-| `cloudwatch_log_group_arn` | ARN of CloudWatch log group |
-| `lambda_source_code_hash` | Base64-encoded SHA256 hash of deployment package |
+| `lambda_arn` | Lambda function ARN |
+| `lambda_qualified_arn` | Versioned ARN |
+| `role_arn` | IAM execution role ARN |
+| `s3_bucket_id` | S3 bucket ID for artifacts |
+| `cloudwatch_log_group_arn` | CloudWatch log group ARN |
 
 ### Usage Example
 
 ```hcl
-# Store Datadog API key in Secrets Manager
-resource "aws_secretsmanager_secret" "datadog_api_key" {
-  name        = "datadog-api-key"
-  description = "Datadog API Key for log forwarding"
-}
-
-resource "aws_secretsmanager_secret_version" "datadog_api_key" {
-  secret_id     = aws_secretsmanager_secret.datadog_api_key.id
-  secret_string = var.datadog_api_key
-}
-
-# Create log forwarder
 module "datadog_log_forwarder" {
-  source = "terraform-aws-modules/datadog-forwarders/aws//modules/log_forwarder"
+  source  = "terraform-aws-modules/datadog-forwarders/aws//modules/log_forwarder"
+  version = "~> 4.12"
 
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key.arn
-  dd_site               = "datadoghq.com"
+  kms_alias             = "alias/datadog"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
 
-  name                           = "production-log-forwarder"
-  forwarder_version              = "4.12.0"
-  memory_size                    = 2048
-  timeout                        = 300
-  reserved_concurrent_executions = 200
+  name        = "production-log-forwarder"
+  memory_size = 2048
+  timeout     = 300
+
+  s3_log_bucket_arns = [
+    "arn:aws:s3:::my-application-logs",
+    "arn:aws:s3:::my-cloudtrail-logs"
+  ]
 
   tags = {
     Environment = "production"
-    Application = "datadog-integration"
-    ManagedBy   = "Terraform"
   }
 }
 
@@ -225,7 +263,6 @@ resource "aws_cloudwatch_log_subscription_filter" "app_logs" {
   destination_arn = module.datadog_log_forwarder.lambda_arn
 }
 
-# Grant permission for CloudWatch Logs to invoke Lambda
 resource "aws_lambda_permission" "allow_cloudwatch" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
@@ -239,74 +276,51 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
 
 ### Description
 
-The RDS enhanced monitoring forwarder submodule creates an AWS Lambda function specifically designed to process RDS enhanced monitoring data from CloudWatch Logs and forward it to Datadog. This forwarder is optimized for handling RDS-specific metrics including OS-level metrics, database engine metrics, and instance-level performance data. It requires minimal memory (256 MB) and automatically subscribes to RDS enhanced monitoring log groups.
+Standalone Lambda function that processes RDS enhanced monitoring data from CloudWatch Logs and forwards to Datadog. Optimized for low memory usage (256 MB) and handles OS-level metrics, database engine metrics, and instance-level performance data.
 
 ### Key Features
 
 - Specialized processing for RDS enhanced monitoring DATA_MESSAGE format
-- Optimized for low memory usage (256 MB default)
-- Automatic CloudWatch Logs subscription for RDS monitoring
+- Low memory footprint (256 MB default)
 - Support for all RDS database engines (MySQL, PostgreSQL, Oracle, SQL Server, MariaDB, Aurora)
-- Real-time metric forwarding to Datadog
-- Configurable Lambda runtime and execution parameters
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `dd_api_key` | `string` | `null` | Datadog API key |
-| `dd_api_key_secret_arn` | `string` | `null` | ARN of Secrets Manager secret with API key |
+| `dd_api_key_secret_arn` | `string` | `""` | ARN of Secrets Manager secret with API key |
 | `dd_site` | `string` | `"datadoghq.com"` | Datadog site endpoint |
-| `forwarder_version` | `string` | `"4.12.0"` | Datadog forwarder version |
 | `name` | `string` | `"datadog-rds-enhanced-monitoring-forwarder"` | Lambda function name |
-| `runtime` | `string` | `"python3.12"` | Lambda runtime |
-| `memory_size` | `number` | `256` | Lambda memory size in MB |
+| `memory_size` | `number` | `256` | Lambda memory in MB |
 | `timeout` | `number` | `10` | Lambda timeout in seconds |
-| `architecture` | `string` | `"arm64"` | Lambda architecture |
-| `tags` | `map(string)` | `{}` | Tags for resources |
+| `reserved_concurrent_executions` | `number` | `10` | Reserved concurrency |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `lambda_arn` | ARN of the RDS forwarder Lambda function |
-| `lambda_qualified_arn` | Versioned ARN of Lambda function |
-| `role_arn` | ARN of Lambda execution role |
-| `role_name` | Name of Lambda execution role |
-| `cloudwatch_log_group_arn` | ARN of CloudWatch log group |
-| `lambda_source_code_hash` | Base64-encoded SHA256 hash of deployment package |
+| `lambda_arn` | Lambda function ARN |
+| `role_arn` | IAM execution role ARN |
+| `cloudwatch_log_group_arn` | CloudWatch log group ARN |
 
 ### Usage Example
 
 ```hcl
-# Create RDS enhanced monitoring forwarder
 module "datadog_rds_forwarder" {
-  source = "terraform-aws-modules/datadog-forwarders/aws//modules/rds_enhanced_monitoring_forwarder"
+  source  = "terraform-aws-modules/datadog-forwarders/aws//modules/rds_enhanced_monitoring_forwarder"
+  version = "~> 4.12"
 
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key.arn
-  dd_site               = "datadoghq.com"
+  kms_alias             = "alias/datadog"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
 
-  name      = "rds-monitoring-forwarder"
+  name = "rds-monitoring-forwarder"
+
   tags = {
     Environment = "production"
-    Purpose     = "rds-monitoring"
   }
 }
 
-# Enable RDS enhanced monitoring on database instance
-resource "aws_db_instance" "database" {
-  identifier = "production-database"
-  engine     = "postgres"
-
-  # Enable enhanced monitoring (60 second granularity)
-  enabled_cloudwatch_logs_exports = ["postgresql"]
-  monitoring_interval             = 60
-  monitoring_role_arn             = aws_iam_role.rds_monitoring.arn
-
-  # Other configuration...
-}
-
-# Subscribe enhanced monitoring log group to forwarder
+# Subscribe RDS enhanced monitoring log group to forwarder
 resource "aws_cloudwatch_log_subscription_filter" "rds_monitoring" {
   name            = "datadog-rds-monitoring"
   log_group_name  = "RDSOSMetrics"
@@ -314,13 +328,12 @@ resource "aws_cloudwatch_log_subscription_filter" "rds_monitoring" {
   destination_arn = module.datadog_rds_forwarder.lambda_arn
 }
 
-# Grant permission for CloudWatch Logs
 resource "aws_lambda_permission" "allow_rds_monitoring" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
   function_name = module.datadog_rds_forwarder.lambda_arn
   principal     = "logs.amazonaws.com"
-  source_arn    = "${data.aws_cloudwatch_log_group.rds_os_metrics.arn}:*"
+  source_arn    = "arn:aws:logs:*:*:log-group:RDSOSMetrics:*"
 }
 ```
 
@@ -328,85 +341,52 @@ resource "aws_lambda_permission" "allow_rds_monitoring" {
 
 ### Description
 
-The VPC flow log forwarder submodule creates an AWS Lambda function that processes VPC flow log data from CloudWatch Logs and forwards it to Datadog for network traffic analysis and security monitoring. This forwarder requires KMS encryption for the Datadog API key and supports optional reading of CloudWatch log groups. It's optimized for processing network flow data and converting it into Datadog's network monitoring format.
+Standalone Lambda function that processes VPC flow log data from CloudWatch Logs or S3 and forwards to Datadog for network traffic analysis and security monitoring. Requires KMS encryption for the Datadog API key.
 
 ### Key Features
 
-- Specialized VPC flow log processing and formatting
-- KMS encryption requirement for enhanced security
-- Optional CloudWatch log group reading capability
-- Network traffic pattern analysis
-- Support for VPC flow log custom formats
+- VPC flow log processing and formatting for Datadog
+- KMS encryption requirement for security
+- Support for CloudWatch Logs and S3 sources
 - Low memory footprint (256 MB default)
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `kms_alias` | `string` | required | Alias of KMS key for encryption |
-| `dd_api_key_secret_arn` | `string` | `null` | ARN of Secrets Manager secret with API key |
+| `kms_alias` | `string` | required | KMS key alias for encryption |
+| `dd_api_key_secret_arn` | `string` | `""` | ARN of Secrets Manager secret with API key |
 | `dd_site` | `string` | `"datadoghq.com"` | Datadog site endpoint |
-| `forwarder_version` | `string` | `"4.12.0"` | Datadog forwarder version |
 | `name` | `string` | `"datadog-vpc-flow-log-forwarder"` | Lambda function name |
-| `runtime` | `string` | `"python3.12"` | Lambda runtime |
-| `memory_size` | `number` | `256` | Lambda memory size in MB |
-| `timeout` | `number` | `120` | Lambda timeout in seconds |
-| `read_cloudwatch_logs` | `bool` | `false` | Whether to read CloudWatch log groups |
-| `architecture` | `string` | `"arm64"` | Lambda architecture |
-| `tags` | `map(string)` | `{}` | Tags for resources |
+| `memory_size` | `number` | `256` | Lambda memory in MB |
+| `timeout` | `number` | `10` | Lambda timeout in seconds |
+| `s3_log_bucket_arns` | `list(string)` | `[]` | S3 buckets containing VPC flow logs |
+| `read_cloudwatch_logs` | `bool` | `false` | Allow reading CloudWatch logs |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `lambda_arn` | ARN of the VPC flow log forwarder Lambda function |
-| `lambda_qualified_arn` | Versioned ARN of Lambda function |
-| `role_arn` | ARN of Lambda execution role |
-| `role_name` | Name of Lambda execution role |
-| `cloudwatch_log_group_arn` | ARN of CloudWatch log group |
-| `lambda_source_code_hash` | Base64-encoded SHA256 hash of deployment package |
+| `lambda_arn` | Lambda function ARN |
+| `role_arn` | IAM execution role ARN |
+| `cloudwatch_log_group_arn` | CloudWatch log group ARN |
 
 ### Usage Example
 
 ```hcl
-# Create KMS key for encryption
-resource "aws_kms_key" "datadog" {
-  description             = "KMS key for Datadog API key encryption"
-  deletion_window_in_days = 10
-
-  tags = {
-    Name = "datadog-encryption-key"
-  }
-}
-
-resource "aws_kms_alias" "datadog" {
-  name          = "alias/datadog"
-  target_key_id = aws_kms_key.datadog.key_id
-}
-
-# Create VPC flow log forwarder
 module "datadog_vpc_fl_forwarder" {
-  source = "terraform-aws-modules/datadog-forwarders/aws//modules/vpc_flow_log_forwarder"
+  source  = "terraform-aws-modules/datadog-forwarders/aws//modules/vpc_flow_log_forwarder"
+  version = "~> 4.12"
 
-  kms_alias             = aws_kms_alias.datadog.name
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key.arn
-  dd_site               = "datadoghq.com"
+  kms_alias             = "alias/datadog"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
 
   name                 = "vpc-flow-log-forwarder"
   read_cloudwatch_logs = true
 
   tags = {
     Environment = "production"
-    Purpose     = "network-monitoring"
   }
-}
-
-# Create VPC flow log
-resource "aws_flow_log" "vpc" {
-  vpc_id          = aws_vpc.main.id
-  traffic_type    = "ALL"
-  iam_role_arn    = aws_iam_role.flow_log.arn
-  log_destination = aws_cloudwatch_log_group.vpc_flow_log.arn
 }
 
 # Subscribe flow log group to forwarder
@@ -417,7 +397,6 @@ resource "aws_cloudwatch_log_subscription_filter" "vpc_flow_log" {
   destination_arn = module.datadog_vpc_fl_forwarder.lambda_arn
 }
 
-# Grant permission for CloudWatch Logs
 resource "aws_lambda_permission" "allow_vpc_flow_log" {
   statement_id  = "AllowExecutionFromCloudWatch"
   action        = "lambda:InvokeFunction"
@@ -429,51 +408,38 @@ resource "aws_lambda_permission" "allow_vpc_flow_log" {
 
 ## Usage Examples
 
-### Example 1: All Forwarders with PrivateLink
+### Example 1: Basic - All Forwarders
 
 ```hcl
-# Create all forwarders with VPC endpoints
+# Prerequisites: KMS key and Secrets Manager secret must exist
+data "aws_secretsmanager_secret" "datadog_api_key" {
+  name = "datadog/api_key"
+}
+
 module "datadog_forwarders" {
-  source = "terraform-aws-modules/datadog-forwarders/aws"
+  source  = "terraform-aws-modules/datadog-forwarders/aws"
+  version = "~> 4.12"
 
   kms_alias             = "alias/datadog"
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key.arn
-  dd_site               = "datadoghq.com"
-
-  # Enable all forwarders
-  create_log_forwarder    = true
-  create_rds_em_forwarder = true
-  create_vpc_fl_forwarder = true
-
-  # PrivateLink VPC endpoints
-  vpc_id             = aws_vpc.main.id
-  subnet_ids         = aws_subnet.private[*].id
-  security_group_ids = [aws_security_group.datadog_vpce.id]
-
-  create_metrics_vpce        = true
-  create_agent_vpce          = true
-  create_log_forwarder_vpce  = true
-  create_api_vpce            = true
-  create_processes_vpce      = true
-  create_traces_vpce         = true
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
 
   tags = {
     Environment = "production"
-    ManagedBy   = "Terraform"
   }
 }
 ```
 
-### Example 2: Log Forwarder Only
+### Example 2: Log Forwarder Only with S3 Sources
 
 ```hcl
 module "log_forwarder_only" {
-  source = "terraform-aws-modules/datadog-forwarders/aws"
+  source  = "terraform-aws-modules/datadog-forwarders/aws"
+  version = "~> 4.12"
 
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key.arn
+  kms_alias             = "alias/datadog"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
 
-  # Only create log forwarder
-  create_log_forwarder    = true
+  # Disable other forwarders
   create_rds_em_forwarder = false
   create_vpc_fl_forwarder = false
 
@@ -481,23 +447,63 @@ module "log_forwarder_only" {
   log_forwarder_name        = "custom-log-forwarder"
   log_forwarder_memory_size = 2048
   log_forwarder_timeout     = 300
+  log_forwarder_s3_log_bucket_arns = [
+    "arn:aws:s3:::my-application-logs",
+    "arn:aws:s3:::my-cloudtrail-logs"
+  ]
 
   tags = {
-    Environment = "development"
+    Environment = "production"
   }
 }
 ```
 
-### Example 3: EU Datadog Site
+### Example 3: All Forwarders with PrivateLink VPC Endpoints
+
+```hcl
+module "datadog_forwarders" {
+  source  = "terraform-aws-modules/datadog-forwarders/aws"
+  version = "~> 4.12"
+
+  kms_alias             = "alias/datadog"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key.arn
+
+  # VPC configuration
+  vpc_id = module.vpc.vpc_id
+
+  # Enable VPC endpoints for private connectivity
+  create_metrics_vpce             = true
+  metrics_vpce_subnet_ids         = module.vpc.private_subnets
+  metrics_vpce_security_group_ids = [aws_security_group.datadog.id]
+
+  create_agent_vpce             = true
+  agent_vpce_subnet_ids         = module.vpc.private_subnets
+  agent_vpce_security_group_ids = [aws_security_group.datadog.id]
+
+  create_log_forwarder_vpce             = true
+  log_forwarder_vpce_subnet_ids         = module.vpc.private_subnets
+  log_forwarder_vpce_security_group_ids = [aws_security_group.datadog.id]
+
+  # Lambda VPC configuration
+  log_forwarder_subnet_ids         = module.vpc.private_subnets
+  log_forwarder_security_group_ids = [aws_security_group.lambda.id]
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 4: EU Datadog Site
 
 ```hcl
 module "datadog_forwarders_eu" {
-  source = "terraform-aws-modules/datadog-forwarders/aws"
+  source  = "terraform-aws-modules/datadog-forwarders/aws"
+  version = "~> 4.12"
 
-  dd_api_key_secret_arn = aws_secretsmanager_secret.datadog_api_key_eu.arn
+  kms_alias             = "alias/datadog-eu"
+  dd_api_key_secret_arn = data.aws_secretsmanager_secret.datadog_api_key_eu.arn
   dd_site               = "datadoghq.eu"  # EU site
-
-  kms_alias = "alias/datadog-eu"
 
   tags = {
     Environment = "production"
@@ -508,72 +514,39 @@ module "datadog_forwarders_eu" {
 
 ## Best Practices
 
-### Security and Access Control
+### Security
 
-1. **Use Secrets Manager for API Keys**: Always store Datadog API and application keys in AWS Secrets Manager instead of hardcoding them in Terraform configurations.
-2. **Enable KMS Encryption**: Use customer-managed KMS keys for encrypting Lambda environment variables containing sensitive data, especially for the VPC flow log forwarder.
-3. **Implement Least Privilege IAM**: Review and customize IAM policies to grant only necessary permissions for each forwarder function.
-4. **Use PrivateLink Endpoints**: Deploy VPC endpoints for Datadog services to keep telemetry data within AWS network and avoid public internet exposure.
-5. **Rotate API Keys Regularly**: Implement a rotation schedule for Datadog API keys and update Secrets Manager secrets accordingly.
-6. **Enable CloudTrail Logging**: Monitor forwarder Lambda function invocations and IAM policy changes through CloudTrail.
-7. **Restrict S3 Bucket Access**: Apply bucket policies to restrict access to Lambda deployment packages to authorized principals only.
+1. **Use Secrets Manager**: Store Datadog API keys in AWS Secrets Manager via `dd_api_key_secret_arn` (recommended over `dd_api_key`)
+2. **Enable KMS Encryption**: Create KMS key and provide `kms_alias` (required for VPC flow log forwarder)
+3. **Use PrivateLink**: Deploy VPC endpoints for private connectivity to Datadog (no public internet exposure)
+4. **Enable S3 Security**: Set `bucket_attach_deny_insecure_transport_policy = true` for Lambda artifact bucket
 
-### Configuration and Deployment
+### Configuration
 
-1. **Pin Forwarder Versions**: Specify exact `forwarder_version` values to ensure consistent deployments and controlled updates.
-2. **Choose Appropriate Site**: Configure `dd_site` correctly based on your Datadog account region (US, EU, Gov, etc.).
-3. **Tag Resources Comprehensively**: Apply tags including Environment, Application, Owner, and CostCenter for resource tracking.
-4. **Use ARM64 Architecture**: Leverage ARM64 (Graviton) Lambda functions for better price-performance ratio.
-5. **Customize Lambda Settings**: Tune memory size and timeout based on your log volume and processing requirements.
-6. **Enable Concurrent Execution Limits**: Set `reserved_concurrent_executions` to prevent Lambda throttling during traffic spikes.
-7. **Version Control Configurations**: Store all forwarder configurations in version control systems for audit and rollback capabilities.
+1. **Pin Forwarder Version**: Specify `log_forwarder_version` for consistent deployments
+2. **Set Correct Site**: Configure `dd_site` based on your Datadog region (`datadoghq.com`, `datadoghq.eu`)
+3. **Use ARM64**: Keep default `["arm64"]` architecture for cost optimization
+4. **Set Concurrency Limits**: Configure `reserved_concurrent_executions` based on expected log volume
 
-### Performance and Optimization
+### Performance
 
-1. **Right-Size Lambda Memory**: Monitor Lambda execution metrics and adjust memory allocation; more memory provides more CPU power.
-2. **Optimize Log Filtering**: Use CloudWatch Logs subscription filter patterns to forward only necessary logs and reduce Lambda invocations.
-3. **Batch CloudWatch Log Subscriptions**: Subscribe multiple log groups to a single forwarder instead of creating individual forwarders.
-4. **Monitor Lambda Metrics**: Track Duration, Errors, Throttles, and ConcurrentExecutions to identify performance issues.
-5. **Use Latest Python Runtime**: Keep Lambda runtime up to date (Python 3.12) for performance improvements and security patches.
-6. **Configure Appropriate Timeouts**: Set realistic timeout values; 120 seconds for log forwarder, 10 seconds for RDS/VPC forwarders.
-7. **Implement Dead Letter Queues**: Configure DLQs for failed invocations to ensure no data loss during processing errors.
+1. **Right-Size Memory**: Log forwarder: 1024-2048 MB; RDS/VPC forwarders: 256 MB
+2. **Filter Logs**: Use CloudWatch subscription filter patterns to forward only necessary logs
+3. **Consolidate Forwarders**: Use single log forwarder for multiple log sources
+4. **Set Realistic Timeouts**: Log forwarder: 120s; RDS/VPC forwarders: 10s
 
 ### Cost Optimization
 
-1. **Consolidate Forwarders**: Use a single log forwarder for multiple log sources instead of creating separate forwarders per source.
-2. **Filter Unnecessary Logs**: Apply subscription filter patterns to exclude debug or verbose logs that don't require forwarding.
-3. **Use Reserved Capacity**: For predictable workloads, consider reserved capacity for Lambda to reduce costs.
-4. **Monitor Data Transfer**: Track data transfer costs especially when not using PrivateLink endpoints.
-5. **Optimize Memory Allocation**: Use AWS Lambda Power Tuning to find optimal memory configuration for cost-performance balance.
-6. **Disable Unused Forwarders**: Set `create_*_forwarder = false` for forwarder types not needed in your environment.
-7. **Review Datadog Ingestion**: Monitor Datadog log and metric ingestion to identify and reduce unnecessary data transmission.
+1. **Disable Unused Forwarders**: Set `create_*_forwarder = false` when not needed
+2. **Filter Before Forwarding**: Exclude debug/verbose logs at subscription filter level
+3. **Monitor Datadog Ingestion**: Track log/metric volume to optimize data transmission
 
-### Monitoring and Observability
+### Important Notes
 
-1. **Enable CloudWatch Logs for Forwarders**: Keep forwarder function logs enabled for troubleshooting and debugging.
-2. **Set Up CloudWatch Alarms**: Create alarms for Lambda errors, throttles, and duration metrics.
-3. **Monitor Datadog Integration**: Use Datadog's AWS Integration dashboard to verify forwarder health and data flow.
-4. **Track Lambda Costs**: Use AWS Cost Explorer with resource tags to monitor forwarder Lambda costs.
-5. **Implement Error Notifications**: Configure SNS topics or EventBridge rules to notify on Lambda function failures.
-6. **Review CloudWatch Logs Retention**: Set appropriate retention periods for forwarder logs to balance costs and compliance.
-
-### Operational Excellence
-
-1. **Document API Key Management**: Maintain clear documentation of which Secrets Manager secrets contain which Datadog API keys.
-2. **Test in Non-Production**: Deploy and test forwarders in development/staging before production deployment.
-3. **Implement Change Management**: Use Terraform workspaces or separate state files for different environments.
-4. **Automate Deployment**: Integrate forwarder deployment into CI/CD pipelines for consistent infrastructure provisioning.
-5. **Plan for Disaster Recovery**: Document procedures for recreating forwarders and restoring Secrets Manager secrets.
-6. **Regular Version Updates**: Stay current with Datadog forwarder releases for bug fixes and new features.
-7. **Maintain Runbooks**: Create operational runbooks for common issues like Lambda throttling or API key expiration.
-
-### High Availability
-
-1. **Deploy Across Multiple AZs**: Use subnet IDs from multiple Availability Zones for VPC endpoints.
-2. **Configure Lambda Retries**: Leverage Lambda's built-in retry mechanism for asynchronous invocations.
-3. **Implement Circuit Breakers**: Monitor error rates and implement automated remediation for persistent failures.
-4. **Use Multiple Forwarders**: For critical workloads, consider deploying redundant forwarders in different regions.
-5. **Test Failover Scenarios**: Regularly test forwarder behavior during AWS service disruptions.
+1. **Prerequisites**: Module does NOT create Secrets Manager secret or KMS key - you must create them beforehand
+2. **VPC Endpoints Default Disabled**: All `create_*_vpce` variables default to `false`
+3. **CloudWatch Log Retention**: Default is only 7 days (`log_forwarder_log_retention_days`)
+4. **ARM64 Default**: Forwarders use ARM64 architecture by default
 
 ## Additional Resources
 
@@ -582,30 +555,18 @@ module "datadog_forwarders_eu" {
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-datadog-forwarders/tree/master/examples
 - **Datadog Forwarder Documentation**: https://docs.datadoghq.com/logs/guide/forwarder/
 - **Datadog AWS Integration**: https://docs.datadoghq.com/integrations/amazon_web_services/
-- **AWS Lambda Best Practices**: https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
-- **Datadog Log Collection**: https://docs.datadoghq.com/logs/log_collection/
 - **Datadog PrivateLink**: https://docs.datadoghq.com/agent/guide/private-link/
-- **AWS Secrets Manager**: https://docs.aws.amazon.com/secretsmanager/latest/userguide/
-- **CloudWatch Logs Subscription Filters**: https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/SubscriptionFilters.html
-- **RDS Enhanced Monitoring**: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_Monitoring.OS.html
-- **VPC Flow Logs**: https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html
 
 ## Notes for AI Agents
 
-When using this module in automated workflows:
+When generating Terraform code with this module:
 
-1. **Store API Keys Securely**: Always use AWS Secrets Manager for Datadog API keys via `dd_api_key_secret_arn`
-2. **Enable Required Forwarders**: Set `create_*_forwarder` flags based on actual monitoring needs
-3. **Configure Datadog Site**: Specify correct `dd_site` value based on Datadog account region
-4. **Use KMS Encryption**: Provide `kms_alias` for VPC flow log forwarder (required)
-5. **Tag Resources**: Apply comprehensive tags for cost allocation and resource tracking
-6. **Choose Right Architecture**: Use ARM64 for cost savings; x86_64 for compatibility if needed
-7. **Set Appropriate Memory**: Log forwarder: 1024-2048 MB; RDS/VPC forwarders: 256 MB
-8. **Configure PrivateLink**: Enable VPC endpoints for secure, private data transmission
-9. **Monitor Lambda Metrics**: Track errors, throttles, and duration for performance optimization
-10. **Implement Log Filtering**: Use CloudWatch subscription filter patterns to reduce costs
-11. **Version Control**: Pin `forwarder_version` for consistent deployments
-12. **Test Before Production**: Validate forwarder configurations in non-production environments
-13. **Document Integration**: Maintain clear documentation of log sources and subscription filters
-14. **Plan for Scale**: Set `reserved_concurrent_executions` based on expected log volume
-15. **Review IAM Policies**: Customize IAM policies to grant minimum required permissions
+1. **Required Prerequisites**: Create KMS key and Secrets Manager secret BEFORE using module
+2. **Required Variable**: `kms_alias` is required; either `dd_api_key_secret_arn` or `dd_api_key` must be provided
+3. **Use Secrets Manager**: Prefer `dd_api_key_secret_arn` over `dd_api_key` for security
+4. **Datadog Site**: Set `dd_site = "datadoghq.eu"` for EU customers (default is US)
+5. **Disable Unused**: Set `create_rds_em_forwarder = false` and/or `create_vpc_fl_forwarder = false` if not needed
+6. **VPC Endpoints**: All `create_*_vpce` default to `false` - enable only if PrivateLink needed
+7. **Log Subscriptions**: Create `aws_cloudwatch_log_subscription_filter` and `aws_lambda_permission` for each log group
+8. **Memory Sizing**: Log forwarder default 1024 MB is sufficient; increase for high-volume use cases
+9. **Version Pinning**: Use `version = "~> 4.12"` in module source for stability

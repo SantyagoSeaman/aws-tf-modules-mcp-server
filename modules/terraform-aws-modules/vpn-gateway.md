@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module that creates AWS Site-to-Site VPN connections between Virtual Private Gateways or Transit Gateways and Customer Gateways
 - **Service**: AWS Site-to-Site VPN (Virtual Private Network)
 - **Category**: Networking, Hybrid Cloud Connectivity, Security
-- **Keywords**: vpn, vpn-gateway, site-to-site-vpn, customer-gateway, virtual-private-gateway, transit-gateway, ipsec, vpn-connection, vpn-tunnel, bgp, static-routes, hybrid-cloud, on-premises, network-connectivity, secure-tunnel, encryption, ikev2, tunnel-configuration, route-propagation, high-availability, redundancy, failover, cloudwatch-logs, acceleration, preshared-key, phase1, phase2, dpd, nat-traversal
+- **Keywords**: vpn-gateway, site-to-site-vpn, customer-gateway, transit-gateway, ipsec, vpn-connection, bgp, static-routes, hybrid-cloud, on-premises, encryption, route-propagation, high-availability, vpn-tunnel
 - **Use For**: Hybrid cloud connectivity, connecting on-premises data centers to AWS, secure site-to-site network connections, extending corporate networks to VPC, disaster recovery connectivity, multi-cloud networking, branch office connectivity to AWS, secure remote access infrastructure, network migration to cloud, dev/test environment access from corporate networks, compliance-required encrypted connectivity, backup connectivity for Direct Connect
 
 ## Description
@@ -45,6 +45,7 @@ The module offers extensive configuration flexibility including custom tunnel in
 - **Conditional Creation**: Control VPN connection creation with boolean flags
 - **Startup Action**: Configurable tunnel startup behavior (add/start)
 - **Rekey Margin and Fuzz**: Advanced tunnel rekey timing configuration
+- **Tunnel Lifecycle Control**: Manage tunnel endpoint startup and shutdown behavior
 
 ## Main Use Cases
 
@@ -71,9 +72,11 @@ The module offers extensive configuration flexibility including custom tunnel in
 | `connect_to_transit_gateway` | `bool` | `false` | Attach VPN connection to Transit Gateway instead of VGW |
 | `create_vpn_gateway_attachment` | `bool` | `true` | Attach VPN Gateway to VPC |
 | `vpn_connection_static_routes_only` | `bool` | `false` | Use static routes exclusively (no BGP) |
-| `vpn_connection_enable_acceleration` | `bool` | `null` | Enable acceleration for VPN connection |
+| `vpn_connection_static_routes_destinations` | `list(string)` | `[]` | CIDR blocks for static route destinations |
+| `vpn_connection_enable_acceleration` | `bool` | `null` | Enable acceleration for VPN connection (TGW only) |
 | `vpc_subnet_route_table_ids` | `list(string)` | `[]` | VPC subnet route table IDs for route propagation |
 | `vpc_subnet_route_table_count` | `number` | `0` | Number of subnet route table IDs |
+| `tunnel_inside_ip_version` | `string` | `"ipv4"` | IP version for tunnel inside addresses (ipv4 or ipv6) |
 | `local_ipv4_network_cidr` | `string` | `"0.0.0.0/0"` | Local IPv4 network CIDR |
 | `remote_ipv4_network_cidr` | `string` | `"0.0.0.0/0"` | Remote IPv4 network CIDR |
 | `local_ipv6_network_cidr` | `string` | `null` | Local IPv6 network CIDR |
@@ -89,7 +92,7 @@ The module offers extensive configuration flexibility including custom tunnel in
 | `tunnel1_ike_versions` | `list(string)` | `null` | IKE versions for tunnel 1 (ikev1, ikev2) |
 | `tunnel2_ike_versions` | `list(string)` | `null` | IKE versions for tunnel 2 (ikev1, ikev2) |
 | `tunnel1_phase1_encryption_algorithms` | `list(string)` | `null` | Phase 1 encryption algorithms for tunnel 1 |
-| `tunnel2_phase1_encryption_algorithms` | `list(string)` | `null` | Phase 2 encryption algorithms for tunnel 2 |
+| `tunnel2_phase1_encryption_algorithms` | `list(string)` | `null` | Phase 1 encryption algorithms for tunnel 2 |
 | `tunnel1_phase1_integrity_algorithms` | `list(string)` | `null` | Phase 1 integrity algorithms for tunnel 1 |
 | `tunnel2_phase1_integrity_algorithms` | `list(string)` | `null` | Phase 1 integrity algorithms for tunnel 2 |
 | `tunnel1_phase2_encryption_algorithms` | `list(string)` | `null` | Phase 2 encryption algorithms for tunnel 1 |
@@ -98,6 +101,10 @@ The module offers extensive configuration flexibility including custom tunnel in
 | `tunnel2_phase2_integrity_algorithms` | `list(string)` | `null` | Phase 2 integrity algorithms for tunnel 2 |
 | `tunnel1_log_options` | `map(any)` | `{}` | CloudWatch log options for tunnel 1 |
 | `tunnel2_log_options` | `map(any)` | `{}` | CloudWatch log options for tunnel 2 |
+| `tunnel1_startup_action` | `string` | `null` | Tunnel 1 startup action (add, start) |
+| `tunnel2_startup_action` | `string` | `null` | Tunnel 2 startup action (add, start) |
+| `tunnel1_enable_tunnel_lifecycle_control` | `bool` | `null` | Enable lifecycle control for tunnel 1 |
+| `tunnel2_enable_tunnel_lifecycle_control` | `bool` | `null` | Enable lifecycle control for tunnel 2 |
 | `tags` | `map(string)` | `{}` | Tags for VPN Connection resource |
 
 ## Main Outputs
@@ -111,8 +118,10 @@ The module offers extensive configuration flexibility including custom tunnel in
 | `vpn_connection_tunnel2_address` | Public IP address of second VPN tunnel |
 | `vpn_connection_tunnel2_cgw_inside_address` | RFC 6890 link-local address of second tunnel (Customer Gateway side) |
 | `vpn_connection_tunnel2_vgw_inside_address` | RFC 6890 link-local address of second tunnel (VPN Gateway side) |
-| `vpn_connection_transit_gateway_attachment_id` | Transit Gateway attachment ID |
-| `vpn_connection_customer_gateway_configuration` | Customer gateway configuration in native XML format |
+| `vpn_connection_transit_gateway_attachment_id` | Transit Gateway attachment ID (sensitive) |
+| `vpn_connection_customer_gateway_configuration` | Customer gateway XML configuration for on-premises device (sensitive) |
+| `tunnel1_preshared_key` | Pre-shared key for tunnel 1 (sensitive) |
+| `tunnel2_preshared_key` | Pre-shared key for tunnel 2 (sensitive) |
 
 ## Usage Examples
 
@@ -151,7 +160,8 @@ module "vpc" {
 
 # Create VPN Connection
 module "vpn_gateway" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.main.id
@@ -185,7 +195,8 @@ resource "aws_customer_gateway" "office" {
 }
 
 module "vpn_gateway_static" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.office.id
@@ -249,7 +260,8 @@ resource "aws_customer_gateway" "site_a" {
 
 # VPN Connection to Transit Gateway
 module "vpn_tgw" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   connect_to_transit_gateway = true
   transit_gateway_id         = aws_ec2_transit_gateway.main.id
@@ -280,7 +292,8 @@ resource "aws_customer_gateway" "datacenter" {
 }
 
 module "vpn_custom_tunnels" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.datacenter.id
@@ -364,7 +377,8 @@ resource "aws_customer_gateway" "hq" {
 }
 
 module "vpn_accelerated" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.hq.id
@@ -435,7 +449,8 @@ resource "aws_customer_gateway" "secondary" {
 
 # Primary VPN Connection
 module "vpn_primary" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.primary.id
@@ -455,7 +470,8 @@ module "vpn_primary" {
 
 # Secondary VPN Connection for redundancy
 module "vpn_secondary" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   vpn_gateway_id      = module.vpc.vgw_id
   customer_gateway_id = aws_customer_gateway.secondary.id
@@ -488,11 +504,15 @@ resource "aws_customer_gateway" "ipv6_site" {
 }
 
 module "vpn_ipv6" {
-  source = "terraform-aws-modules/vpn-gateway/aws"
+  source  = "terraform-aws-modules/vpn-gateway/aws"
+  version = "~> 4.0"
 
   connect_to_transit_gateway = true
   transit_gateway_id         = aws_ec2_transit_gateway.main.id
   customer_gateway_id        = aws_customer_gateway.ipv6_site.id
+
+  # Enable IPv6 for tunnel inside addresses
+  tunnel_inside_ip_version = "ipv6"
 
   # IPv6 network configuration
   local_ipv6_network_cidr  = "::/0"

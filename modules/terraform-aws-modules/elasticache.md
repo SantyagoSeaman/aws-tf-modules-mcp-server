@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/elasticache/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-elasticache
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/elasticache/aws/latest
-- **Latest Version**: 1.10.2
+- **Latest Version**: 1.10.3
 - **Purpose**: Terraform module that creates and manages AWS ElastiCache resources including Redis, Memcached, and Valkey clusters with support for replication groups, cluster mode, global replication, and serverless caches
 - **Service**: AWS ElastiCache (Managed In-Memory Caching Service)
 - **Category**: Database, Caching, Performance Optimization
-- **Keywords**: elasticache, redis, memcached, valkey, cache, in-memory, key-value, data-store, caching, session-management, replication-group, cluster-mode, global-replication, serverless-cache, user-group, multi-az, automatic-failover, encryption, transit-encryption, at-rest-encryption, parameter-group, subnet-group, security-group, pub-sub, leaderboard, messaging, performance, low-latency, high-throughput, read-replica, sharding, snapshot, backup, cloudwatch, monitoring, kms-encryption
+- **Keywords**: elasticache, redis, memcached, valkey, cache, in-memory, replication-group, cluster-mode, serverless-cache, multi-az, automatic-failover, encryption, session-store, low-latency, sharding
 - **Use For**: Session caching and management, database query result caching, application performance acceleration, real-time analytics and leaderboards, pub/sub messaging systems, gaming session state storage, API response caching, recommendation engine data storage, user profile caching, rate limiting and throttling, distributed locks and semaphores, real-time bidding platforms
 
 ## Description
@@ -345,12 +345,8 @@ module "memcached" {
 
   # Security
   security_group_rules = {
-    ingress_app = {
-      type        = "ingress"
-      from_port   = 11211
-      to_port     = 11211
-      protocol    = "tcp"
-      cidr_blocks = ["10.0.0.0/16"]
+    ingress_vpc = {
+      cidr_ipv4   = "10.0.0.0/16"
       description = "Allow Memcached access from VPC"
     }
   }
@@ -396,11 +392,7 @@ module "redis_replication" {
 
   security_group_rules = {
     ingress_vpc = {
-      type        = "ingress"
-      from_port   = 6379
-      to_port     = 6379
-      protocol    = "tcp"
-      cidr_blocks = ["10.0.0.0/16"]
+      cidr_ipv4   = "10.0.0.0/16"
       description = "Allow Redis access from VPC"
     }
   }
@@ -786,8 +778,8 @@ module "valkey_replication" {
 
 ### Security and Access Control
 
-1. **Enable Encryption in Transit**: Always enable `transit_encryption_enabled = true` for production deployments to protect data moving between clients and cache nodes.
-2. **Enable Encryption at Rest**: Use `at_rest_encryption_enabled = true` with KMS customer-managed keys for sensitive data to ensure compliance and security.
+1. **Encryption Enabled by Default**: Both `transit_encryption_enabled` and `at_rest_encryption_enabled` are `true` by default. Use KMS customer-managed keys via `kms_key_arn` for compliance requirements.
+2. **Keep Encryption Enabled**: Do not disable encryption for production deployments; the secure defaults protect data in transit and at rest.
 3. **Implement User-Based Authentication**: Use the user-group submodule to create fine-grained access control instead of relying on a single AUTH token.
 4. **Use VPC Private Subnets**: Deploy ElastiCache clusters in private subnets with no direct internet access to minimize attack surface.
 5. **Configure Security Groups Carefully**: Restrict ingress rules to only the specific CIDR blocks or security groups that need cache access.
@@ -867,7 +859,7 @@ When using this module in automated workflows:
 
 1. **Choose Engine Wisely**: Use Redis for complex data structures, persistence, and pub/sub; use Memcached for simple key-value caching with multi-threading
 2. **Enable High Availability**: Always configure Multi-AZ and automatic failover for production deployments
-3. **Implement Encryption**: Enable both transit and at-rest encryption; use KMS customer-managed keys for compliance requirements
+3. **Encryption Defaults**: Transit and at-rest encryption are enabled by default; use `kms_key_arn` for KMS customer-managed keys
 4. **Use User Groups**: Prefer user-group submodule over AUTH tokens for better security and auditability
 5. **Configure Snapshots**: Set snapshot retention limits and windows for Redis to enable point-in-time recovery
 6. **Monitor Performance**: Enable CloudWatch log delivery and set up alarms for CPU, memory, and cache hit ratio metrics

@@ -6,165 +6,437 @@
 - **Source**: `terraform-aws-modules/eventbridge/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eventbridge
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eventbridge/aws/latest
-- **Latest Version**: 4.2.1
+- **Latest Version**: 4.3.0
 - **Purpose**: Terraform module that creates and manages AWS EventBridge resources for building event-driven architectures and serverless applications
 - **Service**: AWS EventBridge (Amazon EventBridge)
 - **Category**: Integration, Serverless, Event-Driven Architecture
-- **Keywords**: eventbridge, event-bus, event-driven, serverless, event-routing, event-pattern, cloudwatch-events, scheduled-events, cron, rate-expression, event-rule, event-target, event-source, event-archive, event-replay, api-destination, event-pipe, event-connection, lambda-target, sqs-target, sns-target, kinesis-target, step-functions, ecs-task, cloudwatch-logs, event-filtering, event-transformation, cross-account-events, saas-integration, webhooks, event-schema, schema-registry, dead-letter-queue, dlq, retry-policy, input-transformer, event-bus-policy, partner-event-source, custom-event-bus, default-event-bus, event-source-mapping, idempotency, event-deduplication, cloudtrail-events, aws-events, third-party-events, event-driven-architecture, async-communication, decoupling, microservices-events, event-ingestion, event-processing, event-distribution, real-time-events, scheduled-tasks, cron-jobs, event-scheduler
-- **Use For**: Microservices decoupling and communication, serverless workflow orchestration, scheduled task execution and cron jobs, real-time data processing pipelines, cross-account and cross-region event routing, SaaS application integration via webhooks, AWS service event monitoring and automation, API gateway event processing, third-party service integration, audit trail and compliance event tracking, IoT device event processing, multi-tenant event isolation
+- **Keywords**: eventbridge, event-bus, event-driven, serverless, event-rule, event-target, scheduled-events, cron, event-pipe, api-destination, event-archive, lambda-target, sqs-target, step-functions, cross-account-events, dead-letter-queue
+- **Use For**: Microservices decoupling and communication, serverless workflow orchestration, scheduled task execution and cron jobs, real-time data processing pipelines, cross-account and cross-region event routing, SaaS application integration via webhooks, AWS service event monitoring and automation, API gateway event processing, third-party service integration, audit trail and compliance event tracking
 
 ## Description
 
-This Terraform module provides a comprehensive solution for creating and managing AWS EventBridge resources, enabling organizations to build scalable event-driven architectures. EventBridge is a serverless event bus service that facilitates application integration by routing events from various sources to target services based on defined rules and patterns. The module abstracts the complexity of configuring event buses, rules, targets, schedules, pipes, connections, and archives, providing a declarative approach to implementing event-driven systems that decouple application components and enable real-time processing.
+This Terraform module provides a comprehensive solution for creating and managing AWS EventBridge resources, enabling organizations to build scalable event-driven architectures. EventBridge is a serverless event bus service that facilitates application integration by routing events from various sources to target services based on defined rules and patterns. The module abstracts the complexity of configuring event buses, rules, targets, schedules, pipes, connections, and archives, providing a declarative approach to implementing event-driven systems.
 
-The module supports the full spectrum of EventBridge capabilities including custom and default event buses for event routing, rules with sophisticated event pattern matching for filtering and routing logic, multiple target types for event delivery (Lambda, SQS, SNS, Kinesis, Step Functions, ECS, CloudWatch Logs, and more), event schedules for time-based triggering using cron or rate expressions, EventBridge Pipes for advanced event streaming and transformation, API destinations for sending events to external HTTP endpoints, and event archives with replay capabilities for disaster recovery and debugging. The module also handles IAM permissions, resource policies for cross-account access, and dead-letter queues for failed event delivery handling.
+The module supports the full spectrum of EventBridge capabilities including custom and default event buses, rules with sophisticated event pattern matching, multiple target types (Lambda, SQS, SNS, Kinesis, Step Functions, ECS, CloudWatch Logs), event schedules using cron or rate expressions, EventBridge Pipes for advanced streaming and transformation, API destinations for HTTP endpoints, and event archives with replay capabilities. The module handles IAM permissions, resource policies for cross-account access, and dead-letter queues for failed delivery handling.
 
-Built for production use cases, the module implements AWS best practices including conditional resource creation for flexible deployment scenarios, comprehensive IAM policy management for secure event routing, KMS encryption support for sensitive event data, detailed CloudWatch Logs integration for event bus monitoring, and flexible tagging strategies for resource organization. The module's design supports complex architectures including multi-tenant event isolation through custom buses, cross-account event sharing, SaaS partner integrations, and hybrid cloud event routing, making it ideal for modern microservices, serverless applications, and event-driven workflows.
+**Note**: This module has NO submodules. All EventBridge capabilities (buses, rules, targets, schedules, pipes, archives, API destinations, connections, permissions) are managed through conditional resource creation flags within the main module.
 
 ## Key Features
 
-- **Event Bus Management**: Create and manage custom event buses and utilize default event bus for AWS service events
-- **Event Rules Configuration**: Define sophisticated event pattern matching rules with JSON-based filtering logic
-- **Multiple Target Types**: Route events to Lambda functions, SQS queues, SNS topics, Kinesis streams, Step Functions, ECS tasks, CloudWatch Logs, and more
-- **Event Schedules**: Create time-based event triggers using cron expressions or rate expressions for scheduled tasks
-- **EventBridge Pipes**: Configure advanced event streaming with filtering, enrichment, and transformation capabilities
-- **API Destinations**: Send events to external HTTP endpoints and third-party SaaS applications via webhooks
-- **Event Archives**: Create archives for event storage and replay capabilities for disaster recovery and debugging
-- **Event Replay**: Replay archived events to recover from failures or reprocess historical data
-- **Cross-Account Event Routing**: Configure resource policies for cross-account event sharing and multi-account architectures
-- **IAM Role Management**: Automatically create and attach IAM roles with appropriate permissions for event targets
-- **Event Transformation**: Transform event data before delivery using input transformers and input paths
-- **Dead Letter Queues**: Configure DLQ for failed event deliveries with retry policies and error handling
-- **Event Pattern Filtering**: Advanced event filtering using content-based filtering with prefix, suffix, and numeric matching
-- **Connection Management**: Manage OAuth and API key-based connections for API destinations securely
-- **Schedule Groups**: Organize related schedules into groups for better management and monitoring
-- **Flexible Targets**: Support for multiple targets per rule with parallel event delivery
-- **Event Bus Logging**: Enable CloudWatch Logs integration for event bus activity monitoring and debugging
-- **Resource-Based Policies**: Configure event bus policies for fine-grained access control and cross-account permissions
-- **Partner Event Sources**: Integrate with SaaS partner event sources through EventBridge partner ecosystem
-- **Event Schema Registry Integration**: Leverage schema discovery and validation for structured event processing
-- **Conditional Resource Creation**: Granular control over resource creation with boolean flags for flexible deployments
-- **Comprehensive Tagging**: Apply consistent tags to all EventBridge resources for cost allocation and governance
-- **KMS Encryption Support**: Encrypt sensitive event data at rest using customer-managed KMS keys
-- **Retry Configuration**: Configure retry attempts and exponential backoff for failed event deliveries
-- **Input Path Customization**: Extract and map specific event attributes to target inputs using JSON path expressions
+- **Event Bus Management**: Create custom event buses or use default bus with KMS encryption support
+- **Event Rules Configuration**: Define event pattern matching rules with JSON-based filtering logic
+- **Multiple Target Types**: Route events to Lambda, SQS, SNS, Kinesis, Step Functions, ECS, CloudWatch Logs, and more
+- **EventBridge Scheduler**: Create time-based triggers using cron or rate expressions with timezone support
+- **EventBridge Pipes**: Configure event streaming with filtering, enrichment, and transformation
+- **API Destinations**: Send events to external HTTP endpoints with OAuth/API key authentication
+- **Event Archives**: Store events for replay capabilities and disaster recovery
+- **Cross-Account Event Routing**: Configure resource policies for multi-account architectures
+- **IAM Role Management**: Automatically create IAM roles with appropriate target permissions
+- **Dead Letter Queues**: Configure DLQ for failed deliveries with retry policies
+- **Bus-Level Logging**: Enable CloudWatch Logs, S3, or Firehose logging for event bus activity
+- **Conditional Resource Creation**: Granular control via boolean flags (`create_*`) for flexible deployments
+- **Comprehensive Tagging**: Apply consistent tags to all EventBridge resources
+
+## Main Input Variables
+
+### Core Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Master toggle for all resource creation |
+| `bus_name` | `string` | `"default"` | Event bus name (use custom name for custom buses) |
+| `create_bus` | `bool` | `true` | Create custom EventBridge bus |
+| `create_rules` | `bool` | `true` | Create EventBridge rules |
+| `create_targets` | `bool` | `true` | Create EventBridge targets |
+| `create_schedules` | `bool` | `true` | Create EventBridge schedules |
+| `create_pipes` | `bool` | `true` | Create EventBridge pipes |
+| `create_archives` | `bool` | `false` | Enable event archiving |
+| `create_connections` | `bool` | `false` | Create API connections |
+| `create_api_destinations` | `bool` | `false` | Create API destinations |
+| `kms_key_identifier` | `string` | `null` | KMS key for bus encryption |
+
+### Rules and Targets
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `rules` | `map(any)` | `{}` | Map of EventBridge rules with event patterns |
+| `targets` | `any` | `{}` | Map of targets per rule (Lambda, SQS, etc.) |
+| `dead_letter_config` | `any` | `{}` | SQS dead-letter queue configuration |
+
+### Schedules and Pipes
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `schedules` | `any` | `{}` | EventBridge Scheduler definitions |
+| `schedule_groups` | `any` | `{}` | Schedule group definitions |
+| `pipes` | `any` | `{}` | EventBridge Pipes definitions |
+
+### Archives, Connections, API Destinations
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `archives` | `map(any)` | `{}` | Archive definitions with retention |
+| `connections` | `any` | `{}` | API connection definitions (OAuth, API key) |
+| `api_destinations` | `map(any)` | `{}` | API destination definitions |
+
+### IAM Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_role` | `bool` | `true` | Create IAM role for EventBridge |
+| `role_name` | `string` | `null` | Custom IAM role name |
+| `attach_lambda_policy` | `bool` | `false` | Attach Lambda invocation policy |
+| `attach_sqs_policy` | `bool` | `false` | Attach SQS send message policy |
+| `attach_sns_policy` | `bool` | `false` | Attach SNS publish policy |
+| `attach_kinesis_policy` | `bool` | `false` | Attach Kinesis put record policy |
+| `attach_ecs_policy` | `bool` | `false` | Attach ECS run task policy |
+| `attach_sfn_policy` | `bool` | `false` | Attach Step Functions policy |
+| `attach_cloudwatch_policy` | `bool` | `false` | Attach CloudWatch Logs policy |
+| `lambda_target_arns` | `list(string)` | `[]` | Lambda ARNs for policy scope |
+| `sqs_target_arns` | `list(string)` | `[]` | SQS ARNs for policy scope |
+| `ecs_target_arns` | `list(string)` | `[]` | ECS cluster ARNs for policy scope |
+| `ecs_pass_role_resources` | `list(string)` | `[]` | Approved roles for ECS tasks |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `eventbridge_bus_name` | The EventBridge Bus Name |
+| `eventbridge_bus_arn` | The EventBridge Bus ARN |
+| `eventbridge_rule_ids` | The EventBridge Rule IDs (map) |
+| `eventbridge_rule_arns` | The EventBridge Rule ARNs (map) |
+| `eventbridge_schedule_ids` | The EventBridge Schedule IDs |
+| `eventbridge_schedule_arns` | The EventBridge Schedule ARNs |
+| `eventbridge_pipe_ids` | The EventBridge Pipes IDs |
+| `eventbridge_pipe_arns` | The EventBridge Pipes ARNs |
+| `eventbridge_archive_arns` | The EventBridge Archive ARNs |
+| `eventbridge_connection_ids` | The EventBridge Connection IDs |
+| `eventbridge_api_destination_arns` | The EventBridge API Destination ARNs |
+| `eventbridge_role_arn` | The ARN of the IAM role created |
+| `eventbridge_role_name` | The name of the IAM role created |
+
+## Usage Examples
+
+### Example 1: Event Rule with Lambda Target
+
+```hcl
+module "eventbridge" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  bus_name = "orders-event-bus"
+
+  rules = {
+    orders = {
+      description   = "Capture order events"
+      event_pattern = jsonencode({
+        source      = ["myapp.orders"]
+        detail-type = ["Order Placed"]
+      })
+    }
+  }
+
+  targets = {
+    orders = [
+      {
+        name = "process-order"
+        arn  = aws_lambda_function.order_processor.arn
+      }
+    ]
+  }
+
+  attach_lambda_policy = true
+  lambda_target_arns   = [aws_lambda_function.order_processor.arn]
+
+  tags = {
+    Environment = "production"
+    Application = "orders"
+  }
+}
+```
+
+### Example 2: Scheduled Lambda Execution (Cron Job)
+
+```hcl
+module "eventbridge_scheduler" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  create_bus = false  # Use default bus
+
+  schedules = {
+    daily_cleanup = {
+      description         = "Daily cleanup job at 1 AM"
+      schedule_expression = "cron(0 1 * * ? *)"
+      timezone            = "Europe/London"
+
+      target = {
+        arn      = aws_lambda_function.cleanup.arn
+        role_arn = aws_iam_role.scheduler_role.arn
+        input    = jsonencode({ task = "cleanup" })
+      }
+    }
+
+    hourly_sync = {
+      description         = "Sync data every hour"
+      schedule_expression = "rate(1 hour)"
+
+      target = {
+        arn      = aws_lambda_function.sync.arn
+        role_arn = aws_iam_role.scheduler_role.arn
+      }
+    }
+  }
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 3: EventBridge Pipes (SQS to Lambda)
+
+```hcl
+module "eventbridge_pipes" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  create_bus = false
+
+  pipes = {
+    sqs_to_lambda = {
+      source = aws_sqs_queue.source.arn
+      target = aws_lambda_function.processor.arn
+
+      source_parameters = {
+        filter_criteria = {
+          filter = [
+            {
+              pattern = jsonencode({
+                body = { eventType = ["order"] }
+              })
+            }
+          ]
+        }
+        sqs_queue_parameters = {
+          batch_size = 10
+        }
+      }
+    }
+  }
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 4: Multi-Target Rule with DLQ
+
+```hcl
+module "eventbridge" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  bus_name = "application-events"
+
+  rules = {
+    user_signup = {
+      description   = "User signup events"
+      event_pattern = jsonencode({
+        source      = ["myapp.users"]
+        detail-type = ["User Signed Up"]
+      })
+    }
+  }
+
+  targets = {
+    user_signup = [
+      {
+        name            = "send-welcome-email"
+        arn             = aws_lambda_function.welcome_email.arn
+        dead_letter_arn = aws_sqs_queue.dlq.arn
+      },
+      {
+        name = "notify-analytics"
+        arn  = aws_sqs_queue.analytics.arn
+      },
+      {
+        name = "start-onboarding"
+        arn  = aws_sfn_state_machine.onboarding.arn
+      }
+    ]
+  }
+
+  attach_lambda_policy = true
+  attach_sqs_policy    = true
+  attach_sfn_policy    = true
+
+  lambda_target_arns = [aws_lambda_function.welcome_email.arn]
+  sqs_target_arns    = [aws_sqs_queue.analytics.arn, aws_sqs_queue.dlq.arn]
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 5: Event Archive for Replay
+
+```hcl
+module "eventbridge" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  bus_name        = "critical-events"
+  create_archives = true
+
+  archives = {
+    all_events = {
+      description    = "Archive all events for 30 days"
+      retention_days = 30
+    }
+
+    order_events = {
+      description    = "Archive order events for 90 days"
+      retention_days = 90
+      event_pattern  = jsonencode({
+        source = ["myapp.orders"]
+      })
+    }
+  }
+
+  # Rules and targets...
+  rules   = {}
+  targets = {}
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 6: API Destination (Webhook)
+
+```hcl
+module "eventbridge" {
+  source  = "terraform-aws-modules/eventbridge/aws"
+  version = "~> 4.3"
+
+  bus_name                   = "webhook-bus"
+  create_connections         = true
+  create_api_destinations    = true
+
+  connections = {
+    slack = {
+      authorization_type = "API_KEY"
+      auth_parameters = {
+        api_key = {
+          key   = "Authorization"
+          value = "Bearer ${var.slack_token}"
+        }
+      }
+    }
+  }
+
+  api_destinations = {
+    slack_webhook = {
+      description                      = "Send events to Slack"
+      invocation_endpoint              = "https://hooks.slack.com/services/xxx"
+      http_method                      = "POST"
+      invocation_rate_limit_per_second = 10
+      connection_name                  = "slack"
+    }
+  }
+
+  rules = {
+    alerts = {
+      description   = "Send alerts to Slack"
+      event_pattern = jsonencode({
+        source      = ["myapp.alerts"]
+        detail-type = ["Alert"]
+      })
+    }
+  }
+
+  targets = {
+    alerts = [
+      {
+        name            = "slack-webhook"
+        destination     = "slack_webhook"
+        attach_role_arn = true
+      }
+    ]
+  }
+
+  attach_api_destination_policy = true
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
 
 ## Main Use Cases
 
-1. **Microservices Decoupling**: Implement loosely coupled microservices architectures with asynchronous event-based communication
-2. **Serverless Workflow Orchestration**: Coordinate Lambda functions, Step Functions, and other serverless components via events
+1. **Microservices Decoupling**: Implement loosely coupled microservices with asynchronous event-based communication
+2. **Serverless Workflow Orchestration**: Coordinate Lambda functions, Step Functions, and serverless components
 3. **Scheduled Task Automation**: Execute periodic tasks, batch jobs, and cron jobs using EventBridge Scheduler
-4. **Real-Time Data Processing**: Build streaming data pipelines processing events from AWS services, applications, and IoT devices
-5. **Cross-Account Integration**: Route events across AWS accounts for centralized monitoring, logging, and processing
-6. **SaaS Application Integration**: Connect external SaaS applications via webhooks and API destinations for bi-directional event flow
-7. **Infrastructure Automation**: Automate responses to AWS service events (EC2 state changes, CloudTrail API calls, etc.)
-8. **Audit and Compliance**: Capture and route compliance-related events to centralized logging and SIEM systems
+4. **Real-Time Data Processing**: Build streaming pipelines processing events from AWS services and applications
+5. **Cross-Account Integration**: Route events across AWS accounts for centralized monitoring and processing
+6. **SaaS Application Integration**: Connect external SaaS applications via webhooks and API destinations
+7. **Infrastructure Automation**: Automate responses to AWS service events (EC2, CloudTrail, etc.)
+8. **Audit and Compliance**: Capture and route compliance-related events to logging and SIEM systems
 9. **Multi-Tenant Event Isolation**: Isolate tenant events using custom event buses for SaaS applications
-10. **Event Replay and Recovery**: Archive events for disaster recovery, debugging, and historical data reprocessing
+10. **Event Replay and Recovery**: Archive events for disaster recovery and historical data reprocessing
 
 ## Best Practices
 
-### Event Bus Design and Architecture
+### Event Bus Design
 
-1. **Custom Event Buses for Isolation**: Create separate custom event buses for different applications, tenants, or environments to isolate event traffic and simplify access control
-2. **Naming Conventions**: Use consistent naming conventions for event buses, rules, and targets (e.g., `{environment}-{application}-{purpose}`) for clarity
-3. **Event Bus Per Bounded Context**: Align event buses with domain-driven design bounded contexts in microservices architectures
-4. **Default Bus for AWS Services**: Use the default event bus for AWS service events (CloudTrail, EC2, etc.) and custom buses for application events
-5. **Cross-Account Event Routing**: Configure resource-based policies on event buses for cross-account event sharing in multi-account architectures
-6. **Event Bus Limits**: Monitor event bus quotas (PutEvents rate, rules per bus) and distribute load across multiple buses if needed
+1. **Custom Event Buses for Isolation**: Create separate custom event buses for different applications or tenants
+2. **Default Bus for AWS Services**: Use default bus for AWS service events, custom buses for application events
+3. **Naming Conventions**: Use consistent naming (e.g., `{environment}-{application}-{purpose}`)
 
-### Event Rule Configuration
+### Event Rules and Patterns
 
-1. **Specific Event Patterns**: Define precise event patterns with specific matching criteria to reduce unnecessary rule evaluations and target invocations
-2. **Content-Based Filtering**: Use advanced filtering with prefix, suffix, numeric, and exists operators to minimize event processing overhead
-3. **Rule Naming Strategy**: Use descriptive rule names that clearly indicate the event pattern and target (e.g., `order-created-to-inventory-lambda`)
-4. **Avoid Overly Broad Patterns**: Refrain from catch-all patterns that match all events unless required for auditing or monitoring
-5. **Rule Priority with Multiple Targets**: When multiple targets exist, design event patterns to avoid unintended multiple invocations
-6. **Test Event Patterns**: Use EventBridge event pattern sandbox or test events to validate patterns before production deployment
-7. **Version Event Patterns**: Include event schema versions in patterns to handle schema evolution gracefully
+1. **Specific Event Patterns**: Define precise patterns to reduce unnecessary rule evaluations
+2. **Content-Based Filtering**: Use prefix, suffix, numeric operators to minimize processing
+3. **Test Event Patterns**: Validate patterns in EventBridge sandbox before production
 
 ### Target Configuration
 
-1. **Dead Letter Queues**: Configure DLQ (SQS) for all targets to capture failed event deliveries for later analysis and reprocessing
-2. **Retry Policies**: Set appropriate retry attempts (3-5 retries) and exponential backoff for transient failures
-3. **Target IAM Permissions**: Use least privilege IAM roles for EventBridge to invoke targets with only necessary permissions
-4. **Input Transformation**: Transform event payloads to match target input requirements using input transformers instead of custom Lambda wrappers
-5. **Multiple Targets Strategy**: Use multiple targets per rule judiciously, considering idempotency and consistency requirements
-6. **Batch Size Configuration**: For SQS and Kinesis targets, configure appropriate batch sizes to balance throughput and latency
-7. **Target-Specific Settings**: Configure target-specific parameters (ECS task count, Step Functions input, etc.) based on workload characteristics
-8. **Asynchronous Processing**: Design targets to handle events asynchronously and idempotently to avoid blocking and duplicate processing
+1. **Dead Letter Queues**: Configure DLQ (SQS) for all production targets
+2. **Retry Policies**: Set 3-5 retries with exponential backoff for transient failures
+3. **Least Privilege IAM**: Use specific target ARN lists instead of wildcards
+4. **Input Transformation**: Use input transformers instead of Lambda wrappers
 
-### Event Scheduling
+### Scheduling
 
-1. **Timezone Awareness**: Use explicit timezone settings in cron expressions for schedule rules to avoid daylight saving time issues
-2. **Rate vs Cron Expressions**: Use rate expressions for simple periodic tasks and cron for complex schedules requiring specific times
-3. **Schedule Groups**: Organize related schedules into schedule groups for unified management and monitoring
-4. **Flexible Time Windows**: Configure flexible time windows for schedules that don't require precise execution timing
-5. **Schedule Overlap Prevention**: Design scheduled tasks to complete before the next invocation to prevent overlapping executions
-6. **Error Handling for Schedules**: Implement error handling and DLQ for scheduled targets to capture failed executions
-7. **Schedule Monitoring**: Monitor scheduled event metrics in CloudWatch to detect missed or failed executions
+1. **Timezone Awareness**: Always set explicit timezone in cron expressions
+2. **Scheduler vs Rules**: Prefer EventBridge Scheduler over legacy scheduled rules
+3. **Schedule Groups**: Organize related schedules into groups
 
-### Security and Compliance
+### Security
 
-1. **Resource-Based Policies**: Implement restrictive resource-based policies on event buses to control which accounts and services can send events
-2. **Encryption at Rest**: Enable KMS encryption for sensitive event data, especially for compliance-regulated workloads
-3. **IAM Role Segregation**: Create separate IAM roles for different event rules and targets to follow least privilege principle
-4. **Cross-Account Security**: Use IAM conditions in cross-account policies to restrict event sources and validate event origins
-5. **Audit Event Bus Activity**: Enable CloudWatch Logs for event bus to audit all events passing through for security monitoring
-6. **Sensitive Data Handling**: Avoid including sensitive data in event payloads; use references and retrieve data from secure stores
-7. **Connection Secret Management**: Store API keys and OAuth credentials for API destinations in AWS Secrets Manager with rotation
-8. **Event Schema Validation**: Use EventBridge Schema Registry to validate event structures and prevent malformed events
+1. **KMS Encryption**: Enable for sensitive event data (`kms_key_identifier`)
+2. **Resource-Based Policies**: Implement restrictive policies for cross-account access
+3. **Connection Secrets**: Store API credentials in AWS Secrets Manager with rotation
+4. **Audit Logging**: Enable bus-level logging to CloudWatch for security monitoring
 
-### Performance and Optimization
+### Performance and Cost
 
-1. **Event Payload Size**: Keep event payloads under 256 KB; use references to S3 or databases for large data payloads
-2. **Batch Event Submission**: Use PutEvents API to batch up to 10 events per request to reduce API calls and improve throughput
-3. **Rule Evaluation Efficiency**: Design event patterns to fail fast by placing most selective criteria first in pattern matching
-4. **Target Throttling**: Implement backpressure and throttling in targets to handle high event volumes without overwhelming downstream services
-5. **Archive Storage Optimization**: Configure archive retention periods based on compliance requirements to optimize storage costs
-6. **Pipe Filtering**: Use EventBridge Pipes filtering to reduce unnecessary invocations and data transfer costs
-7. **Monitoring Performance Metrics**: Track FailedInvocations, ThrottledRules, and DeadLetterInvocations metrics for performance tuning
+1. **Event Payload Size**: Keep under 256 KB; use S3 references for large data
+2. **Filter Early**: Filter events at the pattern level to reduce target invocation costs
+3. **Archive Retention**: Set appropriate retention periods (charged per GB-month)
 
-### Cost Optimization
+## Important Gotchas
 
-1. **Event Filtering at Source**: Filter events as early as possible in the event pattern to avoid processing and target invocation costs
-2. **Target Cost Awareness**: Consider target invocation costs (Lambda, Step Functions) when designing event-driven workflows
-3. **Archive Retention Policies**: Set appropriate archive retention periods; archives are charged per GB-month stored
-4. **Cross-Region Considerations**: Minimize cross-region event routing to reduce data transfer costs
-5. **Schedule Optimization**: Consolidate multiple scheduled rules into fewer schedules with batched processing when possible
-6. **API Destination Caching**: Implement caching strategies for API destinations to reduce outbound HTTP requests
-7. **Development Environment Management**: Use conditional creation to disable non-essential event rules in development environments
-
-### Operational Excellence
-
-1. **Event Versioning**: Include schema version fields in events to support backward-compatible schema evolution
-2. **Idempotency Keys**: Include unique event IDs or idempotency keys for deduplication in target processing logic
-3. **Comprehensive Tagging**: Tag all EventBridge resources with environment, application, cost center, and owner tags for governance
-4. **Monitoring and Alerting**: Create CloudWatch alarms for FailedInvocations, ThrottledRules, and DLQ message counts
-5. **Event Replay Strategy**: Regularly test event replay procedures to ensure disaster recovery readiness
-6. **Documentation**: Document event schemas, patterns, and data flows for team knowledge sharing and onboarding
-7. **Change Management**: Version control event patterns and infrastructure code; test changes in non-production environments
-8. **Capacity Planning**: Monitor PutEvents API usage and plan for peak loads; request quota increases proactively
-
-### High Availability and Disaster Recovery
-
-1. **Multi-AZ Deployment**: EventBridge is inherently multi-AZ; ensure targets are also multi-AZ for end-to-end availability
-2. **Cross-Region Replication**: Implement cross-region event routing for critical workflows requiring regional failover
-3. **Event Archiving**: Enable archives for critical event buses to support replay during disaster recovery scenarios
-4. **Target Redundancy**: Configure multiple targets in different availability zones or regions for critical events
-5. **DLQ Monitoring**: Actively monitor and alert on DLQ messages to detect and recover from systematic failures
-6. **Replay Testing**: Periodically test event replay from archives to validate recovery procedures
-7. **Health Checks**: Implement health check events to validate end-to-end event delivery paths
-
-### Development and Deployment
-
-1. **Infrastructure as Code**: Manage all EventBridge resources using Terraform with version-controlled configurations
-2. **Environment Segregation**: Use separate event buses and rules for development, staging, and production environments
-3. **Test Events**: Use EventBridge test event feature to validate rules and targets before production deployment
-4. **Gradual Rollout**: Deploy event-driven changes gradually using canary deployments or feature flags
-5. **Rollback Procedures**: Maintain previous versions of event rules and patterns for quick rollback during incidents
-6. **Local Development**: Use tools like LocalStack or SAM Local for local EventBridge testing and development
-7. **CI/CD Integration**: Automate EventBridge resource deployment through CI/CD pipelines with proper validation and testing stages
+1. **Default Bus Naming**: Setting `bus_name = "default"` with `create_bus = true` creates a custom bus, not AWS default
+2. **ECS Pass Role**: When using ECS targets, you MUST provide `ecs_pass_role_resources` with task role ARNs
+3. **Policy Order**: Set `attach_*_policy` flags BEFORE module creates the IAM role
+4. **DLQ at Target Level**: DLQ configuration is in `targets` map, not module-level
+5. **Version 4.0+ Breaking**: Requires Terraform >= 1.5.7 and AWS Provider >= 6.0
 
 ## Additional Resources
 
@@ -173,33 +445,21 @@ Built for production use cases, the module implements AWS best practices includi
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-eventbridge/tree/master/examples
 - **AWS EventBridge Documentation**: https://docs.aws.amazon.com/eventbridge/latest/userguide/what-is-amazon-eventbridge.html
 - **Event Pattern Reference**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-event-patterns.html
-- **EventBridge Targets**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-targets.html
 - **EventBridge Scheduler**: https://docs.aws.amazon.com/scheduler/latest/UserGuide/what-is-scheduler.html
 - **EventBridge Pipes**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-pipes.html
-- **API Destinations**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-api-destinations.html
-- **Event Archives and Replay**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-archive-event.html
-- **Schema Registry**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-schema.html
-- **Cross-Account Events**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-cross-account.html
-- **EventBridge Security**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-security.html
-- **EventBridge Best Practices**: https://docs.aws.amazon.com/eventbridge/latest/userguide/eb-best-practices.html
 - **AWS EventBridge Pricing**: https://aws.amazon.com/eventbridge/pricing/
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Event Bus Strategy**: Determine whether to use default or custom event buses based on event source isolation requirements
-2. **Event Pattern Design**: Create specific, well-defined event patterns with appropriate filtering to minimize unnecessary target invocations
-3. **Target Selection**: Choose appropriate targets based on processing requirements (synchronous vs asynchronous, stateful vs stateless)
-4. **IAM Permissions**: Ensure EventBridge has necessary IAM permissions to invoke targets; the module can create roles automatically
-5. **Dead Letter Queues**: Always configure DLQ for production rules to capture and analyze failed event deliveries
-6. **Retry Configuration**: Set appropriate retry policies (typically 3-5 retries with exponential backoff) for transient failures
-7. **Event Transformation**: Use input transformers to reshape event payloads instead of wrapper Lambda functions for cost efficiency
-8. **Scheduling Syntax**: Use correct cron or rate expression syntax; test schedules before production deployment
-9. **Cross-Account Setup**: When routing events cross-account, configure both source permissions and target resource policies
-10. **Archive Configuration**: Enable archives for critical event buses to support disaster recovery and debugging capabilities
-11. **Monitoring**: Create CloudWatch alarms for FailedInvocations, ThrottledRules, and DLQ metrics to detect issues
-12. **Tagging**: Apply comprehensive tags to all resources for cost allocation, governance, and resource management
-13. **Security**: Use KMS encryption for sensitive event data and implement least privilege IAM policies
-14. **API Destinations**: Store connection credentials securely in AWS Secrets Manager with automatic rotation
-15. **Testing**: Use EventBridge test events feature to validate event patterns and rules before production deployment
+1. **No Submodules**: This module has no submodules - all features via conditional creation flags
+2. **Event Bus Strategy**: Use `create_bus = false` for default bus, `create_bus = true` with custom `bus_name` for isolation
+3. **Rules and Targets Maps**: Rules and targets use matching keys (e.g., `rules.orders` → `targets.orders`)
+4. **IAM Policy Flags**: Enable only necessary `attach_*_policy` flags and provide specific ARN lists
+5. **Dead Letter Queues**: Configure `dead_letter_arn` at target level for production workloads
+6. **Scheduling Syntax**: Cron format is `cron(min hour day month day-of-week year)` with `?` for day/day-of-week
+7. **Event Patterns**: Use `jsonencode()` for event_pattern values in rules
+8. **Version Constraint**: Use `version = "~> 4.3"` for patch-level updates
+9. **Cross-Account**: Use `create_permissions = true` with `permissions` map for cross-account access
+10. **Encryption**: Set `kms_key_identifier` for KMS encryption of sensitive event data

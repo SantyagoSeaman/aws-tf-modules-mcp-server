@@ -2,57 +2,44 @@
 
 ## Module Information
 
-- **Module Name**: terraform-aws-eks
+- **Module Name**: `eks`
 - **Source**: `terraform-aws-modules/eks/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eks
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest
-- **Latest Version**: 21.3.2
-- **Purpose**: Terraform module that creates and manages AWS Elastic Kubernetes Service (EKS) clusters with support for multiple node group types, Fargate profiles, and Karpenter autoscaling
+- **Latest Version**: 21.15.1
+- **Purpose**: Creates Amazon EKS clusters with comprehensive support for EKS Auto Mode, managed/self-managed node groups, Fargate profiles, hybrid on-premises nodes, and Karpenter autoscaling
 - **Service**: AWS EKS (Elastic Kubernetes Service)
 - **Category**: Container Orchestration, Compute, Kubernetes
-- **Keywords**: eks, kubernetes, k8s, container-orchestration, managed-kubernetes, eks-cluster, node-group, managed-node-group, self-managed-node-group, fargate, fargate-profile, karpenter, autoscaling, cluster-autoscaler, irsa, iam-roles-for-service-accounts, oidc, pod-identity, eks-auto-mode, hybrid-nodes, spot-instances, on-demand, launch-template, user-data, ami, bottlerocket, al2, ubuntu, efa, elastic-fabric-adapter, eks-addons, vpc-cni, coredns, kube-proxy, ebs-csi, cluster-encryption, kms, security-group, cluster-access, access-entry, authentication-mode, eks-api, kubectl, control-plane, data-plane
-- **Use For**: Running containerized applications at scale, microservices deployment on Kubernetes, cloud-native application hosting, CI/CD pipeline execution environments, machine learning model training and serving, big data processing workloads, event-driven architectures, multi-tenant Kubernetes platforms, hybrid cloud Kubernetes deployments, cost-optimized compute with Spot instances, serverless container workloads with Fargate, high-performance computing with EFA
+- **Keywords**: eks, kubernetes, k8s, managed-node-group, fargate, karpenter, irsa, oidc, eks-auto-mode, hybrid-nodes, spot-instances, bottlerocket, al2023, efa, eks-addons, kms-encryption, access-entry, control-plane
+- **Use For**: Running containerized applications at scale, microservices deployment on Kubernetes, cloud-native application hosting, CI/CD pipeline execution, machine learning model training and serving, big data processing workloads, multi-tenant Kubernetes platforms, hybrid cloud deployments, cost-optimized compute with Spot instances, serverless workloads with Fargate, high-performance computing with EFA
 
 ## Description
 
-This Terraform module provides comprehensive management of AWS Elastic Kubernetes Service (EKS) clusters, enabling the creation and configuration of production-ready Kubernetes environments on AWS. The module supports multiple compute options including EKS Auto Mode for fully managed infrastructure, EKS managed node groups for simplified node lifecycle management, self-managed node groups for maximum control, Fargate profiles for serverless container execution, and Karpenter integration for intelligent autoscaling. It handles the complete EKS cluster lifecycle including control plane configuration, IAM role management, security group setup, cluster encryption, and add-on deployment.
+This Terraform module provides comprehensive management of AWS Elastic Kubernetes Service (EKS) clusters, enabling creation of production-ready Kubernetes environments on AWS. The module supports multiple compute options: EKS Auto Mode for fully managed infrastructure where AWS handles both control plane and compute nodes, EKS managed node groups for simplified node lifecycle management with automated updates and patching, self-managed node groups for maximum control over instance configuration, Fargate profiles for serverless container execution, and hybrid nodes for on-premises or edge deployments connected to EKS control plane.
 
-The module addresses common Kubernetes deployment challenges by providing pre-configured patterns for cluster access management, OIDC provider setup for IAM Roles for Service Accounts (IRSA), Pod Identity associations, and cluster authentication modes. It supports advanced networking configurations including custom VPC integration, subnet selection, security group rules, and IPv4/IPv6 dual-stack networking. The module also manages EKS add-ons such as VPC-CNI, CoreDNS, kube-proxy, and EBS CSI driver, ensuring core cluster functionality is properly configured and maintained.
+The module handles the complete EKS cluster lifecycle including control plane configuration with provisioned capacity tiers (standard through tier-4xl for production workloads), IAM role management, security group setup, KMS-based secret encryption, and add-on deployment. It provides pre-configured patterns for cluster access management via access entries (replacing aws-auth ConfigMap), automatic OIDC provider setup for IAM Roles for Service Accounts (IRSA), Pod Identity associations, and flexible authentication modes (CONFIG_MAP, API, or API_AND_CONFIG_MAP).
 
-Key architectural capabilities include support for hybrid node deployments combining multiple node group types, Elastic Fabric Adapter (EFA) configuration for high-performance computing workloads, cluster encryption with AWS KMS, comprehensive tagging strategies, and integration with AWS Auto Scaling for dynamic capacity management. The module includes six specialized submodules for managed node groups, self-managed node groups, Fargate profiles, Karpenter provisioning, hybrid node roles, and user data generation, enabling modular composition of cluster infrastructure while maintaining consistent configuration and state management.
+The module includes six specialized submodules: eks-managed-node-group for AWS-managed instances with spot/on-demand support, self-managed-node-group for custom AutoScaling Groups with full launch template control, fargate-profile for serverless execution with namespace/label selectors, karpenter for dynamic autoscaling infrastructure, hybrid-node-role for on-premises node authentication via SSM or IAM Roles Anywhere, and kms for encryption key management. All submodules can be used independently or composed together for complex cluster architectures.
 
 ## Key Features
 
-- **Six Specialized Submodules**: Modular architecture with eks-managed-node-group, self-managed-node-group, fargate-profile, karpenter, hybrid-node-role, and _user_data submodules
-- **EKS Auto Mode**: Fully managed infrastructure where AWS manages both control plane and compute nodes
-- **Managed Node Groups**: AWS-managed EC2 instances with automated provisioning and lifecycle management
-- **Self-Managed Node Groups**: Complete control over node configuration with custom launch templates and AMIs
-- **Fargate Profiles**: Serverless container execution without managing EC2 instances
-- **Karpenter Integration**: Intelligent node provisioning and autoscaling with support for diverse instance types
-- **Hybrid Node Support**: Deploy on-premises or edge Kubernetes nodes connected to EKS control plane
-- **Multiple Kubernetes Versions**: Support for Kubernetes versions up to 1.33
-- **Cluster Access Management**: Fine-grained access control with cluster access entries and authentication modes
-- **OIDC Provider**: Automatic OpenID Connect provider configuration for IRSA
-- **Pod Identity**: AWS Pod Identity associations for simplified IAM role management
-- **IAM Roles for Service Accounts**: Native IRSA support for Kubernetes service account to IAM role mapping
-- **Cluster Encryption**: KMS-based encryption for Kubernetes secrets and control plane data
-- **Security Group Management**: Automatic security group creation with customizable rules
-- **VPC Integration**: Flexible subnet selection and network configuration
-- **IPv4 and IPv6 Support**: Dual-stack networking capabilities
-- **EKS Add-ons**: Managed deployment of VPC-CNI, CoreDNS, kube-proxy, EBS CSI driver
-- **Cluster Logging**: CloudWatch Logs integration for control plane audit and API logs
-- **Launch Template Support**: Custom launch templates for node groups with user data
-- **Multiple Instance Types**: Support for diverse EC2 instance types including Spot instances
-- **Capacity Types**: On-Demand and Spot instance support for cost optimization
-- **EFA Support**: Elastic Fabric Adapter configuration for high-performance computing
-- **Bottlerocket Support**: AWS Bottlerocket OS for containerized workloads
-- **Custom AMI**: Support for Amazon Linux 2, Ubuntu, and custom AMIs
-- **Node Taints and Labels**: Kubernetes taint and label configuration for pod scheduling
-- **Auto Scaling Groups**: Integration with AWS Auto Scaling for dynamic capacity
-- **Spot Termination Handling**: Native support for Spot instance interruption handling with Karpenter
-- **Cluster Creator Admin**: Automatic admin access for cluster creator
-- **Access Entries**: Kubernetes RBAC integration with AWS IAM identities
-- **Comprehensive Tagging**: Support for resource tags with tag propagation
+- **Six Specialized Submodules**: Modular architecture with eks-managed-node-group, self-managed-node-group, fargate-profile, karpenter, hybrid-node-role, and kms submodules
+- **EKS Auto Mode**: Fully managed infrastructure where AWS manages both control plane and compute nodes with general-purpose or system node pools
+- **Provisioned Control Plane**: Enhanced capacity tiers (standard, tier-xl, tier-2xl, tier-4xl) for production workloads requiring guaranteed API server performance
+- **Managed Node Groups**: AWS-managed EC2 instances with automated provisioning, lifecycle management, auto-repair, and rolling updates
+- **Self-Managed Node Groups**: Complete control over node configuration with custom launch templates, AMIs, and AutoScaling policies
+- **Fargate Profiles**: Serverless container execution with namespace/label selectors and automated pod execution roles
+- **Hybrid Node Support**: On-premises or edge Kubernetes nodes connected to EKS control plane via SSM or IAM Roles Anywhere
+- **Kubernetes 1.33 Support**: Latest Kubernetes version with EKS Capabilities feature support
+- **Access Entries**: Fine-grained cluster access control replacing aws-auth ConfigMap with better security and auditability
+- **IRSA (IAM Roles for Service Accounts)**: Automatic OIDC provider creation for pod-level IAM permissions
+- **KMS Encryption**: Auto-created or bring-your-own-key encryption for Kubernetes secrets at rest
+- **EKS Add-ons**: Managed deployment of VPC-CNI, CoreDNS, kube-proxy, EBS CSI driver with `before_compute` dependency ordering
+- **Spot and On-Demand Mix**: Cost optimization through mixed capacity types in node groups
+- **EFA Support**: Elastic Fabric Adapter for high-performance computing with automatic placement group configuration
+- **Multiple AMI Types**: AL2023_x86_64_STANDARD, Bottlerocket, Ubuntu, and custom AMIs
+- **CloudWatch Integration**: Control plane logging (audit, api, authenticator) with configurable retention
+- **Security Defaults**: Public endpoint disabled by default, KMS encryption enabled, separate control plane subnets supported
 
 ## Main Use Cases
 
@@ -70,46 +57,46 @@ Key architectural capabilities include support for hybrid node deployments combi
 ## Submodules
 
 ### 1. eks-managed-node-group
-- **Purpose**: Create AWS-managed node groups with automated lifecycle management
+- **Purpose**: Create AWS-managed node groups with automated lifecycle management, auto-repair, and rolling updates
 - **Source**: `terraform-aws-modules/eks/aws//modules/eks-managed-node-group`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/eks-managed-node-group
-- **Key Features**: Launch template support, Spot/On-Demand instances, auto-scaling, custom AMIs
+- **Key Features**: Launch template support, Spot/On-Demand instances, EFA support, auto-scaling with `update_config.update_strategy`
 - **Use Cases**: Production workloads, managed updates, simplified operations, multi-AZ deployments
 
 ### 2. self-managed-node-group
-- **Purpose**: Create self-managed node groups with complete configuration control
+- **Purpose**: Create self-managed node groups with complete control over AutoScaling Groups and launch templates
 - **Source**: `terraform-aws-modules/eks/aws//modules/self-managed-node-group`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/self-managed-node-group
-- **Key Features**: Custom launch templates, user data scripts, Auto Scaling Groups, custom AMIs
-- **Use Cases**: Custom configurations, legacy compatibility, specialized workloads, advanced customization
+- **Key Features**: Custom launch templates, user data scripts, AL2023/Bottlerocket AMIs, scaling policies
+- **Use Cases**: Custom configurations, specialized workloads, advanced customization, legacy compatibility
 
 ### 3. fargate-profile
-- **Purpose**: Create Fargate profiles for serverless container execution
+- **Purpose**: Create Fargate profiles for serverless container execution with namespace/label selectors
 - **Source**: `terraform-aws-modules/eks/aws//modules/fargate-profile`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/fargate-profile
-- **Key Features**: Namespace selectors, label selectors, IAM role management, subnet configuration
-- **Use Cases**: Serverless workloads, batch processing, temporary jobs, cost-efficient small workloads
+- **Key Features**: Namespace selectors, label selectors, automated pod execution role, subnet configuration
+- **Use Cases**: Serverless workloads, batch processing, kube-system components, cost-efficient small workloads
 
 ### 4. karpenter
-- **Purpose**: Create IAM resources and infrastructure for Karpenter autoscaling
+- **Purpose**: Create IAM resources and infrastructure for Karpenter cluster autoscaler
 - **Source**: `terraform-aws-modules/eks/aws//modules/karpenter`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/karpenter
-- **Key Features**: IAM roles, Pod Identity, Spot termination handling, node provisioning
+- **Key Features**: IAM roles, Pod Identity, SQS queue for Spot termination, EventBridge rules
 - **Use Cases**: Dynamic autoscaling, diverse instance types, cost optimization, rapid scaling
 
 ### 5. hybrid-node-role
-- **Purpose**: Create IAM roles for hybrid nodes connecting to EKS
+- **Purpose**: Create IAM roles for on-premises or edge nodes connecting to EKS control plane
 - **Source**: `terraform-aws-modules/eks/aws//modules/hybrid-node-role`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/hybrid-node-role
-- **Key Features**: IAM role configuration, on-premises integration, edge computing support
+- **Key Features**: SSM authentication, IAM Roles Anywhere support, edge computing integration
 - **Use Cases**: Hybrid cloud, edge deployments, on-premises Kubernetes nodes, distributed infrastructure
 
-### 6. _user_data
-- **Purpose**: Generate user data scripts for node bootstrapping
-- **Source**: `terraform-aws-modules/eks/aws//modules/_user_data`
-- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/_user_data
-- **Key Features**: Cluster bootstrap configuration, custom scripts, AMI compatibility
-- **Use Cases**: Node initialization, custom configuration, cluster join automation
+### 6. kms
+- **Purpose**: Create and manage KMS keys for cluster secret encryption
+- **Source**: `terraform-aws-modules/eks/aws//modules/kms`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest/submodules/kms
+- **Key Features**: Auto-rotation, key policies, alias management, bring-your-own-key support
+- **Use Cases**: Secret encryption at rest, compliance requirements, key management separation
 
 ## Submodule 1: eks-managed-node-group
 
@@ -161,10 +148,11 @@ The eks-managed-node-group submodule creates AWS-managed node groups that automa
 
 ```hcl
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "production-eks"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -264,7 +252,7 @@ module "separate_node_group" {
 
   name            = "additional-nodes"
   cluster_name    = module.eks.cluster_name
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   subnet_ids = module.vpc.private_subnets
 
@@ -362,7 +350,7 @@ module "self_managed_nodes" {
 
   name                = "custom-nodes"
   cluster_name        = module.eks.cluster_name
-  kubernetes_version  = "1.31"
+  kubernetes_version  = "1.33"
 
   subnet_ids = module.vpc.private_subnets
 
@@ -376,7 +364,7 @@ module "self_managed_nodes" {
 
   # Use latest EKS optimized AMI
   use_latest_ami_release_version = true
-  ami_type                       = "AL2_x86_64"
+  ami_type                       = "AL2023_x86_64_STANDARD"
 
   # Custom user data
   pre_bootstrap_user_data = <<-EOT
@@ -474,10 +462,11 @@ The fargate-profile submodule creates Fargate profiles that enable serverless co
 
 ```hcl
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "fargate-eks"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -629,10 +618,11 @@ The karpenter submodule creates the AWS infrastructure required for Karpenter, a
 
 ```hcl
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "karpenter-eks"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -794,33 +784,37 @@ The main EKS module provides comprehensive creation and configuration of AWS Ela
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `cluster_name` | `string` | `""` | Name of the EKS cluster |
-| `cluster_version` | `string` | `null` | Kubernetes version for the cluster |
-| `vpc_id` | `string` | `""` | VPC ID where cluster will be deployed |
-| `subnet_ids` | `list(string)` | `[]` | List of subnet IDs for cluster |
-| `control_plane_subnet_ids` | `list(string)` | `[]` | Subnet IDs for control plane ENIs |
-| `cluster_endpoint_public_access` | `bool` | `true` | Enable public API endpoint access |
+| `cluster_name` | `string` | `""` | Name of the EKS cluster (required) |
+| `cluster_version` | `string` | `null` | Kubernetes version (e.g., "1.33") |
+| `vpc_id` | `string` | `""` | VPC ID where cluster will be deployed (required) |
+| `subnet_ids` | `list(string)` | `[]` | Subnets for node provisioning (must have proper k8s tags) |
+| `control_plane_subnet_ids` | `list(string)` | `[]` | Separate subnets for control plane ENIs |
+| `cluster_endpoint_public_access` | `bool` | `false` | Enable public API endpoint access |
 | `cluster_endpoint_private_access` | `bool` | `true` | Enable private API endpoint access |
-| `enable_cluster_creator_admin_permissions` | `bool` | `false` | Grant admin permissions to cluster creator |
-| `authentication_mode` | `string` | `"API_AND_CONFIG_MAP"` | Authentication mode for cluster |
-| `cluster_encryption_config` | `map(any)` | `{}` | Cluster encryption configuration |
+| `enable_cluster_creator_admin_permissions` | `bool` | `false` | Grant admin permissions to Terraform identity |
+| `authentication_mode` | `string` | `"API_AND_CONFIG_MAP"` | Authentication mode (API, CONFIG_MAP, or API_AND_CONFIG_MAP) |
+| `create_kms_key` | `bool` | `true` | Create KMS key for secret encryption |
+| `cluster_enabled_log_types` | `list(string)` | `["audit","api","authenticator"]` | Control plane log types |
+| `compute_config` | `object` | `null` | EKS Auto Mode config (enabled, node_pools) |
 | `eks_managed_node_groups` | `map(any)` | `{}` | Map of managed node group definitions |
 | `self_managed_node_groups` | `map(any)` | `{}` | Map of self-managed node group definitions |
 | `fargate_profiles` | `map(any)` | `{}` | Map of Fargate profile definitions |
+| `access_entries` | `map(any)` | `{}` | Map of access entries for cluster access |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `cluster_id` | ID/name of the EKS cluster |
-| `cluster_arn` | ARN of the EKS cluster |
-| `cluster_endpoint` | Endpoint for EKS control plane |
-| `cluster_version` | Kubernetes version of the cluster |
-| `cluster_platform_version` | Platform version of the EKS cluster |
-| `cluster_security_group_id` | Security group ID attached to cluster |
+| `cluster_name` | The EKS cluster identifier |
+| `cluster_arn` | Full ARN reference for the cluster |
+| `cluster_endpoint` | Kubernetes API server endpoint URL |
+| `cluster_version` | Kubernetes version running on the cluster |
+| `cluster_certificate_authority_data` | Base64-encoded certificate for authentication |
+| `cluster_iam_role_arn` | IAM role used by the EKS cluster |
+| `cluster_security_group_id` | Security group attached to control plane |
+| `node_security_group_id` | Security group ID for node communication |
+| `oidc_provider_arn` | OIDC provider ARN for IRSA |
 | `cluster_oidc_issuer_url` | OIDC issuer URL for the cluster |
-| `oidc_provider_arn` | ARN of the OIDC provider |
-| `cluster_certificate_authority_data` | Base64 encoded certificate data |
 | `eks_managed_node_groups` | Map of managed node group attributes |
 | `self_managed_node_groups` | Map of self-managed node group attributes |
 | `fargate_profiles` | Map of Fargate profile attributes |
@@ -832,10 +826,11 @@ The main EKS module provides comprehensive creation and configuration of AWS Ela
 
 ```hcl
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "production-eks"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   # VPC configuration
   vpc_id                   = module.vpc.vpc_id
@@ -1043,23 +1038,28 @@ module "ebs_csi_irsa" {
 
 ```hcl
 module "eks_auto_mode" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "auto-mode-eks"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   # VPC configuration
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
 
   # Enable Auto Mode (fully managed infrastructure)
-  enable_auto_mode = true
+  # AWS manages both control plane and compute nodes
+  compute_config = {
+    enabled    = true
+    node_pools = ["general-purpose"]  # or ["system"] for system workloads only
+  }
 
   # Cluster access
   enable_cluster_creator_admin_permissions = true
 
-  # Auto Mode handles node provisioning
-  # No need to define node groups
+  # Auto Mode handles node provisioning automatically
+  # No need to define eks_managed_node_groups or self_managed_node_groups
 
   tags = {
     Mode = "Auto"
@@ -1071,10 +1071,11 @@ module "eks_auto_mode" {
 
 ```hcl
 module "eks" {
-  source = "terraform-aws-modules/eks/aws"
+  source  = "terraform-aws-modules/eks/aws"
+  version = "~> 21.0"
 
   cluster_name    = "karpenter-cluster"
-  cluster_version = "1.31"
+  cluster_version = "1.33"
 
   vpc_id     = module.vpc.vpc_id
   subnet_ids = module.vpc.private_subnets
@@ -1215,7 +1216,7 @@ module "karpenter" {
 ### Operational Excellence
 
 1. **Use Terraform State Locking**: Store EKS Terraform state in S3 with DynamoDB locking.
-2. **Version Pin the Module**: Use specific module versions (e.g., `version = "~> 20.0"`) in production.
+2. **Version Pin the Module**: Use specific module versions (e.g., `version = "~> 21.0"`) in production.
 3. **Tag Everything**: Apply comprehensive tags including Environment, Owner, Application, CostCenter.
 4. **Enable CloudWatch Container Insights**: Deploy Container Insights for cluster and application monitoring.
 5. **Implement GitOps**: Use tools like Flux or ArgoCD for declarative application deployment.
@@ -1278,21 +1279,19 @@ module "karpenter" {
 
 When using this module in automated workflows:
 
-1. **Plan Kubernetes Version**: Always specify cluster_version explicitly for production clusters
-2. **Use Managed Node Groups**: Prefer managed node groups over self-managed for standard workloads
-3. **Enable Cluster Creator Admin**: Set enable_cluster_creator_admin_permissions = true for initial access
-4. **Configure VPC Properly**: Ensure VPC has sufficient IP addresses for pod networking
-5. **Use Private Subnets**: Deploy nodes in private subnets with NAT gateway or VPC endpoints
-6. **Enable IRSA**: Configure OIDC provider for IAM Roles for Service Accounts
-7. **Deploy Core Add-ons**: Always include vpc-cni, kube-proxy, coredns, and ebs-csi-driver
-8. **Tag for Karpenter**: If using Karpenter, tag subnets and security groups appropriately
-9. **Use Spot Wisely**: Configure Spot instances for fault-tolerant workloads only
-10. **Enable Encryption**: Use KMS encryption for cluster secrets in production
-11. **Configure Logging**: Enable all control plane log types for troubleshooting
-12. **Multi-AZ Deployment**: Distribute nodes across at least three availability zones
-13. **Use Access Entries**: Define explicit access entries instead of managing aws-auth ConfigMap
-14. **Version Pin Module**: Use specific module versions to prevent unexpected changes
-15. **Tag Comprehensively**: Include Environment, Owner, Application, CostCenter tags
-16. **Monitor Add-on Versions**: Keep add-ons updated to most recent versions
-17. **Plan IP Space**: Calculate required IPs based on pod density and node count
-18. **Test Upgrades**: Always test version upgrades in non-production first
+1. **Specify Kubernetes Version**: Always set `cluster_version` explicitly (e.g., "1.33") for production clusters
+2. **Endpoint Access Defaults**: Public endpoint is disabled by default (`cluster_endpoint_public_access = false`); enable if kubectl access needed from outside VPC
+3. **Enable Cluster Creator Admin**: Set `enable_cluster_creator_admin_permissions = true` for Terraform identity to access cluster
+4. **Use Access Entries**: Prefer access entries over aws-auth ConfigMap for cluster access management
+5. **Subnet Tagging Required**: Subnets must have `kubernetes.io/cluster/<CLUSTER_NAME>` tags for node registration
+6. **Deploy Add-ons with Dependencies**: Use `before_compute = true` for vpc-cni to ensure networking is ready before nodes
+7. **EKS Auto Mode**: Simplest setup - use `compute_config = { enabled = true, node_pools = ["general-purpose"] }` for fully managed nodes
+8. **Managed Node Groups Preferred**: Prefer EKS managed node groups over self-managed for standard workloads
+9. **KMS Encryption Enabled**: `create_kms_key = true` by default; secrets are encrypted at rest
+10. **Autoscaling Note**: Module ignores `desired_size` changes to support external autoscalers (Karpenter, Cluster Autoscaler)
+11. **Karpenter Tags**: If using Karpenter, tag subnets and security groups with `karpenter.sh/discovery = <cluster_name>`
+12. **Version Pin Module**: Use specific version (e.g., `version = "~> 21.0"`) to prevent unexpected changes
+13. **Core Add-ons**: Always include vpc-cni, kube-proxy, coredns; add aws-ebs-csi-driver for persistent volumes
+14. **Private Subnets**: Deploy nodes in private subnets with NAT gateway or VPC endpoints for outbound access
+15. **Multi-AZ Deployment**: Distribute nodes across at least three availability zones for HA
+16. **EFA Minimum Nodes**: EFA deployments require minimum 2 nodes; placement groups auto-configured

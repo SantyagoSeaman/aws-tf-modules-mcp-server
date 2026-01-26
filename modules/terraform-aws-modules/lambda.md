@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module that creates and manages AWS Lambda functions, layers, and aliases with comprehensive support for building, packaging, and deploying serverless applications
 - **Service**: AWS Lambda (Serverless Compute)
 - **Category**: Compute, Serverless, Application Integration
-- **Keywords**: lambda, serverless, function-as-a-service, faas, event-driven, serverless-framework, lambda-function, lambda-layer, lambda-alias, lambda-edge, deployment-package, container-image, zip-archive, python, nodejs, java, go, dotnet, ruby, custom-runtime, vpc-lambda, event-source-mapping, async-invocation, provisioned-concurrency, reserved-concurrency, function-url, dead-letter-queue, dlq, cloudwatch-logs, x-ray, tracing, iam-role, execution-role, environment-variables, layers, code-signing, snap-start, arm64, x86-64, s3-deployment, docker-build, pip-install, npm-install
+- **Keywords**: lambda, serverless, faas, lambda-function, lambda-layer, lambda-alias, lambda-edge, container-image, vpc-lambda, event-source-mapping, provisioned-concurrency, function-url, dead-letter-queue, codedeploy, canary-deployment, docker-build
 - **Use For**: API backend implementation, event-driven data processing, real-time file processing, scheduled task automation, microservices architecture, stream processing from Kinesis or DynamoDB, IoT data processing, chatbot and voice assistant backends, image and video processing, ETL workflows, serverless web applications, webhook handlers
 
 ## Description
@@ -506,6 +506,110 @@ resource "aws_cloudwatch_event_target" "lambda" {
   rule      = aws_cloudwatch_event_rule.daily_cleanup.name
   target_id = "lambda"
   arn       = module.lambda_scheduled.lambda_function_arn
+}
+```
+
+## Submodules
+
+### 1. alias
+
+- **Purpose**: Manages Lambda function aliases with weighted traffic routing for blue/green deployments
+- **Source**: `terraform-aws-modules/lambda/aws//modules/alias`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest/submodules/alias
+- **Key Features**: Static and dynamic alias management, weighted traffic shifting, async event configuration, version-specific permissions, auto-refresh for external deployments
+- **Use Cases**: Blue/green deployments, canary releases, CodeDeploy integration, version pinning
+
+#### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | - | Name of the Lambda alias |
+| `function_name` | `string` | - | Name of the Lambda function |
+| `function_version` | `string` | `""` | Version to point alias to |
+| `refresh_alias` | `bool` | `true` | Auto-refresh alias to latest version |
+
+#### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `lambda_alias_arn` | ARN of the Lambda alias |
+| `lambda_alias_name` | Name of the Lambda alias |
+| `lambda_alias_invoke_arn` | Invoke ARN for API Gateway |
+
+#### Usage Example
+
+```hcl
+module "lambda_alias" {
+  source = "terraform-aws-modules/lambda/aws//modules/alias"
+
+  name             = "production"
+  function_name    = module.lambda_function.lambda_function_name
+  function_version = module.lambda_function.lambda_function_version
+
+  # Weighted traffic routing for canary
+  routing_additional_version_weights = {
+    "2" = 0.1  # 10% to version 2
+  }
+
+  allowed_triggers = {
+    api_gateway = {
+      principal  = "apigateway.amazonaws.com"
+      source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*"
+    }
+  }
+}
+```
+
+### 2. deploy
+
+- **Purpose**: AWS CodeDeploy integration for orchestrated Lambda deployments with rollback capabilities
+- **Source**: `terraform-aws-modules/lambda/aws//modules/deploy`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest/submodules/deploy
+- **Key Features**: CodeDeploy application and deployment group creation, canary and rolling deployments, automatic rollback on CloudWatch alarms, lifecycle hook integration
+- **Use Cases**: Production deployments requiring gradual rollouts, automated rollback on failures, traffic shifting with monitoring
+
+#### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `alias_name` | `string` | - | Lambda alias name for deployment |
+| `function_name` | `string` | - | Lambda function name |
+| `target_version` | `string` | - | Target Lambda version |
+| `deployment_config_name` | `string` | `"CodeDeployDefault.LambdaAllAtOnce"` | Deployment configuration |
+| `create_app` | `bool` | `true` | Create CodeDeploy application |
+| `alarm_names` | `list(string)` | `[]` | CloudWatch alarms for auto-rollback |
+
+#### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `codedeploy_app_name` | CodeDeploy application name |
+| `codedeploy_deployment_group_name` | Deployment group name |
+| `deploy_script` | Deployment execution script |
+
+#### Usage Example
+
+```hcl
+module "lambda_deploy" {
+  source = "terraform-aws-modules/lambda/aws//modules/deploy"
+
+  alias_name     = module.lambda_alias.lambda_alias_name
+  function_name  = module.lambda_function.lambda_function_name
+  target_version = module.lambda_function.lambda_function_version
+
+  # Canary deployment: 10% traffic for 5 minutes
+  deployment_config_name = "CodeDeployDefault.LambdaCanary10Percent5Minutes"
+
+  # Auto-rollback on alarm
+  alarm_names = [
+    aws_cloudwatch_metric_alarm.lambda_errors.alarm_name
+  ]
+
+  triggers = {
+    redeployment = sha256(jsonencode([
+      module.lambda_function.lambda_function_version
+    ]))
+  }
 }
 ```
 

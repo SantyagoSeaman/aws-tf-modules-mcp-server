@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/app-runner/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-app-runner
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/app-runner/aws/latest
-- **Latest Version**: 1.2.1
+- **Latest Version**: 1.2.2
 - **Purpose**: Terraform module that creates and manages AWS App Runner services for deploying containerized web applications from source code or container images
 - **Service**: AWS App Runner (Fully Managed Container Application Service)
 - **Category**: Serverless, Compute, Platform-as-a-Service, Container Orchestration
-- **Keywords**: app-runner, apprunner, container, containerized, docker, web-app, web-application, paas, platform-as-a-service, serverless, auto-scaling, autoscaling, github, ecr, source-code, deployment, ci-cd, continuous-deployment, vpc, vpc-connector, private-network, ingress, custom-domain, health-check, observability, x-ray, tracing, iam-role, encryption, kms, secrets-manager, environment-variables, instance-configuration, networking, load-balancer, managed-service, automated-deployment, scaling, cpu, memory, concurrency, connection, code-repository, image-repository, certificate, dns, route53
+- **Keywords**: app-runner, container, serverless, paas, auto-scaling, github, ecr, vpc-connector, custom-domain, x-ray, web-application, ci-cd, deployment, load-balancer, managed-service
 - **Use For**: Deploying containerized web APIs and microservices without managing infrastructure, building serverless web applications with automatic scaling, creating CI/CD pipelines for container-based applications, hosting internal services with private VPC networking, deploying GitHub repositories as web services with automatic builds, running container images from ECR with managed deployments, implementing auto-scaling web applications with custom domains, building multi-tenant SaaS platforms with isolated App Runner services, migrating web workloads to serverless without Kubernetes complexity, developing rapid prototypes with container-based deployments
 
 ## Description
@@ -55,6 +55,277 @@ The module enables advanced networking scenarios including private App Runner se
 8. **Event-driven Applications**: Build web applications that integrate with other AWS services using VPC connectivity
 9. **Static Site Backends**: Deploy backend APIs for JAMstack applications with automatic scaling
 10. **Container Modernization**: Migrate Docker-based applications from on-premises or ECS/EKS without Kubernetes complexity
+
+## Usage Examples
+
+### Example 1: Shared Configurations (Connections and Auto-Scaling)
+
+```hcl
+module "app_runner_shared_configs" {
+  source  = "terraform-aws-modules/app-runner/aws"
+  version = "~> 1.2"
+
+  create_service = false
+
+  connections = {
+    github = {
+      provider_type = "GITHUB"
+    }
+  }
+
+  auto_scaling_configurations = {
+    mini = {
+      name            = "mini"
+      max_concurrency = 20
+      max_size        = 5
+      min_size        = 1
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
+
+### Example 2: Code Repository-Based Service (GitHub)
+
+```hcl
+module "app_runner_code_base" {
+  source  = "terraform-aws-modules/app-runner/aws"
+  version = "~> 1.2"
+
+  service_name = "example-code-base"
+
+  auto_scaling_configuration_arn = module.app_runner_shared_configs.auto_scaling_configurations["mini"].arn
+
+  source_configuration = {
+    authentication_configuration = {
+      connection_arn = module.app_runner_shared_configs.connections["github"].arn
+    }
+    auto_deployments_enabled = false
+    code_repository = {
+      code_configuration = {
+        configuration_source = "REPOSITORY"
+      }
+      repository_url = "https://github.com/aws-containers/hello-app-runner"
+      source_code_version = {
+        type  = "BRANCH"
+        value = "main"
+      }
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
+
+### Example 3: Image-Based Service with VPC Connector
+
+```hcl
+module "app_runner_image_base" {
+  source  = "terraform-aws-modules/app-runner/aws"
+  version = "~> 1.2"
+
+  service_name = "example-image-base"
+
+  instance_policy_statements = {
+    GetSecretValue = {
+      actions   = ["secretsmanager:GetSecretValue"]
+      resources = [aws_secretsmanager_secret.this.arn]
+    }
+  }
+
+  source_configuration = {
+    auto_deployments_enabled = false
+    image_repository = {
+      image_configuration = {
+        port = 8000
+        runtime_environment_variables = {
+          MY_VARIABLE = "hello!"
+        }
+        runtime_environment_secrets = {
+          MY_SECRET = aws_secretsmanager_secret.this.arn
+        }
+      }
+      image_identifier      = "public.ecr.aws/aws-containers/hello-app-runner:latest"
+      image_repository_type = "ECR_PUBLIC"
+    }
+  }
+
+  create_vpc_connector          = true
+  vpc_connector_subnets         = ["subnet-abcde012", "subnet-bcde012a"]
+  vpc_connector_security_groups = ["sg-12345678"]
+
+  network_configuration = {
+    egress_configuration = {
+      egress_type = "VPC"
+    }
+  }
+
+  enable_observability_configuration = true
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
+
+### Example 4: Private Service (VPC Ingress + Egress)
+
+```hcl
+module "app_runner_private" {
+  source  = "terraform-aws-modules/app-runner/aws"
+  version = "~> 1.2"
+
+  service_name = "example-private"
+
+  source_configuration = {
+    auto_deployments_enabled = false
+    image_repository = {
+      image_configuration = {
+        port = 8080
+      }
+      image_identifier      = "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-app:latest"
+      image_repository_type = "ECR"
+    }
+  }
+
+  # Access role for private ECR
+  create_access_iam_role = true
+  private_ecr_arn        = "arn:aws:ecr:us-east-1:123456789012:repository/my-app"
+
+  # Ingress (private access only via VPC endpoint)
+  create_ingress_vpc_connection = true
+  ingress_vpc_id                = "vpc-12345678"
+  ingress_vpc_endpoint_id       = "vpce-01234567890123456"
+
+  # Egress (VPC connector for private resources)
+  create_vpc_connector          = true
+  vpc_connector_subnets         = ["subnet-abcde012", "subnet-bcde012a"]
+  vpc_connector_security_groups = ["sg-12345678"]
+
+  network_configuration = {
+    ingress_configuration = {
+      is_publicly_accessible = false
+    }
+    egress_configuration = {
+      egress_type = "VPC"
+    }
+  }
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 5: Service with Custom Domain
+
+```hcl
+module "app_runner_with_domain" {
+  source  = "terraform-aws-modules/app-runner/aws"
+  version = "~> 1.2"
+
+  service_name = "example-api"
+
+  source_configuration = {
+    auto_deployments_enabled = false
+    image_repository = {
+      image_configuration = {
+        port = 8080
+      }
+      image_identifier      = "public.ecr.aws/aws-containers/hello-app-runner:latest"
+      image_repository_type = "ECR_PUBLIC"
+    }
+  }
+
+  instance_configuration = {
+    cpu    = "1024"  # 1 vCPU
+    memory = "2048"  # 2 GB
+  }
+
+  health_check_configuration = {
+    healthy_threshold   = 1
+    interval            = 10
+    path                = "/health"
+    protocol            = "HTTP"
+    timeout             = 5
+    unhealthy_threshold = 5
+  }
+
+  create_custom_domain_association = true
+  domain_name                      = "api.example.com"
+  enable_www_subdomain             = false
+
+  tags = {
+    Environment = "production"
+  }
+}
+
+# DNS validation records (output from module)
+# Use custom_domain_association_certificate_validation_records
+# to create Route53 CNAME records for certificate validation
+```
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Controls whether any resources will be created |
+| `create_service` | `bool` | `true` | Controls whether the App Runner service will be created |
+| `service_name` | `string` | `""` | Name of the App Runner service (required when `create_service = true`) |
+| `source_configuration` | `any` | `{}` | Source configuration for the service (code repository or image) |
+| `auto_scaling_configuration_arn` | `string` | `null` | ARN of auto scaling configuration to associate |
+| `instance_configuration` | `any` | `{}` | Instance configuration (CPU, memory) for the service |
+| `health_check_configuration` | `any` | `{}` | Health check configuration for the service |
+| `network_configuration` | `any` | `{}` | Network configuration for ingress/egress |
+| `encryption_configuration` | `any` | `{}` | Encryption configuration (KMS key ARN) |
+| `observability_configuration` | `any` | `{}` | Observability configuration for the service |
+| `create_access_iam_role` | `bool` | `false` | Create IAM role for ECR access |
+| `private_ecr_arn` | `string` | `null` | ARN of private ECR repository (grants pull permissions) |
+| `access_iam_role_policies` | `map(string)` | `{}` | IAM policies to attach to access role |
+| `create_instance_iam_role` | `bool` | `true` | Create IAM role for service instances |
+| `instance_iam_role_policies` | `map(string)` | `{}` | IAM policies to attach to instance role |
+| `instance_policy_statements` | `any` | `{}` | Map of IAM policy statements for custom instance permissions |
+| `create_vpc_connector` | `bool` | `false` | Create VPC Connector for egress to private resources |
+| `vpc_connector_subnets` | `list(string)` | `[]` | Subnets for VPC Connector |
+| `vpc_connector_security_groups` | `list(string)` | `[]` | Security groups for VPC Connector |
+| `create_ingress_vpc_connection` | `bool` | `false` | Create VPC Ingress Connection for private services |
+| `ingress_vpc_id` | `string` | `""` | VPC ID for ingress configuration |
+| `ingress_vpc_endpoint_id` | `string` | `""` | VPC endpoint ID for ingress configuration |
+| `create_custom_domain_association` | `bool` | `false` | Create custom domain association |
+| `domain_name` | `string` | `""` | Custom domain name to associate |
+| `enable_www_subdomain` | `bool` | `null` | Associate the www subdomain |
+| `connections` | `any` | `{}` | Map of connection definitions (e.g., GitHub) |
+| `auto_scaling_configurations` | `any` | `{}` | Map of auto-scaling configuration definitions |
+| `enable_observability_configuration` | `bool` | `true` | Enable X-Ray observability configuration |
+| `tags` | `map(string)` | `{}` | Tags to add to all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `service_arn` | ARN of the App Runner service |
+| `service_id` | Unique alphanumeric ID generated by App Runner |
+| `service_url` | Subdomain URL to access the service |
+| `service_status` | Current state of the App Runner service |
+| `access_iam_role_arn` | ARN of the access IAM role |
+| `access_iam_role_name` | Name of the access IAM role |
+| `instance_iam_role_arn` | ARN of the instance IAM role |
+| `instance_iam_role_name` | Name of the instance IAM role |
+| `vpc_connector_arn` | ARN of the VPC connector |
+| `vpc_connector_status` | Current state of the VPC connector |
+| `vpc_ingress_connection_arn` | ARN of the VPC Ingress Connection |
+| `vpc_ingress_connection_domain_name` | Domain name for VPC Ingress Connection |
+| `custom_domain_association_id` | Domain name and service ARN separated by comma |
+| `custom_domain_association_certificate_validation_records` | CNAME records for DNS validation |
+| `custom_domain_association_dns_target` | App Runner subdomain mapped to custom domain |
+| `connections` | Map of attribute maps for all connections created |
+| `auto_scaling_configurations` | Map of attribute maps for all autoscaling configurations |
+| `observability_configuration_arn` | ARN of the observability configuration |
 
 ## Best Practices
 
@@ -170,6 +441,14 @@ The module enables advanced networking scenarios including private App Runner se
 - **App Runner Pricing**: https://aws.amazon.com/apprunner/pricing/
 - **Container Best Practices**: https://docs.docker.com/develop/dev-best-practices/
 - **AWS Well-Architected Framework**: https://aws.amazon.com/architecture/well-architected/
+
+## Important Notes
+
+- **No Submodules**: This module has no submodules; all functionality is in the root module
+- **GitHub Connection**: GitHub connections require **manual OAuth handshake completion** in AWS Console after Terraform creates the connection resource
+- **Terraform Requirements**: Terraform >= 1.0, AWS Provider >= 4.51
+- **VPC Connector Networking**: VPC connector subnets must have NAT Gateway access for outbound internet connectivity
+- **VPC Ingress**: Requires a VPC endpoint for App Runner service (`com.amazonaws.<region>.apprunner.requests`)
 
 ## Notes for AI Agents
 

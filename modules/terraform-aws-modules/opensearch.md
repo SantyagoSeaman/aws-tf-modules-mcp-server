@@ -3,11 +3,11 @@
 ## Module Information
 
 - **Source**: `terraform-aws-modules/opensearch/aws`
-- **Version**: 2.2.0
+- **Version**: 2.5.0
 - **Terraform**: >= 1.5.7
-- **AWS Provider**: >= 6.15
+- **AWS Provider**: >= 6.28
 - **License**: Apache-2.0
-- **Keywords**: opensearch, elasticsearch, search, analytics, log-analytics, observability, cluster, domain, data-node, master-node, ultrawarm, cold-storage, index, shard, replica, kibana, dashboards, vpc, encryption, cognito, saml, iam, access-policy, snapshot
+- **Keywords**: opensearch, elasticsearch, search, log-analytics, observability, cluster, domain, serverless, vpc, encryption, saml, cognito, dashboards
 
 ## Description
 
@@ -16,24 +16,19 @@ Terraform module that creates AWS OpenSearch Service domains and collections for
 ## Key Features
 
 - **OpenSearch Domain Creation**: Create and manage OpenSearch Service domains with custom configurations
-- **Engine Version Support**: Support for OpenSearch and legacy Elasticsearch versions
-- **Cluster Configuration**: Flexible cluster setup with configurable instance types, counts, and dedicated master nodes
-- **Multi-AZ Deployment**: Zone-aware replication across multiple Availability Zones for high availability
-- **Advanced Security Options**: Fine-grained access control, SAML authentication, and master user configuration
-- **VPC Integration**: Deploy domains within VPCs with private endpoint configuration
-- **Encryption**: Encryption at rest, in transit, and node-to-node encryption
-- **EBS Storage Configuration**: Customizable EBS volumes with support for gp3, provisioned IOPS, and throughput settings
-- **Auto-Tuning**: Automatic performance tuning and optimization recommendations
-- **CloudWatch Logging**: Log publishing for index slow logs, search slow logs, error logs, and audit logs
-- **Software Update Management**: Automated software updates with configurable maintenance windows
-- **Access Policies**: IAM-based access control with custom policy documents
-- **Cognito Authentication**: Integration with Amazon Cognito for user authentication
-- **Off-Peak Windows**: Configure maintenance windows during off-peak hours
-- **IPv6 Support**: Dual-stack IPv4/IPv6 endpoint configuration
-- **Package Associations**: Deploy custom OpenSearch packages and dictionaries
-- **VPC Endpoints**: Create VPC endpoints for secure domain access
-- **Outbound Connections**: Configure connections to external OpenSearch domains
-- **Serverless Collections**: Dedicated submodule for OpenSearch Serverless collections (SEARCH, TIMESERIES, VECTORSEARCH)
+- **Serverless Collections**: Dedicated submodule for auto-scaled OpenSearch Serverless (SEARCH, TIMESERIES, VECTORSEARCH types)
+- **Cluster Configuration**: Flexible cluster setup with instance types, counts, dedicated masters, and coordinating nodes
+- **Multi-AZ Deployment**: Zone-aware replication across 2-3 Availability Zones for high availability
+- **Advanced Security Options**: Fine-grained access control enabled by default, SAML and IAM Identity Center authentication
+- **VPC Integration**: Deploy domains within VPCs with custom security groups and VPC endpoints
+- **Encryption by Default**: Encryption at rest, node-to-node encryption, and TLS 1.2+ all enabled by default
+- **EBS Storage Configuration**: gp3 volumes by default with configurable IOPS and throughput
+- **Auto-Tuning**: Automatic performance tuning enabled by default with off-peak maintenance windows
+- **CloudWatch Logging**: Log publishing for INDEX_SLOW_LOGS and SEARCH_SLOW_LOGS by default
+- **Software Update Management**: Automated software updates enabled by default
+- **AI/ML Options**: Natural language query generation capabilities
+- **Dual-Stack Endpoints**: IPv4 and IPv4/IPv6 endpoint support
+- **Cross-Cluster Connections**: Outbound connections to external OpenSearch domains
 
 ## Use Cases
 
@@ -54,74 +49,59 @@ Terraform module that creates AWS OpenSearch Service domains and collections for
 
 Creates AWS OpenSearch Serverless collections for on-demand, auto-scaling search and analytics workloads.
 
-**Purpose**: Provision serverless OpenSearch collections without managing infrastructure, supporting different collection types for various use cases.
+**Source**: `terraform-aws-modules/opensearch/aws//modules/collection`
 
-**Key Features**:
-- Support for SEARCH, TIMESERIES, and VECTORSEARCH collection types
-- Access policy management for fine-grained permissions
-- Network policy configuration for VPC and public access control
-- Encryption policy support with AWS KMS integration
-- Lifecycle policy management for data retention
-- Standby replica configuration for high availability
-- Flexible tagging and resource management
+**Purpose**: Provision serverless OpenSearch collections without managing infrastructure, with automatic scaling and pay-per-use pricing.
 
-**Variables** (key ones):
-- `name` (string): Name of the OpenSearch Serverless collection
-- `type` (string): Collection type - SEARCH, TIMESERIES, or VECTORSEARCH
-- `description` (string): Description of the collection
-- `create_access_policy` (bool): Whether to create an access policy
-- `access_policy` (any): Access policy configuration
-- `create_network_policy` (bool): Whether to create a network policy
-- `network_policy` (any): Network policy configuration with VPC endpoints
-- `create_encryption_policy` (bool): Whether to create an encryption policy
-- `encryption_policy` (any): Encryption policy with KMS key configuration
-- `standby_replicas` (string): Standby replica mode (ENABLED/DISABLED)
-- `tags` (map(string)): Tags to apply to collection resources
+**Collection Types**:
+- `SEARCH`: General-purpose search workloads
+- `TIMESERIES`: Time-series data and log analytics
+- `VECTORSEARCH`: Vector embeddings and similarity search (ML/AI applications)
+
+**Key Variables**:
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | string | `""` | Collection identifier (required) |
+| `type` | string | `null` | Collection type: SEARCH, TIMESERIES, or VECTORSEARCH |
+| `description` | string | `null` | Collection description |
+| `standby_replicas` | string | `null` | ENABLED or DISABLED for backup replicas |
+| `create_access_policy` | bool | `true` | Create access control policy |
+| `access_policy_principals` | list(string) | `[]` | IAM principals with access |
+| `access_policy_index_permissions` | list(string) | `["aoss:*"]` | Index-level permissions |
+| `access_policy_collection_permissions` | list(string) | `["aoss:*"]` | Collection-level permissions |
+| `create_encryption_policy` | bool | `true` | Create encryption policy |
+| `create_network_policy` | bool | `false` | Create network access policy |
+| `network_policy` | any | `null` | VPC endpoint and public access settings |
+| `tags` | map(string) | `{}` | Resource tags |
 
 **Outputs**:
 - `arn`: Amazon Resource Name of the collection
 - `id`: Unique identifier for the collection
-- `endpoint`: Collection-specific endpoint for API requests
-- `dashboard_endpoint`: OpenSearch Dashboards endpoint for visualization
+- `endpoint`: API endpoint for index/search requests
+- `dashboard_endpoint`: OpenSearch Dashboards endpoint
 - `kms_key_arn`: ARN of the KMS key used for encryption
-- `access_policy_version`: Version of the access policy
-- `network_policy_version`: Version of the network policy
-- `encryption_policy_version`: Version of the encryption policy
+- `name`: Collection name
 
 **Usage Example**:
 ```hcl
-module "opensearch_serverless_collection" {
-  source = "terraform-aws-modules/opensearch/aws//modules/collection"
+module "opensearch_serverless" {
+  source  = "terraform-aws-modules/opensearch/aws//modules/collection"
+  version = "~> 2.5"
 
-  name        = "my-search-collection"
+  name        = "my-collection"
   type        = "SEARCH"
-  description = "Production search collection for product catalog"
+  description = "Product catalog search"
 
-  # Access policy
-  create_access_policy = true
-  access_policy = {
-    rules = [
-      {
-        resource_type = "collection"
-        permissions   = ["aoss:*"]
-        principals = [
-          "arn:aws:iam::123456789012:role/SearchAppRole"
-        ]
-      }
-    ]
-  }
+  # Access policy (created by default)
+  access_policy_principals = [
+    "arn:aws:iam::123456789012:role/SearchAppRole"
+  ]
 
-  # Network policy for VPC access
+  # Network policy for VPC-only access
   create_network_policy = true
   network_policy = {
     AllowFromPublic = false
-    SourceVPCEs     = ["vpce-050f79086ee71ac05"]
-  }
-
-  # Encryption policy
-  create_encryption_policy = true
-  encryption_policy = {
-    kms_key_arn = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
+    SourceVPCEs     = ["vpce-xxxxx"]
   }
 
   # Enable standby replicas for HA
@@ -129,65 +109,78 @@ module "opensearch_serverless_collection" {
 
   tags = {
     Environment = "production"
-    Application = "product-search"
   }
 }
 ```
 
 ## Variables
 
+### Required
+- `domain_name` (string): Name of the OpenSearch domain (required for domain creation)
+
 ### Domain Configuration
-- `create` (bool): Whether to create OpenSearch domain resources (default: true)
-- `domain_name` (string): Name of the OpenSearch domain
-- `engine_version` (string): OpenSearch or Elasticsearch engine version (e.g., "OpenSearch_2.13")
+- `create` (bool): Whether to create OpenSearch domain resources (default: `true`)
+- `engine_version` (string): OpenSearch or Elasticsearch engine version (e.g., `"OpenSearch_2.13"`)
+- `ip_address_type` (string): Endpoint addressing - `"ipv4"` or `"dualstack"` (default: `null`)
 
 ### Cluster Settings
-- `cluster_config` (any): Cluster configuration including instance types, counts, zone awareness
+- `cluster_config` (any): Cluster configuration (default: `{dedicated_master_enabled: true}`)
   - `instance_type`: Instance type for data nodes
   - `instance_count`: Number of instances in the cluster
-  - `dedicated_master_enabled`: Whether to enable dedicated master nodes
+  - `dedicated_master_enabled`: Whether to enable dedicated master nodes (default: true)
   - `dedicated_master_type`: Instance type for dedicated master nodes
   - `dedicated_master_count`: Number of dedicated master nodes
   - `zone_awareness_enabled`: Enable multi-AZ deployment
-  - `availability_zone_count`: Number of Availability Zones
+  - `zone_awareness_config.availability_zone_count`: Number of Availability Zones (2 or 3)
 
 ### Storage
-- `ebs_options` (any): EBS volume configuration
+- `ebs_options` (any): EBS volume configuration (default: `{ebs_enabled: true, volume_size: 64, volume_type: "gp3"}`)
   - `ebs_enabled`: Whether to enable EBS volumes
   - `volume_type`: EBS volume type (gp3, gp2, io1)
   - `volume_size`: Size of EBS volumes in GiB
-  - `iops`: Provisioned IOPS for io1/gp3 volumes
+  - `iops`: Provisioned IOPS for gp3/io1 volumes
   - `throughput`: Throughput for gp3 volumes in MiB/s
 
-### Security
-- `advanced_security_options` (any): Fine-grained access control configuration
-  - `enabled`: Enable advanced security options
-  - `anonymous_auth_enabled`: Enable anonymous authentication
+### Security (Secure Defaults)
+- `advanced_security_options` (any): Fine-grained access control (default: `{enabled: true, anonymous_auth_enabled: false}`)
+  - `enabled`: Enable advanced security options (default: true)
+  - `anonymous_auth_enabled`: Enable anonymous authentication (default: false)
+  - `internal_user_database_enabled`: Use internal user database
   - `master_user_options`: Master user credentials or ARN
-  - `saml_options`: SAML authentication configuration
-- `encrypt_at_rest` (any): Encryption at rest configuration
-- `node_to_node_encryption` (any): Node-to-node encryption settings
-- `domain_endpoint_options` (any): HTTPS enforcement and TLS policy
+- `encrypt_at_rest` (any): Encryption at rest (default: `{enabled: true}`)
+- `node_to_node_encryption` (any): Node-to-node encryption (default: `{enabled: true}`)
+- `domain_endpoint_options` (any): HTTPS enforcement (default: `{enforce_https: true, tls_security_policy: "Policy-Min-TLS-1-2-2019-07"}`)
+- `create_saml_options` (bool): Enable SAML authentication (default: `false`)
+- `saml_options` (any): SAML provider configuration
+- `identity_center_options` (object): IAM Identity Center integration (default: `null`)
 
 ### Networking
-- `vpc_options` (any): VPC configuration for domain deployment
+- `vpc_options` (any): VPC configuration for domain deployment (default: `{}`)
   - `subnet_ids`: List of subnet IDs for multi-AZ deployment
-  - `security_group_ids`: Security group IDs for domain access
+- `create_security_group` (bool): Whether to create a security group (default: `true`)
+- `security_group_rules` (any): Custom security group rules (default: `{}` - **no ingress rules by default**)
 
 ### Access Control
-- `access_policies` (string): IAM policy document for domain access
+- `create_access_policy` (bool): Generate IAM access policy (default: `true`)
+- `access_policy_statements` (any): Custom IAM policy statements (default: `{}`)
 
 ### Monitoring and Logging
-- `log_publishing_options` (any): CloudWatch log publishing configuration
-- `auto_tune_options` (any): Auto-tuning configuration and maintenance schedules
+- `log_publishing_options` (any): CloudWatch logging (default: `[{log_type: "INDEX_SLOW_LOGS"}, {log_type: "SEARCH_SLOW_LOGS"}]`)
+- `cloudwatch_log_group_retention_in_days` (number): Log retention period (default: `60`)
+- `cloudwatch_log_group_kms_key_id` (string): KMS key for log encryption
+- `auto_tune_options` (any): Auto-tuning configuration (default: `{desired_state: "ENABLED", rollback_on_disable: "NO_ROLLBACK"}`)
 
 ### Advanced Options
-- `cognito_options` (any): Amazon Cognito authentication configuration
-- `software_update_options` (any): Automated software update settings
-- `off_peak_window_options` (any): Maintenance window configuration
+- `cognito_options` (any): Amazon Cognito authentication for Dashboards
+- `software_update_options` (any): Automated updates (default: `{auto_software_update_enabled: true}`)
+- `off_peak_window_options` (any): Maintenance window (default: `{enabled: true, off_peak_window: {hours: 7}}`)
+- `aiml_options` (object): AI/ML natural language query settings (default: `null`)
+- `package_associations` (map(string)): OpenSearch package mappings (default: `{}`)
+- `vpc_endpoints` (any): VPC endpoint configurations (default: `{}`)
+- `outbound_connections` (any): Cross-cluster outbound connections (default: `{}`)
 
 ### Resource Management
-- `tags` (map(string)): Tags to apply to all resources
+- `tags` (map(string)): Tags to apply to all resources (default: `{}`)
 - `timeouts` (map(string)): Resource operation timeouts
 
 ## Outputs
@@ -198,23 +191,19 @@ module "opensearch_serverless_collection" {
 - `domain_name`: Name of the OpenSearch domain
 
 ### Endpoints
-- `domain_endpoint`: Domain-specific endpoint for API requests
-- `domain_endpoint_v2`: IPv4/IPv6 compatible domain endpoint
-- `domain_dashboard_endpoint`: Endpoint for OpenSearch Dashboards (Kibana)
-- `domain_dashboard_endpoint_v2`: IPv4/IPv6 compatible Dashboard endpoint
-- `domain_endpoint_v2_hosted_zone_id`: Hosted zone ID for dual stack endpoint
+- `domain_endpoint`: Primary API endpoint for index/search/upload requests
+- `domain_endpoint_v2`: Dual-stack (IPv4/IPv6) API endpoint
+- `domain_dashboard_endpoint`: OpenSearch Dashboards endpoint (without https scheme)
+- `domain_dashboard_endpoint_v2`: Dual-stack Dashboards endpoint
+- `domain_endpoint_v2_hosted_zone_id`: Hosted zone ID for dual-stack endpoint
 
-### Advanced Features
-- `package_associations`: Map of package associations and their configurations
-- `vpc_endpoints`: Map of VPC endpoints created for the domain
-- `outbound_connections`: Map of outbound connections to external domains
-
-### Monitoring
-- `cloudwatch_logs`: Map of CloudWatch log groups for domain logs
-
-### Security
+### Infrastructure
 - `security_group_arn`: ARN of the security group (if created)
 - `security_group_id`: ID of the security group (if created)
+- `cloudwatch_logs`: Map of CloudWatch log groups and their properties
+- `vpc_endpoints`: Map of VPC endpoints and their attributes
+- `package_associations`: Map of package associations
+- `outbound_connections`: Map of outbound connections to external domains
 
 ## Usage Examples
 
@@ -223,7 +212,7 @@ module "opensearch_serverless_collection" {
 ```hcl
 module "opensearch_basic" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "my-opensearch-domain"
   engine_version = "OpenSearch_2.13"
@@ -250,7 +239,7 @@ module "opensearch_basic" {
 ```hcl
 module "opensearch_production" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "prod-search-domain"
   engine_version = "OpenSearch_2.13"
@@ -314,7 +303,7 @@ resource "random_password" "master_password" {
 ```hcl
 module "opensearch_vpc" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "vpc-search-domain"
   engine_version = "OpenSearch_2.11"
@@ -371,7 +360,7 @@ module "opensearch_vpc" {
 ```hcl
 module "opensearch_autotuned" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "autotuned-domain"
   engine_version = "OpenSearch_2.13"
@@ -415,7 +404,7 @@ module "opensearch_autotuned" {
 ```hcl
 module "opensearch_saml" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "saml-auth-domain"
   engine_version = "OpenSearch_2.11"
@@ -468,7 +457,7 @@ module "opensearch_saml" {
 ```hcl
 module "opensearch_cognito" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "cognito-auth-domain"
   engine_version = "OpenSearch_2.11"
@@ -508,7 +497,8 @@ module "opensearch_cognito" {
 
 ```hcl
 module "opensearch_serverless_timeseries" {
-  source = "terraform-aws-modules/opensearch/aws//modules/collection"
+  source  = "terraform-aws-modules/opensearch/aws//modules/collection"
+  version = "~> 2.5"
 
   name        = "metrics-timeseries"
   type        = "TIMESERIES"
@@ -563,7 +553,7 @@ module "opensearch_serverless_timeseries" {
 ```hcl
 module "opensearch_custom_access" {
   source  = "terraform-aws-modules/opensearch/aws"
-  version = "~> 2.2"
+  version = "~> 2.5"
 
   domain_name    = "custom-access-domain"
   engine_version = "OpenSearch_2.13"
@@ -774,57 +764,99 @@ module "opensearch_custom_access" {
 
 ## Notes for AI Agents
 
-### Module Selection Guidance
-- **Use this module** when users need to deploy OpenSearch or Elasticsearch domains for search, log analytics, or monitoring use cases on AWS.
-- **Serverless collections** are ideal for variable, unpredictable workloads where auto-scaling and on-demand pricing provide better cost efficiency.
-- **Provisioned domains** are better for predictable, sustained workloads with consistent performance requirements.
-- Consider AWS CloudWatch Logs for simple log aggregation, and OpenSearch for complex search queries, aggregations, and dashboards.
+### Important Gotchas
+- **No default ingress rules**: The module creates a security group but does NOT add ingress rules by default. You MUST specify `security_group_rules` to allow access.
+- **Domain names are immutable**: Changing `domain_name` forces resource replacement.
+- **Internal user database change**: Changing `advanced_security_options.internal_user_database_enabled` from `true` to `false` requires domain replacement.
+- **Master user passwords**: Never hardcode passwords in Terraform. Use AWS Secrets Manager or `random_password` resource.
+- **Access policy is open by default**: When `create_access_policy = true`, it creates a permissive policy. Use `access_policy_statements` to restrict access.
+- **Downtime on scaling**: Reducing instance count or changing instance types may cause downtime.
 
-### Architecture Recommendations
-- For **production workloads**: Always use multi-AZ deployment with dedicated master nodes, encryption, and fine-grained access control.
-- For **log analytics**: Consider time-series indices with ISM lifecycle policies to manage data transitions and deletions.
-- For **high availability**: Deploy 3 dedicated master nodes and data nodes across 3 Availability Zones with zone awareness enabled.
-- For **security-sensitive data**: Deploy in VPC, enable all encryption options, use fine-grained access control, and enable audit logging.
-- For **cost optimization**: Start with current-generation Graviton instances, use UltraWarm storage for older data, and implement automated data lifecycle policies.
+### Secure Defaults in v2.5+
+This module has secure defaults enabled:
+- `encrypt_at_rest.enabled = true`
+- `node_to_node_encryption.enabled = true`
+- `advanced_security_options.enabled = true`
+- `advanced_security_options.anonymous_auth_enabled = false`
+- `domain_endpoint_options.enforce_https = true`
+- `domain_endpoint_options.tls_security_policy = "Policy-Min-TLS-1-2-2019-07"`
+- `auto_tune_options.desired_state = "ENABLED"`
+- `software_update_options.auto_software_update_enabled = true`
+
+### When to Use Serverless vs Provisioned
+| Use Case | Recommendation |
+|----------|----------------|
+| Variable/unpredictable workloads | Serverless collection |
+| Development/testing | Serverless or small provisioned domain |
+| Predictable sustained workloads | Provisioned domain |
+| Need UltraWarm/cold storage | Provisioned domain only |
+| Cost-sensitive, low traffic | Serverless (pay-per-use) |
+| High-throughput, consistent load | Provisioned domain |
 
 ### Common Configuration Patterns
-- **Development/Testing**: Single node with t3.small.search, 10GB gp3 volume, basic security.
-- **Small Production**: 2-3 data nodes (r6g.large.search), 50-100GB per node, dedicated masters, multi-AZ.
-- **Medium Production**: 6 data nodes (r6g.xlarge.search), 500GB per node, 3 dedicated masters, full encryption.
-- **Large Production**: 10+ data nodes (r6g.2xlarge.search or larger), UltraWarm nodes, dedicated coordinators, comprehensive monitoring.
-- **Serverless**: Use collections for event-driven workloads, IoT analytics, or unpredictable search patterns.
+- **Development**: Single node, `t3.small.search`, 10-20GB gp3, basic security
+- **Small Production**: 2-3 nodes (`r6g.large.search`), 50-100GB per node, multi-AZ, dedicated masters
+- **Medium Production**: 3-6 nodes (`r6g.xlarge.search`), 100-500GB per node, 3 dedicated masters
+- **Large Production**: 6+ data nodes (`r6g.2xlarge.search`+), UltraWarm nodes, dedicated coordinators
 
-### Version Considerations
-- **OpenSearch 2.x**: Recommended for new deployments, includes latest features and performance improvements.
-- **Elasticsearch 7.x**: Legacy version, consider migration to OpenSearch for long-term support.
-- Always specify explicit version rather than using "latest" to prevent unintended upgrades.
-- Review [OpenSearch release notes](https://opensearch.org/docs/latest/version-history/) before upgrading.
+### Minimal Production Example
+```hcl
+module "opensearch" {
+  source  = "terraform-aws-modules/opensearch/aws"
+  version = "~> 2.5"
 
-### Security Best Practices
-- **Never expose OpenSearch domains directly to the internet** - always use VPC deployment or restrict access via IAM/IP policies.
-- **Avoid hardcoding credentials** - use IAM roles, AWS Secrets Manager, or SSM Parameter Store for credential management.
-- **Enable fine-grained access control** for production domains to implement authentication and field-level security.
-- **Use separate domains** for different security zones or compliance requirements rather than sharing domains across trust boundaries.
+  domain_name    = "my-domain"
+  engine_version = "OpenSearch_2.13"
 
-### Troubleshooting Tips
-- **Red cluster status**: Check for unassigned shards, insufficient storage, or memory pressure. Review CloudWatch logs for errors.
-- **Yellow cluster status**: Usually indicates missing replicas. Verify you have sufficient nodes for configured replica count.
-- **High JVM memory pressure**: Reduce shard count, optimize queries, or scale to larger instance types with more memory.
-- **Slow search performance**: Review search slow logs, optimize queries, increase replica count, or scale horizontally.
-- **Indexing throttling**: Check for disk utilization near limits, JVM memory pressure, or insufficient compute resources.
-- **Access denied errors**: Verify IAM policies, fine-grained access control roles, and security group configurations.
+  cluster_config = {
+    instance_type            = "r6g.large.search"
+    instance_count           = 3
+    dedicated_master_enabled = true
+    dedicated_master_type    = "r6g.large.search"
+    dedicated_master_count   = 3
+    zone_awareness_enabled   = true
+    zone_awareness_config    = { availability_zone_count = 3 }
+  }
 
-### Cost Estimation
-- **Instance costs**: Primary driver, varies by instance type and count. Graviton instances offer ~25% savings.
-- **Storage costs**: Based on EBS volume size and type (gp3 cheaper than io1). UltraWarm storage ~68% cheaper than hot storage.
-- **Data transfer**: Cross-AZ transfer incurs costs. Keep applications in same AZ as OpenSearch for heavy data flows.
-- **Serverless costs**: Charged for OpenSearch Compute Units (OCUs) and storage. Minimum 4 OCUs when collection is active.
-- Use [AWS Pricing Calculator](https://calculator.aws/) for detailed cost estimates based on specific configurations.
+  ebs_options = {
+    volume_type = "gp3"
+    volume_size = 100
+    iops        = 3000
+    throughput  = 125
+  }
 
-### Integration Patterns
-- **Application logs**: Fluent Bit/Fluentd → OpenSearch (via HTTPS API)
-- **CloudWatch Logs**: Lambda subscription filter → OpenSearch
-- **S3 data**: AWS Lambda → OpenSearch or Logstash → OpenSearch
-- **Kafka streams**: Kafka Connect with OpenSearch sink connector
-- **Direct application**: AWS SDK with HTTPS signing for secure API access
-- **Cross-account access**: IAM role assumption with appropriate trust policies
+  vpc_options = {
+    subnet_ids = module.vpc.private_subnets
+  }
+
+  # REQUIRED: Add ingress rules (none by default)
+  security_group_rules = {
+    ingress_443 = {
+      type        = "ingress"
+      from_port   = 443
+      to_port     = 443
+      protocol    = "tcp"
+      cidr_blocks = [module.vpc.vpc_cidr_block]
+    }
+  }
+
+  # Fine-grained access control with IAM role
+  advanced_security_options = {
+    enabled = true
+    master_user_options = {
+      master_user_arn = aws_iam_role.opensearch_admin.arn
+    }
+  }
+
+  tags = { Environment = "production" }
+}
+```
+
+### Troubleshooting Quick Reference
+| Issue | Likely Cause | Solution |
+|-------|--------------|----------|
+| Red cluster status | Unassigned shards, low storage | Check storage, add nodes |
+| Yellow cluster status | Missing replicas | Add nodes for replica count |
+| Access denied | IAM/FGAC misconfiguration | Check policies and roles |
+| Connection timeout | Security group missing rules | Add `security_group_rules` |
+| High JVM memory pressure | Too many shards, large queries | Scale up or optimize queries |

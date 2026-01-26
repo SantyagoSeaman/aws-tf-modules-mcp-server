@@ -6,16 +6,16 @@
 - **Source**: `terraform-aws-modules/ecs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ecs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest
-- **Latest Version**: 6.6.1
+- **Latest Version**: 7.3.0
 - **Purpose**: Terraform module that creates AWS ECS (Elastic Container Service) resources including clusters, services, task definitions, and capacity providers
 - **Service**: AWS ECS (Elastic Container Service)
 - **Category**: Compute, Containers, Orchestration
-- **Keywords**: ecs, elastic-container-service, containers, docker, fargate, ec2, cluster, service, task-definition, container-definitions, capacity-provider, auto-scaling, autoscaling, asg, service-discovery, service-connect, load-balancer, alb, nlb, target-group, task-execution-role, task-role, iam, cloudwatch-logs, awslogs, container-insights, deployment, rolling-update, blue-green, canary, circuit-breaker, microservices, orchestration, scheduling, placement-constraints, placement-strategy, network-mode, awsvpc, bridge, host, task-networking, ecs-exec, execute-command, secrets-manager, parameter-store, environment-variables, health-checks, readiness-probe, liveness-probe, volumes, efs, ebs, bind-mounts, task-metadata, spot-instances, fargate-spot, cpu-architecture, arm64, x86, graviton, container-registry, ecr, private-registry
+- **Keywords**: ecs, elastic-container-service, containers, fargate, cluster, service, task-definition, capacity-provider, autoscaling, service-connect, load-balancer, alb, nlb, container-insights, microservices, fargate-spot, ecr, secrets-manager, efs
 - **Use For**: Microservices deployment, containerized application hosting, API backend services, batch processing workloads, scheduled tasks, event-driven architectures, container orchestration, scalable web applications, service mesh implementations, continuous deployment pipelines, hybrid workloads with Fargate and EC2
 
 ## Description
 
-This comprehensive Terraform module provides a complete solution for deploying and managing AWS Elastic Container Service (ECS) infrastructure, enabling organizations to run containerized applications at scale using either serverless Fargate compute or traditional EC2 instances. The module abstracts the complexity of ECS resource creation while providing granular control over cluster configuration, service definitions, task specifications, capacity providers, and networking. It supports both modern serverless patterns with Fargate and cost-optimized EC2-based deployments with Auto Scaling groups, making it suitable for diverse workload requirements from development environments to production-scale microservices architectures.
+This comprehensive Terraform module provides a complete solution for deploying and managing AWS Elastic Container Service (ECS) infrastructure, enabling organizations to run containerized applications at scale using either serverless Fargate compute or traditional EC2 instances. The module abstracts the complexity of ECS resource creation while providing granular control over cluster configuration, service definitions, task specifications, capacity providers, and networking. It offers four composable submodules: cluster (infrastructure), service (full-featured deployment), container-definition (reusable container specs), and express-service (simplified deployment). It supports both modern serverless patterns with Fargate and cost-optimized EC2-based deployments with Auto Scaling groups, making it suitable for diverse workload requirements from development environments to production-scale microservices architectures.
 
 The module excels at managing ECS clusters with multiple capacity provider strategies, allowing mixed workloads that combine Fargate, Fargate Spot, and EC2 capacity for optimal cost and performance balance. It provides sophisticated service management capabilities including blue-green deployments, canary releases, circuit breaker configurations, and integration with Application Load Balancers and Network Load Balancers for traffic management. The service submodule handles complex container definitions with support for environment variables, secrets from AWS Secrets Manager or Systems Manager Parameter Store, volume mounts for persistent storage using EFS or EBS, and health check configurations for robust application monitoring.
 
@@ -67,19 +67,35 @@ Key architectural advantages include integrated CloudWatch Logs configuration fo
 
 ### 1. cluster
 
-- **Purpose**: Creates and manages ECS cluster resources with capacity providers
+- **Purpose**: Creates ECS cluster infrastructure with capacity providers, IAM roles, and CloudWatch logging
 - **Source**: `terraform-aws-modules/ecs/aws//modules/cluster`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest/submodules/cluster
-- **Key Features**: Fargate capacity providers, EC2 Auto Scaling capacity providers, CloudWatch logging, execute command configuration
-- **Use Cases**: Creating ECS clusters, configuring capacity strategies, enabling Container Insights, setting up cluster-level logging
+- **Key Features**: Fargate/EC2/ECS Managed Instances capacity providers, Container Insights, execute command configuration
+- **Use Cases**: Creating ECS clusters, configuring capacity strategies, setting up cluster-level logging
 
 ### 2. service
 
-- **Purpose**: Creates and manages ECS services with task definitions and container configurations
+- **Purpose**: Deploys ECS services with task definitions, autoscaling, and load balancer integration (Fargate-focused)
 - **Source**: `terraform-aws-modules/ecs/aws//modules/service`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest/submodules/service
-- **Key Features**: Task definition management, container definitions, auto-scaling, load balancer integration, Service Connect, IAM roles
-- **Use Cases**: Deploying containerized applications, configuring service auto-scaling, integrating with load balancers, managing task networking
+- **Key Features**: Task definition management, auto-scaling (enabled by default), load balancer integration, Service Connect
+- **Use Cases**: Deploying containerized applications, configuring service auto-scaling, integrating with ALB/NLB
+
+### 3. container-definition
+
+- **Purpose**: Generates container definition JSON with integrated CloudWatch or FireLens logging
+- **Source**: `terraform-aws-modules/ecs/aws//modules/container-definition`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest/submodules/container-definition
+- **Key Features**: CloudWatch logging by default, FireLens support, secrets management, health checks
+- **Use Cases**: Creating reusable container definitions, configuring logging drivers, managing environment variables and secrets
+
+### 4. express-service
+
+- **Purpose**: Simplified ECS service deployment with automatic infrastructure provisioning
+- **Source**: `terraform-aws-modules/ecs/aws//modules/express-service`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest/submodules/express-service
+- **Key Features**: Minimal configuration required, automatic security group creation, built-in health checks
+- **Use Cases**: Rapid API deployment, prototyping, services with standard configuration needs
 
 ## Submodule 1: cluster
 
@@ -135,6 +151,7 @@ The cluster submodule creates AWS ECS cluster resources that serve as logical gr
 ```hcl
 module "ecs_cluster" {
   source  = "terraform-aws-modules/ecs/aws//modules/cluster"
+  version = "~> 7.3"
 
   cluster_name = "production-fargate"
 
@@ -185,6 +202,7 @@ module "ecs_cluster" {
 ```hcl
 module "ecs_cluster_ec2" {
   source  = "terraform-aws-modules/ecs/aws//modules/cluster"
+  version = "~> 7.3"
 
   cluster_name = "production-ec2"
 
@@ -225,7 +243,9 @@ module "ecs_cluster_ec2" {
 
 ### Description
 
-The service submodule creates and manages ECS services, which maintain a specified number of running task instances and optionally register them with load balancers. This submodule handles the complete lifecycle of ECS services including task definition creation with container specifications, auto-scaling configuration, load balancer target group associations, Service Connect setup for service mesh capabilities, and IAM role management for task execution and application permissions. It provides comprehensive support for both Fargate and EC2 launch types with sensible defaults optimized for Fargate deployments.
+The service submodule creates and manages ECS services, which maintain running task instances and optionally register them with load balancers. This submodule handles the complete lifecycle of ECS services including task definition creation with container specifications, auto-scaling configuration, load balancer target group associations, Service Connect setup for service mesh capabilities, and IAM role management for task execution and application permissions. It provides comprehensive support for both Fargate and EC2 launch types with sensible defaults optimized for Fargate deployments.
+
+**Important**: Autoscaling is enabled by default in v7.x. The `desired_count` parameter is always ignored in favor of autoscaling policies. Set `enable_autoscaling = false` if you need static task counts.
 
 ### Key Features
 
@@ -255,7 +275,7 @@ The service submodule creates and manages ECS services, which maintain a specifi
 | `cpu` | `number` | `1024` | Number of CPU units used by the task (1024 = 1 vCPU) |
 | `memory` | `number` | `2048` | Amount of memory (in MiB) used by the task |
 | `launch_type` | `string` | `null` | Launch type on which to run service (FARGATE, EC2, or EXTERNAL) |
-| `desired_count` | `number` | `1` | Number of instances of the task definition to place and keep running |
+| `desired_count` | `number` | `1` | Initial task count (ignored when autoscaling is enabled, which is the default) |
 | `deployment_minimum_healthy_percent` | `number` | `100` | Lower limit of running tasks during deployment |
 | `deployment_maximum_percent` | `number` | `200` | Upper limit of running tasks during deployment |
 | `enable_execute_command` | `bool` | `false` | Enable ECS Exec for the service |
@@ -299,6 +319,7 @@ The service submodule creates and manages ECS services, which maintain a specifi
 ```hcl
 module "ecs_service" {
   source  = "terraform-aws-modules/ecs/aws//modules/service"
+  version = "~> 7.3"
 
   name        = "web-application"
   cluster_arn = module.ecs_cluster.cluster_arn
@@ -380,6 +401,7 @@ module "ecs_service" {
 ```hcl
 module "ecs_service_with_secrets" {
   source  = "terraform-aws-modules/ecs/aws//modules/service"
+  version = "~> 7.3"
 
   name        = "api-service"
   cluster_arn = module.ecs_cluster.cluster_arn
@@ -487,6 +509,7 @@ module "ecs_service_with_secrets" {
 ```hcl
 module "orders_service" {
   source  = "terraform-aws-modules/ecs/aws//modules/service"
+  version = "~> 7.3"
 
   name        = "orders-service"
   cluster_arn = module.ecs_cluster.cluster_arn
@@ -525,6 +548,191 @@ module "orders_service" {
   tags = {
     Environment = "production"
     Service     = "orders"
+  }
+}
+```
+
+## Submodule 3: container-definition
+
+### Description
+
+The container-definition submodule generates container definition JSON configurations for use with ECS task definitions. It provides a structured way to define container specifications with integrated CloudWatch logging by default, or FireLens for advanced log routing. This submodule is useful for creating reusable container definitions that can be shared across multiple services.
+
+### Key Features
+
+- Generate container definition JSON with proper formatting
+- CloudWatch Logs integration enabled by default
+- FireLens support for advanced log routing
+- Secrets Manager and Parameter Store integration
+- Health check configuration
+- Read-only root filesystem by default for security
+- Environment variables and secrets management
+
+### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | `""` | Container identifier (up to 255 characters) |
+| `image` | `string` | `""` | Docker image URI with optional tag/digest |
+| `cpu` | `number` | `null` | CPU units to allocate |
+| `memory` | `number` | `null` | Memory (MiB) to allocate |
+| `essential` | `bool` | `true` | Container failure stops task |
+| `portMappings` | `list(any)` | `[]` | Port exposure configuration |
+| `environment` | `list(map(string))` | `[]` | Environment variables |
+| `secrets` | `list(map(string))` | `[]` | AWS Secrets Manager references |
+| `readonlyRootFilesystem` | `bool` | `true` | Enable read-only root filesystem |
+| `logConfiguration` | `any` | `null` | Custom logging driver configuration |
+| `healthCheck` | `any` | `null` | Health monitoring configuration |
+| `cloudwatch_log_group_retention_in_days` | `number` | `14` | Log retention period |
+
+### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `container_definition` | Structured container configuration object |
+| `container_definition_json` | JSON-formatted container definition |
+| `cloudwatch_log_group_arn` | CloudWatch log group ARN |
+| `cloudwatch_log_group_name` | CloudWatch log group name |
+
+### Usage Example
+
+```hcl
+module "container_definition" {
+  source  = "terraform-aws-modules/ecs/aws//modules/container-definition"
+  version = "~> 7.3"
+
+  name  = "api"
+  image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/api:latest"
+
+  cpu    = 256
+  memory = 512
+
+  portMappings = [{
+    containerPort = 8080
+    protocol      = "tcp"
+  }]
+
+  environment = [
+    { name = "ENV", value = "production" },
+    { name = "LOG_LEVEL", value = "info" }
+  ]
+
+  secrets = [
+    {
+      name      = "DATABASE_URL"
+      valueFrom = "arn:aws:secretsmanager:us-east-1:123456789012:secret:db-url"
+    }
+  ]
+
+  healthCheck = {
+    command     = ["CMD-SHELL", "curl -f http://localhost:8080/health || exit 1"]
+    interval    = 30
+    timeout     = 5
+    retries     = 3
+    startPeriod = 60
+  }
+
+  # Security: read-only root filesystem enabled by default
+  readonlyRootFilesystem = true
+
+  cloudwatch_log_group_retention_in_days = 30
+}
+
+# Use with task definition (wrap with jsonencode)
+resource "aws_ecs_task_definition" "app" {
+  family                = "app"
+  container_definitions = jsonencode([module.container_definition.container_definition])
+  # ... other configuration
+}
+```
+
+## Submodule 4: express-service
+
+### Description
+
+The express-service submodule provides a simplified interface for deploying ECS services with minimal configuration. It automatically provisions required infrastructure including security groups, IAM roles, and CloudWatch logging. This submodule is ideal for rapid API deployment, prototyping, or services that follow standard configuration patterns.
+
+### Key Features
+
+- Minimal configuration required for deployment
+- Automatic security group creation and management
+- Built-in health check endpoint configuration
+- Automatic IAM role provisioning
+- Integrated autoscaling with sensible defaults
+- Service URL output for easy access
+
+### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | `""` | Service identifier |
+| `vpc_id` | `string` | `""` | VPC identifier for security group |
+| `cpu` | `number` | `256` | Task CPU (256-4096, powers of 2) |
+| `memory` | `number` | `512` | Task memory (512-8192 MiB) |
+| `cluster` | `string` | `"default"` | ECS cluster name or ARN |
+| `network_configuration` | `object` | `{}` | VPC subnets for task placement |
+| `primary_container` | `object` | `{}` | Container specs including image and port |
+| `scaling_target` | `object` | `{}` | Autoscaling configuration |
+| `health_check_path` | `string` | `"/ping"` | Health check endpoint path |
+| `security_group_ingress_rules` | `map(any)` | `{}` | Ingress rules |
+| `security_group_egress_rules` | `map(any)` | `{}` | Egress rules |
+
+### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `service_arn` | ECS service ARN |
+| `service_url` | Service endpoint URL |
+| `security_group_id` | Created security group ID |
+| `task_exec_iam_role_arn` | Task execution IAM role ARN |
+| `tasks_iam_role_arn` | Task IAM role ARN |
+| `cloudwatch_log_group_name` | CloudWatch log group name |
+
+### Usage Example
+
+```hcl
+module "express_api" {
+  source  = "terraform-aws-modules/ecs/aws//modules/express-service"
+  version = "~> 7.3"
+
+  name   = "my-api"
+  vpc_id = module.vpc.vpc_id
+
+  cpu    = 512
+  memory = 1024
+
+  cluster = module.ecs_cluster.arn
+
+  network_configuration = {
+    subnets = module.vpc.private_subnets
+  }
+
+  primary_container = {
+    image = "123456789012.dkr.ecr.us-east-1.amazonaws.com/my-api:latest"
+    port  = 3000
+  }
+
+  scaling_target = {
+    min_capacity = 2
+    max_capacity = 10
+  }
+
+  health_check_path = "/health"
+
+  # Allow inbound traffic from ALB
+  security_group_ingress_rules = {
+    alb = {
+      type                     = "ingress"
+      from_port                = 3000
+      to_port                  = 3000
+      protocol                 = "tcp"
+      source_security_group_id = module.alb.security_group_id
+    }
+  }
+
+  tags = {
+    Environment = "production"
+    Service     = "my-api"
   }
 }
 ```
@@ -644,15 +852,17 @@ module "orders_service" {
 
 When using this module in automated workflows:
 
-1. **Start with Fargate**: Default to Fargate launch type unless specific EC2 requirements exist (GPU, specific instance types, cost optimization for steady workloads)
-2. **Modular Approach**: Use the root module for integrated cluster+services or use cluster and service submodules separately for more control
-3. **Resource Sizing**: Start with conservative CPU (1024) and memory (2048) allocations, then tune based on CloudWatch metrics
-4. **IAM Roles are Critical**: Always create separate task execution roles and task roles; never share roles across services
-5. **Secrets Management**: Use Secrets Manager for rotating secrets (database passwords) and Parameter Store for configuration values
-6. **Network Mode**: Always use awsvpc network mode for security group enforcement and task-level network isolation
-7. **Enable Auto Scaling**: Start with target tracking scaling on CPU (70-80%) and adjust based on actual load patterns
-8. **Load Balancer Integration**: For web services, integrate with ALB; for TCP services, use NLB; configure appropriate health checks
-9. **Container Health Checks**: Define health checks in container definitions for proper task lifecycle management
-10. **Log Configuration**: Always configure awslogs driver with appropriate retention periods and consider log filtering to reduce costs
-11. **Test Deployments**: Use circuit breaker and deployment configuration to enable safe, automated rollbacks
-12. **Tag Everything**: Tag all resources with Environment, Service, Team, and CostCenter for organization and cost allocation
+1. **Version 7.x Breaking Change**: Autoscaling is enabled by default; `desired_count` is ignored. Set `enable_autoscaling = false` for static task counts
+2. **Start with Fargate**: Default to Fargate launch type unless specific EC2 requirements exist (GPU, specific instance types, cost optimization for steady workloads)
+3. **Choose the Right Submodule**: Use `express-service` for rapid deployment, `service` for full control, `container-definition` for reusable container configs
+4. **Resource Sizing**: CPU must be powers of 2 (256-4096), memory 512-8192 MiB. Start conservative and tune based on CloudWatch metrics
+5. **IAM Roles are Critical**: Module creates task execution roles and task roles automatically; customize with `task_exec_iam_role_policies` and `task_iam_role_policies`
+6. **Secrets Management**: Use `secrets` parameter in container definitions to inject from Secrets Manager or Parameter Store
+7. **Network Mode**: Always use awsvpc network mode (default for Fargate) for security group enforcement and task-level network isolation
+8. **Container Definition Output**: When using container-definition submodule, wrap output with `jsonencode()` when passing to task definitions
+9. **Load Balancer Integration**: For web services, integrate with ALB; for TCP services, use NLB; configure appropriate health checks
+10. **Container Health Checks**: Define health checks in container definitions for proper task lifecycle management
+11. **Security Default**: Container definitions default to `readonlyRootFilesystem = true` for enhanced security
+12. **Log Retention**: Main module defaults to 90 days, container-definition defaults to 14 days; adjust based on compliance requirements
+13. **Test Deployments**: Use circuit breaker and deployment configuration to enable safe, automated rollbacks
+14. **Tag Everything**: Tag all resources with Environment, Service, Team, and CostCenter for organization and cost allocation

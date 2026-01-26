@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/dynamodb-table/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-dynamodb-table
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/dynamodb-table/aws/latest
-- **Latest Version**: 5.1.0
+- **Latest Version**: 5.5.0
 - **Purpose**: Terraform module that creates and manages AWS DynamoDB tables with comprehensive configuration options for NoSQL database workloads
 - **Service**: AWS DynamoDB (NoSQL Database Service)
 - **Category**: Database, Storage, Serverless
-- **Keywords**: dynamodb, nosql, database, table, key-value, document-store, partition-key, sort-key, hash-key, range-key, global-secondary-index, gsi, local-secondary-index, lsi, autoscaling, provisioned-capacity, on-demand, pay-per-request, billing-mode, read-capacity, write-capacity, throughput, point-in-time-recovery, pitr, backup, restore, encryption, kms, server-side-encryption, sse, dynamodb-streams, stream, kinesis, lambda-trigger, ttl, time-to-live, attribute, projection, eventual-consistency, strong-consistency, global-table, multi-region, replication, cross-region, table-class, standard, infrequent-access, deletion-protection, resource-policy, transactional-reads, transactional-writes, batch-operations, query, scan, partition, item, capacity-units, rcu, wcu
+- **Keywords**: dynamodb, nosql, database, key-value, hash-key, range-key, gsi, lsi, autoscaling, on-demand, provisioned, pitr, encryption, kms, streams, ttl, global-table, multi-region, table-class
 - **Use For**: Web and mobile application backends, session management, user profiles storage, real-time analytics, IoT data collection, gaming leaderboards, serverless application data stores, event-driven architectures, caching layer, shopping carts, content management, time-series data storage
 
 ## Description
@@ -29,12 +29,13 @@ Key architectural features include support for global tables enabling multi-regi
 - **Attribute Definitions**: Define table attributes with support for String (S), Number (N), and Binary (B) data types
 - **Global Secondary Indexes (GSI)**: Create up to 20 GSIs per table for alternative query patterns with different partition and sort keys
 - **Local Secondary Indexes (LSI)**: Define LSIs for alternative sort key queries using the same partition key as the base table
-- **Point-in-Time Recovery (PITR)**: Enable continuous backups for the last 35 days with second-level restore granularity
+- **Point-in-Time Recovery (PITR)**: Enable continuous backups with customizable retention period (default 35 days) and second-level restore granularity
 - **Server-Side Encryption**: Encrypt data at rest using AWS managed keys or customer-managed KMS keys for enhanced security
 - **DynamoDB Streams**: Enable change data capture for real-time processing with Lambda triggers or Kinesis integration
 - **Time-to-Live (TTL)**: Automatic deletion of expired items to reduce storage costs without consuming write capacity
 - **Table Class Selection**: Choose between STANDARD and STANDARD_INFREQUENT_ACCESS for cost-optimized storage of infrequently accessed data
 - **Global Tables**: Configure multi-region replication for globally distributed applications with local read/write access
+- **Global Table Witness**: Enable strong consistency across regions with witness region configuration (new in v5.5.0)
 - **Deletion Protection**: Prevent accidental table deletion by enabling deletion protection flag
 - **Resource Policies**: Attach resource-based policies for fine-grained access control to DynamoDB tables
 - **Stream View Types**: Configure stream records to include KEYS_ONLY, NEW_IMAGE, OLD_IMAGE, or NEW_AND_OLD_IMAGES
@@ -47,6 +48,9 @@ Key architectural features include support for global tables enabling multi-regi
 - **Table Restoration**: Create tables from point-in-time recovery backups or on-demand backups with cross-region support
 - **Contributor Insights**: Enable detailed monitoring of most accessed and throttled items for optimization
 - **Tagging Support**: Comprehensive tagging for cost allocation, resource organization, and governance
+- **Warm Throughput**: Configure warm read/write units for predictable performance on provisioned tables
+- **On-Demand Throughput**: Set maximum read/write units for on-demand tables to control costs
+- **Table Restoration**: Restore tables from point-in-time recovery backups with cross-region support
 
 ## Main Use Cases
 
@@ -84,6 +88,7 @@ This module does not include submodules. It provides a single root module for Dy
 | `ttl_enabled` | `bool` | `false` | Indicates whether time-to-live is enabled |
 | `ttl_attribute_name` | `string` | `""` | The name of the table attribute to store the TTL timestamp in |
 | `point_in_time_recovery_enabled` | `bool` | `false` | Whether to enable point-in-time recovery |
+| `point_in_time_recovery_period_in_days` | `number` | `null` | PITR retention period in days (default 35) |
 | `server_side_encryption_enabled` | `bool` | `false` | Enable encryption at rest using AWS managed KMS customer master key |
 | `server_side_encryption_kms_key_arn` | `string` | `null` | The ARN of the CMK that should be used for encryption |
 | `stream_enabled` | `bool` | `false` | Indicates whether Streams are to be enabled (true) or disabled (false) |
@@ -94,7 +99,14 @@ This module does not include submodules. It provides a single root module for Dy
 | `autoscaling_read` | `map(string)` | `{}` | Map of read autoscaling settings (scale_in_cooldown, scale_out_cooldown, target_value, max_capacity, min_capacity) |
 | `autoscaling_write` | `map(string)` | `{}` | Map of write autoscaling settings |
 | `autoscaling_indexes` | `map(any)` | `{}` | Map of autoscaling settings for global secondary indexes |
-| `replica_regions` | `list(string)` | `[]` | List of regions to create replica tables (for global tables) |
+| `replica_regions` | `any` | `[]` | List of regions or region configs for global table replicas |
+| `global_table_witness` | `object` | `null` | Witness region config for multi-region strong consistency |
+| `on_demand_throughput` | `any` | `{}` | Max read/write units for on-demand tables |
+| `warm_throughput` | `any` | `{}` | Warm read/write units for the table |
+| `restore_source_name` | `string` | `null` | Source table name for restoration |
+| `restore_to_latest_time` | `bool` | `null` | Restore to most recent recovery point |
+| `import_table` | `any` | `{}` | S3 import configuration for bulk data loading |
+| `ignore_changes_global_secondary_index` | `bool` | `false` | Ignore GSI changes in lifecycle (prevents capacity resets) |
 | `tags` | `map(string)` | `{}` | A map of tags to add to all resources |
 
 ## Main Outputs
@@ -107,6 +119,8 @@ This module does not include submodules. It provides a single root module for Dy
 | `dynamodb_table_stream_label` | A timestamp in ISO 8601 format of the Table Stream (only when stream_enabled is true) |
 | `dynamodb_table_hash_key` | The hash key of the table |
 | `dynamodb_table_range_key` | The range key of the table |
+| `dynamodb_table_replica_arns` | Map of replica ARNs by region |
+| `dynamodb_table_replica_stream_arns` | Map of replica stream ARNs by region |
 
 ## Usage Examples
 
@@ -401,21 +415,28 @@ module "dynamodb_global_table" {
 
   billing_mode = "PAY_PER_REQUEST"
 
-  # Enable global table replication to multiple regions
-  replica_regions = [
-    "eu-west-1",
-    "ap-southeast-1",
-    "us-west-2"
-  ]
-
-  # Enable streams (required for global tables)
+  # Enable streams (REQUIRED for global tables)
   stream_enabled   = true
   stream_view_type = "NEW_AND_OLD_IMAGES"
 
-  # Point-in-time recovery in all regions
+  # Enable global table replication with region-specific configs
+  replica_regions = [
+    {
+      region_name            = "eu-west-1"
+      point_in_time_recovery = true
+      propagate_tags         = true
+    },
+    {
+      region_name            = "ap-southeast-1"
+      point_in_time_recovery = true
+      propagate_tags         = true
+    }
+  ]
+
+  # Point-in-time recovery for primary region
   point_in_time_recovery_enabled = true
 
-  # Encryption in all regions
+  # Encryption with AWS-managed key
   server_side_encryption_enabled = true
 
   tags = {
@@ -426,6 +447,76 @@ module "dynamodb_global_table" {
   }
 }
 ```
+
+### Example 6: Global Table with Witness Region for Strong Consistency
+
+```hcl
+module "dynamodb_global_table_strong_consistency" {
+  source = "terraform-aws-modules/dynamodb-table/aws"
+
+  name     = "strong-consistency-table"
+  hash_key = "id"
+
+  attributes = [
+    {
+      name = "id"
+      type = "S"
+    }
+  ]
+
+  billing_mode = "PAY_PER_REQUEST"
+
+  # Enable streams (required for global tables)
+  stream_enabled   = true
+  stream_view_type = "NEW_AND_OLD_IMAGES"
+
+  # Single replica region
+  replica_regions = [
+    {
+      region_name            = "eu-west-1"
+      point_in_time_recovery = true
+    }
+  ]
+
+  # Enable witness region for multi-region strong consistency
+  # Use with single replica for strong consistency guarantees
+  global_table_witness = {
+    region_name = "ap-southeast-1"
+  }
+
+  point_in_time_recovery_enabled = true
+  server_side_encryption_enabled = true
+
+  tags = {
+    Terraform   = "true"
+    Environment = "production"
+  }
+}
+```
+
+## Critical Warnings and Gotchas
+
+**IMPORTANT**: Read these warnings before using this module to avoid common mistakes:
+
+1. **Autoscaling state management**: Enabling or disabling `autoscaling_enabled` **causes table recreation**. Workaround requires manual state move:
+   ```bash
+   terraform state mv module.dynamodb_table.aws_dynamodb_table.this \
+     module.dynamodb_table.aws_dynamodb_table.autoscaled
+   ```
+
+2. **GSI capacity resets**: Applying Terraform changes while a GSI is scaled up will reset the capacity to configured values. Set `ignore_changes_global_secondary_index = true` to prevent this, but then GSI changes must be applied manually outside Terraform.
+
+3. **Changing ignore_changes_global_secondary_index**: Setting this parameter after table creation also triggers recreation and requires the same state move command as above.
+
+4. **LSI immutability**: Local Secondary Indexes can only be allocated at table creation time and **cannot be modified afterward**.
+
+5. **PROVISIONED mode requirements**: When using `billing_mode = "PROVISIONED"`, both `read_capacity` and `write_capacity` must be greater than 0.
+
+6. **Attribute definitions**: Only `hash_key` and `range_key` attributes need to be defined in the `attributes` list - DynamoDB is schemaless for other attributes.
+
+7. **Encryption default**: Encryption at rest is **NOT enabled by default** (`server_side_encryption_enabled = false`). Enable it explicitly for production workloads.
+
+8. **Global tables require streams**: When using `replica_regions`, you must also set `stream_enabled = true` and `stream_view_type = "NEW_AND_OLD_IMAGES"`.
 
 ## Best Practices
 
@@ -536,15 +627,29 @@ module "dynamodb_global_table" {
 
 When using this module in automated workflows:
 
+### Critical Configuration Rules
+
+1. **Global tables require streams**: When using `replica_regions`, you MUST set `stream_enabled = true` and `stream_view_type = "NEW_AND_OLD_IMAGES"`
+2. **PROVISIONED mode requires capacity**: When `billing_mode = "PROVISIONED"`, both `read_capacity` and `write_capacity` must be > 0
+3. **Only define key attributes**: In the `attributes` list, only define `hash_key` and `range_key` attributes - DynamoDB is schemaless for other attributes
+4. **Autoscaling changes recreate table**: Changing `autoscaling_enabled` causes table recreation - requires manual state management
+5. **LSIs are immutable**: Local Secondary Indexes cannot be modified after table creation
+
+### Recommended Defaults for Production
+
+```hcl
+# Always enable for production tables:
+point_in_time_recovery_enabled = true
+server_side_encryption_enabled = true
+deletion_protection_enabled    = true
+```
+
+### Best Practices
+
 1. **Choose Billing Mode Carefully**: Use PAY_PER_REQUEST for unpredictable workloads, PROVISIONED with autoscaling for steady traffic patterns
-2. **Enable PITR by Default**: Always enable point-in-time recovery for production tables to prevent data loss
-3. **Design Partition Keys Wisely**: Select high-cardinality partition keys that distribute traffic evenly across partitions
-4. **Minimize Global Secondary Indexes**: Each GSI adds cost - only create indexes for essential query patterns
-5. **Enable Encryption**: Always enable server-side encryption, preferably with customer-managed KMS keys
-6. **Use Appropriate Table Class**: Consider STANDARD_INFREQUENT_ACCESS for data accessed less than twice per month
-7. **Enable TTL for Temporary Data**: Use time-to-live for automatic expiration of temporary items without consuming write capacity
-8. **Monitor Throttled Requests**: Set up alarms for throttled requests to detect capacity issues early
-9. **Tag Consistently**: Implement comprehensive tagging including Environment, Application, Owner, and DataClassification
-10. **Test Before Production**: Always test DynamoDB schema and capacity settings in non-production environments first
-11. **Document Access Patterns**: Clearly document all access patterns and query requirements to validate table design
-12. **Plan for Scale**: Design tables to handle 10x current load to avoid costly schema changes later
+2. **Design Partition Keys Wisely**: Select high-cardinality partition keys that distribute traffic evenly across partitions
+3. **Minimize Global Secondary Indexes**: Each GSI adds cost - only create indexes for essential query patterns
+4. **Use Appropriate Table Class**: Consider STANDARD_INFREQUENT_ACCESS for data accessed less than twice per month
+5. **Enable TTL for Temporary Data**: Use time-to-live for automatic expiration of temporary items
+6. **Tag Consistently**: Implement comprehensive tagging including Environment, Application, Owner
+7. **Plan for Scale**: Design tables to handle 10x current load to avoid costly schema changes later

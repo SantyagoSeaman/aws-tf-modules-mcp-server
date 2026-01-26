@@ -25,9 +25,11 @@ from pydantic import BaseModel, Field, field_serializer
 
 from tfmod_search_lib import (
     _PROJECT_ROOT,
+    BGE_QUERY_INSTRUCTION,
     SearchIndex,
     compute_scores,
     extract_description,
+    extract_purpose,
     initialize_nltk,
     load_index,
     resolve_index_path,
@@ -216,6 +218,46 @@ class ConfigLoader:
 
         return weights
 
+    @staticmethod
+    def load_query_instruction(
+        config_path: Path | None = None,
+        cli_override: str | None = None,
+        logger: logging.Logger | None = None,
+    ) -> str | None:
+        """
+        Load query instruction with precedence: CLI > YAML > default (None).
+
+        Args:
+            config_path: Path to YAML configuration file
+            cli_override: CLI argument override for query_instruction
+            logger: Logger instance for logging operations
+
+        Returns:
+            Query instruction string or None if disabled
+        """
+        query_instruction = None
+
+        # Load from YAML if exists
+        if config_path and config_path.exists():
+            try:
+                with open(config_path) as f:
+                    config = yaml.safe_load(f)
+                    if config and "query_instruction" in config:
+                        query_instruction = config["query_instruction"]
+                        if logger and query_instruction:
+                            logger.info(f"Loaded query_instruction from config: {config_path}")
+            except Exception as e:
+                if logger:
+                    logger.warning(f"Error loading query_instruction from {config_path}: {e}")
+
+        # Apply CLI override (takes precedence)
+        if cli_override is not None:
+            query_instruction = cli_override if cli_override else None
+            if logger:
+                logger.info(f"Applied CLI override for query_instruction: {'set' if query_instruction else 'disabled'}")
+
+        return query_instruction
+
 
 class ServerState:
     """
@@ -228,10 +270,16 @@ class ServerState:
         _index: The loaded search index
         _weights: Search scoring weights configuration
         _index_path: Path to the index file
+        _query_instruction: Optional query instruction prefix for BGE models
     """
 
     def __init__(
-        self, index: SearchIndex | None, weights: SearchWeights, index_path: Path, logger: logging.Logger | None = None
+        self,
+        index: SearchIndex | None,
+        weights: SearchWeights,
+        index_path: Path,
+        query_instruction: str | None = None,
+        logger: logging.Logger | None = None,
     ):
         """
         Initialize server state.
@@ -240,18 +288,22 @@ class ServerState:
             index: Loaded search index (can be None for testing)
             weights: Search weights configuration
             index_path: Path to index file
+            query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
         """
         self._index = index
         self._weights = weights
         self._index_path = index_path
+        self._query_instruction = query_instruction
         self._lock = threading.RLock()
         self._logger = logger
 
         doc_count = len(index.docs) if index is not None else 0
         if self._logger:
             self._logger.info(
-                f"ServerState initialized: index_path={index_path}, " f"docs={doc_count}, weights={weights.to_dict()}"
+                f"ServerState initialized: index_path={index_path}, "
+                f"docs={doc_count}, weights={weights.to_dict()}, "
+                f"query_instruction={'set' if query_instruction else 'disabled'}"
             )
 
     @property
@@ -275,6 +327,11 @@ class ServerState:
     def logger(self) -> logging.Logger | None:
         """Get logger instance."""
         return self._logger
+
+    @property
+    def query_instruction(self) -> str | None:
+        """Get optional query instruction prefix for BGE models."""
+        return self._query_instruction
 
     def reload_index(self, new_index_path: Path | None = None) -> None:
         """
@@ -321,7 +378,12 @@ class ServerStateManager:
 
     @classmethod
     def initialize(
-        cls, index: SearchIndex, weights: SearchWeights, index_path: Path, logger: logging.Logger | None = None
+        cls,
+        index: SearchIndex,
+        weights: SearchWeights,
+        index_path: Path,
+        query_instruction: str | None = None,
+        logger: logging.Logger | None = None,
     ) -> ServerState:
         """
         Initialize the server state singleton.
@@ -332,6 +394,7 @@ class ServerStateManager:
             index: Loaded search index
             weights: Search weights configuration
             index_path: Path to index file
+            query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
 
         Returns:
@@ -343,7 +406,7 @@ class ServerStateManager:
         with cls._lock:
             if cls._instance is not None:
                 raise RuntimeError("ServerState already initialized")
-            cls._instance = ServerState(index, weights, index_path, logger)
+            cls._instance = ServerState(index, weights, index_path, query_instruction, logger)
             if logger:
                 logger.info("ServerStateManager initialized")
             return cls._instance
@@ -515,6 +578,7 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
         w_bm25=weights.w_bm25,
         w_sem=weights.w_sem,
         top_k=1,
+        query_instruction=state.query_instruction,
         logger=state.logger,
     )
 
@@ -558,6 +622,7 @@ def search_modules_impl(query: str, state: ServerState) -> SearchOutput:
         w_bm25=weights.w_bm25,
         w_sem=weights.w_sem,
         top_k=3,  # Always return top-3
+        query_instruction=state.query_instruction,
         logger=state.logger,
     )
 
@@ -621,8 +686,8 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
 
     modules: list[ModuleListItem] = []
     for doc in state.index.docs:
-        # Extract description from document text
-        description = extract_description(doc.text)
+        # Extract purpose from Module Information section
+        description = extract_purpose(doc.text)
 
         modules.append(
             ModuleListItem(
@@ -644,7 +709,7 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
     description=(
         "List all available Terraform modules in the catalog. "
         "Returns complete list of modules with names, paths, descriptions, and keywords. "
-        "Use this to discover what modules are available before searching or retrieving documentation."
+        "Use this to discover what modules are available before searching or retrieving documentation. "
         "If there are no required module, please search in Terraform Registry (https://registry.terraform.io/)."
     ),
     tags={"catalog", "list", "terraform", "aws", "modules"},
@@ -771,7 +836,7 @@ def search_modules(
     description=(
         "Get compacted documentation for a specific Terraform module. "
         "Use this tool after search_modules to retrieve module documentation including "
-        "usage examples, inputs, outputs, and configuration details."
+        "usage examples, inputs, outputs, and configuration details. "
         "To get original documentation including full lists inputs/outputs for each sub-module, "
         "use direct links to registry.terraform.io from documentation."
     ),
@@ -857,7 +922,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--index_path",
         type=str,
-        help="Path to the search index file (.pkl). Defaults to './model/tfmod_gte_small_index.pkl'",
+        help="Path to the search index file (.pkl). Defaults to './model/tfmod_bge_base_index.pkl'",
     )
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to YAML config file")
     parser.add_argument(
@@ -871,6 +936,13 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument("--w_exact", type=float, help="Override weight for exact module name match")
     parser.add_argument("--w_bm25", type=float, help="Override weight for BM25 text relevance")
     parser.add_argument("--w_sem", type=float, help="Override weight for semantic similarity")
+    parser.add_argument(
+        "--query-instruction",
+        dest="query_instruction",
+        type=str,
+        default=None,
+        help=f"Optional query instruction prefix for BGE models. Use '{BGE_QUERY_INSTRUCTION}' for improved short query retrieval",
+    )
 
     return parser.parse_args()
 
@@ -936,6 +1008,15 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
 
         logger.info(f"Search weights: {weights.to_dict()}")
 
+        # Load query instruction with precedence: CLI > YAML > default (None)
+        query_instruction = ConfigLoader.load_query_instruction(
+            config_path=config_path,
+            cli_override=args.query_instruction,
+            logger=logger,
+        )
+
+        logger.info(f"Query instruction: {'enabled' if query_instruction else 'disabled'}")
+
         # Resolve index path using shared logic from tfmod_search_lib
         index_path = resolve_index_path(args.index_path)
 
@@ -944,7 +1025,7 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
             logger.error(
                 f"Index file not found at: {index_path}\n"
                 f"Please specify a valid path using --index_path argument or ensure "
-                f"the default index exists at ./model/tfmod_gte_small_index.pkl"
+                f"the default index exists at ./model/tfmod_bge_base_index.pkl"
             )
             sys.exit(1)
 
@@ -954,7 +1035,13 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
         logger.info(f"Index loaded successfully: {len(index.docs)} documents")
 
         # Initialize server state
-        state = ServerStateManager.initialize(index=index, weights=weights, index_path=index_path, logger=logger)
+        state = ServerStateManager.initialize(
+            index=index,
+            weights=weights,
+            index_path=index_path,
+            query_instruction=query_instruction,
+            logger=logger,
+        )
 
         logger.info(f"Server initialized successfully: {state}")
         return state

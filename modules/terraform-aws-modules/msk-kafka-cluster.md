@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/msk-kafka-cluster/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-msk-kafka-cluster
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/msk-kafka-cluster/aws/latest
-- **Latest Version**: 2.13.0
+- **Latest Version**: 3.1.0
 - **Purpose**: Terraform module to create AWS Managed Streaming for Apache Kafka (MSK) clusters with provisioned and serverless configurations
 - **Service**: AWS Managed Streaming for Apache Kafka (Amazon MSK)
 - **Category**: Streaming, Data Integration, Messaging
-- **Keywords**: apache-kafka, auto-scaling, autoscaling, broker-nodes, bootstrap-brokers, cdc, client-authentication, cloudwatch-logs, cluster-configuration, cluster-policy, data-streaming, ebs-storage, encryption-at-rest, encryption-in-transit, enhanced-monitoring, event-streaming, firehose, glue-schema-registry, iam-authentication, jmx-exporter, kafka, kafka-cluster, kafka-connect, kafka-version, kinesis-firehose, kms-encryption, kraft, message-broker, monitoring, msk, msk-connect, msk-serverless, node-exporter, open-monitoring, provisioned, real-time-streaming, s3-logs, sasl-iam, sasl-scram, schema-registry, secrets-manager, security-group, serverless, storage-autoscaling, streaming-data, tiered-storage, tls, topic, vpc-connectivity, zookeeper
+- **Keywords**: msk, kafka, kafka-cluster, streaming, event-streaming, message-broker, sasl-scram, sasl-iam, schema-registry, msk-connect, serverless, encryption, monitoring, autoscaling, vpc-connectivity
 - **Use For**: real-time data streaming pipelines, event-driven microservices architectures, log aggregation and analysis, change data capture (CDC) for databases, IoT data ingestion, clickstream analytics, financial transaction processing, social media feed processing, distributed system event buses, data lake ingestion, message queue replacement, application activity tracking
 
 ## Description
@@ -109,7 +109,8 @@ The serverless submodule provides a simplified interface for creating MSK Server
 
 ```hcl
 module "msk_serverless" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws//modules/serverless"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws//modules/serverless"
+  version = "~> 3.1"
 
   name = "dev-kafka-serverless"
 
@@ -121,15 +122,9 @@ module "msk_serverless" {
   create_cluster_policy = true
   cluster_policy_statements = {
     consumer = {
-      sid = "AllowConsumerAccess"
-      principals = [{
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::123456789012:root"]
-      }]
-      actions = [
-        "kafka:DescribeCluster",
-        "kafka:GetBootstrapBrokers"
-      ]
+      sid        = "AllowConsumerAccess"
+      principals = [{ type = "AWS", identifiers = ["arn:aws:iam::123456789012:root"] }]
+      actions    = ["kafka:DescribeCluster", "kafka:GetBootstrapBrokers"]
     }
   }
 
@@ -139,7 +134,6 @@ module "msk_serverless" {
   }
 }
 
-# Use the serverless cluster in applications
 output "kafka_bootstrap_servers" {
   description = "Bootstrap servers for Kafka clients"
   value       = module.msk_serverless.serverless_arn
@@ -148,51 +142,55 @@ output "kafka_bootstrap_servers" {
 
 ## Main Input Variables
 
+### Required Variables
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `broker_node_client_subnets` | `list(string)` | Subnets for client VPC connectivity (broker count must be multiple of subnet count) |
+| `broker_node_instance_type` | `string` | EC2 instance type for Kafka brokers (e.g., `kafka.m5.large`) |
+| `kafka_version` | `string` | Desired Kafka software version (e.g., `"3.5.1"`) |
+| `number_of_broker_nodes` | `number` | Total broker nodes (must be multiple of subnets count, minimum 3 for production) |
+
+### Optional Variables
+
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Determines whether cluster resources will be created |
 | `name` | `string` | `"msk"` | Name of the MSK cluster |
-| `kafka_version` | `string` | `null` | Specify the desired Kafka software version |
-| `number_of_broker_nodes` | `number` | `null` | The desired total number of broker nodes in the Kafka cluster |
-| `broker_node_client_subnets` | `list(string)` | `[]` | A list of subnets to connect to in client VPC |
-| `broker_node_instance_type` | `string` | `null` | Specify the instance type to use for the Kafka brokers |
-| `broker_node_security_groups` | `list(string)` | `[]` | A list of the security groups to associate with broker nodes |
-| `broker_node_storage_info` | `any` | `{}` | A block that contains information about storage volumes attached to broker nodes |
-| `broker_node_az_distribution` | `string` | `null` | The distribution of broker nodes across availability zones |
-| `enhanced_monitoring` | `string` | `null` | Specify the desired enhanced MSK CloudWatch monitoring level |
-| `encryption_at_rest_kms_key_arn` | `string` | `null` | You may specify a KMS key ARN to encrypt your data at rest |
-| `encryption_in_transit_client_broker` | `string` | `null` | Encryption setting for data in transit between clients and brokers |
-| `encryption_in_transit_in_cluster` | `bool` | `null` | Whether data communication among broker nodes is encrypted |
-| `client_authentication_sasl_iam` | `bool` | `null` | Enables IAM client authentication |
-| `client_authentication_sasl_scram` | `bool` | `null` | Enables SCRAM client authentication via AWS Secrets Manager |
-| `client_authentication_tls_certificate_authority_arns` | `list(string)` | `null` | List of ACM Certificate Authority ARNs |
-| `client_authentication_unauthenticated` | `bool` | `null` | Enables unauthenticated access |
+| `broker_node_security_groups` | `list(string)` | `[]` | Security groups to associate with broker nodes |
+| `broker_node_storage_info` | `object` | `null` | Storage volume config (EBS with optional throughput/provisioned IOPS) |
+| `broker_node_az_distribution` | `string` | `null` | Distribution of broker nodes across availability zones |
+| `enhanced_monitoring` | `string` | `null` | CloudWatch monitoring level (e.g., `PER_TOPIC_PER_PARTITION`) |
+| `encryption_at_rest_kms_key_arn` | `string` | `null` | KMS key ARN for data encryption at rest |
+| `encryption_in_transit_client_broker` | `string` | `null` | Client-broker encryption: `TLS`, `TLS_PLAINTEXT`, or `PLAINTEXT` |
+| `encryption_in_transit_in_cluster` | `bool` | `null` | Whether broker-to-broker communication is encrypted |
+| `client_authentication` | `object` | `null` | Authentication settings object with `sasl` and `tls` blocks |
 | `configuration_name` | `string` | `null` | Name of the configuration to use for the cluster |
 | `configuration_description` | `string` | `null` | Description of the configuration |
-| `configuration_server_properties` | `map(string)` | `{}` | Contents of the server.properties file |
-| `jmx_exporter_enabled` | `bool` | `false` | Indicates whether you want to enable or disable the JMX Exporter |
-| `node_exporter_enabled` | `bool` | `false` | Indicates whether you want to enable or disable the Node Exporter |
-| `cloudwatch_logs_enabled` | `bool` | `false` | Indicates whether you want to enable or disable streaming broker logs to CloudWatch Logs |
-| `cloudwatch_logs_log_group` | `string` | `null` | Name of the CloudWatch Log Group to deliver logs to |
-| `firehose_logs_enabled` | `bool` | `false` | Indicates whether you want to enable or disable streaming broker logs to Kinesis Data Firehose |
+| `configuration_server_properties` | `map(string)` | `{}` | Custom Kafka broker properties (e.g., `auto.create.topics.enable`) |
+| `jmx_exporter_enabled` | `bool` | `false` | Enable JMX Exporter for Prometheus metrics |
+| `node_exporter_enabled` | `bool` | `false` | Enable Node Exporter for Prometheus metrics |
+| `cloudwatch_logs_enabled` | `bool` | `false` | Stream broker logs to CloudWatch Logs |
+| `cloudwatch_log_group` | `string` | `null` | Name of the CloudWatch Log Group |
+| `firehose_logs_enabled` | `bool` | `false` | Stream broker logs to Kinesis Data Firehose |
 | `firehose_delivery_stream` | `string` | `null` | Name of the Kinesis Data Firehose delivery stream |
-| `s3_logs_enabled` | `bool` | `false` | Indicates whether you want to enable or disable streaming broker logs to S3 |
-| `s3_logs_bucket` | `string` | `null` | Name of the S3 bucket to deliver logs to |
-| `s3_logs_prefix` | `string` | `null` | Prefix to append to the folder name |
-| `storage_mode` | `string` | `null` | Controls storage mode for supported storage tiers |
-| `create_scram_secret_association` | `bool` | `false` | Determines whether to create SASL/SCRAM secret association |
-| `scram_secret_association_secret_arn_list` | `list(string)` | `[]` | List of AWS Secrets Manager secret ARNs |
-| `create_cloudwatch_log_group` | `bool` | `true` | Determines whether to create a CloudWatch log group |
-| `cloudwatch_log_group_retention_in_days` | `number` | `0` | Specifies the number of days you want to retain log events |
-| `cloudwatch_log_group_kms_key_id` | `string` | `null` | The ARN of the KMS Key to use when encrypting log data |
-| `scaling_max_capacity` | `number` | `null` | Maximum storage capacity for the cluster in GiB |
-| `scaling_target_value` | `number` | `null` | The Kafka broker storage utilization percentage threshold |
-| `create_schema_registry` | `bool` | `false` | Determines whether to create a Glue Schema Registry for use with MSK |
-| `schema_registry_name` | `string` | `null` | The name of the Glue Schema Registry |
-| `schema_registry_description` | `string` | `null` | The description of the Glue Schema Registry |
-| `schemas` | `map(any)` | `{}` | Map of schemas to create in the Glue Schema Registry |
-| `timeouts` | `map(string)` | `{}` | Updated Terraform resource management timeouts |
-| `tags` | `map(string)` | `{}` | A map of tags to assign to all created resources |
+| `s3_logs_enabled` | `bool` | `false` | Stream broker logs to S3 |
+| `s3_logs_bucket` | `string` | `null` | Name of the S3 bucket for logs |
+| `s3_logs_prefix` | `string` | `null` | Prefix for S3 log objects |
+| `storage_mode` | `string` | `null` | Storage mode: `LOCAL` or `TIERED` |
+| `enable_storage_autoscaling` | `bool` | `true` | Enable automatic storage scaling |
+| `scaling_max_capacity` | `number` | `250` | Maximum storage capacity in GB for auto-scaling |
+| `scaling_target_value` | `number` | `70` | Storage utilization percentage trigger for scaling |
+| `create_scram_secret_association` | `bool` | `false` | Create SASL/SCRAM secret association |
+| `scram_secret_association_secret_arn_list` | `list(string)` | `[]` | AWS Secrets Manager ARNs for SCRAM authentication |
+| `vpc_connections` | `map(object)` | `{}` | VPC connections with authentication and security settings |
+| `create_cluster_policy` | `bool` | `false` | Create MSK cluster policy for cross-account access |
+| `schema_registries` | `map(object)` | `{}` | Glue schema registries configuration |
+| `schemas` | `map(object)` | `{}` | Schemas within registry (name, format, compatibility, definition) |
+| `connect_custom_plugins` | `map(object)` | `{}` | MSK Connect custom plugin configs |
+| `rebalancing` | `object` | `null` | Intelligent rebalancing configuration |
+| `timeouts` | `map(string)` | `{}` | Terraform resource management timeouts |
+| `tags` | `map(string)` | `{}` | Tags to assign to all created resources |
 
 ## Main Outputs
 
@@ -235,7 +233,8 @@ output "kafka_bootstrap_servers" {
 
 ```hcl
 module "msk_kafka_cluster" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "my-kafka-cluster"
   kafka_version          = "3.5.1"
@@ -246,9 +245,7 @@ module "msk_kafka_cluster" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 100
-    }
+    ebs_storage_info = { volume_size = 100 }
   }
 
   encryption_in_transit_client_broker = "TLS"
@@ -264,7 +261,7 @@ module "msk_kafka_cluster" {
 ### Example 2: Production Cluster with SASL/SCRAM Authentication
 
 ```hcl
-# Create secret for SCRAM authentication
+# Create secret for SCRAM authentication (name must start with "AmazonMSK_")
 resource "aws_secretsmanager_secret" "kafka_user" {
   name = "AmazonMSK_kafka_user"
 }
@@ -283,7 +280,8 @@ resource "random_password" "kafka_user" {
 }
 
 module "msk_production" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "prod-kafka"
   kafka_version          = "3.5.1"
@@ -294,20 +292,18 @@ module "msk_production" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 500
-    }
+    ebs_storage_info = { volume_size = 500 }
   }
 
   # Enhanced monitoring
   enhanced_monitoring = "PER_TOPIC_PER_BROKER"
 
-  # Enable SASL/SCRAM authentication
-  client_authentication_sasl_scram = true
-  create_scram_secret_association  = true
-  scram_secret_association_secret_arn_list = [
-    aws_secretsmanager_secret.kafka_user.arn
-  ]
+  # Authentication using new object structure (v3.x)
+  client_authentication = {
+    sasl = { scram = true }
+  }
+  create_scram_secret_association          = true
+  scram_secret_association_secret_arn_list = [aws_secretsmanager_secret.kafka_user.arn]
 
   # Encryption
   encryption_at_rest_kms_key_arn      = module.kms.key_arn
@@ -321,8 +317,9 @@ module "msk_production" {
   s3_logs_prefix          = "kafka-logs/"
 
   # Storage autoscaling
-  scaling_max_capacity = 1024
-  scaling_target_value = 80
+  enable_storage_autoscaling = true
+  scaling_max_capacity       = 1024
+  scaling_target_value       = 80
 
   tags = {
     Environment = "production"
@@ -335,7 +332,8 @@ module "msk_production" {
 
 ```hcl
 module "msk_monitored" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "monitored-kafka"
   kafka_version          = "3.5.1"
@@ -346,26 +344,21 @@ module "msk_monitored" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 200
-    }
+    ebs_storage_info = { volume_size = 200 }
   }
 
-  # Enhanced monitoring
-  enhanced_monitoring = "PER_TOPIC_PER_BROKER"
+  # Enhanced monitoring with per-partition detail
+  enhanced_monitoring = "PER_TOPIC_PER_PARTITION"
 
-  # Prometheus exporters
+  # Prometheus exporters for Grafana integration
   jmx_exporter_enabled  = true
   node_exporter_enabled = true
 
-  # Comprehensive logging
-  cloudwatch_logs_enabled       = true
-  cloudwatch_log_group          = "/aws/msk/kafka-cluster"
-  create_cloudwatch_log_group   = true
-  cloudwatch_log_group_retention_in_days = 30
-  cloudwatch_log_group_kms_key_id        = module.kms.key_arn
+  # Multi-destination logging
+  cloudwatch_logs_enabled = true
+  cloudwatch_log_group    = "/aws/msk/monitored-kafka"
 
-  firehose_logs_enabled   = true
+  firehose_logs_enabled    = true
   firehose_delivery_stream = aws_kinesis_firehose_delivery_stream.kafka_logs.name
 
   s3_logs_enabled = true
@@ -386,7 +379,8 @@ module "msk_monitored" {
 
 ```hcl
 module "msk_with_schema_registry" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "kafka-with-schemas"
   kafka_version          = "3.5.1"
@@ -397,30 +391,33 @@ module "msk_with_schema_registry" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 100
+    ebs_storage_info = { volume_size = 100 }
+  }
+
+  # Schema Registries (v3.x uses map structure)
+  schema_registries = {
+    main = {
+      name        = "kafka-schemas"
+      description = "Schema registry for Kafka topics"
     }
   }
 
-  # Schema Registry
-  create_schema_registry     = true
-  schema_registry_name       = "kafka-schemas"
-  schema_registry_description = "Schema registry for Kafka topics"
-
   schemas = {
     user_events = {
-      schema_name        = "UserEvents"
-      description        = "Schema for user event data"
-      compatibility      = "BACKWARD"
-      data_format        = "AVRO"
-      schema_definition  = file("${path.module}/schemas/user_events.avsc")
+      schema_registry_name = "kafka-schemas"
+      schema_name          = "UserEvents"
+      description          = "Schema for user event data"
+      compatibility        = "BACKWARD"
+      data_format          = "AVRO"
+      schema_definition    = file("${path.module}/schemas/user_events.avsc")
     }
     order_events = {
-      schema_name        = "OrderEvents"
-      description        = "Schema for order event data"
-      compatibility      = "FORWARD"
-      data_format        = "AVRO"
-      schema_definition  = file("${path.module}/schemas/order_events.avsc")
+      schema_registry_name = "kafka-schemas"
+      schema_name          = "OrderEvents"
+      description          = "Schema for order event data"
+      compatibility        = "FORWARD"
+      data_format          = "AVRO"
+      schema_definition    = file("${path.module}/schemas/order_events.avsc")
     }
   }
 
@@ -428,7 +425,7 @@ module "msk_with_schema_registry" {
   encryption_in_transit_in_cluster    = true
 
   tags = {
-    Environment = "production"
+    Environment      = "production"
     SchemaManagement = "enabled"
   }
 }
@@ -438,7 +435,8 @@ module "msk_with_schema_registry" {
 
 ```hcl
 module "msk_iam_auth" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "kafka-iam-auth"
   kafka_version          = "3.5.1"
@@ -449,24 +447,24 @@ module "msk_iam_auth" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 100
-    }
+    ebs_storage_info = { volume_size = 100 }
   }
 
-  # Enable IAM authentication
-  client_authentication_sasl_iam = true
+  # Enable IAM authentication (v3.x object structure)
+  client_authentication = {
+    sasl = { iam = true }
+  }
 
   encryption_in_transit_client_broker = "TLS"
   encryption_in_transit_in_cluster    = true
 
   tags = {
-    Environment = "production"
+    Environment    = "production"
     Authentication = "iam"
   }
 }
 
-# IAM policy for Kafka client
+# IAM policy for Kafka client applications
 resource "aws_iam_policy" "kafka_client" {
   name = "kafka-client-policy"
 
@@ -474,28 +472,18 @@ resource "aws_iam_policy" "kafka_client" {
     Version = "2012-10-17"
     Statement = [
       {
-        Effect = "Allow"
-        Action = [
-          "kafka-cluster:Connect",
-          "kafka-cluster:DescribeCluster"
-        ]
+        Effect   = "Allow"
+        Action   = ["kafka-cluster:Connect", "kafka-cluster:DescribeCluster"]
         Resource = module.msk_iam_auth.arn
       },
       {
-        Effect = "Allow"
-        Action = [
-          "kafka-cluster:*Topic*",
-          "kafka-cluster:WriteData",
-          "kafka-cluster:ReadData"
-        ]
+        Effect   = "Allow"
+        Action   = ["kafka-cluster:*Topic*", "kafka-cluster:WriteData", "kafka-cluster:ReadData"]
         Resource = "arn:aws:kafka:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:topic/${module.msk_iam_auth.cluster_uuid}/*"
       },
       {
-        Effect = "Allow"
-        Action = [
-          "kafka-cluster:AlterGroup",
-          "kafka-cluster:DescribeGroup"
-        ]
+        Effect   = "Allow"
+        Action   = ["kafka-cluster:AlterGroup", "kafka-cluster:DescribeGroup"]
         Resource = "arn:aws:kafka:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:group/${module.msk_iam_auth.cluster_uuid}/*"
       }
     ]
@@ -507,7 +495,8 @@ resource "aws_iam_policy" "kafka_client" {
 
 ```hcl
 module "msk_vpc_connectivity" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "kafka-vpc-peering"
   kafka_version          = "3.5.1"
@@ -518,29 +507,29 @@ module "msk_vpc_connectivity" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 100
-    }
+    ebs_storage_info = { volume_size = 100 }
   }
 
-  # Enable VPC connectivity for multi-VPC access
+  # Enable VPC connectivity for multi-VPC/cross-account access
   vpc_connections = {
     peered_vpc = {
-      authentication = "SASL_IAM"
-      client_subnets = module.client_vpc.private_subnets
-      security_groups = [module.client_sg.security_group_id]
+      authentication     = "SASL_IAM"
+      client_subnets     = module.client_vpc.private_subnets
+      security_groups    = [module.client_sg.security_group_id]
       target_cluster_arn = module.msk_vpc_connectivity.arn
-      vpc_id = module.client_vpc.vpc_id
+      vpc_id             = module.client_vpc.vpc_id
     }
   }
 
-  client_authentication_sasl_iam = true
+  client_authentication = {
+    sasl = { iam = true }
+  }
 
   encryption_in_transit_client_broker = "TLS"
   encryption_in_transit_in_cluster    = true
 
   tags = {
-    Environment = "production"
+    Environment  = "production"
     Connectivity = "multi-vpc"
   }
 }
@@ -550,7 +539,8 @@ module "msk_vpc_connectivity" {
 
 ```hcl
 module "msk_serverless" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws//modules/serverless"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws//modules/serverless"
+  version = "~> 3.1"
 
   name = "serverless-kafka"
 
@@ -561,30 +551,16 @@ module "msk_serverless" {
   create_cluster_policy = true
   cluster_policy_statements = {
     producer_access = {
-      sid = "AllowProducerAccess"
-      principals = [{
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::111111111111:role/KafkaProducer"]
-      }]
-      actions = [
-        "kafka-cluster:Connect",
-        "kafka-cluster:WriteData",
-        "kafka-cluster:CreateTopic"
-      ]
-      resources = ["*"]
+      sid        = "AllowProducerAccess"
+      principals = [{ type = "AWS", identifiers = ["arn:aws:iam::111111111111:role/KafkaProducer"] }]
+      actions    = ["kafka-cluster:Connect", "kafka-cluster:WriteData", "kafka-cluster:CreateTopic"]
+      resources  = ["*"]
     }
     consumer_access = {
-      sid = "AllowConsumerAccess"
-      principals = [{
-        type        = "AWS"
-        identifiers = ["arn:aws:iam::222222222222:role/KafkaConsumer"]
-      }]
-      actions = [
-        "kafka-cluster:Connect",
-        "kafka-cluster:ReadData",
-        "kafka-cluster:DescribeTopic"
-      ]
-      resources = ["*"]
+      sid        = "AllowConsumerAccess"
+      principals = [{ type = "AWS", identifiers = ["arn:aws:iam::222222222222:role/KafkaConsumer"] }]
+      actions    = ["kafka-cluster:Connect", "kafka-cluster:ReadData", "kafka-cluster:DescribeTopic"]
+      resources  = ["*"]
     }
   }
 
@@ -599,7 +575,8 @@ module "msk_serverless" {
 
 ```hcl
 module "msk_tiered_storage" {
-  source = "terraform-aws-modules/msk-kafka-cluster/aws"
+  source  = "terraform-aws-modules/msk-kafka-cluster/aws"
+  version = "~> 3.1"
 
   name                   = "kafka-tiered"
   kafka_version          = "3.5.1"
@@ -610,30 +587,22 @@ module "msk_tiered_storage" {
   broker_node_security_groups = [module.kafka_sg.security_group_id]
 
   broker_node_storage_info = {
-    ebs_storage_info = {
-      volume_size = 1000
-    }
+    ebs_storage_info = { volume_size = 1000 }
   }
 
   # Enable tiered storage for cost-effective unlimited retention
   storage_mode = "TIERED"
 
-  # Custom configuration for tiered storage
+  # Custom Kafka broker configuration
   configuration_name        = "tiered-storage-config"
   configuration_description = "Configuration for tiered storage"
   configuration_server_properties = {
-    "auto.create.topics.enable" = "true"
+    "auto.create.topics.enable"  = "true"
     "default.replication.factor" = "3"
-    "min.insync.replicas" = "2"
-    "num.io.threads" = "8"
-    "num.network.threads" = "5"
-    "num.partitions" = "1"
-    "num.replica.fetchers" = "2"
-    "replica.lag.time.max.ms" = "30000"
-    "socket.receive.buffer.bytes" = "102400"
-    "socket.request.max.bytes" = "104857600"
-    "socket.send.buffer.bytes" = "102400"
-    "unclean.leader.election.enable" = "true"
+    "min.insync.replicas"        = "2"
+    "num.io.threads"             = "8"
+    "num.network.threads"        = "5"
+    "num.partitions"             = "1"
   }
 
   encryption_in_transit_client_broker = "TLS"
@@ -748,18 +717,28 @@ module "msk_tiered_storage" {
 
 When using this module in automated workflows:
 
-1. **Subnet Requirements**: MSK requires subnets in at least 2 (preferably 3) different Availability Zones; verify subnet AZ distribution before deployment
-2. **Broker Node Count**: number_of_broker_nodes must be a multiple of the number of Availability Zones; 3, 6, 9 are common values
-3. **Storage Sizing**: Minimum EBS volume size is 1 GiB; plan for at least 100 GiB for development, 500 GiB+ for production
-4. **Kafka Version Compatibility**: Verify client library compatibility with selected kafka_version; some versions require specific client updates
-5. **Authentication Setup**: When using SASL/SCRAM, create Secrets Manager secrets before enabling; secret names must start with "AmazonMSK_"
-6. **Encryption Changes**: Changing encryption settings requires cluster recreation; plan for data migration
-7. **Bootstrap Brokers**: Use appropriate bootstrap broker output based on authentication method (plaintext, TLS, SASL/IAM, SASL/SCRAM)
-8. **Security Group Ports**: Ensure security groups allow traffic on ports 9092 (plaintext), 9094 (TLS), 9096 (SASL/IAM), 9098 (SASL/SCRAM)
-9. **Monitoring Delays**: CloudWatch metrics may have 1-2 minute delay; don't rely on instant metrics for critical decisions
-10. **Configuration Updates**: Some configuration changes (like server properties) require cluster restart; plan maintenance windows
-11. **Schema Registry Timing**: Create schema registry before deploying applications that depend on it; registry ARN is needed for client configuration
-12. **Autoscaling Behavior**: Storage autoscaling is gradual; monitor ahead of time and don't rely on it for sudden traffic spikes
-13. **Serverless Limitations**: MSK Serverless doesn't support custom configurations, tiered storage, or public access; use provisioned for these needs
-14. **ZooKeeper vs KRaft**: For Kafka 3.3.1+, consider KRaft mode; it eliminates ZooKeeper dependency but may have limited tooling support
-15. **Cost Awareness**: MSK charges by broker-hour, storage GB-month, and data transfer; estimate costs before large-scale deployments
+### Critical Configuration Rules
+1. **Broker Node Count**: `number_of_broker_nodes` MUST be a multiple of `broker_node_client_subnets` count (e.g., 3 subnets → 3, 6, 9 brokers)
+2. **Subnet Requirements**: MSK requires subnets in at least 2 AZs; use 3 AZs for production high availability
+3. **Authentication Object (v3.x)**: Use `client_authentication = { sasl = { iam = true } }` instead of deprecated `client_authentication_sasl_iam = true`
+4. **SCRAM Secret Naming**: Secrets Manager secret names MUST start with `"AmazonMSK_"` for SCRAM authentication
+
+### Common Patterns
+5. **Storage Sizing**: Use 100+ GiB for development, 500+ GiB for production; enable `enable_storage_autoscaling = true` with `scaling_max_capacity`
+6. **Security Group Ports**: Allow 9092 (plaintext), 9094 (TLS), 9096 (SASL/IAM), 9098 (SASL/SCRAM) based on auth method
+7. **Bootstrap Brokers**: Select output based on authentication: `bootstrap_brokers_sasl_iam`, `bootstrap_brokers_sasl_scram`, `bootstrap_brokers_tls`
+8. **Schema Registry**: Use `schema_registries` map (v3.x) instead of `create_schema_registry`/`schema_registry_name`
+
+### Limitations and Gotchas
+9. **Encryption Changes**: Changing encryption settings requires cluster recreation; plan data migration
+10. **Serverless Limitations**: MSK Serverless doesn't support custom configurations, tiered storage, or public access
+11. **Configuration Updates**: Some `configuration_server_properties` changes require cluster restart
+12. **Autoscaling Behavior**: Storage autoscaling is gradual; don't rely on it for sudden traffic spikes
+
+### Version-Specific Notes
+13. **Module Version**: v3.x uses `client_authentication` object; v2.x used separate boolean flags
+14. **Kafka Version**: Use 3.5.1+ for latest features; verify client library compatibility
+15. **KRaft Mode**: Kafka 3.3.1+ supports ZooKeeper-free operation but may have limited tooling support
+
+### Cost Considerations
+16. **Pricing Model**: MSK charges by broker-hour + storage GB-month + data transfer; estimate before deployment

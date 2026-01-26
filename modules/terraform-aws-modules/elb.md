@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module that creates Classic Load Balancer (ELB) resources on AWS
 - **Service**: AWS Elastic Load Balancing - Classic Load Balancer (ELB)
 - **Category**: Networking, Load Balancing, Legacy
-- **Keywords**: access-logs, availability-zone, classic-load-balancer, connection-draining, cross-zone-load-balancing, elb, health-check, http, https, idle-timeout, instance-attachment, layer-4, layer-7, listener, load-balancer, monitoring, previous-generation, route53, security-group, ssl, ssl-certificate, ssl-policy, sticky-sessions, subnet, tagging, tcp, tls, traffic-distribution, zone-id
+- **Keywords**: elb, classic-load-balancer, load-balancer, health-check, listener, ssl, https, connection-draining, cross-zone, instance-attachment, access-logs, tcp, http, security-group, route53
 - **Use For**: legacy application support, maintaining existing Classic Load Balancer infrastructure, TCP/SSL load balancing for specific requirements, backward compatibility with older AWS deployments, simple HTTP/HTTPS load balancing for non-containerized applications, migrating from Classic to Application Load Balancer, supporting applications requiring instance-level load balancing, cross-zone traffic distribution for EC2 instances
 
 ## Description

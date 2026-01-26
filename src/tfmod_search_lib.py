@@ -2,16 +2,20 @@
 Reusable library for hybrid search over Markdown docs describing Terraform modules.
 CPU-only, sub-second queries for hundreds of docs.
 
+Default embedding model: BAAI/bge-base-en-v1.5
+
 Exports:
 - initialize_nltk() -> None
 - setup_logging(log_filename, log_level) -> Logger
 - switch_log_file(new_log_filename) -> None
 - build_index(docs_dir, model_name) -> SearchIndex
 - save_index(index, path), load_index(path) -> SearchIndex
-- compute_scores(index, query, w_kw, w_exact, w_bm25, w_sem, top_k) -> List[(score, idx)]
+- compute_scores(index, query, ..., query_instruction) -> List[(score, idx)]
 - extract_description(text, max_length) -> str
 - get_default_index_path() -> Path
 - resolve_index_path(index_path) -> Path
+- DEFAULT_MODEL_NAME: str (BAAI/bge-base-en-v1.5)
+- BGE_QUERY_INSTRUCTION: str (optional query prefix for BGE models)
 """
 
 import logging
@@ -36,6 +40,13 @@ _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
 
 # Model cache to avoid reloading SentenceTransformer on every query
 _MODEL_CACHE: dict[str, SentenceTransformer] = {}
+
+# Default embedding model
+DEFAULT_MODEL_NAME = "BAAI/bge-base-en-v1.5"
+
+# Optional query instruction for BGE models (improves short query retrieval)
+# BGE v1.5 works well without instruction, but this can provide slight improvement
+BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 
 
 def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> SentenceTransformer:
@@ -419,12 +430,55 @@ def extract_description(text: str, max_length: int = 200) -> str:
     return description
 
 
+def extract_purpose(text: str, max_length: int = 200) -> str:
+    """
+    Extract the Purpose field from Module Information section.
+
+    Looks for a line matching the pattern `- **Purpose**: <content>` in the
+    document text and returns the purpose description.
+
+    Args:
+        text: Document text (may include Markdown formatting)
+        max_length: Maximum length of purpose in characters (default: 200)
+
+    Returns:
+        Extracted purpose string, truncated at word boundary if needed.
+        Returns empty string if no Purpose field found.
+
+    Notes:
+        - Returns empty string if no Purpose field found
+        - Truncates at word boundaries with '...' suffix if needed
+
+    Examples:
+        >>> text = "## Module Information\\n- **Purpose**: Create VPC resources\\n"
+        >>> extract_purpose(text, 50)
+        'Create VPC resources'
+    """
+    if not text:
+        return ""
+
+    # Look for the Purpose field pattern
+    purpose_pattern = r"^\s*-\s*\*\*Purpose\*\*:\s*(.+)$"
+    match = re.search(purpose_pattern, text, re.MULTILINE)
+
+    if not match:
+        return ""
+
+    purpose = match.group(1).strip()
+
+    # Truncate to max_length if needed
+    if len(purpose) > max_length:
+        purpose = purpose[:max_length].rsplit(" ", 1)[0] + "..."
+
+    return purpose
+
+
 def get_default_index_path() -> Path:
     """
     Get the default index path relative to the project root.
 
     Returns the standard location for the search index file:
-    `<project_root>/model/tfmod_gte_small_index.pkl`
+    `<project_root>/model/tfmod_bge_base_index.pkl`
 
     Returns:
         Path object pointing to the default index location
@@ -432,9 +486,9 @@ def get_default_index_path() -> Path:
     Example:
         >>> default_path = get_default_index_path()
         >>> print(default_path)
-        /path/to/project/model/tfmod_gte_small_index.pkl
+        /path/to/project/model/tfmod_bge_base_index.pkl
     """
-    return _PROJECT_ROOT / "model" / "tfmod_gte_small_index.pkl"
+    return _PROJECT_ROOT / "model" / "tfmod_bge_base_index.pkl"
 
 
 def resolve_index_path(index_path: str | None = None) -> Path:
@@ -456,7 +510,7 @@ def resolve_index_path(index_path: str | None = None) -> Path:
         >>> # Use default path
         >>> path = resolve_index_path()
         >>> print(path)
-        /path/to/project/model/tfmod_gte_small_index.pkl
+        /path/to/project/model/tfmod_bge_base_index.pkl
 
         >>> # Use custom absolute path
         >>> path = resolve_index_path("/custom/path/index.pkl")
@@ -570,7 +624,7 @@ def compute_kw_idf(docs: list[DocRecord]) -> dict[str, float]:
 # Build/Save/Load index
 # -----------------------------
 def build_index(
-    docs_dir: str, model_name: str = "thenlper/gte-small", logger: logging.Logger | None = None
+    docs_dir: str, model_name: str = DEFAULT_MODEL_NAME, logger: logging.Logger | None = None
 ) -> SearchIndex:
     """
     Build a complete search index from Terraform module documentation.
@@ -592,7 +646,7 @@ def build_index(
     Args:
         docs_dir: Directory containing Terraform module .md files
         model_name: Sentence transformer model for embeddings
-                   (default: "thenlper/gte-small")
+                   (default: BAAI/bge-base-en-v1.5)
         logger: Logger instance for logging operations
 
     Returns:
@@ -602,7 +656,7 @@ def build_index(
         RuntimeError: If no valid Markdown documents found in docs_dir
 
     Notes:
-        - Downloads the embedding model on first use (~134MB for gte-small)
+        - Downloads the embedding model on first use (~220MB for bge-base-en-v1.5)
         - All processing is CPU-only, no GPU required
         - Embedding generation may take 1-5 minutes for hundreds of documents
         - Files that fail to parse are silently skipped
@@ -689,7 +743,7 @@ def save_index(index: SearchIndex, path: str, logger: logging.Logger) -> None:
 
     Example:
         >>> logger = logging.getLogger(__name__)
-        >>> save_index(index, "./model/tfmod_gte_small_index.pkl", logger)
+        >>> save_index(index, "./model/tfmod_bge_base_index.pkl", logger)
     """
     logger.info(f"Saving index to {path}")
     with open(path, "wb") as f:
@@ -726,7 +780,7 @@ def load_index(path: str, logger: logging.Logger) -> SearchIndex:
 
     Example:
         >>> logger = logging.getLogger(__name__)
-        >>> index = load_index("./model/tfmod_gte_small_index.pkl", logger)
+        >>> index = load_index("./model/tfmod_bge_base_index.pkl", logger)
         >>> print(f"Loaded {len(index.docs)} documents")
     """
     logger.info(f"Loading index from {path}")
@@ -750,6 +804,7 @@ def compute_scores(
     w_bm25: float = 1.0,
     w_sem: float = 1.0,
     top_k: int = 10,
+    query_instruction: str | None = None,
     logger: logging.Logger | None = None,
 ) -> list[tuple[float, int]]:
     """
@@ -782,6 +837,9 @@ def compute_scores(
         w_bm25: Weight for BM25 text relevance (default: 1.0)
         w_sem: Weight for semantic similarity (default: 1.0)
         top_k: Number of top results to return (default: 10)
+        query_instruction: Optional instruction prefix for query embedding.
+                          For BGE models, use BGE_QUERY_INSTRUCTION constant.
+                          If None, no prefix is applied (default: None)
         logger: Logger instance for logging operations
 
     Returns:
@@ -845,7 +903,13 @@ def compute_scores(
     logger.debug("Generating query embedding and computing semantic similarity...")
     # Use the same model as index (cached to avoid HTTP requests)
     model = _get_sentence_transformer(index.model_name, logger)
-    q_vec = model.encode([q], convert_to_numpy=True, normalize_embeddings=True)[0].astype(np.float32, copy=False)
+    # Use prompt parameter for optional query instruction (e.g., for BGE models)
+    q_vec = model.encode(
+        [q],
+        prompt=query_instruction,
+        convert_to_numpy=True,
+        normalize_embeddings=True,
+    )[0].astype(np.float32, copy=False)
     cos_raw = cosine_sim_matrix(q_vec, index.doc_vectors)
     cos_raw = (cos_raw + 1.0) / 2.0  # Scale from [-1, 1] to [0, 1]
     cos = minmax(cos_raw)  # Normalize to spread small differences

@@ -6,18 +6,18 @@
 - **Source**: `terraform-aws-modules/route53/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-route53
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest
-- **Latest Version**: 6.1.0
+- **Latest Version**: 6.4.0
 - **Purpose**: Terraform module that creates and manages AWS Route53 resources including hosted zones, DNS records, resolver endpoints, and firewall rules
 - **Service**: AWS Route 53 (Domain Name System)
 - **Category**: Networking, DNS Management, Security
-- **Keywords**: route53, dns, hosted-zone, domain, nameserver, records, routing-policy, geolocation, weighted-routing, failover, latency-routing, alias-records, private-zone, public-zone, dnssec, delegation-sets, resolver-endpoint, resolver-firewall, cross-account, vpc-association, dns-query-logging, resolver-rules, dns-filtering, hybrid-dns, dns-firewall
+- **Keywords**: route53, dns, hosted-zone, domain, records, routing-policy, geolocation, failover, latency-routing, alias-records, private-zone, dnssec, resolver-endpoint, resolver-firewall, hybrid-dns
 - **Use For**: Multi-region application routing, domain name management, hybrid cloud DNS resolution, DNS-based failover and disaster recovery, geolocation-based content delivery, weighted traffic distribution, private internal DNS for VPCs, cross-account DNS management, DNS security and filtering, microservices service discovery, blue-green deployments, canary releases
 
 ## Description
 
 The Terraform AWS Route53 module provides comprehensive infrastructure-as-code capabilities for managing AWS Route53 DNS services. It enables creation and management of both public and private hosted zones, DNS records with advanced routing policies, DNSSEC configurations, and Route53 Resolver components. The module supports complex DNS architectures including hybrid cloud scenarios where on-premises networks need to resolve AWS resources and vice versa.
 
-This module simplifies DNS management by abstracting the complexity of Route53 configurations while providing flexibility for advanced use cases. It supports all major DNS record types (A, AAAA, CNAME, MX, TXT, SRV, PTR, NS, CAA) and advanced routing policies including geolocation, weighted, failover, latency-based, multivalue, and geoproximity routing. The module also handles VPC associations for private zones, enabling secure internal DNS resolution within AWS networks.
+This module simplifies DNS management by abstracting the complexity of Route53 configurations while providing flexibility for advanced use cases. It supports all major DNS record types (A, AAAA, CNAME, MX, TXT, SRV, PTR, NS, CAA) and advanced routing policies including geolocation, weighted, failover, latency-based, multivalue, geoproximity, and CIDR-based routing. The module also handles VPC associations for private zones, enabling secure internal DNS resolution within AWS networks.
 
 The module includes three specialized submodules for managing delegation sets (reusable name server collections), resolver endpoints (for hybrid DNS resolution between AWS and on-premises networks), and resolver firewall rule groups (for DNS-based security filtering). These components work together to provide enterprise-grade DNS infrastructure with support for cross-account sharing, DNSSEC for enhanced security, and flexible traffic management capabilities.
 
@@ -25,7 +25,7 @@ The module includes three specialized submodules for managing delegation sets (r
 
 - **Public Hosted Zones**: Create and manage publicly accessible DNS zones for internet-facing domains
 - **Private Hosted Zones**: Set up internal DNS zones associated with specific VPCs for private resource resolution
-- **Advanced Routing Policies**: Support for geolocation, weighted, failover, latency-based, multivalue, and geoproximity routing
+- **Advanced Routing Policies**: Support for geolocation, weighted, failover, latency-based, multivalue, geoproximity, and CIDR-based routing
 - **DNSSEC Support**: Enable DNS Security Extensions with KMS key management for enhanced DNS security
 - **Alias Records**: Native support for AWS service aliases (CloudFront, ELB, S3, API Gateway)
 - **Cross-Account Zone Association**: Authorize and associate hosted zones across different AWS accounts
@@ -38,7 +38,7 @@ The module includes three specialized submodules for managing delegation sets (r
 - **DNS Query Logging**: Enable query logging for auditing and troubleshooting
 - **Resource Access Manager (RAM) Integration**: Share resolver firewall rules across accounts and organizations
 - **Dual-Stack Support**: IPv4, IPv6, and dual-stack configurations for resolver endpoints
-- **DNS Protocols**: Support for Do53 (DNS over port 53) and DoH (DNS over HTTPS)
+- **DNS Protocols**: Support for Do53 (DNS over port 53), DoH (DNS over HTTPS), and DoH-FIPS
 - **Flexible Tagging**: Comprehensive tag management for cost allocation and resource organization
 - **Customizable Timeouts**: Configure timeouts for create, update, and delete operations
 - **Security Group Management**: Automated security group creation for resolver endpoints with customizable rules
@@ -55,6 +55,7 @@ The module includes three specialized submodules for managing delegation sets (r
 8. **Cross-Account DNS Management**: Centralize DNS management while sharing zones and resolver rules across multiple AWS accounts
 9. **Geolocation-Based Content Delivery**: Route users to region-specific endpoints based on geographic location
 10. **DNSSEC-Enabled Secure DNS**: Implement cryptographically signed DNS responses to prevent DNS spoofing and cache poisoning
+11. **CIDR-Based Routing**: Route traffic based on client IP CIDR ranges for network-specific endpoints
 
 ## Submodules
 
@@ -71,7 +72,7 @@ The module includes three specialized submodules for managing delegation sets (r
 - **Purpose**: Creates Route53 Resolver endpoints for hybrid DNS resolution between AWS and on-premises networks
 - **Source**: `terraform-aws-modules/route53/aws//modules/resolver-endpoint`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest/submodules/resolver-endpoint
-- **Key Features**: Inbound/outbound endpoints, dual-stack support, DoH and Do53 protocols, automated security group creation
+- **Key Features**: Inbound/outbound endpoints, dual-stack support, Do53/DoH/DoH-FIPS protocols, automated security group creation, resolver rules
 - **Use Cases**: Hybrid cloud DNS resolution, on-premises to AWS DNS queries, AWS to on-premises DNS forwarding, multi-cloud DNS integration
 
 ### 3. resolver-firewall-rule-group
@@ -81,6 +82,135 @@ The module includes three specialized submodules for managing delegation sets (r
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest/submodules/resolver-firewall-rule-group
 - **Key Features**: Block/allow/override rules, domain lists, cross-account sharing via RAM, priority-based rule evaluation
 - **Use Cases**: Malicious domain blocking, DNS exfiltration prevention, compliance-driven DNS filtering, parental controls
+
+## Root Module: Hosted Zones and Records
+
+### Description
+
+The root module creates and manages AWS Route53 hosted zones (public or private) and DNS records. It provides comprehensive support for creating DNS records with various routing policies, DNSSEC configuration, cross-account VPC associations, and integration with AWS services via alias records.
+
+### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | - | Hosted zone domain name (required when creating zone) |
+| `create_zone` | `bool` | `true` | Whether to create new zone or lookup existing |
+| `comment` | `string` | `null` | Zone description (defaults to "Managed by Terraform") |
+| `vpc` | `map(object)` | `null` | VPC associations for private hosted zones |
+| `records` | `map(object)` | `{}` | DNS records configuration with routing policies |
+| `enable_dnssec` | `bool` | `false` | Enable DNSSEC signing for the zone |
+| `delegation_set_id` | `string` | `null` | Reusable delegation set ID (public zones only) |
+| `ignore_vpc` | `bool` | `false` | Ignore VPC changes post-creation (important for cross-account) |
+| `force_destroy` | `bool` | `null` | Delete all records when destroying the zone |
+| `tags` | `map(string)` | `{}` | Resource tags for the zone |
+
+### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `id` | Hosted zone identifier |
+| `arn` | Zone Amazon Resource Name |
+| `name_servers` | Authoritative nameservers for the zone |
+| `records` | Map of created DNS records |
+| `dnssec_signing_key_id` | DNSSEC signing key identifier |
+| `dnssec_signing_key_ds_record` | DS record for parent zone delegation |
+| `dnssec_kms_key_arn` | KMS key ARN used for DNSSEC signing |
+
+### Usage Examples
+
+#### Example 1: Public Hosted Zone with DNS Records
+
+```hcl
+module "public_zone" {
+  source  = "terraform-aws-modules/route53/aws"
+  version = "~> 6.4"
+
+  name = "example.com"
+
+  records = {
+    "www" = {
+      type    = "A"
+      ttl     = 3600
+      records = ["192.168.1.1"]
+    }
+    "" = {
+      type    = "MX"
+      ttl     = 3600
+      records = ["10 mail.example.com"]
+    }
+    "api" = {
+      type = "A"
+      alias = {
+        name                   = "my-alb-123456.us-east-1.elb.amazonaws.com"
+        zone_id                = "Z35SXDOTRQ7X7K"
+        evaluate_target_health = true
+      }
+    }
+  }
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+#### Example 2: Private Hosted Zone with VPC Association
+
+```hcl
+module "private_zone" {
+  source  = "terraform-aws-modules/route53/aws"
+  version = "~> 6.4"
+
+  name = "internal.example.com"
+
+  vpc = {
+    vpc_id = "vpc-0123456789abcdef0"
+  }
+
+  records = {
+    "db" = {
+      type    = "A"
+      ttl     = 300
+      records = ["10.0.1.100"]
+    }
+    "cache" = {
+      type    = "CNAME"
+      ttl     = 300
+      records = ["elasticache.internal.example.com"]
+    }
+  }
+
+  tags = {
+    Environment = "production"
+    Visibility  = "private"
+  }
+}
+```
+
+#### Example 3: DNSSEC-Enabled Zone
+
+```hcl
+module "dnssec_zone" {
+  source  = "terraform-aws-modules/route53/aws"
+  version = "~> 6.4"
+
+  name          = "secure.example.com"
+  enable_dnssec = true
+
+  records = {
+    "www" = {
+      type    = "A"
+      ttl     = 3600
+      records = ["192.168.1.1"]
+    }
+  }
+
+  tags = {
+    Environment = "production"
+    Security    = "dnssec-enabled"
+  }
+}
+```
 
 ## Submodule 1: delegation-sets
 
@@ -152,7 +282,7 @@ The resolver-endpoint submodule creates AWS Route53 Resolver endpoints that enab
 
 - Inbound and outbound resolver endpoint creation
 - IPv4, IPv6, and dual-stack support
-- DNS over port 53 (Do53) and DNS over HTTPS (DoH) protocols
+- DNS over port 53 (Do53), DNS over HTTPS (DoH), and DoH-FIPS protocols
 - Automated security group creation with customizable rules
 - Multiple IP address configuration per endpoint
 - Integration with resolver rules for outbound query forwarding
@@ -166,12 +296,13 @@ The resolver-endpoint submodule creates AWS Route53 Resolver endpoints that enab
 | `create` | `bool` | `true` | Controls whether resolver endpoint resources should be created |
 | `direction` | `string` | `""` | Direction of DNS queries (INBOUND or OUTBOUND) |
 | `type` | `string` | `"IPV4"` | IP address type (IPV4, IPV6, or DUALSTACK) |
-| `protocols` | `list(string)` | `["Do53"]` | List of DNS protocols (Do53, DoH) |
+| `protocols` | `list(string)` | `["Do53"]` | List of DNS protocols (Do53, DoH, DoH-FIPS) |
 | `ip_address` | `map(object)` | `{}` | Map of subnet IDs and optional IP addresses for endpoint network interfaces |
 | `security_group_ingress_rules` | `map(object)` | `{}` | Security group ingress rules for inbound traffic |
 | `security_group_egress_rules` | `map(object)` | `{}` | Security group egress rules for outbound traffic |
 | `vpc_id` | `string` | `""` | VPC ID where the resolver endpoint will be created |
 | `name` | `string` | `""` | Name identifier for the resolver endpoint |
+| `rules` | `map(object)` | `{}` | Resolver rules with domain forwarding and VPC associations |
 
 ### Main Outputs
 
@@ -182,6 +313,7 @@ The resolver-endpoint submodule creates AWS Route53 Resolver endpoints that enab
 | `ip_addresses` | List of IP addresses assigned to the resolver endpoint |
 | `security_group_id` | ID of the security group created for the resolver endpoint |
 | `host_vpc_id` | VPC ID where the resolver endpoint is deployed |
+| `rules` | Created resolver rules |
 
 ### Usage Examples
 
@@ -288,6 +420,7 @@ The resolver-firewall-rule-group submodule creates and manages Route53 Resolver 
 | `name` | `string` | `""` | Name identifier for the firewall rule group |
 | `rules` | `map(object)` | `{}` | Map of firewall rule configurations including action, priority, and domains |
 | `ram_resource_associations` | `map(object)` | `{}` | Configuration for sharing rule groups via AWS RAM |
+| `region` | `string` | `null` | Deployment region (defaults to provider region) |
 | `tags` | `map(string)` | `{}` | Map of tags to assign to firewall resources |
 
 **Rules Object Structure**:

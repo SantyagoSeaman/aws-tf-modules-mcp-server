@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/s3-bucket/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-s3-bucket
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest
-- **Latest Version**: 5.7.0
+- **Latest Version**: 5.10.0
 - **Purpose**: Terraform module that creates and manages AWS S3 buckets with comprehensive configuration options for security, replication, lifecycle management, and notifications
 - **Service**: AWS S3 (Simple Storage Service)
 - **Category**: Storage, Object Storage, Data Management
-- **Keywords**: s3, bucket, object-storage, versioning, encryption, lifecycle, replication, cors, logging, static-website, kms, sse, acl, bucket-policy, public-access-block, server-access-logging, object-lock, mfa-delete, intelligent-tiering, glacier, cross-region-replication, crr, same-region-replication, srr, s3-notifications, lambda-trigger, sns, sqs, eventbridge, s3-analytics, s3-inventory, storage-class, transfer-acceleration, request-payer, website-hosting, redirect, cloudfront, cloudtrail, elb-logs, alb-logs, waf-logs, table-bucket, directory-bucket
+- **Keywords**: s3, bucket, object-storage, versioning, encryption, lifecycle, replication, logging, static-website, kms, object-lock, cross-region-replication, s3-notifications, glacier, intelligent-tiering, directory-bucket, table-bucket
 - **Use For**: Storing application data and backups, hosting static websites and SPAs, centralized log aggregation, serving media files and assets, data lake storage, compliance and archival storage, cross-region data replication, event-driven architectures with S3 triggers, CloudFront origin buckets, versioned configuration storage, disaster recovery backups, analytics data warehousing
 
 ## Description

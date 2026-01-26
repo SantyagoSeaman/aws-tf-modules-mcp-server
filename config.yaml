@@ -1,4 +1,13 @@
 # TFModSearch MCP Server Configuration
+#
+# Default embedding model: BAAI/bge-base-en-v1.5
+# Model is configured at index build time via CLI --model argument
+
+# Optional query instruction for BGE models
+# BGE v1.5 works well without instruction, but this can improve short query retrieval
+# Set to null/empty to disable (default), or use the BGE instruction:
+# query_instruction: "Represent this sentence for searching relevant passages: "
+query_instruction: null
 
 # Search scoring weights (default values)
 # These control how different search components are weighted

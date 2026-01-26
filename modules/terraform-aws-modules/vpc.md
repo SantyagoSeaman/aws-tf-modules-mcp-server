@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/vpc/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpc
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest
-- **Latest Version**: 6.4.0
+- **Latest Version**: 6.6.0
 - **Purpose**: Terraform module that creates and manages AWS VPC resources including subnets, route tables, NAT gateways, internet gateways, and network configurations
 - **Service**: AWS VPC (Virtual Private Cloud)
 - **Category**: Networking, Infrastructure, Network Security
-- **Keywords**: vpc, virtual-private-cloud, networking, subnets, public-subnet, private-subnet, nat-gateway, internet-gateway, route-table, network-acl, nacl, security-group, ipv4, ipv6, dual-stack, cidr, availability-zone, az, multi-az, vpn-gateway, customer-gateway, transit-gateway, vpc-peering, vpc-endpoints, flow-logs, dhcp-options, dns, elasticache-subnet, database-subnet, redshift-subnet, intra-subnet, outpost-subnet, ipam, ip-address-management, secondary-cidr, network-routing, bastion, egress, ingress, vpc-flow-logs, cloudwatch-logs
+- **Keywords**: vpc, networking, subnets, nat-gateway, internet-gateway, route-table, network-acl, ipv6, cidr, availability-zone, vpn-gateway, transit-gateway, vpc-endpoints, flow-logs, ipam, database-subnet, private-subnet, public-subnet
 - **Use For**: Multi-tier application hosting, microservices networking, hybrid cloud connectivity, isolated development environments, secure database hosting, high-availability web applications, container orchestration networking, disaster recovery infrastructure, regulatory compliance networking, multi-region architectures, hub-and-spoke network topologies, zero-trust network architectures
 
 ## Description
@@ -20,6 +20,8 @@ This Terraform module provides comprehensive management of AWS Virtual Private C
 The module addresses common VPC design challenges by offering pre-configured patterns for various subnet types (public, private, database, ElastiCache, Redshift, intra, and outpost subnets) with automatic CIDR block calculation and distribution across availability zones. It supports multiple NAT gateway deployment strategies including single NAT gateway for cost optimization, one NAT gateway per availability zone for high availability, and one NAT gateway per subnet for maximum fault tolerance. The module also handles DNS configuration, DHCP options, and network access control lists (NACLs) for granular traffic control.
 
 Key architectural capabilities include AWS IP Address Manager (IPAM) integration for centralized IP management, secondary CIDR block support for VPC expansion, VPC endpoints for private AWS service access, customer and VPN gateway configuration for hybrid connectivity, and comprehensive tagging strategies for resource organization. The module includes dedicated submodules for VPC endpoints and flow logs, enabling modular composition of network features while maintaining centralized state management and consistent configuration patterns.
+
+**Important**: VPC Flow Logs configuration in the root module is deprecated as of v6.x and will be removed in v7.0.0. Use the `flow-log` submodule for new implementations.
 
 ## Key Features
 
@@ -34,7 +36,8 @@ Key architectural capabilities include AWS IP Address Manager (IPAM) integration
 - **VPC Endpoints**: Private connectivity to AWS services without internet gateway traversal
 - **VPN Gateway Support**: Customer gateway and VPN gateway configuration for hybrid cloud connectivity
 - **Transit Gateway Integration**: Support for transit gateway attachments and routing
-- **VPC Flow Logs**: Network traffic logging to CloudWatch Logs, S3, or Kinesis Data Firehose
+- **VPC Flow Logs**: Network traffic logging to CloudWatch Logs, S3, or Kinesis Data Firehose (use flow-log submodule)
+- **VPC Block Public Access**: Support for AWS VPC-level public access blocking for enhanced security
 - **Network ACLs**: Configurable network access control lists for subnet-level security
 - **Route Table Management**: Separate route tables for each subnet type with customizable routes
 - **DHCP Options**: Custom DHCP option sets for DNS and domain configuration
@@ -72,12 +75,13 @@ Key architectural capabilities include AWS IP Address Manager (IPAM) integration
 - **Key Features**: Interface and gateway endpoints, security group configuration, subnet association, tagging support
 - **Use Cases**: Private S3 access, DynamoDB connectivity, SSM access without internet gateway, compliance requirements
 
-### 2. flow-log
+### 2. flow-log (Recommended)
 - **Purpose**: Create VPC flow logs for network traffic monitoring and analysis
 - **Source**: `terraform-aws-modules/vpc/aws//modules/flow-log`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/flow-log
 - **Key Features**: CloudWatch Logs integration, S3 logging, Kinesis Firehose support, custom log formats
 - **Use Cases**: Security monitoring, troubleshooting connectivity issues, network analysis, compliance auditing
+- **Note**: This is the recommended approach for flow logs. Root module flow log variables are deprecated.
 
 ## Submodule 1: vpc-endpoints
 
@@ -272,11 +276,13 @@ resource "aws_security_group" "vpc_endpoints" {
 }
 ```
 
-## Submodule 2: flow-log
+## Submodule 2: flow-log (Recommended)
 
 ### Description
 
 The flow-log submodule creates VPC flow logs that capture information about IP traffic going to and from network interfaces in a VPC, subnet, or elastic network interface. Flow logs help monitor network traffic patterns, troubleshoot connectivity issues, detect security threats, and ensure compliance with network security policies. The submodule supports publishing flow log data to CloudWatch Logs, Amazon S3, or Amazon Kinesis Data Firehose with customizable log formats and aggregation intervals.
+
+**Important**: This submodule is the recommended approach for implementing VPC flow logs. The root module's flow log variables are deprecated as of v6.x and will be removed in v7.0.0.
 
 ### Key Features
 
@@ -889,7 +895,7 @@ resource "aws_security_group" "vpc_endpoints" {
 
 ### Security and Access Control
 
-1. **Enable VPC Flow Logs**: Always enable flow logs for security monitoring, troubleshooting, and compliance auditing.
+1. **Enable VPC Flow Logs**: Always enable flow logs for security monitoring, troubleshooting, and compliance auditing. Use the `flow-log` submodule (root module flow log variables are deprecated).
 2. **Use Network ACLs as Additional Layer**: Implement NACLs as stateless firewalls in addition to security groups for defense in depth.
 3. **Block Public Access by Default**: Set default NACL rules to deny all traffic, then explicitly allow required traffic.
 4. **Implement VPC Endpoints**: Use VPC endpoints (especially gateway endpoints for S3 and DynamoDB) to keep traffic within AWS network.
@@ -977,7 +983,7 @@ When using this module in automated workflows:
 5. **Enable DNS Settings**: Always enable DNS hostnames and DNS support
 6. **Tag Comprehensively**: Include Environment, Application, Owner, CostCenter tags
 7. **Use VPC Endpoints**: Implement S3 and DynamoDB gateway endpoints to reduce NAT costs
-8. **Enable Flow Logs**: Always enable VPC flow logs for security and troubleshooting
+8. **Enable Flow Logs**: Use `flow-log` submodule (root module flow log variables deprecated in v6.x)
 9. **Separate Database Subnets**: Use dedicated database subnets, not general private subnets
 10. **Version Pin Module**: Use specific module versions to prevent unexpected changes
 11. **Test AZ Failures**: Validate high availability by testing AZ failure scenarios

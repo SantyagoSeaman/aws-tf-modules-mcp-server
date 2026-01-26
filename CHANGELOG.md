@@ -1,5 +1,91 @@
 # Changelog
 
+## [0.2.0] - 2026-01-25
+
+[0.2.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.0
+
+### Changed
+
+- **Embedding Model Upgrade**: Switched default model from `thenlper/gte-small` to `BAAI/bge-base-en-v1.5`
+  - Better retrieval performance with 768-dimensional embeddings (vs 384)
+  - Improved similarity distribution (addresses narrow clustering issue)
+  - BGE v1.5 specifically optimized for retrieval tasks with hard negatives training
+  - Model size: ~220MB (vs ~67MB for gte-small)
+
+- **Optional Query Instruction Support**: Added configurable query instruction prefix for BGE models
+  - New `query_instruction` parameter in `compute_scores()` function
+  - Configurable via `config.yaml` or CLI `--query-instruction` argument
+  - Uses modern sentence-transformers `prompt` parameter in `model.encode()`
+  - Disabled by default (BGE v1.5 works well without instruction)
+  - Instruction: `"Represent this sentence for searching relevant passages: "`
+
+- **Default Index Path**: Changed from `tfmod_gte_small_index.pkl` to `tfmod_bge_base_index.pkl`
+  - All references updated across codebase, CLI, and tests
+  - Pre-built index now included at `model/tfmod_bge_base_index.pkl`
+
+- **Module List Description**: `modules_list` tool now uses `extract_purpose()` for cleaner descriptions
+  - Extracts Purpose field from Module Information section
+  - More concise and relevant module descriptions in catalog listing
+
+- **Dependency Updates**:
+  - Updated `numpy` from `>=2.3.3` to `>=2.4.1`
+  - Updated `sentence-transformers` from `>=5.1.1` to `>=5.2.0`
+
+### Added
+
+- **Integration Guides**: Comprehensive setup instructions in README
+  - Claude Code CLI integration with `claude mcp add` command
+  - Claude Desktop configuration for macOS
+  - GitHub Copilot integration for VS Code (requires VS Code 1.99+)
+  - Step-by-step setup and troubleshooting commands
+
+- **New Search Library Functions**:
+  - `extract_purpose(text, max_length)`: Extract Purpose field from Module Information section
+  - `DEFAULT_MODEL_NAME` constant: Default embedding model identifier
+  - `BGE_QUERY_INSTRUCTION` constant: Optional query prefix for BGE models
+
+- **Configuration Loader**: New `ConfigLoader.load_query_instruction()` method
+  - Supports precedence: CLI > YAML > default (None)
+  - Proper logging for configuration source
+
+- **Build Configuration**: Added hatch wheel build settings in `pyproject.toml`
+  - Configured `tool.hatch.build.targets.wheel` for proper package distribution
+  - Source mapping from `src/` directory
+
+- **Model Comparison Tests**: New test file `tests/integration/test_model_comparison.py`
+  - Compares embedding model performance (gte-small vs bge-base-en-v1.5)
+  - Tests across different query types (1-word to long natural language)
+  - Timing measurements and success rate analysis
+
+### Fixed
+
+- **ServerState Initialization**: Added `query_instruction` parameter support
+  - Properly passed through `ServerStateManager.initialize()`
+  - Included in state logging output
+
+### Documentation
+
+- **Module Documentation Updates**: Refreshed all 54 Terraform AWS module docs
+  - Updated module versions and feature descriptions
+  - Improved formatting and consistency across modules
+  - Enhanced best practices and use case sections
+
+- **README Improvements**:
+  - Reorganized Quick Start section with integration-specific guides
+  - Updated all code examples to use new model and index paths
+  - Added GitHub Copilot and VS Code MCP documentation links
+
+- **Configuration Comments**: Enhanced `config.yaml` with detailed comments
+  - Documented query instruction usage and BGE model notes
+  - Added model configuration guidance
+
+### Notes
+
+- **Index Rebuild Required**: After upgrading, rebuild the search index with the new model
+- **Index Size**: Increased from ~4.5MB to ~9MB due to larger embedding dimensions (768 vs 384)
+- **Performance**: First query ~2-3s (model loading), subsequent queries ~0.02s
+- **Breaking Change**: Default index path changed - update any hardcoded paths
+
 ## [0.1.2] - 2025-10-13
 
 [0.1.2]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.2

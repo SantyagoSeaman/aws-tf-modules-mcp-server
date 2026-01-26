@@ -6,12 +6,12 @@
 - **Source**: `terraform-aws-modules/memory-db/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-memory-db
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/memory-db/aws/latest
-- **Latest Version**: 2.3.0
+- **Latest Version**: 3.1.0
 - **Purpose**: Terraform module to create AWS MemoryDB resources including clusters, users, ACLs, parameter groups, and subnet groups
 - **Service**: AWS MemoryDB for Redis and Valkey
 - **Category**: Database, In-Memory Database, Caching
-- **Keywords**: acl, access-control-list, backup, cache, cluster, compliance, data-durability, data-tiering, database, encryption, engine-version, high-availability, high-performance, hipaa, in-memory, in-transit-encryption, key-value, kms-encryption, low-latency, maintenance-window, memorydb, microservices, microsecond-latency, multi-az, node-type, parameter-group, pci-dss, primary-database, redis, redis-compatible, replicas, replication, security-group, shards, snapshot, snapshot-retention, soc-compliance, subnet-group, tls, user-management, valkey, valkey-compatible, vpc
-- **Use For**: high-performance primary database for microservices, real-time analytics and caching, session storage with durability, gaming leaderboards and state management, financial transaction processing, IoT data ingestion and processing, chat and messaging applications, machine learning feature stores, e-commerce shopping carts and inventory, real-time bidding platforms, location-based services, social media feed management
+- **Keywords**: memorydb, redis, valkey, in-memory-database, cluster, cache, high-availability, encryption, acl, snapshot, multi-az, shards, replicas, tls, kms, low-latency
+- **Use For**: microservices primary database, real-time analytics, session storage, gaming leaderboards, financial transactions, IoT data processing, chat applications, ML feature stores
 
 ## Description
 
@@ -40,6 +40,13 @@ The module's design enables conditional resource creation, allowing users to man
 - **Multi-AZ Durability**: Automatic data replication across multiple Availability Zones for fault tolerance
 - **Conditional Creation**: Flexible flags to selectively create or skip individual resource components
 - **Comprehensive Tagging**: Apply tags across all resources for cost allocation and resource organization
+- **SNS Notifications**: Configure SNS topic for cluster event notifications
+
+## Compatibility
+
+- **Terraform**: >= 1.5.7
+- **AWS Provider**: >= 6.28
+- **Submodules**: None (standalone root module)
 
 ## Main Use Cases
 
@@ -81,6 +88,7 @@ The module's design enables conditional resource creation, allowing users to man
 | `final_snapshot_name` | `string` | `null` | Name of the final cluster snapshot |
 | `data_tiering` | `bool` | `null` | Enables data tiering for the cluster |
 | `auto_minor_version_upgrade` | `bool` | `null` | When true, minor engine upgrades will be applied automatically |
+| `sns_topic_arn` | `string` | `null` | ARN of SNS topic for cluster notifications |
 | `create_users` | `bool` | `true` | Determines whether users will be created |
 | `users` | `any` | `{}` | Map of users to create |
 | `create_acl` | `bool` | `true` | Determines whether an ACL will be created |
@@ -304,7 +312,7 @@ module "memorydb_restored" {
 }
 ```
 
-### Example 5: Valkey-Compatible Cluster
+### Example 5: Valkey Cluster
 
 ```hcl
 module "memorydb_valkey" {
@@ -314,7 +322,7 @@ module "memorydb_valkey" {
   description = "MemoryDB cluster using Valkey engine"
 
   engine         = "valkey"
-  engine_version = "7.2"
+  engine_version = "7.3"
   node_type      = "db.r7g.large"
 
   num_shards             = 2
@@ -591,13 +599,14 @@ When using this module in automated workflows:
 3. **Shard Planning**: num_shards determines horizontal scalability; plan based on dataset size and throughput requirements
 4. **Replica Requirements**: num_replicas_per_shard affects availability and read capacity; minimum 1 for production, 2 for critical workloads
 5. **Subnet Distribution**: subnet_ids must span at least 2 AZs; MemoryDB distributes nodes across provided subnets automatically
-6. **User Password Security**: Store passwords in AWS Secrets Manager; never use plaintext passwords in Terraform code
+6. **User Authentication**: Supports password-based and IAM authentication (type = "iam"); store passwords in Secrets Manager
 7. **ACL Dependencies**: acl_user_names must reference created user names; ensure users exist before associating with ACL
 8. **Snapshot Naming**: snapshot_name for restoration must be exact match; use data source to query available snapshots
 9. **Parameter Group Family**: parameter_group_family must match engine version (e.g., "memorydb_redis7" for Redis 7.x)
-10. **TLS Configuration**: When tls_enabled = true, clients must support TLS connections; update connection strings accordingly
+10. **TLS Configuration**: When tls_enabled = true, clients must support TLS; when tls_enabled = false, acl_name must be "open-access"
 11. **Data Tiering Compatibility**: data_tiering only available on R6gd and R7gd instance families; requires supported node types
 12. **Final Snapshot Timing**: final_snapshot_name snapshot is created before deletion; plan for snapshot storage costs
 13. **Conditional Creation**: Use create flags to manage existing resources; set create_subnet_group = false when using existing subnets
 14. **Port Configuration**: Default port is 6379; if changing, ensure security group rules and client configurations are updated
-15. **Monitoring Integration**: After creation, configure CloudWatch alarms for DatabaseMemoryUsagePercentage, EngineCPUUtilization, and latency metrics
+15. **Monitoring Integration**: Configure CloudWatch alarms for DatabaseMemoryUsagePercentage, EngineCPUUtilization; use sns_topic_arn for notifications
+16. **Engine Version Upgrades**: Downgrades are not supported; plan version upgrades carefully and test in non-production first

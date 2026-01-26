@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module to create AWS Database Migration Service (DMS) resources for database migrations and continuous data replication
 - **Service**: AWS Database Migration Service (AWS DMS)
 - **Category**: Database, Migration, Data Integration
-- **Keywords**: aurora, cdc, certificate, change-data-capture, cloudwatch-logs, data-migration, data-replication, database-migration, db2, documentdb, dynamodb, endpoint, etl, event-subscription, full-load, heterogeneous-migration, homogeneous-migration, iam-role, kafka, kinesis, mongodb, msk, multi-az, mysql, neptune, ongoing-replication, opensearch, oracle, postgresql, redshift, replication-instance, replication-task, s3, sap-ase, schema-conversion, serverless, sql-server, subnet-group, target-endpoint, timestream
+- **Keywords**: dms, database-migration, cdc, change-data-capture, replication-instance, replication-task, endpoint, full-load, serverless, multi-az, mysql, postgresql, oracle, sql-server, aurora, redshift, s3, kafka, kinesis, dynamodb
 - **Use For**: database migration to AWS cloud, cross-platform database migrations, continuous data replication for disaster recovery, modernizing legacy databases, real-time data streaming to analytics platforms, consolidating databases from multiple sources, migrating from commercial to open-source databases, hybrid cloud data synchronization, data lake population from operational databases, database version upgrades with minimal downtime, multi-region database replication, heterogeneous database migrations
 
 ## Description
@@ -772,6 +772,29 @@ module "secure_migration" {
 }
 ```
 
+## Submodules
+
+This module contains **no submodules**. All DMS functionality (replication instances, endpoints, tasks, event subscriptions, certificates, and IAM roles) is provided directly in the root module.
+
+## Supported Database Engines
+
+### Source and Target (Bidirectional)
+- Aurora MySQL / Aurora PostgreSQL
+- MySQL / MariaDB
+- PostgreSQL
+- Oracle
+- SQL Server
+- MongoDB
+- Amazon S3
+
+### Target Only
+- Amazon Redshift
+- Amazon Kinesis Data Streams
+- Amazon DynamoDB
+- Amazon OpenSearch (Elasticsearch)
+- Apache Kafka (Amazon MSK)
+- Redis
+
 ## Best Practices
 
 ### Replication Instance Configuration
@@ -900,3 +923,8 @@ When using this module in automated workflows:
 13. **CDC Prerequisites**: Source databases must have binary logging enabled for CDC; PostgreSQL needs logical replication, MySQL needs binlog_format=ROW
 14. **Task State Management**: Use start_replication_task parameter cautiously; tasks may fail to start if endpoints aren't ready
 15. **Resource Cleanup**: Always delete tasks before deleting endpoints or instances; dependency order matters for clean destruction
+16. **Instance ID Lowercase**: Replication instance IDs (`repl_instance_id`) must be lowercase; uppercase characters cause failures
+17. **Multi-AZ vs Availability Zone**: Cannot specify both `repl_instance_multi_az = true` and `repl_instance_availability_zone`; they are mutually exclusive
+18. **Storage Limits**: `repl_instance_allocated_storage` must be between 5 and 6144 GB
+19. **Key-Based References**: Use logical keys (e.g., `"source"`, `"target"`) in `endpoints` map, then reference them via `source_endpoint_key` and `target_endpoint_key` in tasks
+20. **IAM Propagation Delay**: Module includes `time_sleep` resources for IAM role propagation; initial deployments may take extra time - this is expected behavior

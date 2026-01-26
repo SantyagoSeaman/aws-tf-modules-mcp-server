@@ -10,66 +10,54 @@
 - **Purpose**: Terraform module that creates and manages AWS Systems Manager (SSM) Parameter Store parameters for secure configuration and secrets management
 - **Service**: AWS Systems Manager Parameter Store
 - **Category**: Configuration Management, Secrets Management, Security
-- **Keywords**: ssm, parameter-store, systems-manager, configuration-management, secrets-management, secure-string, kms-encryption, parameters, configuration, secrets, credentials, hierarchical-storage, version-control, change-tracking, tags, compliance, audit, access-control, iam, string, stringlist, securestring, plaintext, encrypted, centralized-config, application-config
-- **Use For**: Application configuration management, secrets and credentials storage, environment-specific settings management, database connection strings storage, API keys and tokens management, feature flags and toggles, centralized configuration for microservices, license key storage, third-party service credentials, infrastructure configuration parameters, AMI ID management, cross-account configuration sharing
+- **Keywords**: ssm, parameter-store, systems-manager, configuration, secrets, secure-string, kms-encryption, credentials, hierarchical-storage, string, stringlist, securestring
+- **Use For**: Application configuration management, secrets and credentials storage, environment-specific settings, database connection strings, API keys and tokens, feature flags, microservices configuration, AMI ID parameters
 
 ## Description
 
-This Terraform module provides streamlined creation and management of AWS Systems Manager (SSM) Parameter Store parameters, enabling centralized storage of configuration data and secrets in a secure, hierarchical structure. The module supports all three parameter types (String, StringList, and SecureString) with automatic type detection, flexible value handling, and options for ignoring value changes when parameters are managed externally. It simplifies the creation of multiple parameters through native Terraform `for_each` support and provides comprehensive outputs for both secure and non-secure parameter values.
+This Terraform module creates and manages AWS Systems Manager (SSM) Parameter Store parameters for centralized configuration and secrets management. It supports all three parameter types (String, StringList, SecureString) with automatic type detection and native `for_each` support for bulk parameter creation.
 
-AWS Systems Manager Parameter Store is a fully managed, secure, and scalable service for storing configuration data and secrets without the need to manage separate infrastructure. It separates sensitive data from code, provides version tracking for all parameter changes, enables granular access control through IAM policies, and integrates seamlessly with other AWS services like EC2, ECS, Lambda, CloudFormation, and CodeBuild. SecureString parameters leverage AWS KMS for encryption at rest, ensuring sensitive data like passwords, database credentials, and API keys remain protected while maintaining accessibility for authorized applications and users.
+Key capabilities include KMS encryption for SecureString parameters, parameter tiers (Standard up to 4KB free, Advanced up to 8KB paid, Intelligent-Tiering for automatic optimization), regex validation via `allowed_pattern`, and AWS integration data types (`aws:ec2:image`, `aws:ssm:integration`). The `ignore_value_changes` option allows Terraform to manage parameters whose values are updated externally.
 
-The module offers extensive configuration options including parameter tiers (Standard, Advanced, Intelligent-Tiering), KMS encryption keys for SecureString parameters, allowed pattern validation using regular expressions, data type specification for AWS integrations, and comprehensive tagging support. It's designed for use cases ranging from simple string values to complex hierarchical configurations for multi-environment deployments, making it ideal for storing application settings, feature flags, database connection strings, and any configuration data that needs centralized management, versioning, and secure access control.
+Parameter Store integrates with EC2, ECS, Lambda, CloudFormation, and CodeBuild. SecureString parameters use AWS KMS encryption at rest. Parameters support hierarchical naming with forward slashes (paths must start with `/`).
 
 ## Key Features
 
-- **Multiple Parameter Types**: Support for String, StringList, and SecureString parameter types
-- **Automatic Type Detection**: Intelligent detection of parameter type based on `secure_type` flag and value format
-- **Bulk Parameter Creation**: Native `for_each` support for creating multiple parameters efficiently
-- **SecureString Encryption**: KMS encryption for sensitive data with optional custom KMS key specification
-- **Parameter Tiers**: Support for Standard, Advanced, and Intelligent-Tiering parameter tiers
-- **Value Flexibility**: Accept both single values and lists with automatic JSON encoding for StringList
-- **Value Change Ignoring**: Option to ignore value changes for externally managed parameters
-- **Pattern Validation**: Regular expression validation for parameter values via `allowed_pattern`
-- **Data Type Support**: Specification of data types including text, aws:ssm:integration, and aws:ec2:image
-- **Version Tracking**: Automatic versioning of all parameter changes by AWS
-- **Comprehensive Outputs**: Separate outputs for secure and non-secure values with sensitivity flags
-- **Hierarchical Organization**: Support for hierarchical parameter naming with forward slashes
-- **Tagging Support**: Full tagging capabilities for resource organization and cost allocation
-- **Conditional Creation**: Control parameter creation with boolean `create` flag
-- **Description Support**: Optional parameter descriptions for documentation purposes
-- **IAM Integration**: Seamless integration with IAM for granular access control
-- **Cross-Service Compatibility**: Works with EC2, ECS, Lambda, CloudFormation, CodeBuild, and other AWS services
+- **Three Parameter Types**: String (default), StringList (auto-detected from `values` list), SecureString (via `secure_type = true`)
+- **Automatic Type Detection**: Uses `values` → StringList, `secure_type = true` → SecureString, otherwise String
+- **KMS Encryption**: SecureString uses AWS-managed KMS by default; specify `key_id` for customer-managed keys
+- **Bulk Creation**: Native `for_each` support for managing multiple parameters efficiently
+- **Parameter Tiers**: Standard (free, 4KB), Advanced (paid, 8KB), Intelligent-Tiering (automatic)
+- **Value Change Ignoring**: `ignore_value_changes = true` for parameters managed outside Terraform
+- **Regex Validation**: `allowed_pattern` for input validation
+- **AWS Data Types**: Support for `aws:ec2:image` and `aws:ssm:integration` data types
+- **Hierarchical Paths**: Forward-slash naming (paths must start with `/`)
 
 ## Main Use Cases
 
-1. **Application Configuration Management**: Store and manage application settings across multiple environments
-2. **Secrets and Credentials Storage**: Securely store database passwords, API keys, and authentication tokens
-3. **Environment-Specific Settings**: Manage different configurations for dev, staging, and production environments
-4. **Feature Flags and Toggles**: Centralize feature flag management for dynamic application behavior
-5. **Database Connection Strings**: Store and version database connection parameters securely
-6. **Third-Party Integration Credentials**: Manage credentials for external service integrations
-7. **Infrastructure Configuration**: Store Terraform variables, AMI IDs, and infrastructure parameters
-8. **Microservices Configuration**: Centralized configuration management for distributed microservices architectures
-9. **Compliance and Auditing**: Track configuration changes with built-in versioning and CloudTrail integration
-10. **Cross-Account Configuration Sharing**: Share configuration parameters across AWS accounts securely
+1. **Application Configuration**: Store settings across dev/staging/production environments
+2. **Secrets Storage**: Database passwords, API keys, tokens with SecureString encryption
+3. **Feature Flags**: Dynamic application behavior toggles (use `ignore_value_changes` for external management)
+4. **Database Connections**: Connection strings, hostnames, ports, credentials
+5. **Infrastructure Parameters**: AMI IDs (with `data_type = "aws:ec2:image"`), VPC IDs, resource ARNs
+6. **Microservices Config**: Centralized configuration for distributed architectures
 
 ## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls whether to create the SSM Parameter |
-| `name` | `string` | `null` | Name of the SSM parameter |
-| `value` | `string` | `null` | Value of the parameter |
-| `values` | `list(string)` | `[]` | List of parameter values (will be JSON encoded for StringList) |
+| `name` | `string` | `null` | Name of the parameter. Paths (containing `/`) must start with `/` |
+| `value` | `string` | `null` | Single string value for the parameter |
+| `values` | `list(string)` | `[]` | List of values (auto-jsonencoded, triggers StringList type) |
 | `type` | `string` | `null` | Parameter type: `String`, `StringList`, or `SecureString` |
-| `secure_type` | `bool` | `false` | Determines if the value should be treated as SecureString |
-| `key_id` | `string` | `null` | KMS key ID or ARN for encrypting SecureString parameters |
+| `secure_type` | `bool` | `false` | Set to `true` to use SecureString type with KMS encryption |
+| `key_id` | `string` | `null` | KMS key ID/ARN for SecureString encryption (uses AWS-managed key if null) |
+| `tier` | `string` | `null` | `Standard` (free, 4KB), `Advanced` (paid, 8KB), or `Intelligent-Tiering` |
+| `allowed_pattern` | `string` | `null` | Regex pattern to validate parameter value |
+| `data_type` | `string` | `null` | `text`, `aws:ec2:image`, or `aws:ssm:integration` |
 | `description` | `string` | `null` | Description of the parameter |
-| `tier` | `string` | `null` | Parameter tier: `Standard`, `Advanced`, or `Intelligent-Tiering` |
-| `allowed_pattern` | `string` | `null` | Regular expression for parameter value validation |
-| `data_type` | `string` | `null` | Parameter data type: `text`, `aws:ssm:integration`, or `aws:ec2:image` |
-| `ignore_value_changes` | `bool` | `false` | Ignore changes in parameter value (useful for externally managed values) |
+| `ignore_value_changes` | `bool` | `false` | Ignore value changes for externally managed parameters |
+| `create` | `bool` | `true` | Whether to create the SSM parameter |
 | `tags` | `map(string)` | `{}` | Tags to assign to the parameter |
 
 ## Main Outputs
@@ -78,14 +66,13 @@ The module offers extensive configuration options including parameter tiers (Sta
 |--------|-------------|
 | `ssm_parameter_arn` | ARN of the parameter |
 | `ssm_parameter_name` | Name of the parameter |
-| `ssm_parameter_type` | Type of the parameter |
-| `ssm_parameter_version` | Version of the parameter |
-| `ssm_parameter_tags_all` | All tags used for the parameter |
-| `raw_value` | Raw parameter value (sensitive) |
-| `value` | Decoded parameter value (non-sensitive) |
+| `ssm_parameter_type` | Type of the parameter (String/StringList/SecureString) |
+| `ssm_parameter_version` | Version number of the parameter |
+| `value` | Decoded parameter value (recommended for most use cases) |
+| `raw_value` | Raw value as stored in SSM (before decoding) |
+| `secure_value` | Secure parameter value (nonsensitive output) |
 | `insecure_value` | Insecure parameter value |
-| `secure_value` | Secure parameter value (sensitive) |
-| `secure_type` | Whether the parameter is a SecureString |
+| `secure_type` | Boolean indicating if parameter is SecureString |
 
 ## Usage Examples
 
@@ -100,44 +87,23 @@ module "app_environment" {
 
   tags = {
     Application = "myapp"
-    Environment = "production"
   }
 }
 ```
 
-### Example 2: SecureString Parameter with KMS Encryption
+### Example 2: SecureString with Custom KMS Key
 
 ```hcl
-# Create KMS key for parameter encryption
-resource "aws_kms_key" "parameter_store" {
-  description             = "KMS key for SSM Parameter Store encryption"
-  deletion_window_in_days = 10
-
-  tags = {
-    Name = "parameter-store-key"
-  }
-}
-
-resource "aws_kms_alias" "parameter_store" {
-  name          = "alias/parameter-store"
-  target_key_id = aws_kms_key.parameter_store.key_id
-}
-
-# Create secure parameter
 module "database_password" {
   source = "terraform-aws-modules/ssm-parameter/aws"
 
   name        = "/myapp/database/password"
-  value       = "SuperSecretPassword123!"
-  description = "Database master password"
-
+  value       = var.db_password
   secure_type = true
-  key_id      = aws_kms_key.parameter_store.id
+  key_id      = aws_kms_key.ssm.id  # Optional: uses AWS-managed key if omitted
 
   tags = {
     Application = "myapp"
-    Type        = "credential"
-    Encrypted   = "true"
   }
 }
 ```
@@ -145,30 +111,21 @@ module "database_password" {
 ### Example 3: StringList Parameter
 
 ```hcl
-# Using comma-separated string
+# Using values list (recommended - auto-detects StringList type)
 module "allowed_ips" {
   source = "terraform-aws-modules/ssm-parameter/aws"
 
-  name  = "/myapp/security/allowed-ips"
-  value = "10.0.1.0/24,10.0.2.0/24,10.0.3.0/24"
-  type  = "StringList"
-
-  tags = {
-    Application = "myapp"
-    Type        = "security"
-  }
+  name   = "/myapp/allowed-ips"
+  values = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
 }
 
-# Using list of values (will be JSON encoded)
-module "environment_list" {
+# Alternative: comma-separated string with explicit type
+module "allowed_ips_alt" {
   source = "terraform-aws-modules/ssm-parameter/aws"
 
-  name   = "/myapp/environments"
-  values = ["dev", "staging", "production"]
-
-  tags = {
-    Application = "myapp"
-  }
+  name  = "/myapp/allowed-ips"
+  value = "10.0.1.0/24,10.0.2.0/24,10.0.3.0/24"
+  type  = "StringList"
 }
 ```
 
@@ -176,368 +133,104 @@ module "environment_list" {
 
 ```hcl
 locals {
-  application_config = {
-    "/myapp/database/host" = {
-      value       = "db.example.com"
-      description = "Database hostname"
-    }
-    "/myapp/database/port" = {
-      value       = "5432"
-      description = "Database port"
-    }
-    "/myapp/database/name" = {
-      value       = "myapp_production"
-      description = "Database name"
-    }
-    "/myapp/database/username" = {
-      value       = "dbadmin"
-      description = "Database username"
-    }
-    "/myapp/database/password" = {
-      value       = "SecurePassword123!"
-      description = "Database password"
-      secure_type = true
-    }
-    "/myapp/api/key" = {
-      value       = "api-key-12345"
-      description = "Third-party API key"
-      secure_type = true
-    }
+  parameters = {
+    "/myapp/db/host"     = { value = "db.example.com" }
+    "/myapp/db/port"     = { value = "5432" }
+    "/myapp/db/password" = { value = var.db_password, secure_type = true }
+    "/myapp/api/key"     = { value = var.api_key, secure_type = true }
   }
 }
 
-module "app_parameters" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  for_each = local.application_config
+module "parameters" {
+  source   = "terraform-aws-modules/ssm-parameter/aws"
+  for_each = local.parameters
 
   name        = each.key
   value       = each.value.value
-  description = try(each.value.description, null)
   secure_type = try(each.value.secure_type, false)
 
-  tags = {
-    Application = "myapp"
-    Environment = "production"
-    ManagedBy   = "Terraform"
-  }
+  tags = { Application = "myapp", ManagedBy = "Terraform" }
 }
 ```
 
-### Example 5: Advanced Tier with Pattern Validation
+### Example 5: Feature Flag with External Management
 
 ```hcl
-module "version_parameter" {
+# Terraform creates the parameter but value changes are managed via Console/API
+module "feature_flag" {
+  source = "terraform-aws-modules/ssm-parameter/aws"
+
+  name                 = "/myapp/features/new-ui"
+  value                = "false"
+  ignore_value_changes = true  # Terraform won't revert external value changes
+
+  tags = { Type = "feature-flag" }
+}
+```
+
+### Example 6: AMI ID with AWS Data Type Validation
+
+```hcl
+module "ami_parameter" {
+  source = "terraform-aws-modules/ssm-parameter/aws"
+
+  name      = "/myapp/ami/amazon-linux-2"
+  value     = data.aws_ami.amazon_linux_2.id
+  data_type = "aws:ec2:image"  # AWS validates this is a valid AMI ID
+}
+```
+
+### Example 7: Pattern Validation
+
+```hcl
+module "version" {
   source = "terraform-aws-modules/ssm-parameter/aws"
 
   name            = "/myapp/version"
   value           = "1.2.3"
-  description     = "Application version (semantic versioning)"
-  tier            = "Advanced"
   allowed_pattern = "^\\d+\\.\\d+\\.\\d+$"  # Validates semver format
-
-  tags = {
-    Application = "myapp"
-    Type        = "version"
-  }
-}
-
-module "email_parameter" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  name            = "/myapp/admin/email"
-  value           = "admin@example.com"
-  description     = "Administrator email address"
-  allowed_pattern = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$"
-
-  tags = {
-    Application = "myapp"
-    Type        = "contact"
-  }
-}
-```
-
-### Example 6: Hierarchical Configuration for Multiple Environments
-
-```hcl
-locals {
-  environments = ["dev", "staging", "production"]
-
-  base_config = {
-    "database/port"     = "5432"
-    "database/max_conn" = "100"
-    "api/timeout"       = "30"
-    "api/retry_count"   = "3"
-  }
-
-  env_specific_config = {
-    dev = {
-      "database/host" = "dev-db.internal.example.com"
-      "api/endpoint"  = "https://api-dev.example.com"
-      "log_level"     = "DEBUG"
-    }
-    staging = {
-      "database/host" = "staging-db.internal.example.com"
-      "api/endpoint"  = "https://api-staging.example.com"
-      "log_level"     = "INFO"
-    }
-    production = {
-      "database/host" = "prod-db.internal.example.com"
-      "api/endpoint"  = "https://api.example.com"
-      "log_level"     = "WARN"
-    }
-  }
-}
-
-# Create base parameters for all environments
-module "base_parameters" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  for_each = merge([
-    for env in local.environments : {
-      for key, value in local.base_config :
-      "/myapp/${env}/${key}" => {
-        value       = value
-        environment = env
-      }
-    }
-  ]...)
-
-  name  = each.key
-  value = each.value.value
-
-  tags = {
-    Application = "myapp"
-    Environment = each.value.environment
-    Type        = "base-config"
-    ManagedBy   = "Terraform"
-  }
-}
-
-# Create environment-specific parameters
-module "env_parameters" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  for_each = merge([
-    for env in local.environments : {
-      for key, value in local.env_specific_config[env] :
-      "/myapp/${env}/${key}" => {
-        value       = value
-        environment = env
-      }
-    }
-  ]...)
-
-  name  = each.key
-  value = each.value.value
-
-  tags = {
-    Application = "myapp"
-    Environment = each.value.environment
-    Type        = "env-config"
-    ManagedBy   = "Terraform"
-  }
-}
-```
-
-### Example 7: Intelligent-Tiering with External Value Management
-
-```hcl
-module "dynamic_feature_flag" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  name        = "/myapp/features/new-ui-enabled"
-  value       = "false"
-  description = "Feature flag for new UI (managed externally)"
-  tier        = "Intelligent-Tiering"
-
-  # Ignore value changes since this is toggled via AWS Console or API
-  ignore_value_changes = true
-
-  tags = {
-    Application = "myapp"
-    Type        = "feature-flag"
-    Managed     = "external"
-  }
-}
-```
-
-### Example 8: AMI ID Parameter with Data Type
-
-```hcl
-data "aws_ami" "amazon_linux_2" {
-  most_recent = true
-  owners      = ["amazon"]
-
-  filter {
-    name   = "name"
-    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
-  }
-}
-
-module "ami_parameter" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  name        = "/myapp/ami/amazon-linux-2"
-  value       = data.aws_ami.amazon_linux_2.id
-  description = "Latest Amazon Linux 2 AMI ID"
-  data_type   = "aws:ec2:image"
-
-  tags = {
-    Application = "myapp"
-    Type        = "ami"
-    OS          = "amazon-linux-2"
-  }
-}
-```
-
-### Example 9: Conditional Parameter Creation
-
-```hcl
-variable "create_production_params" {
-  description = "Whether to create production parameters"
-  type        = bool
-  default     = false
-}
-
-module "production_config" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  create = var.create_production_params
-
-  name        = "/myapp/production/api-key"
-  value       = "prod-api-key-value"
-  description = "Production API key"
-  secure_type = true
-
-  tags = {
-    Application = "myapp"
-    Environment = "production"
-  }
-}
-```
-
-### Example 10: Integration with AWS Secrets Manager Alternative
-
-```hcl
-# Store non-rotatable secrets in Parameter Store with KMS encryption
-module "service_credentials" {
-  source = "terraform-aws-modules/ssm-parameter/aws"
-
-  for_each = {
-    "/myapp/services/github/token" = {
-      value       = var.github_token
-      description = "GitHub personal access token"
-    }
-    "/myapp/services/slack/webhook" = {
-      value       = var.slack_webhook_url
-      description = "Slack webhook URL for notifications"
-    }
-    "/myapp/services/datadog/api-key" = {
-      value       = var.datadog_api_key
-      description = "Datadog API key"
-    }
-  }
-
-  name        = each.key
-  value       = each.value.value
-  description = each.value.description
-  secure_type = true
-  tier        = "Advanced"
-
-  tags = {
-    Application = "myapp"
-    Type        = "service-credential"
-    ManagedBy   = "Terraform"
-  }
 }
 ```
 
 ## Best Practices
 
-### Security and Access Control
+### Security
 
-1. **Use SecureString for Sensitive Data**: Always set `secure_type = true` for passwords, API keys, tokens, and any sensitive information to ensure KMS encryption at rest.
-2. **Implement Custom KMS Keys**: Use customer-managed KMS keys instead of the default AWS-managed key for better control over encryption and key rotation policies.
-3. **Apply Least Privilege IAM Policies**: Grant IAM principals only the minimum required permissions (GetParameter, GetParameters) for specific parameter paths using resource-based conditions.
-4. **Enable CloudTrail Logging**: Monitor parameter access and modifications through CloudTrail to maintain audit trails for compliance and security investigations.
-5. **Use Parameter Hierarchies**: Organize parameters in hierarchical paths (e.g., `/app/env/component/setting`) to simplify IAM policy management and enable path-based access control.
-6. **Rotate Sensitive Values**: Implement regular rotation of SecureString parameters containing credentials, either manually or through automation with Lambda functions.
-7. **Avoid Hardcoding Secrets**: Never commit parameter values to version control; use variables, Terraform Cloud/Enterprise variables, or CI/CD secrets management.
+1. **Use SecureString for Sensitive Data**: Set `secure_type = true` for passwords, API keys, tokens
+2. **Use Custom KMS Keys**: Specify `key_id` for customer-managed key rotation control
+3. **Least Privilege IAM**: Grant GetParameter/GetParameters only for specific paths
+4. **Never Hardcode Secrets**: Use Terraform variables or CI/CD secrets management
 
-### Configuration Management
+### Organization
 
-1. **Establish Naming Conventions**: Use consistent, hierarchical naming patterns like `/application/environment/component/parameter` for easy organization and filtering.
-2. **Document with Descriptions**: Always provide meaningful `description` values to help team members understand the parameter's purpose and usage.
-3. **Use Pattern Validation**: Leverage `allowed_pattern` to validate parameter values against expected formats (e.g., email addresses, version numbers, IP ranges).
-4. **Choose Appropriate Tiers**: Use Standard tier (free, up to 4KB) for most parameters; use Advanced tier (charged, up to 8KB) only when necessary; consider Intelligent-Tiering for automatic optimization.
-5. **Tag Comprehensively**: Apply consistent tags including Application, Environment, ManagedBy, CostCenter, and Owner for resource tracking and cost allocation.
-6. **Leverage for_each for Bulk Operations**: Use `for_each` with local maps to create and manage multiple related parameters efficiently in a single module call.
+1. **Hierarchical Naming**: Use `/app/env/component/param` pattern for IAM path-based access
+2. **Use for_each**: Manage related parameters efficiently with local maps
+3. **Tag Consistently**: Include Application, Environment, ManagedBy tags
+4. **Choose Correct Tier**: Standard (free, 4KB) for most; Advanced (8KB) only when needed
 
-### Version Control and Change Management
+### Operations
 
-1. **Enable Version Tracking**: Take advantage of automatic parameter versioning to track changes over time and enable rollback capabilities.
-2. **Use ignore_value_changes Judiciously**: Only set `ignore_value_changes = true` for parameters that are intentionally managed outside Terraform (e.g., feature flags toggled via console).
-3. **Implement Change Notifications**: Set up CloudWatch Events or EventBridge rules to trigger notifications when parameters are modified.
-4. **Test in Lower Environments First**: Always test parameter changes in development and staging environments before applying to production.
-5. **Document External Changes**: If parameters are modified outside Terraform, document the changes and reasons to maintain clear operational records.
-
-### Performance and Optimization
-
-1. **Use Intelligent-Tiering**: For parameters with variable access patterns, use Intelligent-Tiering to automatically optimize costs based on usage.
-2. **Batch Parameter Retrieval**: In applications, use GetParameters (plural) API to retrieve multiple parameters in a single call instead of individual GetParameter calls.
-3. **Implement Caching**: Cache parameter values in applications with appropriate TTL to reduce API calls and improve performance.
-4. **Minimize Parameter Size**: Keep parameter values under 4KB when possible to use the free Standard tier and reduce retrieval latency.
-5. **Use Parameter Labels**: Create parameter labels (aliases) to reference specific versions for gradual rollouts and canary deployments.
-
-### Operational Excellence
-
-1. **Separate Secrets from Configuration**: Use Parameter Store for configuration and consider AWS Secrets Manager for secrets requiring automatic rotation.
-2. **Implement Disaster Recovery**: Export critical parameters to backup storage and document recovery procedures for cross-region disaster scenarios.
-3. **Monitor Parameter Costs**: Track Advanced tier parameter usage and cross-region data transfer to manage costs effectively.
-4. **Use Data Types for Validation**: Specify `data_type` (e.g., aws:ec2:image) to leverage AWS's built-in validation for specific parameter formats.
-5. **Automate Parameter Updates**: Use CI/CD pipelines to update parameters alongside application deployments for consistent configuration management.
-6. **Review Unused Parameters**: Regularly audit and delete obsolete parameters to reduce clutter and potential security exposure.
-
-### Compliance and Auditing
-
-1. **Enable Parameter Store Logging**: Ensure CloudTrail is enabled to log all parameter access and modifications for compliance audits.
-2. **Implement Change Approval**: Require change approval processes for production parameter modifications through Terraform Cloud/Enterprise or custom workflows.
-3. **Use Resource Policies**: For cross-account parameter sharing, implement resource policies with explicit allow/deny rules for fine-grained access control.
-4. **Regular Access Reviews**: Periodically review IAM policies granting parameter access to ensure compliance with least privilege principles.
-5. **Encrypt All Sensitive Data**: Maintain a policy that all parameters containing PII, credentials, or sensitive business data must use SecureString type.
+1. **ignore_value_changes**: Use for parameters managed outside Terraform (feature flags)
+2. **Pattern Validation**: Use `allowed_pattern` to validate value formats
+3. **Data Types**: Use `aws:ec2:image` for AMI IDs to get AWS validation
+4. **Consider Secrets Manager**: For secrets requiring automatic rotation
 
 ## Additional Resources
 
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ssm-parameter
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ssm-parameter/aws/latest
-- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-ssm-parameter/tree/master/examples
-- **AWS Systems Manager Parameter Store Documentation**: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
-- **Parameter Store Pricing**: https://aws.amazon.com/systems-manager/pricing/
-- **AWS Systems Manager User Guide**: https://docs.aws.amazon.com/systems-manager/latest/userguide/
+- **AWS Parameter Store Documentation**: https://docs.aws.amazon.com/systems-manager/latest/userguide/systems-manager-parameter-store.html
 - **IAM Policies for Parameter Store**: https://docs.aws.amazon.com/systems-manager/latest/userguide/sysman-paramstore-access.html
-- **Parameter Store Integration Examples**: https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-about-examples.html
-- **KMS Encryption for SecureString**: https://docs.aws.amazon.com/kms/latest/developerguide/services-parameter-store.html
-- **CloudTrail Logging for Parameter Store**: https://docs.aws.amazon.com/systems-manager/latest/userguide/monitoring-cloudtrail-logs.html
-- **Parameter Store CloudWatch Metrics**: https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-throughput.html
-- **AWS Secrets Manager vs Parameter Store**: https://docs.aws.amazon.com/secretsmanager/latest/userguide/integrating_how-services-use-secrets_PS.html
 
 ## Notes for AI Agents
 
-When using this module in automated workflows:
+**Key patterns for code generation:**
 
-1. **Use SecureString by Default**: For any sensitive data, always set `secure_type = true` to ensure KMS encryption
-2. **Leverage for_each**: Create multiple parameters efficiently using `for_each` with local maps or variables
-3. **Implement Hierarchical Naming**: Use forward-slash delimited paths (e.g., `/app/env/component/param`) for better organization
-4. **Apply Consistent Tags**: Include Application, Environment, ManagedBy, and Owner tags on all parameters
-5. **Choose Appropriate Tiers**: Use Standard tier (free, 4KB limit) for most use cases; Advanced tier only when needed
-6. **Validate Values**: Use `allowed_pattern` to enforce value formats and prevent configuration errors
-7. **Document Parameters**: Always provide meaningful `description` values for team collaboration
-8. **Manage Secrets Externally**: Store sensitive values in Terraform Cloud variables or CI/CD secrets, not in code
-9. **Use Custom KMS Keys**: Specify `key_id` for SecureString parameters to control encryption keys
-10. **Enable CloudTrail**: Ensure CloudTrail logging is enabled for audit and compliance requirements
-11. **Implement IAM Least Privilege**: Grant parameter access based on specific path prefixes using IAM conditions
-12. **Consider Secrets Manager**: For secrets requiring automatic rotation, use AWS Secrets Manager instead
-13. **Cache Parameter Values**: In applications, cache retrieved values to reduce API calls and costs
-14. **Version Awareness**: Leverage automatic versioning for rollback capabilities and change tracking
-15. **Test Before Production**: Always validate parameter changes in non-production environments first
+1. **Type Detection**: Use `values = [...]` for StringList (auto-detects), `secure_type = true` for SecureString
+2. **Paths**: Parameters with `/` must start with `/` (e.g., `/myapp/config`, not `myapp/config`)
+3. **Bulk Creation**: Use `for_each` with local maps for multiple related parameters
+4. **Sensitive Data**: Always use `secure_type = true` for passwords, tokens, API keys
+5. **External Management**: Use `ignore_value_changes = true` for feature flags managed via Console/API
+6. **Custom KMS**: Specify `key_id` only if customer-managed key is required (AWS-managed key is default)
+7. **AMI Parameters**: Use `data_type = "aws:ec2:image"` for AMI ID validation
+8. **Output Selection**: Use `value` output (auto-decodes JSON) for most cases

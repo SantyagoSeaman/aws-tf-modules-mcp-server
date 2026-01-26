@@ -29,7 +29,7 @@ def test_logger():
 @pytest.fixture
 def test_index_path(tmp_path):
     """Provide a temporary path for test index file."""
-    return str(tmp_path / "test_tfmod_gte_small_index.pkl")
+    return str(tmp_path / "test_tfmod_index.pkl")
 
 
 @pytest.fixture

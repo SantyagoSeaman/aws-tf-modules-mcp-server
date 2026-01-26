@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module that creates and manages AWS EC2 key pairs for SSH access to EC2 instances
 - **Service**: AWS EC2 (Elastic Compute Cloud) - Key Pairs
 - **Category**: Security, Compute, Access Management
-- **Keywords**: key-pair, ec2-key-pair, ssh-key, public-key, private-key, rsa, ed25519, key-generation, tls-private-key, openssh, pem, key-import, key-material, ssh-access, ec2-access, instance-access, ssh-authentication, key-fingerprint, key-management, cryptography, asymmetric-encryption, public-key-cryptography, key-rotation, ssh-login, remote-access, bastion-host, jumpbox, secure-access, 4096-bit, key-algorithm, key-pair-creation
+- **Keywords**: key-pair, ec2, ssh-key, rsa, ed25519, public-key, private-key, tls, openssh, pem, ssh-access, bastion-host, key-generation, authentication, security
 - **Use For**: EC2 SSH access, secure instance login, bastion host authentication, remote server administration, automated deployment access, CI/CD instance access, development environment setup, emergency instance access, key rotation workflows, multi-account key management
 
 ## Description
@@ -51,6 +51,133 @@ This module is essential for organizations managing EC2 infrastructure, particul
 8. **Automated Instance Provisioning**: Generate key pairs as part of automated infrastructure deployment workflows
 9. **Compliance and Auditing**: Track key pair creation and usage through Terraform state and AWS CloudTrail
 10. **Cross-Region Deployments**: Create identical key pairs across multiple regions for consistent access patterns
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Determines whether resources will be created |
+| `create_private_key` | `bool` | `false` | Determines whether a private key will be created by the module |
+| `key_name` | `string` | `null` | The name for the key pair (conflicts with `key_name_prefix`) |
+| `key_name_prefix` | `string` | `null` | Creates a unique name beginning with the specified prefix |
+| `public_key` | `string` | `""` | The public key material (required when not using `create_private_key`) |
+| `private_key_algorithm` | `string` | `"RSA"` | Algorithm for private key generation: `RSA` or `ED25519` |
+| `private_key_rsa_bits` | `number` | `4096` | When algorithm is RSA, the size of the generated RSA key in bits |
+| `tags` | `map(string)` | `{}` | A map of tags to add to all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `key_pair_id` | The key pair ID |
+| `key_pair_arn` | The key pair ARN |
+| `key_pair_name` | The key pair name |
+| `key_pair_fingerprint` | The MD5 public key fingerprint (RFC 4716 format) |
+| `private_key_id` | Unique identifier (SHA1 checksum in hex) |
+| `private_key_openssh` | Private key data in OpenSSH PEM format (RFC 4716) - **SENSITIVE** |
+| `private_key_pem` | Private key data in PEM format (RFC 1421) - **SENSITIVE** |
+| `public_key_openssh` | Public key data in Authorized Keys format |
+| `public_key_pem` | Public key data in PEM format (RFC 1421) |
+| `public_key_fingerprint_md5` | MD5 fingerprint in `aa:bb:cc` notation |
+| `public_key_fingerprint_sha256` | SHA256 fingerprint in OpenSSH format |
+
+## Usage Examples
+
+### Example 1: Auto-Generated Key Pair
+
+```hcl
+module "key_pair" {
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "~> 2.0"
+
+  key_name           = "my-key-pair"
+  create_private_key = true
+
+  tags = {
+    Environment = "production"
+    Terraform   = "true"
+  }
+}
+
+# Access the private key (store securely!)
+output "private_key_pem" {
+  value     = module.key_pair.private_key_pem
+  sensitive = true
+}
+```
+
+### Example 2: External Public Key (TLS Provider)
+
+```hcl
+resource "tls_private_key" "this" {
+  algorithm = "ED25519"
+}
+
+module "key_pair" {
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "~> 2.0"
+
+  key_name   = "my-external-key"
+  public_key = trimspace(tls_private_key.this.public_key_openssh)
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 3: Existing Public Key Material
+
+```hcl
+module "key_pair" {
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "~> 2.0"
+
+  key_name   = "my-existing-key"
+  public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQ..."
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Example 4: ED25519 Auto-Generated Key
+
+```hcl
+module "key_pair_ed25519" {
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "~> 2.0"
+
+  key_name              = "my-ed25519-key"
+  create_private_key    = true
+  private_key_algorithm = "ED25519"
+
+  tags = {
+    Environment = "production"
+    Algorithm   = "ED25519"
+  }
+}
+```
+
+### Example 5: Conditional Creation
+
+```hcl
+variable "create_key_pair" {
+  description = "Whether to create the key pair"
+  type        = bool
+  default     = true
+}
+
+module "key_pair" {
+  source  = "terraform-aws-modules/key-pair/aws"
+  version = "~> 2.0"
+
+  create             = var.create_key_pair
+  key_name           = "conditional-key"
+  create_private_key = true
+}
+```
 
 ## Best Practices
 

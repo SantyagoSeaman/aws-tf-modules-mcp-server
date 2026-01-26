@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/network-firewall/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-network-firewall
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/network-firewall/aws/latest
-- **Latest Version**: 2.0.1
+- **Latest Version**: 2.1.0
 - **Purpose**: Terraform module that creates and manages AWS Network Firewall resources for stateful network traffic inspection and intrusion detection/prevention in VPCs
 - **Service**: AWS Network Firewall (Amazon Network Firewall)
 - **Category**: Security, Networking, Firewall
-- **Keywords**: network-firewall, aws-network-firewall, vpc-firewall, stateful-firewall, stateless-firewall, intrusion-detection, intrusion-prevention, ids, ips, suricata, firewall-policy, firewall-rules, rule-groups, stateful-rules, stateless-rules, domain-filtering, ip-filtering, protocol-detection, deep-packet-inspection, dpi, network-security, vpc-security, perimeter-security, traffic-filtering, packet-inspection, firewall-logging, cloudwatch-logs, s3-logging, flow-logs, alert-logs, kms-encryption, resource-policy, subnet-mapping, availability-zones, firewall-endpoint, vpc-endpoint, nat-gateway-protection, internet-gateway-filtering, vpn-filtering, direct-connect-security, network-segmentation, micro-segmentation, threat-detection, threat-prevention, malware-detection, signature-based-detection, anomaly-detection, rule-evaluation, rule-order, rule-priority, stateful-inspection, connection-tracking, session-management, protocol-analysis, application-layer-filtering, network-layer-filtering, egress-filtering, ingress-filtering, east-west-traffic, north-south-traffic, centralized-firewall, distributed-firewall, firewall-manager, multi-account-firewall, cross-account-firewall, compliance, pci-dss, hipaa, network-monitoring, security-monitoring
+- **Keywords**: network-firewall, vpc-firewall, stateful-firewall, intrusion-detection, intrusion-prevention, ids, ips, suricata, firewall-policy, rule-groups, domain-filtering, deep-packet-inspection, traffic-filtering, firewall-logging, transit-gateway, egress-filtering, perimeter-security, network-security
 - **Use For**: VPC perimeter security, intrusion detection and prevention, egress traffic filtering, internet gateway protection, malware detection, domain-based filtering, application-layer inspection, compliance enforcement (PCI-DSS, HIPAA), threat prevention, centralized firewall management, multi-account security, east-west traffic inspection, north-south traffic control, network segmentation enforcement
 
 ## Description
@@ -62,6 +62,228 @@ Built for enterprise security requirements, the module provides extensive loggin
 8. **Internet Gateway Protection**: Filter malicious traffic before it reaches EC2 instances and other VPC resources
 9. **VPN and Direct Connect Security**: Inspect traffic from on-premises networks connecting via VPN or AWS Direct Connect
 10. **Threat Intelligence Integration**: Block traffic from known malicious IP addresses and domains using threat intelligence feeds
+
+## Submodules
+
+### 1. firewall
+
+- **Purpose**: Creates AWS Network Firewall resource with VPC or Transit Gateway attachment, encryption, and logging configuration
+- **Source**: `terraform-aws-modules/network-firewall/aws//modules/firewall`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/network-firewall/aws/latest/submodules/firewall
+- **Key Features**: VPC/Transit Gateway attachment, multi-AZ subnet mapping, KMS encryption, CloudWatch/S3 logging, delete protection, subnet change protection
+- **Use Cases**: VPC perimeter security, centralized inspection VPC, Transit Gateway inspection architecture
+
+#### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | - | Friendly firewall identifier (required) |
+| `vpc_id` | `string` | `""` | VPC identifier for deployment |
+| `firewall_policy_arn` | `string` | `""` | Associated policy ARN (required) |
+| `subnet_mapping` | `map(object)` | `{}` | Subnet configuration across different AZs |
+| `delete_protection` | `bool` | `true` | Prevents accidental deletion |
+| `subnet_change_protection` | `bool` | `true` | Blocks subnet modifications |
+| `encryption_configuration` | `object` | `null` | KMS encryption settings (key_id, type) |
+| `logging_configuration_destination_config` | `list(object)` | `[]` | CloudWatch or S3 logging targets (1-2 destinations) |
+| `transit_gateway_id` | `string` | `null` | Transit Gateway ID (alternative to VPC attachment) |
+| `enabled_analysis_types` | `list(string)` | `[]` | Traffic analysis metrics (TLS_SNI, HTTP_HOST) |
+
+#### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `arn` | Firewall resource ARN |
+| `id` | Firewall resource ID |
+| `status` | Operational state with endpoint information per AZ |
+| `update_token` | Version control token for modifications |
+| `logging_configuration_id` | Associated logging configuration ARN |
+
+#### Usage Example
+
+```hcl
+module "firewall" {
+  source  = "terraform-aws-modules/network-firewall/aws//modules/firewall"
+  version = "~> 2.0"
+
+  name                = "example-firewall"
+  vpc_id              = "vpc-1234556abcdef"
+  firewall_policy_arn = module.firewall_policy.arn
+
+  # Deploy across multiple AZs for high availability
+  subnet_mapping = {
+    us-east-1a = { subnet_id = "subnet-abcde012" }
+    us-east-1b = { subnet_id = "subnet-bcde012a" }
+  }
+
+  # Enable protection controls
+  delete_protection        = true
+  subnet_change_protection = true
+
+  # Configure logging
+  create_logging_configuration = true
+  logging_configuration_destination_config = [
+    {
+      log_destination      = { logGroup = "/aws/network-firewall/example" }
+      log_destination_type = "CloudWatchLogs"
+      log_type             = "ALERT"
+    },
+    {
+      log_destination      = { bucketName = "my-firewall-logs", prefix = "flow" }
+      log_destination_type = "S3"
+      log_type             = "FLOW"
+    }
+  ]
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### 2. policy
+
+- **Purpose**: Creates AWS Network Firewall policy with stateful/stateless rule group references, custom actions, and resource policies
+- **Source**: `terraform-aws-modules/network-firewall/aws//modules/policy`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/network-firewall/aws/latest/submodules/policy
+- **Key Features**: Stateful/stateless rule groups, custom actions, KMS encryption, resource policies for cross-account sharing, RAM associations
+- **Use Cases**: Shared firewall policies across accounts, centralized policy management, multi-VPC security policies
+
+#### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | - | Policy identifier (required) |
+| `stateful_rule_group_reference` | `map(object)` | `{}` | Stateful rule groups with priority and ARN |
+| `stateless_rule_group_reference` | `map(object)` | `{}` | Stateless rule groups with priority |
+| `stateless_default_actions` | `list(string)` | `["aws:pass"]` | Default packet handling (aws:drop, aws:pass, aws:forward_to_sfe) |
+| `stateless_fragment_default_actions` | `list(string)` | `["aws:pass"]` | Fragment packet handling |
+| `stateful_default_actions` | `list(string)` | `null` | Fallback for unmatched stateful rules |
+| `stateful_engine_options` | `object` | `null` | Flow timeouts, rule ordering, exception policies |
+| `stateless_custom_action` | `map(object)` | `{}` | Custom actions with metric publishing |
+| `policy_variables` | `object` | `null` | Suricata setting overrides with IP set definitions |
+| `encryption_configuration` | `object` | `null` | KMS encryption settings |
+| `create_resource_policy` | `bool` | `false` | Create resource policy for cross-account access |
+| `resource_policy_principals` | `list(string)` | `[]` | IAM principals for cross-account access |
+| `ram_resource_associations` | `map(object)` | `{}` | RAM share associations |
+
+#### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `arn` | Policy resource ARN |
+| `id` | Policy resource ID |
+| `update_token` | Policy modification token |
+| `resource_policy_id` | Associated resource policy ARN |
+
+#### Usage Example
+
+```hcl
+module "firewall_policy" {
+  source  = "terraform-aws-modules/network-firewall/aws//modules/policy"
+  version = "~> 2.0"
+
+  name        = "example-policy"
+  description = "Network firewall policy with stateful inspection"
+
+  # Default actions for unmatched traffic
+  stateless_default_actions          = ["aws:forward_to_sfe"]
+  stateless_fragment_default_actions = ["aws:drop"]
+
+  # Stateful engine options
+  stateful_engine_options = {
+    rule_order              = "STRICT_ORDER"
+    stream_exception_policy = "DROP"
+  }
+
+  # Reference existing rule groups
+  stateful_rule_group_reference = {
+    domain-filtering = {
+      priority     = 100
+      resource_arn = aws_networkfirewall_rule_group.domain_filtering.arn
+    }
+    threat-signatures = {
+      priority     = 200
+      resource_arn = aws_networkfirewall_rule_group.threat_signatures.arn
+    }
+  }
+
+  # Enable cross-account sharing
+  create_resource_policy     = true
+  attach_resource_policy     = true
+  resource_policy_principals = ["arn:aws:iam::123456789012:root"]
+  resource_policy_actions    = [
+    "network-firewall:ListFirewallPolicies",
+    "network-firewall:DescribeFirewallPolicy"
+  ]
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+## Complete Module Usage
+
+```hcl
+module "network_firewall" {
+  source  = "terraform-aws-modules/network-firewall/aws"
+  version = "~> 2.0"
+
+  name        = "example"
+  description = "Example network firewall"
+  vpc_id      = "vpc-1234556abcdef"
+
+  # Subnet mapping across different AZs
+  subnet_mapping = {
+    subnet1 = { subnet_id = "subnet-abcde012", ip_address_type = "IPV4" }
+    subnet2 = { subnet_id = "subnet-bcde012a", ip_address_type = "IPV4" }
+  }
+
+  # Protection controls
+  delete_protection                 = true
+  subnet_change_protection          = true
+  firewall_policy_change_protection = true
+
+  # Logging configuration
+  create_logging_configuration = true
+  logging_configuration_destination_config = [
+    {
+      log_destination      = { logGroup = "/aws/network-firewall/example" }
+      log_destination_type = "CloudWatchLogs"
+      log_type             = "ALERT"
+    },
+    {
+      log_destination      = { bucketName = "s3-example-bucket", prefix = "example" }
+      log_destination_type = "S3"
+      log_type             = "FLOW"
+    }
+  ]
+
+  # Policy configuration
+  policy_name                                = "example"
+  policy_stateless_default_actions           = ["aws:forward_to_sfe"]
+  policy_stateless_fragment_default_actions  = ["aws:drop"]
+
+  # Stateful engine options
+  policy_stateful_engine_options = {
+    rule_order              = "STRICT_ORDER"
+    stream_exception_policy = "DROP"
+  }
+
+  # Rule group references
+  policy_stateful_rule_group_reference = {
+    one = {
+      priority     = 100
+      resource_arn = "arn:aws:network-firewall:us-east-1:123456789012:stateful-rulegroup/example"
+    }
+  }
+
+  tags = {
+    Terraform   = "true"
+    Environment = "production"
+  }
+}
+```
 
 ## Best Practices
 

@@ -53,7 +53,7 @@ Generate the following bullet points in order:
  - Format: - **Keywords**: {comma-separated-keyword-list}
  - Extract from module tags, README, or infer from functionality
  - Include: resource types, features, use cases, abbreviations, related services
- - 20-50 keywords covering technical terms, features, integrations, and use cases
+ - 10-20 keywords covering technical terms, features, integrations, and use cases
  - Examples: vpc, subnet, nat-gateway, internet-gateway, route-table, security-group
 
 10. **Use For**:

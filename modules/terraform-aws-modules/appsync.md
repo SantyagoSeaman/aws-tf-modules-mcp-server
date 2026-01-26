@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/appsync/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appsync
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appsync/aws/latest
-- **Latest Version**: 4.0.0
+- **Latest Version**: 4.1.0
 - **Purpose**: Terraform module that creates AWS AppSync GraphQL API resources with flexible datasources, resolvers, and authentication configurations
 - **Service**: AWS AppSync (Managed GraphQL Service)
 - **Category**: Serverless, API Management, Application Integration
-- **Keywords**: appsync, graphql, api, serverless, lambda, dynamodb, http, resolver, datasource, authentication, api-key, iam, cognito, oidc, openid, schema, mutation, query, subscription, real-time, websocket, cloudwatch, x-ray, caching, elasticache, domain, custom-domain, route53, certificate, acm, eventbridge, rds, aurora, opensearch, elasticsearch, javascript, vtl, mapping-template, pipeline, function, field-resolver, authorization, federation, merged-api
+- **Keywords**: appsync, graphql, api, serverless, resolver, datasource, lambda, dynamodb, cognito, iam, api-key, subscription, real-time, caching, custom-domain, x-ray, vtl, javascript, pipeline-resolver
 - **Use For**: Building GraphQL APIs for mobile and web applications, creating real-time data synchronization systems, implementing serverless backend APIs, aggregating multiple data sources through unified GraphQL interface, developing collaborative applications with subscriptions, migrating REST APIs to GraphQL, building microservices API gateways, implementing event-driven architectures with GraphQL mutations, creating multi-tenant SaaS platforms, developing IoT device management interfaces
 
 ## Description
@@ -55,6 +55,233 @@ The module follows AWS best practices for serverless architectures and integrate
 8. **Multi-tenant SaaS Platforms**: Implement tenant isolation using Cognito authentication and resolver-level authorization rules
 9. **REST to GraphQL Migration**: Wrap existing REST APIs with GraphQL interface using HTTP datasources and custom resolvers
 10. **Real-time Analytics Dashboards**: Stream metrics and events to web dashboards using subscriptions connected to DynamoDB Streams or EventBridge
+
+## Submodules
+
+This module does not have separate submodules. All functionality is contained in the root module. A `wrappers/` directory exists for use with Terragrunt patterns.
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | required | Name of the GraphQL API |
+| `schema` | `string` | required | GraphQL schema definition in SDL format |
+| `create_graphql_api` | `bool` | `true` | Whether to create the GraphQL API |
+| `authentication_type` | `string` | `"API_KEY"` | Primary authentication type: API_KEY, AWS_IAM, OPENID_CONNECT, AMAZON_COGNITO_USER_POOLS, AWS_LAMBDA |
+| `visibility` | `string` | `null` | API visibility: GLOBAL or PRIVATE |
+| `api_keys` | `map(string)` | `{}` | Map of API keys to create |
+| `additional_authentication_provider` | `any` | `{}` | Additional authentication providers |
+| `datasources` | `any` | `{}` | Map of data source configurations |
+| `resolvers` | `any` | `{}` | Map of resolver definitions |
+| `functions` | `any` | `{}` | Map of AppSync function definitions for pipeline resolvers |
+| `logging_enabled` | `bool` | `false` | Enable CloudWatch logging |
+| `log_field_log_level` | `string` | `null` | Log level: ALL, ERROR, or NONE |
+| `xray_enabled` | `bool` | `false` | Enable X-Ray tracing |
+| `caching_enabled` | `bool` | `false` | Enable ElastiCache caching |
+| `caching_behavior` | `string` | `"FULL_REQUEST_CACHING"` | FULL_REQUEST_CACHING or PER_RESOLVER_CACHING |
+| `cache_type` | `string` | `"SMALL"` | Cache instance size: SMALL, MEDIUM, LARGE, XLARGE, etc. |
+| `cache_ttl` | `number` | `1` | Cache TTL in seconds |
+| `cache_at_rest_encryption_enabled` | `bool` | `false` | Enable cache encryption at rest |
+| `cache_transit_encryption_enabled` | `bool` | `false` | Enable cache encryption in transit |
+| `domain_name` | `string` | `""` | Custom domain name for the API |
+| `domain_name_association_enabled` | `bool` | `false` | Enable domain name association |
+| `certificate_arn` | `string` | `""` | ACM certificate ARN for custom domain |
+| `query_depth_limit` | `number` | `null` | Maximum query depth allowed |
+| `resolver_count_limit` | `number` | `null` | Maximum resolvers per request |
+| `introspection_config` | `string` | `null` | Enable/disable schema introspection (ENABLED/DISABLED) |
+| `user_pool_config` | `map(string)` | `{}` | Amazon Cognito User Pool configuration |
+| `lambda_authorizer_config` | `map(string)` | `{}` | Lambda authorizer configuration |
+| `openid_connect_config` | `map(string)` | `{}` | OpenID Connect configuration |
+| `tags` | `map(string)` | `{}` | Tags to apply to all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `appsync_graphql_api_id` | GraphQL API identifier |
+| `appsync_graphql_api_arn` | GraphQL API ARN |
+| `appsync_graphql_api_uris` | Map of URIs (includes GraphQL endpoint) |
+| `appsync_graphql_api_fqdns` | Fully qualified domain names |
+| `appsync_datasource_arn` | Map of data source ARNs by key |
+| `appsync_resolver_arn` | Map of resolver ARNs by key |
+| `appsync_function_arn` | Map of function ARNs by key |
+| `appsync_function_id` | Map of function IDs by key |
+| `appsync_api_key_id` | Map of API key IDs |
+| `appsync_api_key_key` | Map of API key values (sensitive) |
+| `appsync_domain_id` | Custom domain name ID |
+| `appsync_domain_name` | AppSync-provided domain name |
+| `appsync_domain_hosted_zone_id` | Route 53 hosted zone ID for domain |
+
+## Supported Data Source Types
+
+| Type | Description |
+|------|-------------|
+| `AWS_LAMBDA` | AWS Lambda function integration |
+| `AMAZON_DYNAMODB` | DynamoDB table integration |
+| `AMAZON_ELASTICSEARCH` | Elasticsearch domain (legacy) |
+| `AMAZON_OPENSEARCH_SERVICE` | OpenSearch Service domain |
+| `AMAZON_EVENTBRIDGE` | EventBridge event bus |
+| `RELATIONAL_DATABASE` | RDS/Aurora via Data API |
+| `HTTP` | External HTTP endpoints |
+| `NONE` | Local resolvers (no external data source) |
+
+## Usage Examples
+
+### Basic GraphQL API with Lambda Data Source
+
+```hcl
+module "appsync" {
+  source  = "terraform-aws-modules/appsync/aws"
+  version = "~> 4.1"
+
+  name   = "my-graphql-api"
+  schema = file("schema.graphql")
+
+  api_keys = {
+    default = null  # Expires in 7 days
+  }
+
+  datasources = {
+    lambda_posts = {
+      type         = "AWS_LAMBDA"
+      function_arn = aws_lambda_function.posts.arn
+    }
+  }
+
+  resolvers = {
+    "Query.getPosts" = {
+      data_source   = "lambda_posts"
+      direct_lambda = true
+    }
+  }
+
+  tags = {
+    Environment = "development"
+  }
+}
+```
+
+### Production API with Multiple Auth Providers and Caching
+
+```hcl
+module "appsync" {
+  source  = "terraform-aws-modules/appsync/aws"
+  version = "~> 4.1"
+
+  name   = "prod-graphql-api"
+  schema = file("schema.graphql")
+
+  # Primary authentication
+  authentication_type = "OPENID_CONNECT"
+  openid_connect_config = {
+    issuer    = "https://auth.example.com"
+    client_id = "your-client-id"
+  }
+
+  # Additional authentication providers
+  additional_authentication_provider = {
+    iam = {
+      authentication_type = "AWS_IAM"
+    }
+    cognito = {
+      authentication_type = "AMAZON_COGNITO_USER_POOLS"
+      user_pool_config = {
+        user_pool_id = aws_cognito_user_pool.this.id
+      }
+    }
+  }
+
+  # Caching configuration
+  caching_enabled                    = true
+  caching_behavior                   = "PER_RESOLVER_CACHING"
+  cache_type                         = "SMALL"
+  cache_ttl                          = 60
+  cache_at_rest_encryption_enabled   = true
+  cache_transit_encryption_enabled   = true
+
+  # Observability
+  logging_enabled     = true
+  log_field_log_level = "ERROR"
+  xray_enabled        = true
+
+  # Security limits
+  query_depth_limit    = 10
+  resolver_count_limit = 100
+  introspection_config = "DISABLED"
+
+  # Data sources
+  datasources = {
+    dynamodb_posts = {
+      type       = "AMAZON_DYNAMODB"
+      table_name = aws_dynamodb_table.posts.name
+      region     = "us-east-1"
+    }
+    lambda_users = {
+      type         = "AWS_LAMBDA"
+      function_arn = aws_lambda_function.users.arn
+    }
+    http_external = {
+      type     = "HTTP"
+      endpoint = "https://api.example.com"
+    }
+  }
+
+  # Resolvers
+  resolvers = {
+    "Query.getPost" = {
+      data_source       = "dynamodb_posts"
+      request_template  = file("templates/getPost-request.vtl")
+      response_template = file("templates/getPost-response.vtl")
+      caching_keys      = ["$context.identity.sub", "$context.arguments.id"]
+    }
+    "Query.getUser" = {
+      data_source   = "lambda_users"
+      direct_lambda = true
+    }
+  }
+
+  tags = {
+    Environment = "production"
+    Team        = "platform"
+  }
+}
+```
+
+### API with Custom Domain
+
+```hcl
+module "appsync" {
+  source  = "terraform-aws-modules/appsync/aws"
+  version = "~> 4.1"
+
+  name   = "custom-domain-api"
+  schema = file("schema.graphql")
+
+  authentication_type = "API_KEY"
+  api_keys = {
+    default = null
+  }
+
+  # Custom domain configuration
+  domain_name                     = "graphql.example.com"
+  domain_name_association_enabled = true
+  certificate_arn                 = aws_acm_certificate.graphql.arn
+
+  datasources = {
+    none = {
+      type = "NONE"
+    }
+  }
+
+  resolvers = {
+    "Query.hello" = {
+      data_source       = "none"
+      request_template  = "{\"version\": \"2017-02-28\"}"
+      response_template = "$util.toJson({\"message\": \"Hello World\"})"
+    }
+  }
+}
+```
 
 ## Best Practices
 

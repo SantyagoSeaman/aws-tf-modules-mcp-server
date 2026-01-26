@@ -11,8 +11,8 @@ A **Model Context Protocol (MCP)** server that provides intelligent search capab
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
-- **Fast & Efficient**: Pre-built search index with CPU-only inference using `thenlper/gte-small` model
-- **Ready to Use**: Includes pre-built index (`model/tfmod_gte_small_index.pkl`) with embeddings from `thenlper/gte-small` model and curated Terraform AWS module documentation
+- **Fast & Efficient**: Pre-built search index with CPU-only inference using `BAAI/bge-base-en-v1.5` model
+- **Ready to Use**: Includes pre-built index (`model/tfmod_index.pkl`) with embeddings from `BAAI/bge-base-en-v1.5` model and curated Terraform AWS module documentation
 - **Comprehensive Catalog**: Access to terraform-aws-modules documentation compiled from official sources with rich metadata
 - **Security-First**: Built-in path validation and access controls for safe file operations
 - **Configurable Weights**: Fine-tune search scoring through YAML config or CLI arguments
@@ -21,10 +21,12 @@ A **Model Context Protocol (MCP)** server that provides intelligent search capab
 
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
+  - [Claude Code CLI Integration](#claude-code-cli-integration)
+  - [Claude Desktop Integration](#claude-desktop-integration)
+  - [GitHub Copilot Integration](#github-copilot-integration-vs-code)
 - [Usage](#-usage)
   - [Building the Index](#1-building-the-index)
   - [CLI Search](#2-cli-search-standalone)
-  - [MCP Server](#3-mcp-server)
 - [MCP Tools](#-mcp-tools)
 - [Configuration](#️-configuration)
 - [Development](#-development)
@@ -73,17 +75,16 @@ pip install -r pyproject.toml
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_gte_small_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
 ```bash
 python src/tfmod_search_cli.py index \
-  --docs_dir ./modules/terraform-aws-modules \
-  --model thenlper/gte-small
+  --docs_dir ./modules/terraform-aws-modules
 ```
 
-**Note**: The first run will download the `thenlper/gte-small` model (~134MB).
+**Note**: The first run will download the `BAAI/bge-base-en-v1.5` model (~220MB).
 
 ### 2. Test the Search (CLI)
 
@@ -95,13 +96,90 @@ python src/tfmod_search_cli.py search \
   --top_k 5
 ```
 
-### 3. Run the MCP Server
+#### Claude Code CLI Integration
 
-Start the MCP server for integration with Claude Desktop or other MCP clients:
+Add the MCP server to Claude Code using the CLI:
 
 ```bash
-python src/tfmod_mcp_server.py --index_path ./model/tfmod_gte_small_index.pkl
+# Add the MCP server (replace with your actual path)
+claude mcp add --transport stdio terraform-modules -- \
+  /absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python \
+  /absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py
+
+# Verify the server was added
+claude mcp list
 ```
+
+Or manually add to your Claude Code settings (`~/.claude/settings.json`):
+
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "args": [
+        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+#### Claude Desktop Integration
+
+Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
+
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "args": [
+        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+#### GitHub Copilot Integration (VS Code)
+
+Add the MCP server to GitHub Copilot in VS Code (requires VS Code 1.99+):
+
+**Step 1**: Create `.vscode/mcp.json` in your project root (or open user-level config via Command Palette: "MCP: Open User Configuration"):
+
+```json
+{
+  "servers": {
+    "terraform-modules": {
+      "type": "stdio",
+      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "args": [
+        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+      ]
+    }
+  }
+}
+```
+
+**Step 2**: Click the "Start" button that appears at the top of the `mcp.json` file to initialize the server.
+
+**Step 3**: Open GitHub Copilot Chat, select **Agent** mode from the popup menu, and click the tools icon to verify the `terraform-modules` server and its tools are available.
+
+**Alternative setup via Command Palette**:
+1. Open Command Palette (`Cmd+Shift+P` on macOS / `Ctrl+Shift+P` on Windows/Linux)
+2. Run "MCP: Add Server"
+3. Select "stdio" as the server type
+4. Enter `terraform-modules` as the server name
+5. Enter the Python path as the command
+6. Enter the script path as the argument
+
+**Managing MCP Servers**:
+- "MCP: List Servers" — view installed servers and available actions
+- "MCP: Reset Cached Tools" — refresh tool discovery if tools don't appear
+- "MCP: Show Output" — debug server connection issues
+
+For more details, see [VS Code MCP documentation](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) and [GitHub Copilot MCP guide](https://docs.github.com/copilot/customizing-copilot/using-model-context-protocol/extending-copilot-chat-with-mcp).
 
 ## 📖 Usage
 
@@ -114,14 +192,13 @@ Build or rebuild the search index from your module documentation:
 ```bash
 python src/tfmod_search_cli.py index \
   --docs_dir ./modules/terraform-aws-modules \
-  --index_path ./model/tfmod_gte_small_index.pkl \
-  --model thenlper/gte-small
+  --index_path ./model/tfmod_bge_base_index.pkl
 ```
 
 **Options**:
 - `--docs_dir`: Directory containing Terraform module markdown files (required)
-- `--index_path`: Output path for the pickled index file (required)
-- `--model`: Sentence transformer model to use (default: `thenlper/gte-small`)
+- `--index_path`: Output path for the pickled index file (optional, defaults to `./model/tfmod_index.pkl`)
+- `--model`: Sentence transformer model to use (default: `BAAI/bge-base-en-v1.5`)
 
 ### 2. CLI Search (Standalone)
 
@@ -145,48 +222,11 @@ python src/tfmod_search_cli.py search \
   --w_exact 4.0 \
   --w_bm25 1.5 \
   --w_sem 1.0
-```
 
-### 3. MCP Server
-
-#### Running the Server
-
-**Note**: The repository includes a pre-built index, so you can run the server immediately without rebuilding.
-
-```bash
-# Using default index path (./model/tfmod_gte_small_index.pkl) - uses pre-built index
-python src/tfmod_mcp_server.py
-
-# With custom index path
-python src/tfmod_mcp_server.py --index_path /path/to/tfmod_gte_small_index.pkl
-
-# With custom configuration file
-python src/tfmod_mcp_server.py --config /path/to/config.yaml
-
-# With CLI weight overrides (overrides config.yaml)
-python src/tfmod_mcp_server.py \
-  --index_path ./model/tfmod_gte_small_index.pkl \
-  --w_kw 2.5 \
-  --w_exact 4.0 \
-  --w_bm25 1.5 \
-  --w_sem 1.0
-```
-
-#### Claude Desktop Integration
-
-Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/claude_desktop_config.json` on macOS):
-
-```json
-{
-  "mcpServers": {
-    "terraform-modules": {
-      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
-      "args": [
-        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
-      ]
-    }
-  }
-}
+# Search with optional query instruction for BGE models
+python src/tfmod_search_cli.py search \
+  --query "s3" \
+  --query-instruction "Represent this sentence for searching relevant passages: "
 ```
 
 ## 🛠️ MCP Tools
@@ -249,15 +289,20 @@ Retrieve full documentation for a specific Terraform module.
 Create a `config.yaml` file in the project root to customize search scoring weights:
 
 ```yaml
+# Optional query instruction for BGE models (improves short query retrieval)
+# Set to null to disable (default), or use:
+# query_instruction: "Represent this sentence for searching relevant passages: "
+query_instruction: null
+
 search_weights:
-  w_kw: 2.0      # Keyword overlap weight (IDF-weighted)
+  w_kw: 1.0      # Keyword overlap weight (IDF-weighted)
   w_exact: 3.0   # Exact module name match boost
-  w_bm25: 1.0    # BM25 text relevance weight
-  w_sem: 1.0     # Semantic similarity weight
+  w_bm25: 2.0    # BM25 text relevance weight
+  w_sem: 3.0     # Semantic similarity weight
 ```
 
 **Configuration Precedence** (highest to lowest):
-1. CLI arguments (`--w_kw`, `--w_exact`, etc.)
+1. CLI arguments (`--w_kw`, `--w_exact`, `--query-instruction`, etc.)
 2. `config.yaml` file
 3. Built-in defaults
 
@@ -327,9 +372,10 @@ The project includes comprehensive integration tests covering all major function
 pytest tests/ -v
 
 # Run specific test suite
-pytest tests/integration/test_mcp_server.py -v        # MCP server tests (17 tests)
-pytest tests/integration/test_parse_markdown.py -v    # Parsing tests (12 tests)
-pytest tests/integration/test_cli_index.py -v         # CLI index tests (4 tests)
+pytest tests/integration/test_mcp_server.py -v           # MCP server tests (17 tests)
+pytest tests/integration/test_parse_markdown.py -v       # Parsing tests (12 tests)
+pytest tests/integration/test_cli_index.py -v            # CLI index tests (4 tests)
+pytest tests/integration/test_model_comparison.py -v -s  # Model comparison tests (31 tests)
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
@@ -340,8 +386,9 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **MCP Server** (17 tests): `search_modules` tool, `get_module` resource, security validation, integration workflows
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
 - **CLI Index Building** (4 tests): Index creation, validation, search integration
+- **Model Comparison** (31 tests): Embedding model performance comparison with timing analysis
 
-**Total**: 33 integration tests
+**Total**: 64 integration tests
 
 ## 🏗️ Architecture
 
@@ -349,11 +396,11 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 This repository includes:
 
-- **Pre-built Search Index** (`model/tfmod_gte_small_index.pkl`):
-  - Ready-to-use search index with pre-computed embeddings using `thenlper/gte-small` model
+- **Pre-built Search Index** (`model/tfmod_index.pkl`):
+  - Ready-to-use search index with pre-computed embeddings using `BAAI/bge-base-en-v1.5` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
   - Includes 54 curated Terraform AWS modules
-  - File size: ~4.36 MB
+  - File size: ~4.38 MB
 
 - **Curated Module Documentation** (`modules/terraform-aws-modules/`):
   - Compiled documentation for 54 Terraform AWS modules covering compute, storage, networking, databases, security, and more
@@ -486,6 +533,29 @@ The hybrid search combines four signals with configurable weights:
 4. **Semantic Similarity** (`w_sem`): Cosine similarity of neural embeddings
 
 All scores are min-max normalized before weighted combination.
+
+### Embedding Model Comparison
+
+The project supports multiple embedding models. Here are benchmark results comparing `thenlper/gte-small` and `BAAI/bge-base-en-v1.5`:
+
+| Metric | thenlper/gte-small | BAAI/bge-base-en-v1.5 |
+|--------|-------------------|----------------------|
+| **Embedding Dimensions** | 384 | 768 |
+| **Model Size** | ~67 MB | ~220 MB |
+| **Index Size** | ~4.30 MB | ~4.38 MB |
+| **Index Build Time** | ~4.2s | ~7.3s |
+| **Avg Query Time** | ~14 ms | ~35 ms |
+| **Success Rate** (top-3) | 100% | 100% |
+
+**Test conditions**: 15 queries across 3 modules (s3-bucket, rds, ec2-instance) with 5 query types each (1-word, 2-word, short-phrase, medium-phrase, long natural language query).
+
+**Key findings**:
+- Both models achieve 100% success rate for finding target modules in top-3 results
+- `gte-small` is ~2.5x faster per query
+- `bge-base-en-v1.5` provides better similarity distribution for semantic search (addresses narrow clustering)
+- BGE v1.5 supports optional query instruction prefix for improved short query retrieval
+
+**Default model**: `BAAI/bge-base-en-v1.5` is the default for better retrieval quality with larger embedding dimensions.
 
 ## 🤝 Contributing
 

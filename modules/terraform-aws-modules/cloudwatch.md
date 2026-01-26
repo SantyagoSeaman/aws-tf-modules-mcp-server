@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/cloudwatch/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-cloudwatch
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/cloudwatch/aws/latest
-- **Latest Version**: 5.7.1
+- **Latest Version**: 5.7.2
 - **Purpose**: Terraform module that creates and manages AWS CloudWatch resources including log groups, metric alarms, metric filters, and advanced monitoring capabilities
 - **Service**: AWS CloudWatch (Monitoring and Observability)
 - **Category**: Monitoring, Observability, Logging, Security
-- **Keywords**: cloudwatch, monitoring, metrics, alarms, logs, log-groups, log-streams, metric-filters, metric-alarms, composite-alarms, cis-benchmark, security-monitoring, observability, dashboards, log-analytics, metric-stream, anomaly-detection, log-subscription, kinesis, firehose, lambda, sns, cloudtrail, application-monitoring, infrastructure-monitoring, performance-monitoring, resource-monitoring, threshold-alarms, log-retention, kms-encryption, log-data-protection, query-definition, log-insights, metric-math, alarm-actions, sns-notifications, email-alerts, pagerduty, opsgenie, datadog, splunk, elasticsearch, time-series, aggregation, statistics, percentiles, cloudwatch-agent, container-insights, lambda-insights, application-insights, synthetics, service-lens, x-ray, distributed-tracing
+- **Keywords**: cloudwatch, monitoring, metrics, alarms, logs, log-groups, metric-filters, composite-alarms, cis-benchmark, observability, metric-stream, anomaly-detection, log-subscription, sns-notifications, log-retention, kms-encryption, data-protection, query-definition
 - **Use For**: Application performance monitoring, infrastructure health tracking, log aggregation and analysis, security event detection, compliance monitoring, cost optimization through metrics, automated incident response, real-time alerting and notifications, anomaly detection, trend analysis, capacity planning, SLA monitoring
 
 ## Description
@@ -113,11 +113,11 @@ Key architectural advantages include modular design allowing selective use of on
 - **Key Features**: Pre-configured CIS controls, selectively disable controls, automated security monitoring, compliance reporting
 - **Use Cases**: Security compliance monitoring, unauthorized access detection, policy change tracking, root account usage alerts
 
-### 7. log-data-protection
+### 7. log-data-protection-policy
 
 - **Purpose**: Implements data protection policies to mask or block sensitive information in logs
-- **Source**: `terraform-aws-modules/cloudwatch/aws//modules/log-data-protection`
-- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/cloudwatch/aws/latest/submodules/log-data-protection
+- **Source**: `terraform-aws-modules/cloudwatch/aws//modules/log-data-protection-policy`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/cloudwatch/aws/latest/submodules/log-data-protection-policy
 - **Key Features**: PII detection and masking, custom data identifiers, audit findings
 - **Use Cases**: GDPR compliance, PCI-DSS log protection, sensitive data masking, privacy compliance
 
@@ -639,11 +639,11 @@ module "cis_alarms_dev" {
 }
 ```
 
-## Submodule 7: log-data-protection
+## Submodule 7: log-data-protection-policy
 
 ### Description
 
-The log-data-protection submodule implements CloudWatch Logs data protection policies that automatically detect and mask sensitive information such as personally identifiable information (PII), credit card numbers, and other confidential data in log streams. This helps organizations maintain compliance with privacy regulations like GDPR, HIPAA, and PCI-DSS by preventing sensitive data exposure in logs.
+The log-data-protection-policy submodule implements CloudWatch Logs data protection policies that automatically detect and mask sensitive information such as personally identifiable information (PII), credit card numbers, and other confidential data in log streams. This helps organizations maintain compliance with privacy regulations like GDPR, HIPAA, and PCI-DSS by preventing sensitive data exposure in logs.
 
 ### Key Features
 
@@ -672,7 +672,7 @@ The log-data-protection submodule implements CloudWatch Logs data protection pol
 
 ```hcl
 module "log_data_protection" {
-  source  = "terraform-aws-modules/cloudwatch/aws//modules/log-data-protection"
+  source  = "terraform-aws-modules/cloudwatch/aws//modules/log-data-protection-policy"
 
   log_group_name = "/aws/application/payment-processor"
 
@@ -1257,7 +1257,7 @@ When using this module in automated workflows:
 5. **Test Alarm Thresholds**: Start with conservative thresholds and tune based on actual behavior to avoid alarm fatigue
 6. **Use Submodules Selectively**: Only include submodules needed for your use case to keep Terraform state manageable
 7. **Enable CIS Alarms for Security**: For production accounts, always implement cis-alarms submodule for security compliance monitoring
-8. **Protect Sensitive Data**: Use log-data-protection submodule for any log groups that might contain PII or confidential information
+8. **Protect Sensitive Data**: Use log-data-protection-policy submodule for any log groups that might contain PII or confidential information
 9. **Plan for Scale**: When monitoring large resource fleets, use metric-alarms-by-multiple-dimensions to avoid Terraform configuration explosion
 10. **Integrate with Incident Response**: Connect alarms to SNS topics that integrate with your incident management platform
 11. **Document Dependencies**: Clearly document relationships between log groups, metric filters, and alarms for maintainability

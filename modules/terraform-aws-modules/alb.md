@@ -6,47 +6,37 @@
 - **Source**: `terraform-aws-modules/alb/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-alb
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/alb/aws/latest
-- **Latest Version**: 10.0.0
-- **Purpose**: Terraform module for creating and managing AWS Application Load Balancers (ALB) and Network Load Balancers (NLB) with comprehensive configuration options
+- **Latest Version**: 10.5.0
+- **Purpose**: Creates Application Load Balancers (ALB), Network Load Balancers (NLB), and Gateway Load Balancers with listeners, target groups, security groups, and Route53 integration
 - **Service**: AWS ELB (Elastic Load Balancing)
 - **Category**: Networking, Compute, Security
-- **Keywords**: alb, application-load-balancer, nlb, network-load-balancer, elastic-load-balancing, load-balancer, layer-7, layer-4, target-group, listener, listener-rules, routing, http, https, tcp, udp, tls, ssl-termination, traffic-distribution, high-availability, auto-scaling, health-check, security-group, waf, web-application-firewall, cognito, oidc, authentication, access-logs, cloudwatch, route53, dns, http-redirect, https-redirect, path-based-routing, host-based-routing, sticky-sessions, cross-zone, vpc, subnet, internet-facing, internal, mutual-tls, mtls, trust-store, certificate-revocation
-- **Use For**: distributing incoming traffic across multiple targets, implementing high availability for web applications, enabling SSL/TLS termination for secure connections, routing traffic based on URL paths and hostnames, implementing user authentication with Cognito or OIDC, load balancing containerized applications and microservices, supporting auto-scaling groups with health checks, protecting applications with AWS WAF integration, handling millions of requests with low latency, implementing blue-green or canary deployments, securing internal services with private load balancers, enabling mutual TLS authentication for enhanced security
+- **Keywords**: alb, nlb, load-balancer, target-group, listener, routing, https, tls, health-check, security-group, waf, cognito, oidc, authentication, path-routing, host-routing, mutual-tls, access-logs
+- **Use For**: distributing traffic across multiple targets, high availability for web applications, SSL/TLS termination, path-based and host-based routing, user authentication with Cognito/OIDC, load balancing containers and microservices, auto-scaling integration, WAF protection, blue-green and canary deployments, mutual TLS authentication
 
 ## Description
 
-This Terraform module provides a comprehensive solution for creating and managing AWS Application Load Balancers (ALB) and Network Load Balancers (NLB) with extensive configuration flexibility. Application Load Balancers operate at Layer 7 (application layer) and provide advanced HTTP/HTTPS traffic routing capabilities based on URL paths, hostnames, headers, query parameters, and source IP addresses. Network Load Balancers operate at Layer 4 (transport layer) and are designed for ultra-high performance, handling millions of requests per second with ultra-low latency while supporting TCP, UDP, and TLS protocols.
+This module creates and manages AWS Application Load Balancers (ALB), Network Load Balancers (NLB), and Gateway Load Balancers with comprehensive configuration options. ALBs operate at Layer 7 providing advanced HTTP/HTTPS routing based on paths, hostnames, headers, and query parameters. NLBs operate at Layer 4 for ultra-high performance TCP/UDP/TLS traffic with static IP support. Gateway Load Balancers enable deployment of third-party virtual appliances for traffic inspection.
 
-The module handles all aspects of load balancer configuration including listeners, target groups, listener rules, security groups, and access logging. It supports complex routing scenarios with multiple target groups, weighted target group routing, and sophisticated listener rules. The module integrates seamlessly with other AWS services including Route53 for DNS management, AWS WAF for application security, CloudWatch for monitoring and logging, and AWS Certificate Manager for SSL/TLS certificate management. Authentication capabilities include support for Amazon Cognito user pools and OIDC-compliant identity providers, enabling secure access control at the load balancer level.
+The module manages all load balancer components: listeners with routing rules, target groups with health checks, security groups, and access logging. It supports weighted routing for canary deployments, authentication via Cognito/OIDC, WAF integration, and Route53 DNS record creation. Advanced features include mutual TLS (mTLS) authentication with trust stores and certificate revocation lists, header manipulation (add/remove request/response headers), and URL rewriting.
 
-Built with operational excellence in mind, the module provides conditional resource creation, comprehensive tagging support, and flexible security group management. It includes a specialized submodule for managing trust stores and certificate revocation lists for mutual TLS authentication scenarios. The module supports both internet-facing and internal load balancers, cross-zone load balancing, connection draining, sticky sessions, and detailed access logging. It outputs all essential information including load balancer DNS names, ARNs, listener configurations, target group details, and security group IDs for integration with other infrastructure components.
+Key defaults prioritize security: deletion protection is enabled, invalid HTTP headers are dropped, and cross-zone load balancing is enabled. The module outputs DNS names, ARNs, listener configurations, target group details, and security group IDs for integration with other infrastructure.
 
 ## Key Features
 
-- **Application Load Balancer (ALB)**: Layer 7 load balancer with advanced HTTP/HTTPS routing and application-level traffic management
-- **Network Load Balancer (NLB)**: Layer 4 load balancer for ultra-high performance TCP/UDP/TLS traffic handling with static IP support
-- **Flexible Listener Configuration**: Define multiple listeners for different protocols (HTTP, HTTPS, TCP, UDP, TLS) with customizable ports
-- **Target Group Management**: Create and configure multiple target groups with health check settings and routing algorithms
-- **Advanced Routing Rules**: Implement sophisticated listener rules based on path patterns, hostnames, headers, query strings, and source IPs
-- **HTTP to HTTPS Redirect**: Automatic redirection from HTTP to HTTPS for enforcing secure connections
-- **Authentication Integration**: Built-in support for Amazon Cognito and OIDC authentication at the load balancer level
-- **Security Group Management**: Automated security group creation and configuration with customizable ingress and egress rules
-- **AWS WAF Integration**: Associate Web Application Firewall (WAF) ACLs for advanced threat protection and filtering
-- **SSL/TLS Termination**: Terminate SSL/TLS connections at the load balancer with ACM certificate integration
-- **Mutual TLS (mTLS) Support**: Implement client certificate authentication using trust stores and certificate revocation lists
-- **Access Logging**: Enable detailed access logs to S3 for security auditing, compliance, and traffic analysis
-- **Route53 Integration**: Automatic creation of Route53 DNS records pointing to the load balancer
-- **Health Check Configuration**: Comprehensive health check settings for monitoring target availability and responsiveness
-- **Sticky Sessions**: Support for session affinity using application-controlled or load balancer-generated cookies
-- **Cross-Zone Load Balancing**: Distribute traffic evenly across targets in multiple Availability Zones
-- **Connection Draining**: Graceful handling of in-flight requests during target deregistration
-- **Internal and Internet-Facing**: Support for both public-facing and private internal load balancers
-- **Conditional Resource Creation**: Control resource creation through feature flags for modular deployments
-- **Comprehensive Tagging**: Apply consistent tags across all resources for cost allocation and resource management
-- **CloudWatch Metrics**: Automatic integration with CloudWatch for monitoring performance and health metrics
-- **Weighted Target Groups**: Distribute traffic across target groups with configurable weights for canary deployments
-- **IP Address Targeting**: Register targets by IP address for flexibility in multi-environment architectures
-- **Lambda Function Targets**: Route traffic to AWS Lambda functions for serverless application architectures
+- **Multi-Type Load Balancer Support**: Application (ALB), Network (NLB), and Gateway Load Balancers in a single module
+- **Advanced Routing Rules**: Path patterns, hostnames, headers, query strings, HTTP methods, and source IP conditions
+- **Authentication Integration**: Amazon Cognito, OIDC providers, and JWT validation at the load balancer level
+- **Mutual TLS (mTLS)**: Client certificate authentication with trust stores and certificate revocation lists via submodule
+- **Header Manipulation**: Add/remove request and response headers, URL rewriting, and host header preservation
+- **Security Group Management**: Automated creation with customizable ingress/egress rules or attach existing groups
+- **AWS WAF Integration**: Associate Web Application Firewall ACLs with `associate_web_acl` parameter
+- **Comprehensive Logging**: Access logs, connection logs, and health check logs to S3
+- **Route53 Integration**: Automatic creation of A and AAAA DNS records
+- **Target Types**: Instance, IP, Lambda, and ALB targets with configurable health checks
+- **Load Balancing Algorithms**: Round robin, least outstanding requests, and weighted random for canary deployments
+- **SSL/TLS Termination**: ACM certificate integration with modern TLS 1.3 policies
+- **Static IPs (NLB)**: Subnet mapping with Elastic IP allocation for predictable IP addresses
+- **Zonal Shift Support**: Route 53 Application Recovery Controller integration for AZ failover
 
 ## Main Use Cases
 
@@ -141,7 +131,7 @@ resource "aws_s3_object" "crl_1" {
 # Create trust store with revocation lists
 module "trust_store" {
   source = "terraform-aws-modules/alb/aws//modules/lb_trust_store"
-  version = "~> 9.0"
+  version = "~> 10.0"
 
   name = "api-client-trust-store"
 
@@ -189,37 +179,45 @@ resource "aws_lb_listener" "mtls_https" {
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Controls if resources should be created |
-| `name` | `string` | `null` | Name of the load balancer |
-| `load_balancer_type` | `string` | `"application"` | Type of load balancer (application or network) |
-| `internal` | `bool` | `null` | If true, the load balancer will be internal |
-| `vpc_id` | `string` | `null` | VPC ID where the load balancer will be created |
-| `subnets` | `list(string)` | `null` | List of subnet IDs to attach to the load balancer |
-| `listeners` | `any` | `{}` | Map of listener configurations to create |
-| `target_groups` | `any` | `{}` | Map of target group configurations to create |
-| `security_group_ingress_rules` | `any` | `{}` | Security group ingress rules to add to the security group |
-| `security_group_egress_rules` | `any` | `{}` | Security group egress rules to add to the security group |
-| `create_security_group` | `bool` | `true` | Determines whether to create a security group |
-| `access_logs` | `map(string)` | `{}` | Map containing access logs configuration |
-| `associate_web_acl` | `bool` | `false` | Indicates whether a Web ACL should be associated |
-| `enable_deletion_protection` | `bool` | `null` | If true, deletion protection will be enabled |
-| `enable_cross_zone_load_balancing` | `bool` | `null` | If true, cross-zone load balancing is enabled |
-| `tags` | `map(string)` | `{}` | Map of tags to assign to resources |
+| `name` | `string` | `null` | Name of the load balancer (max 32 characters) |
+| `load_balancer_type` | `string` | `"application"` | Type: `application`, `network`, or `gateway` |
+| `internal` | `bool` | `null` | If true, creates internal (private) load balancer |
+| `vpc_id` | `string` | `null` | VPC ID (required when creating security group) |
+| `subnets` | `list(string)` | `null` | Subnet IDs to attach to the load balancer |
+| `listeners` | `map(any)` | `{}` | Listener configurations with rules |
+| `target_groups` | `map(any)` | `null` | Target group configurations |
+| `create_security_group` | `bool` | `true` | Create a new security group for the LB |
+| `security_groups` | `list(string)` | `[]` | Existing security group IDs to attach |
+| `security_group_ingress_rules` | `map(any)` | `null` | Ingress rules for created security group |
+| `security_group_egress_rules` | `map(any)` | `null` | Egress rules for created security group |
+| `access_logs` | `object` | `null` | Access logging config: `{bucket, enabled, prefix}` |
+| `connection_logs` | `object` | `null` | Connection logging config (NLB only) |
+| `associate_web_acl` | `bool` | `false` | Associate WAF Web ACL |
+| `web_acl_arn` | `string` | `null` | WAF Web ACL ARN to associate |
+| `enable_deletion_protection` | `bool` | `true` | Prevent deletion via API (default enabled!) |
+| `enable_cross_zone_load_balancing` | `bool` | `true` | Distribute traffic across AZs |
+| `drop_invalid_header_fields` | `bool` | `true` | Drop invalid HTTP headers (security default) |
+| `preserve_host_header` | `bool` | `null` | Preserve Host header to targets |
+| `idle_timeout` | `number` | `null` | Connection idle timeout in seconds (ALB) |
+| `subnet_mapping` | `list(object)` | `null` | Subnet mapping with EIP allocation (NLB static IPs) |
+| `route53_records` | `map(any)` | `null` | Route53 DNS records to create |
+| `tags` | `map(string)` | `{}` | Tags for all resources |
 
 ## Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `id` | The ID and ARN of the load balancer |
-| `arn` | The ID and ARN of the load balancer |
-| `arn_suffix` | ARN suffix for use with CloudWatch metrics |
-| `dns_name` | The DNS name of the load balancer |
-| `zone_id` | The zone ID of the load balancer for Route53 records |
-| `listeners` | Map of listeners created and their attributes |
-| `listener_rules` | Map of listener rules created and their attributes |
-| `target_groups` | Map of target groups created and their attributes |
-| `security_group_arn` | Amazon Resource Name (ARN) of the security group |
-| `security_group_id` | ID of the security group |
-| `route53_records` | Route53 records created and attached to the load balancer |
+| `id` | The ARN of the load balancer |
+| `arn` | The ARN of the load balancer |
+| `arn_suffix` | ARN suffix for CloudWatch metrics |
+| `dns_name` | DNS name of the load balancer |
+| `zone_id` | Hosted zone ID for Route53 alias records |
+| `listeners` | Map of listeners and their attributes |
+| `listener_rules` | Map of listener rules and their attributes |
+| `target_groups` | Map of target groups and their attributes |
+| `security_group_arn` | ARN of the created security group |
+| `security_group_id` | ID of the created security group |
+| `route53_records` | Route53 records created for the load balancer |
 
 ## Usage Examples
 
@@ -228,7 +226,7 @@ resource "aws_lb_listener" "mtls_https" {
 ```hcl
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+  version = "~> 10.0"
 
   name               = "web-app-alb"
   load_balancer_type = "application"
@@ -338,7 +336,7 @@ output "alb_dns_name" {
 ```hcl
 module "nlb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+  version = "~> 10.0"
 
   name               = "tcp-app-nlb"
   load_balancer_type = "network"
@@ -396,7 +394,7 @@ module "nlb" {
 ```hcl
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+  version = "~> 10.0"
 
   name               = "microservices-alb"
   load_balancer_type = "application"
@@ -523,7 +521,7 @@ module "alb" {
 ```hcl
 module "alb" {
   source  = "terraform-aws-modules/alb/aws"
-  version = "~> 9.0"
+  version = "~> 10.0"
 
   name               = "authenticated-app-alb"
   load_balancer_type = "application"
@@ -588,128 +586,71 @@ module "alb" {
 
 ## Best Practices
 
-### Load Balancer Design and Architecture
+### Architecture and Design
 
-1. **Choose the Right Load Balancer Type**: Use ALB for HTTP/HTTPS with advanced routing needs; use NLB for ultra-high performance TCP/UDP traffic or when static IPs are required
-2. **Multi-AZ Deployment**: Always deploy load balancers across at least two Availability Zones for high availability and fault tolerance
-3. **Subnet Selection**: Use public subnets for internet-facing load balancers and private subnets for internal load balancers
-4. **Target Group Strategy**: Create separate target groups for different application tiers, environments, or microservices
-5. **Health Check Configuration**: Configure health checks with appropriate intervals, thresholds, and timeout values based on application characteristics
-6. **Connection Draining**: Enable connection draining (deregistration delay) to complete in-flight requests during deployment or scaling
-7. **Cross-Zone Load Balancing**: Enable cross-zone load balancing to distribute traffic evenly across all registered targets in all enabled AZs
-8. **Idle Timeout Configuration**: Adjust idle timeout settings based on application requirements (default 60 seconds for ALB)
+1. **Load Balancer Type Selection**: ALB for HTTP/HTTPS Layer 7 routing; NLB for TCP/UDP with static IPs or ultra-high performance; Gateway LB for network appliances
+2. **Multi-AZ Deployment**: Always use at least 2 subnets in different AZs for high availability
+3. **Subnet Placement**: Public subnets for internet-facing; private subnets for internal load balancers
+4. **Listener Rules**: Every rule's actions must end with `forward`, `redirect`, or `fixed-response` action
+5. **Rule Priority**: Lower numbers = higher priority; put most specific rules first
 
-### Security Configuration
+### Security
 
-1. **Security Group Design**: Create dedicated security groups for load balancers with minimal required ingress/egress rules
-2. **SSL/TLS Policies**: Use modern TLS policies (TLS 1.2 or 1.3 only) such as `ELBSecurityPolicy-TLS13-1-2-2021-06` for enhanced security
-3. **Certificate Management**: Use AWS Certificate Manager (ACM) for SSL/TLS certificates with automatic renewal
-4. **HTTP to HTTPS Redirect**: Implement automatic HTTP to HTTPS redirection to enforce encrypted connections
-5. **WAF Integration**: Associate AWS WAF with ALBs to protect against common web exploits and attacks
-6. **Deletion Protection**: Enable deletion protection for production load balancers to prevent accidental deletion
-7. **Private Load Balancers**: Use internal load balancers for backend services that should not be directly accessible from the internet
-8. **Authentication at Load Balancer**: Leverage Cognito or OIDC authentication at the load balancer level to offload authentication from applications
-9. **Mutual TLS (mTLS)**: Implement client certificate authentication using trust stores for B2B APIs or high-security applications
-10. **Security Group Source Restrictions**: Limit ingress rules to known CIDR ranges or security groups rather than allowing 0.0.0.0/0 when possible
+1. **TLS Policies**: Use `ELBSecurityPolicy-TLS13-1-2-2021-06` or newer for modern TLS 1.3 support
+2. **Deletion Protection**: Enabled by default - explicitly disable only for dev/test environments
+3. **HTTP to HTTPS**: Always redirect HTTP to HTTPS using listener redirect action
+4. **WAF Integration**: Associate WAF ACL for internet-facing ALBs via `associate_web_acl = true`
+5. **Security Groups**: Define explicit ingress/egress rules; avoid 0.0.0.0/0 when possible
+6. **mTLS**: Use `lb_trust_store` submodule for client certificate authentication on B2B APIs
 
-### Listener and Routing Configuration
+### Target Groups and Health Checks
 
-1. **Default Actions**: Always configure a default action for listeners to handle requests that don't match any rules
-2. **Rule Priority Management**: Assign rule priorities strategically, with most specific rules having lower priority numbers
-3. **Path-Based Routing**: Use path-based routing to route different URL paths to different target groups or microservices
-4. **Host-Based Routing**: Implement host-based routing to serve multiple domains from a single load balancer
-5. **Header-Based Routing**: Leverage header-based routing for A/B testing, canary deployments, or API versioning
-6. **Fixed Response Actions**: Configure fixed response actions for maintenance pages or simple redirects without backend targets
-7. **Redirect Actions**: Use redirect actions for URL normalization, domain consolidation, or HTTP to HTTPS enforcement
-8. **Weighted Target Groups**: Implement weighted target group routing for gradual traffic shifting during blue-green or canary deployments
+1. **Target Types**: `instance` for EC2, `ip` for containers/ECS, `lambda` for serverless
+2. **Health Check Path**: Use dedicated endpoint that validates application dependencies
+3. **Recommended Thresholds**: 3 healthy, 2-3 unhealthy checks; 10-30s interval; timeout < interval
+4. **Deregistration Delay**: 30-300s depending on request duration; allows in-flight requests to complete
+5. **Load Balancing Algorithms**: `round_robin` (default), `least_outstanding_requests`, `weighted_random` (canary)
 
-### Target Group and Health Check Best Practices
+### Logging and Monitoring
 
-1. **Health Check Path Selection**: Use dedicated health check endpoints that verify all critical application dependencies
-2. **Health Check Thresholds**: Balance healthy and unhealthy thresholds to avoid flapping (recommended: 3 healthy, 2-3 unhealthy)
-3. **Health Check Intervals**: Set intervals based on application startup time and desired recovery speed (10-30 seconds typical)
-4. **Health Check Timeouts**: Configure timeouts shorter than intervals but long enough for realistic response times
-5. **HTTP Status Code Matching**: Use specific HTTP status codes (200) or ranges (200-299) for health check success criteria
-6. **Deregistration Delay**: Set deregistration delay to allow in-flight requests to complete (30-300 seconds depending on application)
-7. **Sticky Sessions**: Enable sticky sessions only when necessary; use application-controlled cookies for better control
-8. **Target Type Selection**: Choose appropriate target type (instance, IP, Lambda) based on your architecture and flexibility needs
-9. **Slow Start Mode**: Enable slow start mode for targets that require warm-up time before handling full request load
-10. **Target Group Attributes**: Configure appropriate attributes like connection termination, preserve client IP, and proxy protocol
-
-### Monitoring and Logging
-
-1. **Access Logging**: Enable access logs to S3 for security analysis, compliance, and troubleshooting (note: S3 storage costs apply)
-2. **CloudWatch Metrics**: Monitor key metrics including request count, target response time, healthy host count, and HTTP status codes
-3. **CloudWatch Alarms**: Create alarms for unhealthy target count, high response times, and elevated 4xx/5xx error rates
-4. **Target Group Metrics**: Monitor target-level metrics to identify performance issues with specific backend instances
-5. **Connection Metrics**: Track active connection counts, connection errors, and rejected connections for capacity planning
-6. **Request Tracing**: Enable request tracing headers (X-Amzn-Trace-Id) for distributed tracing in microservices architectures
-7. **Log Analysis**: Regularly analyze access logs for security threats, performance issues, and usage patterns
-8. **Metric Filters**: Create CloudWatch log metric filters for custom metrics based on access log patterns
-
-### Performance Optimization
-
-1. **Connection Multiplexing**: ALBs automatically use HTTP/2 and connection multiplexing to reduce latency and improve throughput
-2. **Keep-Alive Connections**: Enable keep-alive on backend targets to reuse connections and reduce connection overhead
-3. **Compression**: Enable compression on backend applications to reduce data transfer and improve response times
-4. **Response Caching**: Implement caching at the application or CloudFront layer in front of ALB for static content
-5. **Request Routing**: Use efficient routing rules to minimize evaluation time and reduce latency
-6. **Target Capacity**: Ensure adequate target capacity to handle traffic spikes and maintain low response times
-7. **Geographic Distribution**: Use multiple load balancers in different regions with Route53 latency-based routing for global applications
-8. **WebSocket Support**: Leverage ALB's native WebSocket support for real-time applications without additional infrastructure
-
-### Cost Optimization
-
-1. **Right-Sizing**: Choose appropriate load balancer type and size based on actual traffic requirements
-2. **Cross-Zone Load Balancing Costs**: Understand data transfer costs for cross-zone load balancing (free for ALB, charged for NLB)
-3. **Access Logging Costs**: Consider S3 storage costs when enabling access logging; implement lifecycle policies to manage log retention
-4. **Idle Load Balancers**: Identify and remove idle or underutilized load balancers to reduce costs
-5. **LCU Optimization**: Monitor Load Balancer Capacity Units (LCUs) and optimize to avoid unnecessary charges
-6. **Target Group Consolidation**: Consolidate target groups where possible to reduce complexity and potential costs
-7. **NLB Static IPs**: Use NLB when static IPs are required instead of Elastic IPs attached to instances
-
-### Operational Excellence
-
-1. **Infrastructure as Code**: Manage all load balancer configurations through Terraform for version control and reproducibility
-2. **Naming Conventions**: Use consistent, descriptive naming conventions for load balancers, target groups, and listeners
-3. **Tagging Strategy**: Apply comprehensive tags for cost allocation, environment identification, and resource management
-4. **Change Management**: Test load balancer configuration changes in non-production environments before production deployment
-5. **Documentation**: Document load balancer architecture, routing logic, and operational procedures
-6. **Backup and DR**: Implement multi-region load balancer deployments for disaster recovery scenarios
-7. **Regular Reviews**: Conduct periodic reviews of load balancer configurations, security groups, and listener rules
-8. **Automation**: Automate target registration/deregistration with auto-scaling groups or container orchestration platforms
+1. **Access Logs**: Enable for production; requires S3 bucket with ELB write permissions
+2. **Connection Logs**: Available for NLB; useful for debugging TLS issues
+3. **CloudWatch Alarms**: Monitor `UnHealthyHostCount`, `HTTPCode_ELB_5XX`, `TargetResponseTime`
 
 ## Additional Resources
 
 - **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-alb
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/alb/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-alb/tree/master/examples
-- **AWS ALB Documentation**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/introduction.html
-- **AWS NLB Documentation**: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
-- **Elastic Load Balancing User Guide**: https://docs.aws.amazon.com/elasticloadbalancing/latest/userguide/what-is-load-balancing.html
-- **ALB Listener Rules**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-update-rules.html
-- **Target Group Routing**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-target-groups.html
-- **Health Checks**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/target-group-health-checks.html
-- **Authentication with Cognito**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/listener-authenticate-users.html
-- **WAF Integration**: https://docs.aws.amazon.com/waf/latest/developerguide/waf-chapter.html
-- **Access Logs**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-access-logs.html
-- **CloudWatch Metrics**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-cloudwatch-metrics.html
+- **AWS ALB Documentation**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/
+- **AWS NLB Documentation**: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/
 - **Mutual TLS Authentication**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/mutual-authentication.html
-- **ELB Pricing**: https://aws.amazon.com/elasticloadbalancing/pricing/
 
 ## Notes for AI Agents
 
-When using this module in automated workflows:
+**Critical defaults to be aware of:**
+- `enable_deletion_protection = true` - Must explicitly disable for dev/test environments
+- `drop_invalid_header_fields = true` - Security default, usually keep enabled
+- `enable_cross_zone_load_balancing = true` - Usually desired for even distribution
 
-1. **Load Balancer Type Selection**: Choose `application` for HTTP/HTTPS Layer 7 routing; choose `network` for Layer 4 TCP/UDP traffic with ultra-high performance requirements
-2. **Multi-AZ Deployment**: Always specify at least two subnets in different Availability Zones for high availability
-3. **Security Group Management**: Use `create_security_group = true` and define explicit ingress/egress rules; avoid overly permissive rules
-4. **Listener Configuration**: Define listeners with appropriate protocols (HTTP, HTTPS, TCP, TLS) and port numbers; use HTTPS with ACM certificates for secure connections
-5. **Target Group Health Checks**: Configure realistic health check parameters based on application behavior; include path, interval, timeout, and thresholds
-6. **HTTPS Enforcement**: Implement HTTP to HTTPS redirect rules to enforce encrypted connections for web applications
-7. **Access Logging**: Enable access logs for production environments for security analysis and compliance; ensure S3 bucket exists with proper permissions
-8. **Tagging Strategy**: Apply consistent tags including Environment, Application, ManagedBy, and CostCenter for resource management and cost allocation
-9. **Route53 Integration**: Use the `route53_records` configuration to automatically create DNS records pointing to the load balancer
-10. **Deletion Protection**: Enable deletion protection for production load balancers using `enable_deletion_protection = true`
-11. **WAF Association**: For internet-facing ALBs handling untrusted traffic, associate AWS WAF ACL using `associate_web_acl = true` and provide `web_acl_arn`
-12. **Output Usage**: Export load balancer DNS name, ARN, and target group ARNs for integration with other resources like Route53 and Auto Scaling Groups
+**Common patterns:**
+
+1. **Simple ALB with HTTPS**: Use `listeners` with HTTP→HTTPS redirect and HTTPS forward to target group
+2. **Path-based routing**: Define `rules` within listener with `path_pattern` conditions
+3. **Host-based routing**: Use `host_header` conditions in listener rules
+4. **NLB with static IPs**: Use `subnet_mapping` with `allocation_id` for Elastic IPs
+5. **Weighted routing (canary)**: Use `forward.stickiness` and `forward.target_groups` with weights
+
+**Required parameters by use case:**
+- All: `name`, `vpc_id`, `subnets`, `listeners`, `target_groups`
+- Internet-facing: `internal = false` (or omit), public subnets
+- Internal: `internal = true`, private subnets
+- HTTPS: `certificate_arn` in listener, port 443, protocol "HTTPS"
+- WAF: `associate_web_acl = true`, `web_acl_arn`
+- mTLS: Use `lb_trust_store` submodule, set `mutual_authentication` in listener
+
+**Output usage:**
+- `dns_name` - For Route53 alias records or direct access
+- `zone_id` - Required for Route53 alias record configuration
+- `target_groups["key"].arn` - For ASG attachment or ECS service
+- `security_group_id` - For target security group ingress rules

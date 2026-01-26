@@ -6,11 +6,11 @@
 - **Source**: `terraform-aws-modules/managed-service-grafana/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-grafana/aws/latest
-- **Latest Version**: 2.3.0
+- **Latest Version**: 2.3.1
 - **Purpose**: Terraform module that creates and manages AWS Managed Service for Grafana (AMG) workspaces and related resources
 - **Service**: AWS Managed Grafana (Amazon Managed Service for Grafana)
 - **Category**: Monitoring, Observability, Analytics
-- **Keywords**: amg, analytics, api-key, authentication, aws-sso, cloudwatch, dashboard, data-source, data-visualization, elasticsearch, enterprise-license, free-trial, grafana, grafana-workspace, iam-role, monitoring, network-access-control, observability, opensearch, permissions, prometheus, saml, security-group, service-account, service-managed, single-sign-on, timestream, token, user-management, visualization, vpc-configuration, workspace, x-ray
+- **Keywords**: grafana, amg, grafana-workspace, monitoring, observability, dashboard, visualization, cloudwatch, prometheus, x-ray, aws-sso, saml, api-key, service-account, vpc-configuration, data-source
 - **Use For**: centralized metrics visualization, multi-source dashboard creation, CloudWatch metrics analysis, Prometheus data visualization, distributed tracing with X-Ray, enterprise observability platforms, team collaboration dashboards, IoT data monitoring, log analytics visualization, application performance monitoring, infrastructure monitoring, business intelligence dashboards
 
 ## Description
@@ -68,21 +68,27 @@ The module integrates seamlessly with AWS native data sources including CloudWat
 | `account_access_type` | `string` | `"CURRENT_ACCOUNT"` | Type of account access (CURRENT_ACCOUNT, ORGANIZATION) |
 | `authentication_providers` | `list(string)` | `["AWS_SSO"]` | List of authentication providers (AWS_SSO, SAML) |
 | `permission_type` | `string` | `"SERVICE_MANAGED"` | Permission type (SERVICE_MANAGED, CUSTOMER_MANAGED) |
-| `data_sources` | `list(string)` | `[]` | List of data sources (CLOUDWATCH, PROMETHEUS, XRAY, OPENSEARCH_SERVICE, etc.) |
+| `data_sources` | `list(string)` | `[]` | List of data sources (CLOUDWATCH, PROMETHEUS, XRAY, ATHENA, OPENSEARCH_SERVICE, REDSHIFT, SITEWISE, TIMESTREAM) |
 | `notification_destinations` | `list(string)` | `[]` | List of notification destinations (SNS) |
 | `grafana_version` | `string` | `null` | Version of Grafana to support |
 | `network_access_control` | `any` | `{}` | Network access control configuration |
 | `vpc_configuration` | `any` | `{}` | VPC configuration for the workspace |
 | `create_iam_role` | `bool` | `true` | Whether to create IAM role for workspace |
 | `iam_role_name` | `string` | `null` | Name to use for IAM role |
+| `iam_role_arn` | `string` | `null` | Existing IAM role ARN (required if create_iam_role = false) |
 | `iam_role_policy_arns` | `list(string)` | `[]` | ARNs of IAM policies to attach to workspace role |
+| `enable_alerts` | `bool` | `false` | Enable alerting permissions for workspace IAM role |
 | `create_security_group` | `bool` | `true` | Whether to create security group for workspace |
 | `security_group_rules` | `any` | `{}` | Security group rules to add |
 | `workspace_api_keys` | `any` | `{}` | Map of workspace API keys to create |
 | `workspace_service_accounts` | `any` | `{}` | Map of workspace service accounts to create |
+| `workspace_service_account_tokens` | `any` | `{}` | Map of workspace service account tokens to create |
 | `associate_license` | `bool` | `true` | Whether to associate a license with workspace |
 | `license_type` | `string` | `"ENTERPRISE"` | Type of license (ENTERPRISE, ENTERPRISE_FREE_TRIAL) |
-| `saml_configuration` | `any` | `{}` | SAML configuration for workspace |
+| `saml_idp_metadata_url` | `string` | `null` | SAML identity provider metadata URL |
+| `saml_admin_role_values` | `list(string)` | `[]` | SAML assertion values for admin role |
+| `saml_editor_role_values` | `list(string)` | `[]` | SAML assertion values for editor role |
+| `configuration` | `string` | `null` | JSON-encoded workspace configuration (unified alerting, plugins) |
 | `tags` | `map(string)` | `{}` | Map of tags to assign to resources |
 
 ## Main Outputs
@@ -107,11 +113,26 @@ The module integrates seamlessly with AWS native data sources including CloudWat
 
 ## Usage Examples
 
+### Minimal Example
+
+```hcl
+module "grafana" {
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
+
+  name              = "my-grafana"
+  associate_license = false  # Set to true for Enterprise features
+
+  tags = { Environment = "dev" }
+}
+```
+
 ### Example 1: Basic Workspace with AWS SSO
 
 ```hcl
 module "grafana_basic" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "team-grafana"
   description              = "Grafana workspace for engineering team"
@@ -138,7 +159,8 @@ module "grafana_basic" {
 
 ```hcl
 module "grafana_vpc" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "secure-grafana"
   description              = "Grafana workspace in private VPC"
@@ -186,7 +208,8 @@ module "grafana_vpc" {
 
 ```hcl
 module "grafana_automation" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "automation-grafana"
   description              = "Grafana workspace with API keys for automation"
@@ -240,7 +263,8 @@ module "grafana_automation" {
 
 ```hcl
 module "grafana_organization" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "org-wide-grafana"
   description              = "Organization-wide Grafana workspace"
@@ -279,7 +303,8 @@ module "grafana_organization" {
 
 ```hcl
 module "grafana_saml" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "saml-grafana"
   description              = "Grafana workspace with SAML authentication"
@@ -290,23 +315,15 @@ module "grafana_saml" {
   data_sources = ["CLOUDWATCH", "PROMETHEUS"]
 
   # SAML configuration
-  saml_configuration = {
-    idp_metadata_url = "https://idp.example.com/metadata"
-
-    assertion_attributes = {
-      email = "email"
-      login = "username"
-      name  = "displayName"
-      role  = "role"
-      org   = "organization"
-    }
-
-    role_assertion = "role"
-
-    allowed_organizations = ["engineering", "operations"]
-
-    login_validity_duration = 1440  # 24 hours
-  }
+  saml_idp_metadata_url      = "https://idp.example.com/metadata"
+  saml_admin_role_values     = ["admin"]
+  saml_editor_role_values    = ["editor"]
+  saml_email_assertion       = "email"
+  saml_login_assertion       = "username"
+  saml_name_assertion        = "displayName"
+  saml_role_assertion        = "role"
+  saml_org_assertion         = "organization"
+  saml_login_validity_duration = 1440  # 24 hours
 
   tags = {
     Environment    = "production"
@@ -342,7 +359,8 @@ resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
 }
 
 module "grafana_custom_permissions" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "custom-perm-grafana"
   description              = "Grafana workspace with customer-managed permissions"
@@ -353,8 +371,8 @@ module "grafana_custom_permissions" {
   data_sources = ["CLOUDWATCH"]
 
   # Use existing IAM role
-  create_iam_role      = false
-  workspace_iam_role_arn = aws_iam_role.grafana_custom.arn
+  create_iam_role = false
+  iam_role_arn    = aws_iam_role.grafana_custom.arn
 
   tags = {
     Environment = "production"
@@ -367,7 +385,8 @@ module "grafana_custom_permissions" {
 
 ```hcl
 module "grafana_restricted" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                     = "restricted-grafana"
   description              = "Grafana workspace with IP restrictions"
@@ -405,24 +424,33 @@ resource "aws_ec2_managed_prefix_list" "corporate" {
 
 ```hcl
 module "grafana_production" {
-  source = "terraform-aws-modules/managed-service-grafana/aws"
+  source  = "terraform-aws-modules/managed-service-grafana/aws"
+  version = "~> 2.3"
 
   name                = "prod-observability"
   description         = "Production observability platform with Grafana"
-  grafana_version     = "9.4"
+  grafana_version     = "10.4"
   account_access_type = "CURRENT_ACCOUNT"
 
   authentication_providers = ["AWS_SSO"]
   permission_type          = "SERVICE_MANAGED"
+
+  # Enable unified alerting
+  configuration = jsonencode({
+    unifiedAlerting = { enabled = true }
+    plugins = { pluginAdminEnabled = false }
+  })
 
   # All supported data sources
   data_sources = [
     "CLOUDWATCH",
     "PROMETHEUS",
     "XRAY",
+    "ATHENA",
     "OPENSEARCH_SERVICE",
-    "TIMESTREAM",
-    "SITEWISE"
+    "REDSHIFT",
+    "SITEWISE",
+    "TIMESTREAM"
   ]
 
   notification_destinations = ["SNS"]

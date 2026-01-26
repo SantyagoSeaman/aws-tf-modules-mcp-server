@@ -6,46 +6,38 @@
 - **Source**: `terraform-aws-modules/rds-aurora/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-rds-aurora
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/rds-aurora/aws/latest
-- **Latest Version**: 9.16.0
-- **Purpose**: Terraform module for creating and managing AWS RDS Aurora database clusters with extensive configuration options
+- **Latest Version**: 10.2.0
+- **Purpose**: Terraform module for creating and managing AWS RDS Aurora database clusters with autoscaling, global clusters, serverless configurations, and advanced monitoring
 - **Service**: AWS RDS Aurora (Amazon Relational Database Service - Aurora)
 - **Category**: Database, Managed Services, Cloud Infrastructure
-- **Keywords**: aurora, rds, database, postgresql, mysql, serverless, global-cluster, autoscaling, multi-az, limitless, dsql, read-replica, cluster, relational-database, aws-aurora, aurora-postgresql, aurora-mysql, db-cluster, database-cluster, managed-database, cloud-database, aurora-serverless, serverless-v2, enhanced-monitoring, performance-insights, s3-import, backup, encryption, kms, snapshot, failover, high-availability, disaster-recovery, cross-region, replication, endpoint, custom-endpoint, scaling, capacity, monitoring, cloudwatch, iam-authentication, security-group, subnet-group, parameter-group, cluster-parameter-group, db-instance, writer-endpoint, reader-endpoint
-- **Use For**: Production relational databases, multi-region database deployments, serverless database workloads, auto-scaling database clusters, high-availability database systems, disaster recovery setups, global database applications, microservices data persistence, application backend databases, read-heavy workloads with replica scaling, cost-optimized serverless databases, enterprise database consolidation
+- **Keywords**: aurora, rds, database, postgresql, mysql, serverless, global-cluster, autoscaling, multi-az, read-replica, encryption, high-availability, dsql, limitless, secrets-manager, enhanced-monitoring
+- **Use For**: Production relational databases, multi-region database deployments, serverless database workloads, auto-scaling database clusters, high-availability database systems, disaster recovery setups, global database applications, microservices data persistence, read-heavy workloads with replica scaling, cost-optimized serverless databases
 
 ## Description
 
-This Terraform module provides a comprehensive solution for deploying and managing Amazon Aurora database clusters on AWS. Aurora is a MySQL and PostgreSQL-compatible relational database built for the cloud, combining the performance and availability of enterprise databases with the simplicity and cost-effectiveness of open-source databases. The module abstracts the complexity of Aurora cluster configuration, supporting both provisioned and serverless deployment modes, multiple database engines (Aurora PostgreSQL and Aurora MySQL), and advanced features like global clusters, read replica autoscaling, and custom endpoints.
+This Terraform module provides a comprehensive solution for deploying and managing Amazon Aurora database clusters on AWS. Aurora is a MySQL and PostgreSQL-compatible relational database built for the cloud, combining enterprise-grade performance with open-source simplicity. The module supports multiple engine types (Aurora MySQL, Aurora PostgreSQL, Aurora Limitless, Aurora DSQL), both provisioned and serverless deployment modes, and advanced features like global clusters, read replica autoscaling, and custom endpoints.
 
-The module enables flexible cluster architectures ranging from simple single-region deployments to sophisticated multi-region global databases with automatic failover capabilities. It supports Aurora Serverless v1 and v2 for variable workloads that require automatic scaling based on demand, as well as Aurora Limitless for horizontally scalable databases. Features like enhanced monitoring, Performance Insights, S3 data import, and integration with AWS services such as CloudWatch, KMS, and IAM provide enterprise-grade database management capabilities. The module also supports Aurora DSQL (Distributed SQL) clusters for distributed database workloads across multiple regions.
+The module enables flexible cluster architectures from simple single-region deployments to sophisticated multi-region global databases with automatic failover. It supports Aurora Serverless v1 and v2 for variable workloads, Aurora Limitless for horizontally scalable databases, and heterogeneous clusters with mixed instance classes and promotion tier control. Integration with AWS Secrets Manager provides automatic master password management without storing credentials in Terraform state.
 
-Built with production readiness in mind, this module includes comprehensive options for security (encryption at rest and in transit, IAM authentication, network isolation), high availability (Multi-AZ deployments, automated backups, point-in-time recovery), and operational excellence (configurable monitoring intervals, CloudWatch log exports, automated minor version upgrades). The module follows Terraform best practices with clear input variables, comprehensive outputs, and conditional resource creation, making it suitable for both development environments and production-grade database deployments.
+Built with production readiness in mind, the module includes options for security (encryption enabled by default, IAM authentication, network isolation), high availability (Multi-AZ deployments, automated backups), and operational excellence (enhanced monitoring with configurable intervals, CloudWatch log exports). Requires Terraform >= 1.11.1 and AWS Provider >= 6.28.
 
 ## Key Features
 
-- **Multiple Database Engines**: Support for Aurora PostgreSQL and Aurora MySQL with configurable engine versions
-- **Deployment Modes**: Provisioned clusters, Serverless v1, Serverless v2, and Aurora Limitless configurations
+- **Multiple Database Engines**: Aurora MySQL, Aurora PostgreSQL, Aurora Limitless, and Aurora DSQL
+- **Deployment Modes**: Provisioned clusters, Serverless v1, Serverless v2, and Limitless configurations
 - **Global Clusters**: Multi-region database clusters with cross-region read replicas and automatic failover
-- **Read Replica Autoscaling**: Automatic scaling of read replicas based on CPU utilization or custom metrics
-- **Serverless Capabilities**: Aurora Serverless v1 and v2 with automatic capacity scaling for variable workloads
-- **Aurora DSQL Support**: Distributed SQL clusters with multi-region capabilities via the dsql submodule
-- **Aurora Limitless**: Horizontally scalable databases for massive throughput requirements
-- **Enhanced Monitoring**: Integration with CloudWatch for detailed database performance metrics at 1-60 second intervals
-- **Performance Insights**: Advanced database performance monitoring and query analysis
-- **Custom Endpoints**: Create custom endpoint configurations for load balancing and workload isolation
-- **S3 Import**: Direct data import from Amazon S3 buckets during cluster creation
+- **Read Replica Autoscaling**: CPU-based automatic scaling with configurable min/max capacity
+- **Heterogeneous Clusters**: Mix different instance classes with promotion tier control for failover priority
+- **Secrets Manager Integration**: Automatic master password management (enabled by default)
+- **Aurora DSQL Support**: Distributed SQL clusters with multi-region peering via dsql submodule
+- **Enhanced Monitoring**: CloudWatch integration with configurable intervals (1-60 seconds)
+- **Custom Endpoints**: Fine-grained routing control for workload isolation
+- **S3 Import**: Restore databases from S3-based backups
 - **Multi-AZ Deployments**: High availability with automatic failover across availability zones
-- **Encryption**: Storage encryption using AWS KMS with customer-managed or AWS-managed keys
-- **IAM Database Authentication**: Token-based authentication using AWS IAM credentials
-- **Backup and Recovery**: Automated backups with configurable retention periods and point-in-time recovery
-- **Snapshot Management**: Manual and automated snapshot creation with cross-region copy capabilities
-- **CloudWatch Logs**: Export of audit logs, error logs, general logs, and slow query logs to CloudWatch
-- **Security Groups**: Configurable security group rules for network access control
-- **Subnet Groups**: Custom database subnet group configuration for VPC networking
-- **Parameter Groups**: Cluster and instance-level parameter group customization
-- **Tagging Support**: Comprehensive resource tagging for cost allocation and resource management
-- **Deletion Protection**: Prevent accidental deletion of production database clusters
-- **Blue/Green Deployments**: Support for zero-downtime database updates (Aurora PostgreSQL)
+- **Encryption at Rest**: Storage encryption enabled by default using AWS KMS
+- **IAM Database Authentication**: Token-based authentication without storing passwords
+- **CloudWatch Logs Export**: Audit, error, general, slowquery, and postgresql log types
+- **Security Groups**: Auto-create or use existing security groups with ingress rule configuration
 - **Conditional Resource Creation**: Flexible module configuration with create flags for all resources
 
 ## Main Use Cases
@@ -142,6 +134,181 @@ module "dsql_cluster_secondary" {
     Environment = "production"
     Name        = "dsql-secondary"
     Region      = "us-west-2"
+  }
+}
+```
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | n/a | Name prefix used across all created resources |
+| `engine` | `string` | `null` | Database engine: `aurora`, `aurora-mysql`, `aurora-postgresql` |
+| `engine_version` | `string` | `null` | Specific engine version (e.g., `17.5` for PostgreSQL) |
+| `master_username` | `string` | `"root"` | Username for the master database user |
+| `cluster_instance_class` | `string` | `null` | Compute/memory capacity per instance (e.g., `db.r8g.large`) |
+| `instances` | `map(object)` | `{}` | Map of instance configurations with custom settings |
+| `vpc_id` | `string` | `""` | VPC ID for security group placement |
+| `db_subnet_group_name` | `string` | `""` | Database subnet group (existing or auto-created) |
+| `subnets` | `list(string)` | `[]` | List of subnet IDs used by database subnet group |
+| `storage_encrypted` | `bool` | `true` | Enable encryption at rest (recommended) |
+| `kms_key_id` | `string` | `null` | ARN for KMS encryption key |
+| `backup_retention_period` | `number` | `null` | Days to retain automated backups |
+| `deletion_protection` | `bool` | `null` | Prevent accidental cluster deletion |
+| `skip_final_snapshot` | `bool` | `false` | Skip final snapshot before deletion |
+| `manage_master_user_password` | `bool` | `true` | Use RDS Secrets Manager for password management |
+| `autoscaling_enabled` | `bool` | `false` | Enable read replica autoscaling |
+| `autoscaling_min_capacity` | `number` | `0` | Minimum autoscaled read replicas |
+| `autoscaling_max_capacity` | `number` | `2` | Maximum autoscaled read replicas |
+| `autoscaling_target_cpu` | `number` | `70` | Target CPU percentage for autoscaling |
+| `enabled_cloudwatch_logs_exports` | `list(string)` | `[]` | Log types: `audit`, `error`, `general`, `slowquery`, `postgresql` |
+| `monitoring_interval` | `number` | `0` | Enhanced monitoring frequency (0=disabled, 1-60 seconds) |
+| `vpc_security_group_ids` | `list(string)` | `[]` | List of existing VPC security groups to associate |
+| `security_group_ingress_rules` | `map(object)` | `{}` | Map of ingress rules for auto-created security group |
+| `iam_database_authentication_enabled` | `bool` | `null` | Enable IAM database authentication |
+| `create` | `bool` | `true` | Control whether to create cluster resources |
+| `create_db_subnet_group` | `bool` | `true` | Create DB subnet group or use existing |
+| `create_security_group` | `bool` | `true` | Create security group or use existing |
+| `create_monitoring_role` | `bool` | `true` | Create IAM role for enhanced monitoring |
+| `apply_immediately` | `bool` | `false` | Apply changes immediately or during maintenance window |
+| `tags` | `map(string)` | `{}` | Map of tags to assign to all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `cluster_endpoint` | Writer endpoint for the cluster (primary connection) |
+| `cluster_reader_endpoint` | Read-only endpoint, load-balanced across replicas |
+| `cluster_port` | Database port number |
+| `cluster_id` | RDS Cluster Identifier |
+| `cluster_arn` | Amazon Resource Name (ARN) of the cluster |
+| `cluster_resource_id` | RDS Cluster Resource ID |
+| `cluster_members` | List of RDS instance identifiers in the cluster |
+| `cluster_instances` | Map of cluster instances with full attributes |
+| `cluster_master_username` | Database master username (sensitive) |
+| `cluster_master_user_secret` | Managed secret object (when Secrets Manager enabled) |
+| `security_group_id` | Security group ID of the cluster |
+| `cluster_engine_version_actual` | Running engine version |
+| `cluster_database_name` | Auto-created database name |
+| `db_subnet_group_name` | Subnet group identifier |
+| `enhanced_monitoring_iam_role_arn` | Enhanced monitoring IAM role ARN |
+| `db_cluster_parameter_group_arn` | Cluster parameter group ARN |
+| `db_parameter_group_arn` | DB parameter group ARN |
+
+## Usage Examples
+
+### Basic PostgreSQL Cluster
+
+```hcl
+module "aurora_cluster" {
+  source  = "terraform-aws-modules/rds-aurora/aws"
+  version = "~> 10.2"
+
+  name           = "my-aurora-postgres"
+  engine         = "aurora-postgresql"
+  engine_version = "17.5"
+
+  cluster_instance_class = "db.r8g.large"
+  instances = {
+    one = {}
+    two = {
+      instance_class = "db.r8g.2xlarge"
+    }
+  }
+
+  vpc_id               = "vpc-12345678"
+  db_subnet_group_name = "db-subnet-group"
+
+  security_group_ingress_rules = {
+    vpc_ingress = {
+      cidr_ipv4 = "10.20.0.0/20"
+    }
+  }
+
+  storage_encrypted   = true
+  apply_immediately   = true
+  monitoring_interval = 10
+
+  enabled_cloudwatch_logs_exports = ["postgresql"]
+
+  tags = {
+    Environment = "production"
+    Terraform   = "true"
+  }
+}
+```
+
+### Autoscaled Cluster
+
+```hcl
+module "aurora_cluster" {
+  source  = "terraform-aws-modules/rds-aurora/aws"
+  version = "~> 10.2"
+
+  name           = "my-aurora-autoscaled"
+  engine         = "aurora-postgresql"
+  engine_version = "17.5"
+
+  cluster_instance_class = "db.r8g.large"
+  instances = {
+    one = {}  # Primary writer instance
+  }
+
+  autoscaling_enabled      = true
+  autoscaling_min_capacity = 1
+  autoscaling_max_capacity = 5
+  autoscaling_target_cpu   = 70
+
+  vpc_id               = "vpc-12345678"
+  db_subnet_group_name = "db-subnet-group"
+  storage_encrypted    = true
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+### Heterogeneous Cluster with Mixed Instance Classes
+
+```hcl
+module "aurora_cluster" {
+  source  = "terraform-aws-modules/rds-aurora/aws"
+  version = "~> 10.2"
+
+  name           = "my-aurora-heterogeneous"
+  engine         = "aurora-postgresql"
+  engine_version = "17.5"
+
+  cluster_instance_class = "db.r8g.large"
+  instances = {
+    writer = {
+      instance_class      = "db.r8g.2xlarge"
+      publicly_accessible = false
+    }
+    reader_analytics = {
+      identifier     = "analytics-reader"
+      instance_class = "db.r8g.2xlarge"
+    }
+    reader_reporting = {
+      identifier     = "reporting-reader"
+      instance_class = "db.r8g.large"
+      promotion_tier = 15  # Lower priority for failover
+    }
+  }
+
+  autoscaling_enabled      = true
+  autoscaling_min_capacity = 1
+  autoscaling_max_capacity = 5
+
+  vpc_id  = "vpc-12345678"
+  subnets = ["subnet-1", "subnet-2", "subnet-3"]
+
+  storage_encrypted   = true
+  deletion_protection = true
+
+  tags = {
+    Environment = "production"
   }
 }
 ```
@@ -260,17 +427,17 @@ module "dsql_cluster_secondary" {
 
 When using this module in automated workflows:
 
-1. **Security First**: Always enable encryption at rest and in transit, use KMS customer-managed keys for production
-2. **High Availability**: Enable Multi-AZ deployments for production workloads
-3. **Network Isolation**: Deploy clusters in private subnets with restrictive security groups
-4. **Backup Strategy**: Configure appropriate backup retention periods based on RPO requirements
-5. **Monitoring**: Enable enhanced monitoring and Performance Insights for production clusters
-6. **Credential Management**: Use AWS Secrets Manager for master password storage, never hardcode credentials
-7. **Tagging**: Apply consistent tags for cost allocation, environment identification, and resource management
-8. **Autoscaling**: Configure read replica autoscaling for variable read workloads
-9. **Engine Selection**: Choose Aurora PostgreSQL for advanced features and compliance, Aurora MySQL for MySQL compatibility
-10. **Serverless Considerations**: Use Serverless v2 for modern workloads, Serverless v1 for legacy applications
-11. **Global Clusters**: For multi-region applications, evaluate Aurora Global Database for low-latency reads
-12. **Cost Optimization**: Right-size instances, use autoscaling, and consider reserved instances for production
-13. **Testing**: Always test major version upgrades and failover procedures in non-production environments first
-14. **Documentation**: Document cluster architecture, networking decisions, and disaster recovery procedures
+1. **Version Requirements**: Requires Terraform >= 1.11.1 and AWS Provider >= 6.28
+2. **Secrets Manager by Default**: `manage_master_user_password = true` is the default; credentials are stored in Secrets Manager, not Terraform state
+3. **Encryption Enabled by Default**: `storage_encrypted = true` is the default; no action needed for basic encryption
+4. **Instance Configuration**: Define instances using the `instances` map; at least one instance is typically required
+5. **Network Configuration**: Either provide `db_subnet_group_name` or `subnets` list for VPC integration
+6. **Security Groups**: Module creates security groups by default; use `security_group_ingress_rules` to define access rules
+7. **Autoscaling Setup**: Enable with `autoscaling_enabled = true` and set `autoscaling_min_capacity`, `autoscaling_max_capacity`, `autoscaling_target_cpu`
+8. **Heterogeneous Clusters**: Override `instance_class` per instance in `instances` map; use `promotion_tier` for failover priority
+9. **Engine Selection**: Use `aurora-postgresql` for PostgreSQL, `aurora-mysql` for MySQL; specify `engine_version` explicitly
+10. **Monitoring**: Set `monitoring_interval` (1-60) for enhanced monitoring; add log types to `enabled_cloudwatch_logs_exports`
+11. **Production Settings**: Set `deletion_protection = true`, `skip_final_snapshot = false`, appropriate `backup_retention_period`
+12. **Tagging**: Apply consistent tags via `tags` parameter for cost allocation and resource management
+13. **Global Clusters**: For multi-region, consider Aurora Global Database examples in the module repository
+14. **DSQL Clusters**: Use the `dsql` submodule for distributed SQL across regions with cluster peering

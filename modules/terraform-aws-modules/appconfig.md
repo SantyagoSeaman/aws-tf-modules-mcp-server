@@ -2,12 +2,17 @@
 
 ## Module Information
 
+- **Module Name**: `appconfig`
 - **Source**: `terraform-aws-modules/appconfig/aws`
-- **Version**: 2.0.1
+- **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appconfig
+- **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appconfig/aws/latest
+- **Latest Version**: 2.0.1
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.0
-- **License**: Apache-2.0
-- **Keywords**: appconfig, application-configuration, feature-flags, configuration-management, deployment-strategy, validation, canary-deployment, linear-deployment, exponential-deployment, configuration-profile, environment, deployment, rollback, monitoring, cloudwatch-alarms
+- **Purpose**: Create and manage AWS AppConfig resources for dynamic application configuration and feature flags
+- **Service**: AWS AppConfig (Application Configuration)
+- **Category**: Configuration Management, Feature Flags, DevOps
+- **Keywords**: appconfig, feature-flags, configuration-management, deployment-strategy, validation, canary-deployment, gradual-rollout, configuration-profile, environment, rollback
 
 ## Description
 
@@ -71,12 +76,21 @@ This module does not contain submodules. All AppConfig resources are managed thr
     - `monitors`: CloudWatch alarm ARNs for monitoring
     - `tags`: Environment-specific tags
 
+### Configuration Source Selection
+- `use_hosted_configuration` (bool): Use AppConfig hosted configuration store (default: false)
+- `use_s3_configuration` (bool): Use S3 as configuration source (default: false)
+- `use_ssm_parameter_configuration` (bool): Use SSM Parameter Store as configuration source (default: false)
+- `use_ssm_document_configuration` (bool): Use SSM Document as configuration source (default: false)
+- `s3_configuration_bucket_arn` (string): S3 bucket ARN for configuration (default: null)
+- `s3_configuration_object_key` (string): S3 object key pattern (default: "*")
+- `ssm_parameter_configuration_arn` (string): SSM Parameter ARN (default: null)
+- `ssm_document_configuration_arn` (string): SSM Document ARN (default: null)
+
 ### Configuration Profile Settings
 - `config_profile_name` (string): Name of the configuration profile (default: null)
 - `config_profile_description` (string): Description of the configuration profile (default: null)
-- `config_profile_type` (string): Configuration type (e.g., "AWS.AppConfig.FeatureFlags") (default: null)
+- `config_profile_type` (string): Configuration type: "AWS.AppConfig.FeatureFlags" or "AWS.Freeform" (default: null)
 - `config_profile_location_uri` (string): Configuration location URI (default: "hosted")
-  - Options: "hosted", S3 URI, SSM Parameter name, SSM Document ARN, Secrets Manager ARN
 - `config_profile_retrieval_role_arn` (string): IAM role ARN for configuration retrieval (default: null)
 
 ### Configuration Profile Validators
@@ -91,28 +105,31 @@ This module does not contain submodules. All AppConfig resources are managed thr
 - `hosted_config_version_description` (string): Description of the configuration version (default: null)
 
 ### Deployment Strategy Configuration
-- `create_deployment_strategy` (bool): Whether to create a deployment strategy (default: false)
+- `create_deployment_strategy` (bool): Whether to create a deployment strategy (default: true)
 - `deployment_strategy_id` (string): ID of existing deployment strategy (default: null)
 - `deployment_strategy_name` (string): Name of the deployment strategy (default: null)
 - `deployment_strategy_description` (string): Description of the deployment strategy (default: null)
-- `deployment_strategy_deployment_duration_in_minutes` (number): Deployment duration in minutes (default: null)
+- `deployment_strategy_deployment_duration_in_minutes` (number): Deployment duration, 0-1440 minutes (default: 0)
 - `deployment_strategy_final_bake_time_in_minutes` (number): Bake time after 100% deployment (default: 0)
-- `deployment_strategy_growth_factor` (number): Growth factor for exponential deployment (default: null)
+- `deployment_strategy_growth_factor` (number): Percentage of targets per interval, 1-100 (default: 100)
 - `deployment_strategy_growth_type` (string): Growth type ("LINEAR" or "EXPONENTIAL") (default: null)
 - `deployment_strategy_replicate_to` (string): Replication target (default: "NONE")
 
 ### Deployment Configuration
 - `deployments` (any): Map of deployment configurations for environments (default: {})
   - Each deployment specifies:
+    - `environment_key`: Key from environments map
     - `deployment_strategy_id`: Strategy to use for deployment
     - `configuration_version`: Version to deploy
     - `description`: Deployment description
     - `kms_key_identifier`: KMS key for encryption
+- `deployment_description` (string): Deployment description, max 1024 characters (default: null)
+- `deployment_configuration_version` (string): Configuration version to deploy (default: null)
 
 ### IAM Retrieval Role
-- `create_retrieval_role` (bool): Whether to create IAM retrieval role (default: false)
+- `create_retrieval_role` (bool): Whether to create IAM retrieval role (default: true)
 - `retrieval_role_name` (string): Name of the retrieval role (default: null)
-- `retrieval_role_use_name_prefix` (bool): Use name prefix for role (default: false)
+- `retrieval_role_use_name_prefix` (bool): Use name prefix for role (default: true)
 - `retrieval_role_path` (string): IAM role path (default: null)
 - `retrieval_role_description` (string): Description of the retrieval role (default: null)
 - `retrieval_role_permissions_boundary` (string): Permissions boundary ARN (default: null)
@@ -614,181 +631,127 @@ module "appconfig_dual_validators" {
 
 ## Best Practices
 
-### Application and Environment Design
+### Environment and Configuration Design
 
-1. **Use Descriptive Names**: Choose clear, descriptive names for applications, environments, and configuration profiles that reflect their purpose and make them easily identifiable across teams.
-2. **Separate Environments**: Create distinct environments (dev, staging, production) to enable safe testing of configuration changes before production deployment.
-3. **Align with Deployment Pipeline**: Structure AppConfig environments to match your CI/CD pipeline stages for seamless integration and consistent deployment workflows.
-4. **Logical Application Grouping**: Group related configuration profiles under a single application to simplify management and improve organization.
-5. **Environment-Specific Monitoring**: Configure CloudWatch alarms for production environments to enable automatic rollback when issues are detected.
-6. **Use Tags Consistently**: Apply comprehensive tagging strategy including environment, application, owner, and cost center for effective resource management and cost allocation.
+1. **Separate Environments**: Create distinct environments (dev, staging, prod) matching CI/CD pipeline stages for safe configuration testing.
+2. **Prefer Hosted Configuration**: Use AppConfig hosted configuration store for new deployments—offers best features, versioning, and AWS enhancements.
+3. **Use Feature Flags for Toggles**: Use `AWS.AppConfig.FeatureFlags` type for binary enable/disable decisions; freeform for complex settings.
+4. **Separate Sensitive Data**: Store secrets in AWS Secrets Manager, not AppConfig. Reference from application code.
 
-### Configuration Profile Management
+### Validation
 
-7. **Choose Appropriate Configuration Type**: Use feature flags for binary enable/disable decisions and freeform configurations for complex application settings and parameters.
-8. **Prefer Hosted Configuration**: Use AppConfig hosted configuration store for new deployments as it offers the most features, versioning, and enhancements compared to external sources.
-9. **Version Configuration Changes**: Increment version numbers or use semantic versioning in configuration content to track changes and enable easy rollback.
-10. **Document Configuration Schema**: Maintain clear documentation of configuration structure, expected values, and impact of changes for team collaboration.
-11. **Use External Sources Strategically**: Leverage S3, SSM Parameter Store, or Secrets Manager when configurations are already managed there or require specific access patterns.
-12. **Separate Sensitive Data**: Store secrets and credentials in AWS Secrets Manager rather than AppConfig, referencing them from application code securely.
+5. **Always Validate Production**: Implement at least one validator (JSON Schema or Lambda) for all production configuration profiles.
+6. **JSON Schema for Structure**: Enforce data types, required fields, value ranges with JSON Schema 4.X validators.
+7. **Lambda for Business Logic**: Use Lambda validators (max 15s) for cross-field validation or external system checks.
+8. **Dual Validation for Critical**: Use both validators for mission-critical configurations requiring structural and business logic validation.
 
-### Validation Strategy
+### Deployment Strategies
 
-13. **Always Use Validators**: Implement at least one validator (JSON Schema or Lambda) for all production configuration profiles to prevent deployment of invalid configurations.
-14. **JSON Schema for Structure**: Use JSON Schema validators to enforce data types, required fields, value ranges, and structural correctness.
-15. **Lambda for Business Logic**: Implement Lambda validators for complex validation rules that cannot be expressed in JSON Schema, such as cross-field validation or external system checks.
-16. **Keep Lambda Validators Fast**: Ensure Lambda validators complete within the 15-second timeout by optimizing code and avoiding unnecessary external calls.
-17. **Dual Validation for Critical Configs**: Use both JSON Schema and Lambda validators for mission-critical configurations requiring structural and business logic validation.
-18. **Test Validators Thoroughly**: Test validation logic with both valid and invalid inputs before production use to prevent blocking legitimate configuration changes.
-19. **Fail Fast on Validation**: Configure validators to fail immediately on detection of invalid configuration to prevent deployment of problematic changes.
+9. **Conservative for Production**: Use 10-20% linear growth with 10-30 minute bake time for production deployments.
+10. **Fast for Non-Production**: Use 50%+ growth or AllAtOnce for development environments.
+11. **Exponential for High-Risk**: Start at 2-4% and double for high-risk configuration changes.
+12. **Integrate CloudWatch Alarms**: Associate alarms with production environments for automatic rollback on detected issues.
 
-### Deployment Strategy Selection
+### Security
 
-20. **Conservative for Production**: Use slower, more conservative deployment strategies (10-20% growth) for production environments to minimize blast radius of configuration issues.
-21. **Aggressive for Non-Production**: Use faster deployment strategies (50%+ growth) for development and testing environments to accelerate testing cycles.
-22. **Linear for Predictability**: Choose linear deployment strategies when consistent, predictable rollout timing is important for coordination with other activities.
-23. **Exponential for Caution**: Use exponential deployment strategies to start with very small percentages (2-4%) for high-risk configuration changes.
-24. **Configure Adequate Bake Time**: Set final bake time to 10-30 minutes for production deployments to allow sufficient monitoring before considering rollout complete.
-25. **Align Duration with Change Window**: Match deployment duration to your maintenance windows and operational requirements for change management.
-26. **Reuse Predefined Strategies**: Leverage AWS-provided predefined deployment strategies for common scenarios before creating custom strategies.
+13. **Use Retrieval Roles**: Create dedicated IAM retrieval roles with least-privilege permissions (GetConfiguration, StartConfigurationSession).
+14. **Encrypt with KMS**: Use KMS encryption for configurations containing PII or compliance-sensitive data.
+15. **Separate Production Access**: Use dedicated IAM roles/policies for production with stricter controls.
+16. **Audit Changes**: Enable CloudTrail logging for all AppConfig API calls.
 
-### Monitoring and Rollback
+### Feature Flags
 
-27. **Integrate CloudWatch Alarms**: Configure CloudWatch alarms monitoring critical application metrics and associate them with production environments for automatic rollback.
-28. **Monitor Deployment Progress**: Track deployment status through AWS Console, CLI, or API to identify issues early during rollout.
-29. **Set Appropriate Alarm Thresholds**: Configure alarm thresholds that detect real issues without triggering false positives that unnecessarily rollback valid changes.
-30. **Test Rollback Procedures**: Regularly test automatic and manual rollback procedures to ensure they work correctly when needed.
-31. **Enable Detailed Logging**: Activate CloudWatch Logs for AppConfig API calls through CloudTrail to maintain audit trail of all configuration changes.
-32. **Review Deployment History**: Regularly review deployment logs and history to identify patterns, issues, and opportunities for improvement.
-
-### Security and Access Control
-
-33. **Use IAM Roles for Retrieval**: Create dedicated IAM retrieval roles with least-privilege permissions for applications to access configuration data.
-34. **Restrict Configuration Updates**: Limit AppConfig write permissions (CreateConfigurationProfile, StartDeployment) to authorized personnel and CI/CD systems only.
-35. **Enable Encryption in Transit**: Use HTTPS/TLS for all AppConfig API calls to protect configuration data during transmission.
-36. **Encrypt Sensitive Configurations**: Use KMS encryption for configuration data containing sensitive information or credentials.
-37. **Implement Permissions Boundaries**: Apply IAM permissions boundaries to retrieval roles to enforce maximum permission limits for additional security.
-38. **Audit Configuration Changes**: Review CloudTrail logs regularly to audit who made configuration changes and when they were deployed.
-39. **Separate Production Access**: Use separate IAM roles and policies for production configuration access with stricter controls than non-production.
-
-### Operational Excellence
-
-40. **Automate Configuration Deployments**: Integrate AppConfig deployments into CI/CD pipelines using Terraform, AWS CLI, or SDK for consistent, repeatable deployments.
-41. **Infrastructure as Code**: Manage all AppConfig resources through Terraform to ensure version control, peer review, and reproducibility.
-42. **Test in Lower Environments First**: Always test configuration changes in development and staging environments before deploying to production.
-43. **Document Configuration Impact**: Maintain documentation describing what each configuration parameter controls and the impact of changing it.
-44. **Implement Change Control**: Require peer review and approval for production configuration changes through pull request workflows.
-45. **Use Feature Flags for Releases**: Decouple code deployments from feature releases using feature flags to enable/disable functionality independently.
-46. **Gradual Feature Rollout**: Enable new features for small user segments first using multi-variant feature flags before full rollout.
-47. **Monitor Application Metrics**: Track application-specific metrics (latency, error rates, resource usage) during and after configuration deployments to detect issues.
+17. **Default to Safe State**: Configure flags to default to "disabled" to prevent issues if retrieval fails.
+18. **Remove Obsolete Flags**: Delete feature flags and code once fully rolled out to prevent technical debt.
+19. **Use Consistent Naming**: Follow conventions like "enable_new_checkout" or "beta_ai_features".
 
 ### Cost Optimization
 
-48. **Optimize Retrieval Frequency**: Use AppConfig Agent with caching to reduce API calls and minimize retrieval costs for high-frequency access patterns.
-49. **Consolidate Configuration Profiles**: Group related configurations into single profiles where appropriate to reduce the number of managed profiles and simplify retrieval.
-50. **Right-Size Deployment Duration**: Balance deployment safety with cost by using appropriate deployment durations that don't unnecessarily extend monitoring periods.
-51. **Clean Up Unused Resources**: Regularly review and delete unused applications, environments, and configuration profiles to avoid unnecessary costs.
-52. **Use Appropriate Configuration Sources**: Choose configuration sources (hosted vs. S3 vs. SSM) based on access patterns and cost considerations for your use case.
-
-### Feature Flag Best Practices
-
-53. **Use Boolean Flags Correctly**: Implement simple enable/disable feature flags as boolean values for clarity and ease of management.
-54. **Multi-Variant for Complex Scenarios**: Use multi-variant feature flags when testing multiple variations of a feature or implementing A/B tests.
-55. **Remove Obsolete Flags**: Delete feature flags and associated code once features are fully rolled out to prevent technical debt accumulation.
-56. **Document Flag Purpose**: Maintain clear documentation of what each feature flag controls, expected states, and rollout status.
-57. **Default to Safe State**: Configure feature flags to default to safe, conservative values (usually "disabled") to prevent issues if retrieval fails.
-58. **Flag Naming Conventions**: Use consistent naming conventions for feature flags (e.g., "enable_new_checkout", "beta_ai_features") for easy identification.
+20. **Use AppConfig Agent**: Deploy as Lambda extension or sidecar container to cache configs and reduce API calls by 90%+.
+21. **Consolidate Profiles**: Group related configurations to reduce managed profiles and simplify retrieval.
+22. **Clean Up Unused Resources**: Regularly delete unused applications, environments, and configuration profiles.
 
 ## Additional Resources
 
-### Official Documentation
+- **Module GitHub**: https://github.com/terraform-aws-modules/terraform-aws-appconfig
+- **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appconfig/aws/latest
 - **AWS AppConfig Documentation**: https://docs.aws.amazon.com/appconfig/
-- **Terraform AWS AppConfig Module GitHub**: https://github.com/terraform-aws-modules/terraform-aws-appconfig
-- **Terraform Registry - AppConfig Module**: https://registry.terraform.io/modules/terraform-aws-modules/appconfig/aws
-
-### User Guides
-- **Getting Started with AppConfig**: https://docs.aws.amazon.com/appconfig/latest/userguide/what-is-appconfig.html
-- **Creating Configuration and Profile**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-configuration-and-profile.html
+- **Feature Flags Guide**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-configuration-and-profile-feature-flags.html
 - **Deployment Strategies**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-deployment-strategy.html
 - **Configuration Validators**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-configuration-and-profile-validators.html
-
-### Integration and Tools
-- **AppConfig Agent**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration-lambda-extensions.html
-- **AWS SDKs for AppConfig**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration.html
-- **Feature Flags Reference**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-creating-configuration-and-profile-feature-flags.html
-
-### API and CLI Reference
-- **AppConfig API Reference**: https://docs.aws.amazon.com/appconfig/2019-10-09/APIReference/
-- **AWS CLI AppConfig Commands**: https://docs.aws.amazon.com/cli/latest/reference/appconfig/
-
-### Best Practices and Architecture
+- **AppConfig Agent (Lambda Extension)**: https://docs.aws.amazon.com/appconfig/latest/userguide/appconfig-integration-lambda-extensions.html
 - **AppConfig Pricing**: https://aws.amazon.com/systems-manager/pricing/#AWS_AppConfig
-- **AWS Well-Architected Framework**: https://aws.amazon.com/architecture/well-architected/
-
-### Related Services
-- **AWS Systems Manager**: https://docs.aws.amazon.com/systems-manager/
-- **AWS Secrets Manager**: https://docs.aws.amazon.com/secretsmanager/
-- **Amazon CloudWatch**: https://docs.aws.amazon.com/cloudwatch/
 
 ## Notes for AI Agents
 
-### Module Selection Guidance
-- **Use AppConfig** when applications need dynamic configuration changes without redeployment, feature flag management, or gradual configuration rollouts with validation and rollback.
-- **Use SSM Parameter Store** for simple key-value configuration storage without deployment strategies, validation, or gradual rollout requirements.
-- **Use Secrets Manager** specifically for credentials, API keys, and sensitive data requiring automatic rotation and audit trails.
-- **Use S3** for large configuration files, static content, or when configuration is already managed as files in version control.
+### When to Use This Module
+- **Use AppConfig** for dynamic configuration changes without redeployment, feature flags, or gradual rollouts with validation
+- **Use SSM Parameter Store** for simple key-value storage without deployment strategies or validation
+- **Use Secrets Manager** for credentials, API keys requiring automatic rotation
+- **Use S3** for large configuration files or static content
 
-### Architecture Recommendations
-- For **production applications**: Always use separate environments (dev, staging, prod), implement validators, configure deployment strategies with bake time, and integrate CloudWatch alarms for automatic rollback.
-- For **feature flags**: Use AppConfig.FeatureFlags configuration type with hosted configuration store, implement boolean flags for simple toggles and multi-variant for A/B testing.
-- For **high-frequency retrieval**: Deploy AppConfig Agent as Lambda extension or sidecar container to cache configurations and reduce API calls and costs.
-- For **multi-region applications**: Create separate AppConfig applications per region or use cross-region replication strategies for configuration synchronization.
-- For **microservices**: Consider creating separate configuration profiles per service or use shared profiles with service-specific sections.
+### Quick Start Patterns
 
-### Common Configuration Patterns
-- **Development**: Single environment, fast deployment strategy (5 minutes, linear 50%), hosted configuration, JSON Schema validation.
-- **Staging**: Separate environment, moderate deployment (15 minutes, linear 25%), CloudWatch alarm testing, dual validators.
-- **Production**: Multiple environments, conservative deployment (60 minutes, linear 10%, 20-minute bake), CloudWatch alarms enabled, dual validators, monitoring integration.
-- **Feature Flags**: Hosted feature flags configuration, immediate deployment to dev, gradual rollout (2-4 hours) to production, boolean or multi-variant based on use case.
+**Basic Feature Flags**:
+```hcl
+module "appconfig" {
+  source  = "terraform-aws-modules/appconfig/aws"
+  version = "~> 2.0"
 
-### Deployment Strategy Selection
-- **AllAtOnce** (AWS predefined): Deploy to all targets immediately; use only for development environments or emergency fixes.
-- **Linear50PercentEvery30Seconds** (AWS predefined): Fast rollout for non-critical changes in non-production.
-- **Canary10Percent20Minutes** (AWS predefined): Start with 10% for 20 minutes, then complete; good for production testing.
-- **Custom Linear 10%**: Deploy 10% every interval; conservative approach for critical production configurations.
-- **Custom Exponential 2%**: Start at 2% and double; most conservative, use for high-risk changes.
+  name                       = "my-app"
+  environments               = { prod = { name = "production" } }
+  config_profile_type        = "AWS.AppConfig.FeatureFlags"
+  use_hosted_configuration   = true
+  hosted_config_version_content_type = "application/json"
+  hosted_config_version_content = jsonencode({
+    version = "1"
+    flags   = { feature_x = { name = "feature_x" } }
+    values  = { feature_x = { enabled = false } }
+  })
+}
+```
 
-### Validator Recommendations
-- **JSON Schema validators**: Use for all freeform configurations to enforce structure, data types, required fields, and value ranges.
-- **Lambda validators**: Implement for business logic validation like checking database connectivity, validating against external services, or complex cross-field rules.
-- **No validators**: Only acceptable for development environments and non-critical feature flags; always validate production configurations.
-- **Validator performance**: Keep Lambda validators under 10 seconds execution time; optimize by caching external API calls when possible.
+**Production with Gradual Rollout**:
+```hcl
+module "appconfig" {
+  source  = "terraform-aws-modules/appconfig/aws"
+  version = "~> 2.0"
 
-### Security Best Practices
-- **Never hardcode credentials** in AppConfig configurations; reference Secrets Manager ARNs or SSM Parameter Store secure strings from application code.
-- **Use retrieval roles** with least-privilege permissions; grant only GetConfiguration and StartConfigurationSession actions for specific applications.
-- **Enable encryption** using KMS for configurations containing PII, business-critical settings, or compliance-sensitive data.
-- **Audit all changes** by enabling CloudTrail logging for AppConfig API calls; review logs regularly for unauthorized access attempts.
-- **Separate production access** with dedicated IAM roles, policies, and potentially separate AWS accounts for production AppConfig resources.
+  name = "prod-app"
+  environments = {
+    prod = {
+      name     = "production"
+      monitors = [{ alarm_arn = aws_cloudwatch_metric_alarm.errors.arn, alarm_role_arn = aws_iam_role.monitor.arn }]
+    }
+  }
 
-### Troubleshooting Tips
-- **Validation failures**: Check CloudWatch Logs for detailed validation errors; test configurations locally using JSON Schema validators or Lambda invocations.
-- **Deployment stuck**: Verify CloudWatch alarms are not in ALARM state; check IAM permissions for alarm monitoring role if configured.
-- **Configuration not updating**: Confirm application is polling AppConfig API or AppConfig Agent cache is refreshing; check retrieval role permissions.
-- **Rollback not triggering**: Verify CloudWatch alarm is associated with environment, alarm role has necessary permissions, and alarm thresholds are correctly configured.
-- **Lambda validator timeout**: Optimize validator code, reduce external API calls, increase Lambda memory allocation, or consider moving to JSON Schema for structural validation.
+  use_hosted_configuration                           = true
+  hosted_config_version_content_type                 = "application/json"
+  hosted_config_version_content                      = jsonencode({ setting = "value" })
+  deployment_strategy_name                           = "conservative"
+  deployment_strategy_deployment_duration_in_minutes = 60
+  deployment_strategy_growth_type                    = "LINEAR"
+  deployment_strategy_growth_factor                  = 10
+  deployment_strategy_final_bake_time_in_minutes     = 20
+}
+```
+
+### Deployment Strategy Quick Reference
+| Strategy | Growth | Duration | Bake Time | Use Case |
+|----------|--------|----------|-----------|----------|
+| AllAtOnce | 100% | 0 min | 0 min | Dev/emergency only |
+| Fast Linear | 50% | 10 min | 5 min | Non-production |
+| Conservative | 10% | 60 min | 20 min | Production |
+| Exponential | 2% double | 30 min | 15 min | High-risk changes |
+
+### Common Mistakes to Avoid
+1. **No validators in production**: Always add JSON Schema or Lambda validators
+2. **Credentials in AppConfig**: Store in Secrets Manager, reference from code
+3. **Missing CloudWatch alarms**: Production environments need alarm integration for rollback
+4. **No bake time**: Always set 10-30 minute bake time for production deployments
+5. **Ignoring retrieval role**: Create least-privilege IAM roles for configuration access
 
 ### Cost Estimation
-- **Configuration requests**: $0.10 per 10,000 requests for GetConfiguration and StartConfigurationSession API calls.
-- **Feature flag requests**: $0.0001 per request for feature flag evaluations.
-- **Configuration data**: First 50,000 requests free each month; costs scale with request volume.
-- **Deployment overhead**: No separate charge for deployments; costs based on configuration retrievals during deployment.
-- **Cost optimization**: Use AppConfig Agent caching (reduces requests by 90%+), consolidate configuration profiles, implement appropriate polling intervals (30-60 seconds typical).
-
-### Integration Patterns
-- **Lambda function**: Use AppConfig Lambda extension for cached configuration retrieval with automatic refresh.
-- **ECS/EKS containers**: Deploy AppConfig Agent as sidecar container to provide local caching HTTP endpoint (localhost:2772).
-- **EC2 instances**: Install AppConfig Agent as system daemon for local configuration caching and retrieval.
-- **CI/CD pipeline**: Use AWS CLI or SDK to trigger configuration deployments as part of deployment workflow after code deployment.
-- **Application code**: Implement AppConfig SDK integration with local caching layer for resilience to API throttling or outages.
-- **Multi-account**: Use cross-account IAM roles to allow applications in one account to retrieve configurations from AppConfig in another account.
+- ~$0.10 per 10,000 configuration requests
+- First 50,000 requests/month free
+- Use AppConfig Agent caching to reduce costs by 90%+

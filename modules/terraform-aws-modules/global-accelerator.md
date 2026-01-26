@@ -2,12 +2,18 @@
 
 ## Module Information
 
+- **Module Name**: `global-accelerator`
 - **Source**: `terraform-aws-modules/global-accelerator/aws`
-- **Version**: 3.0.0
+- **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator
+- **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest
+- **Latest Version**: 3.0.1
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.84
-- **License**: Apache-2.0
-- **Keywords**: global-accelerator, anycast, static-ip, edge-location, aws-global-network, performance, latency-reduction, availability, endpoint-health, multi-region, failover, alb, nlb, ec2, elastic-ip, tcp, udp, listener, endpoint-group, health-check, traffic-distribution, client-ip-preservation, byoip, dual-stack, ipv4, ipv6, flow-logs, custom-routing, gaming, voip, iot
+- **Purpose**: Creates and manages AWS Global Accelerator resources with static anycast IPs, multi-region endpoints, and automatic failover
+- **Service**: AWS Global Accelerator
+- **Category**: Networking, Performance, High Availability
+- **Keywords**: global-accelerator, anycast, static-ip, multi-region, failover, latency, alb, nlb, endpoint-group, health-check, traffic-distribution, client-affinity, flow-logs, custom-routing, udp, tcp
+- **Use For**: global application delivery, multi-region failover, latency reduction, gaming and real-time apps, blue-green deployments, API performance optimization, hybrid cloud connectivity, DDoS protection
 
 ## Description
 
@@ -56,6 +62,9 @@ Global Accelerator integrates with Application Load Balancers, Network Load Bala
 
 ### custom-routing
 
+- **Source**: `terraform-aws-modules/global-accelerator/aws//modules/custom-routing`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest/submodules/custom-routing
+
 Creates AWS Global Accelerator custom routing accelerators for application-specific traffic routing with granular control over destination selection.
 
 **Purpose**: Provision custom routing accelerators that allow applications to use custom logic to direct specific users to particular destinations among many potential endpoints, ideal for gaming, VoIP, and specialized routing requirements.
@@ -98,7 +107,8 @@ Creates AWS Global Accelerator custom routing accelerators for application-speci
 **Usage Example**:
 ```hcl
 module "global_accelerator_custom_routing" {
-  source = "terraform-aws-modules/global-accelerator/aws//modules/custom-routing"
+  source  = "terraform-aws-modules/global-accelerator/aws//modules/custom-routing"
+  version = "~> 3.0"
 
   name                = "gaming-accelerator"
   enabled             = true
@@ -164,22 +174,22 @@ resource "aws_globalaccelerator_custom_routing_endpoint_group" "game_servers" {
     - `port_ranges`: List of port range objects with `from_port` and `to_port`
     - `protocol`: "TCP" or "UDP"
     - `client_affinity`: "NONE" or "SOURCE_IP"
-    - `endpoint_group`: Endpoint group configuration (see below)
+    - `endpoint_groups`: Map of endpoint group configurations (see below)
 - `listeners_timeouts` (map(string)): Create, update, and delete timeout configurations for listeners (default: {})
 
 ### Endpoint Group Configuration
-Within each listener's `endpoint_group` block:
+Within each listener's `endpoint_groups` map, each endpoint group can specify:
 - `health_check_interval_seconds` (number): Health check interval in seconds (default: 30)
 - `health_check_path` (string): Path for HTTP/HTTPS health checks (default: "/")
 - `health_check_port` (number): Port for health checks (default: listener port)
 - `health_check_protocol` (string): Protocol for health checks - "TCP", "HTTP", or "HTTPS" (default: "TCP")
 - `threshold_count` (number): Number of consecutive health checks before status change (default: 3)
 - `traffic_dial_percentage` (number): Percentage of traffic to dial to endpoint group (default: 100)
-- `endpoint_configuration`: List of endpoint configurations
-  - `endpoint_id`: ID of endpoint (ALB, NLB, EC2, or EIP)
-  - `weight` (number): Endpoint weight for traffic distribution (default: 100)
+- `endpoints`: Map of endpoint configurations
+  - `endpoint_id`: ID of endpoint (ALB ARN, NLB ARN, EC2 instance ID, or EIP allocation ID)
+  - `weight` (number): Endpoint weight for traffic distribution 0-255 (default: 100)
   - `client_ip_preservation_enabled` (bool): Preserve client IP address (default: false)
-- `port_override`: List of port override configurations
+- `port_overrides`: List of port override configurations
   - `endpoint_port`: Destination port on endpoint
   - `listener_port`: Source port from listener
 
@@ -230,16 +240,18 @@ module "global_accelerator_basic" {
       protocol        = "TCP"
       client_affinity = "SOURCE_IP"
 
-      endpoint_group = {
-        health_check_protocol = "HTTP"
-        health_check_path     = "/health"
+      endpoint_groups = {
+        primary = {
+          health_check_protocol = "HTTP"
+          health_check_path     = "/health"
 
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_lb.main.arn
-            weight      = 100
+          endpoints = {
+            alb = {
+              endpoint_id = aws_lb.main.arn
+              weight      = 100
+            }
           }
-        ]
+        }
       }
     }
   }
@@ -275,51 +287,42 @@ module "global_accelerator_multi_region" {
       protocol        = "TCP"
       client_affinity = "SOURCE_IP"
 
-      # Primary endpoint group in us-east-1
-      endpoint_group = {
-        endpoint_group_region         = "us-east-1"
-        health_check_interval_seconds = 30
-        health_check_protocol         = "HTTPS"
-        health_check_path             = "/health"
-        threshold_count               = 3
-        traffic_dial_percentage       = 100
+      endpoint_groups = {
+        # Primary endpoint group in us-east-1
+        us_east = {
+          endpoint_group_region         = "us-east-1"
+          health_check_interval_seconds = 30
+          health_check_protocol         = "HTTPS"
+          health_check_path             = "/health"
+          threshold_count               = 3
+          traffic_dial_percentage       = 100
 
-        endpoint_configuration = [
-          {
-            endpoint_id                    = aws_lb.us_east.arn
-            weight                         = 100
-            client_ip_preservation_enabled = true
+          endpoints = {
+            alb = {
+              endpoint_id                    = aws_lb.us_east.arn
+              weight                         = 100
+              client_ip_preservation_enabled = true
+            }
           }
-        ]
-      }
-    }
-
-    # Secondary endpoint group configuration
-    https_secondary = {
-      port_ranges = [
-        {
-          from_port = 443
-          to_port   = 443
         }
-      ]
-      protocol        = "TCP"
-      client_affinity = "SOURCE_IP"
 
-      endpoint_group = {
-        endpoint_group_region         = "eu-west-1"
-        health_check_interval_seconds = 30
-        health_check_protocol         = "HTTPS"
-        health_check_path             = "/health"
-        threshold_count               = 3
-        traffic_dial_percentage       = 50  # 50% traffic to secondary region
+        # Secondary endpoint group in eu-west-1
+        eu_west = {
+          endpoint_group_region         = "eu-west-1"
+          health_check_interval_seconds = 30
+          health_check_protocol         = "HTTPS"
+          health_check_path             = "/health"
+          threshold_count               = 3
+          traffic_dial_percentage       = 100
 
-        endpoint_configuration = [
-          {
-            endpoint_id                    = aws_lb.eu_west.arn
-            weight                         = 100
-            client_ip_preservation_enabled = true
+          endpoints = {
+            alb = {
+              endpoint_id                    = aws_lb.eu_west.arn
+              weight                         = 100
+              client_ip_preservation_enabled = true
+            }
           }
-        ]
+        }
       }
     }
   }
@@ -331,7 +334,7 @@ module "global_accelerator_multi_region" {
 }
 ```
 
-### Global Accelerator with Multiple Endpoints
+### Global Accelerator with Multiple Endpoints (Weighted)
 
 ```hcl
 module "global_accelerator_multiple_endpoints" {
@@ -355,27 +358,29 @@ module "global_accelerator_multiple_endpoints" {
       ]
       protocol = "TCP"
 
-      endpoint_group = {
-        health_check_protocol         = "TCP"
-        health_check_interval_seconds = 10
-        threshold_count               = 2
+      endpoint_groups = {
+        primary = {
+          health_check_protocol         = "TCP"
+          health_check_interval_seconds = 10
+          threshold_count               = 2
 
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_lb.primary.arn
-            weight      = 70  # 70% of traffic
-          },
-          {
-            endpoint_id = aws_lb.secondary.arn
-            weight      = 30  # 30% of traffic
+          endpoints = {
+            primary_alb = {
+              endpoint_id = aws_lb.primary.arn
+              weight      = 70  # 70% of traffic
+            }
+            secondary_alb = {
+              endpoint_id = aws_lb.secondary.arn
+              weight      = 30  # 30% of traffic
+            }
           }
-        ]
+        }
       }
     }
   }
 
   tags = {
-    Environment     = "production"
+    Environment      = "production"
     LoadDistribution = "weighted"
   }
 }
@@ -402,17 +407,19 @@ module "global_accelerator_dual_stack" {
       ]
       protocol = "TCP"
 
-      endpoint_group = {
-        health_check_protocol = "HTTPS"
-        health_check_path     = "/health"
+      endpoint_groups = {
+        primary = {
+          health_check_protocol = "HTTPS"
+          health_check_path     = "/health"
 
-        endpoint_configuration = [
-          {
-            endpoint_id                    = aws_lb.main.arn
-            weight                         = 100
-            client_ip_preservation_enabled = true
+          endpoints = {
+            alb = {
+              endpoint_id                    = aws_lb.main.arn
+              weight                         = 100
+              client_ip_preservation_enabled = true
+            }
           }
-        ]
+        }
       }
     }
   }
@@ -473,25 +480,27 @@ module "global_accelerator_port_override" {
       ]
       protocol = "TCP"
 
-      endpoint_group = {
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_lb.main.arn
-            weight      = 100
+      endpoint_groups = {
+        primary = {
+          endpoints = {
+            alb = {
+              endpoint_id = aws_lb.main.arn
+              weight      = 100
+            }
           }
-        ]
 
-        # Override ports for specific endpoints
-        port_override = [
-          {
-            endpoint_port = 8443  # Backend listens on 8443
-            listener_port = 80    # Client connects to 80
-          },
-          {
-            endpoint_port = 8443  # Backend listens on 8443
-            listener_port = 8080  # Client connects to 8080
-          }
-        ]
+          # Override ports for specific endpoints
+          port_overrides = [
+            {
+              endpoint_port = 8443  # Backend listens on 8443
+              listener_port = 80    # Client connects to 80
+            },
+            {
+              endpoint_port = 8443  # Backend listens on 8443
+              listener_port = 8080  # Client connects to 8080
+            }
+          ]
+        }
       }
     }
   }
@@ -523,22 +532,24 @@ module "global_accelerator_udp" {
       ]
       protocol = "UDP"
 
-      endpoint_group = {
-        health_check_protocol         = "TCP"
-        health_check_port             = 53
-        health_check_interval_seconds = 10
-        threshold_count               = 2
+      endpoint_groups = {
+        dns_servers = {
+          health_check_protocol         = "TCP"
+          health_check_port             = 53
+          health_check_interval_seconds = 10
+          threshold_count               = 2
 
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_eip.dns_server_1.id
-            weight      = 50
-          },
-          {
-            endpoint_id = aws_eip.dns_server_2.id
-            weight      = 50
+          endpoints = {
+            dns_1 = {
+              endpoint_id = aws_eip.dns_server_1.allocation_id
+              weight      = 50
+            }
+            dns_2 = {
+              endpoint_id = aws_eip.dns_server_2.allocation_id
+              weight      = 50
+            }
           }
-        ]
+        }
       }
     }
 
@@ -551,13 +562,15 @@ module "global_accelerator_udp" {
       ]
       protocol = "UDP"
 
-      endpoint_group = {
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_instance.game_server.id
-            weight      = 100
+      endpoint_groups = {
+        game_servers = {
+          endpoints = {
+            server_1 = {
+              endpoint_id = aws_instance.game_server.id
+              weight      = 100
+            }
           }
-        ]
+        }
       }
     }
   }
@@ -578,9 +591,10 @@ module "global_accelerator_byoip" {
 
   name         = "byoip-accelerator"
   enabled      = true
+  # BYOIP requires 1 or 2 IPv4 addresses from your BYOIP pool
   ip_addresses = [
-    aws_eip.byoip_1.id,
-    aws_eip.byoip_2.id
+    "203.0.113.10",
+    "203.0.113.11"
   ]
 
   listeners = {
@@ -593,13 +607,15 @@ module "global_accelerator_byoip" {
       ]
       protocol = "TCP"
 
-      endpoint_group = {
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_lb.main.arn
-            weight      = 100
+      endpoint_groups = {
+        primary = {
+          endpoints = {
+            alb = {
+              endpoint_id = aws_lb.main.arn
+              weight      = 100
+            }
           }
-        ]
+        }
       }
     }
   }
@@ -608,19 +624,6 @@ module "global_accelerator_byoip" {
     Environment = "production"
     BYOIP       = "true"
   }
-}
-
-# BYOIP Elastic IPs (requires prior BYOIP setup)
-resource "aws_eip" "byoip_1" {
-  domain               = "vpc"
-  public_ipv4_pool     = "ipv4pool-ec2-012345abcde67890f"
-  network_border_group = "us-west-2"
-}
-
-resource "aws_eip" "byoip_2" {
-  domain               = "vpc"
-  public_ipv4_pool     = "ipv4pool-ec2-012345abcde67890f"
-  network_border_group = "us-west-2"
 }
 ```
 
@@ -645,20 +648,20 @@ module "global_accelerator_blue_green" {
       protocol        = "TCP"
       client_affinity = "SOURCE_IP"
 
-      endpoint_group = {
-        # Gradually shift traffic from blue to green
-        traffic_dial_percentage = 50  # Adjust this to shift traffic
-
-        endpoint_configuration = [
-          {
-            endpoint_id = aws_lb.blue.arn
-            weight      = 90  # Blue environment - decreasing traffic
-          },
-          {
-            endpoint_id = aws_lb.green.arn
-            weight      = 10  # Green environment - increasing traffic
+      endpoint_groups = {
+        primary = {
+          # Gradually shift traffic from blue to green using weights
+          endpoints = {
+            blue = {
+              endpoint_id = aws_lb.blue.arn
+              weight      = 90  # Blue environment - decreasing traffic
+            }
+            green = {
+              endpoint_id = aws_lb.green.arn
+              weight      = 10  # Green environment - increasing traffic
+            }
           }
-        ]
+        }
       }
     }
   }

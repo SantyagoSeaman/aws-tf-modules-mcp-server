@@ -149,7 +149,7 @@ def test_logger():
 @pytest.fixture(scope="module")
 def search_index(test_logger):
     """Load the search index once for all tests."""
-    index_path = PROJECT_ROOT / "model" / "tfmod_gte_small_index.pkl"
+    index_path = PROJECT_ROOT / "model" / "tfmod_bge_base_index.pkl"
     if not index_path.exists():
         pytest.skip(f"Index file not found at {index_path}")
     return load_index(str(index_path), test_logger)
@@ -165,7 +165,7 @@ def search_weights():
 @pytest.fixture
 def server_state(search_index, search_weights, test_logger):
     """Create a ServerState instance for testing."""
-    index_path = PROJECT_ROOT / "model" / "tfmod_gte_small_index.pkl"
+    index_path = PROJECT_ROOT / "model" / "tfmod_bge_base_index.pkl"
 
     # Reset ServerStateManager to allow re-initialization in tests
     ServerStateManager.reset()

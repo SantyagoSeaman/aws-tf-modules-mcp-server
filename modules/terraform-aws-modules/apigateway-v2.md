@@ -6,171 +6,406 @@
 - **Source**: `terraform-aws-modules/apigateway-v2/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-apigateway-v2
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/apigateway-v2/aws/latest
-- **Latest Version**: 5.3.1
-- **Purpose**: Terraform module that creates and manages AWS API Gateway v2 resources for building HTTP and WebSocket APIs with serverless architectures
-- **Service**: AWS API Gateway v2 (Amazon API Gateway HTTP APIs and WebSocket APIs)
+- **Latest Version**: 6.1.0
+- **Purpose**: Terraform module to create AWS API Gateway v2 (HTTP and WebSocket APIs) with support for custom domains, authorizers, VPC links, and integrations
+- **Service**: AWS API Gateway v2 (HTTP APIs and WebSocket APIs)
 - **Category**: Serverless, API Management, Integration
-- **Keywords**: api-gateway, apigateway-v2, http-api, websocket-api, serverless, rest-api, lambda-integration, api-management, jwt-authorizer, cors, custom-domain, route53, acm, ssl-certificate, oauth2, openid-connect, api-routing, vpc-link, private-integration, proxy-integration, http-proxy, aws-proxy, api-gateway-stage, access-logging, cloudwatch-logs, throttling, rate-limiting, request-validation, response-transformation, api-key, usage-plan, authorizer, lambda-authorizer, request-authorizer, mutual-tls, mtls, client-certificate, stage-variables, deployment, auto-deploy, api-versioning, subdomain, domain-mapping, route-configuration, integration-configuration, websocket-routes, websocket-integrations, event-driven, real-time-api, bidirectional-communication, serverless-api, microservices-api, api-security, api-observability, api-monitoring
-- **Use For**: serverless API backends, Lambda function APIs, microservices API gateway, WebSocket real-time applications, API consolidation and routing, OAuth2 and JWT authentication, custom domain API hosting, event-driven architectures, bidirectional communication APIs, multi-backend API orchestration, cost-optimized API solutions, RESTful service endpoints
+- **Keywords**: api-gateway, http-api, websocket-api, lambda-integration, jwt-authorizer, cors, custom-domain, vpc-link, serverless, api-routing, access-logging, throttling, mutual-tls, route53, acm
 
 ## Description
 
-AWS API Gateway v2 is Amazon's next-generation managed API service that enables developers to create, publish, maintain, monitor, and secure HTTP and WebSocket APIs at scale. This Terraform module provides a comprehensive solution for deploying API Gateway v2 resources with support for both HTTP APIs (RESTful) and WebSocket APIs (bidirectional communication). The module simplifies the configuration of complex API Gateway features including routes, integrations, authorizers, custom domains, and CORS policies, making it ideal for serverless architectures and microservices deployments.
+AWS API Gateway v2 is Amazon's managed API service for creating HTTP and WebSocket APIs at scale. This Terraform module provides a comprehensive solution for deploying API Gateway v2 resources with both protocol types. HTTP APIs offer up to 71% cost savings compared to REST APIs and support features like JWT authorizers, CORS, and Lambda integrations. WebSocket APIs enable real-time bidirectional communication for chat applications, streaming, and live updates.
 
-The module supports multiple integration types including AWS Lambda function invocations, HTTP proxy integrations to backend services, and VPC link integrations for private resource access. It provides flexible authentication and authorization options through JWT authorizers, custom Lambda authorizers, and OAuth2/OpenID Connect integration. The module handles the complete lifecycle of API Gateway resources including stage management, deployment automation, access logging configuration, and custom domain name mapping with Route 53 and ACM certificate integration.
+The module supports multiple integration types: AWS Lambda function invocations via AWS_PROXY, HTTP proxy integrations to backend services, and VPC link integrations for private resource access. It provides flexible authentication through JWT authorizers (Cognito, Auth0), custom Lambda authorizers, and AWS IAM. The module handles the complete lifecycle including stage management, deployment automation, access logging, and custom domain mapping with Route 53 and ACM certificate integration.
 
-Built as part of the serverless.tf framework, this module follows AWS best practices for API Gateway deployments and provides advanced features such as mutual TLS authentication, throttling and rate limiting, stage variables for environment-specific configurations, and comprehensive CloudWatch integration for monitoring and observability. The module's design supports multi-environment deployments with conditional resource creation, flexible route and integration configurations, and extensive tagging capabilities for resource organization and cost allocation. It is particularly well-suited for building cost-effective, scalable API solutions that integrate seamlessly with AWS Lambda, containerized services, and external HTTP endpoints.
+Built as part of the serverless.tf framework, this module follows AWS best practices and provides advanced features such as mutual TLS authentication, throttling and rate limiting, stage variables for environment-specific configurations, and CloudWatch integration for monitoring. The module supports multi-environment deployments with conditional resource creation and extensive tagging capabilities.
 
 ## Key Features
 
-- **HTTP API Support**: Create lightweight, cost-effective HTTP APIs with up to 71% cost savings compared to REST APIs
-- **WebSocket API Support**: Build real-time bidirectional communication APIs for chat applications, streaming, and live updates
-- **Lambda Integration**: Seamless integration with AWS Lambda functions using AWS_PROXY integration type
-- **HTTP Proxy Integration**: Route requests to HTTP endpoints and backend services with HTTP_PROXY integration
-- **VPC Link Integration**: Connect to private resources in VPCs without exposing them to the public internet
-- **JWT Authorizers**: Built-in JWT token validation for OAuth2 and OpenID Connect authentication flows
-- **Custom Lambda Authorizers**: Implement custom authorization logic using Lambda functions for REQUEST authorizers
-- **CORS Configuration**: Automatic cross-origin resource sharing support with flexible origin, method, and header controls
-- **Custom Domain Names**: Map APIs to custom domains with Route 53 integration and ACM certificate management
-- **Subdomain Support**: Configure multiple subdomains and wildcard domain mappings for multi-tenant architectures
-- **Mutual TLS**: Enhanced security with client certificate validation using mutual TLS authentication
-- **Route Configuration**: Define multiple API routes with HTTP methods, route keys, and route-specific settings
-- **Integration Settings**: Configure timeout, payload format version, and connection type for each integration
-- **Stage Management**: Create and manage deployment stages with stage-specific configurations and variables
-- **Auto Deployment**: Automatic API deployment on configuration changes for streamlined development workflows
-- **Access Logging**: Comprehensive request and response logging to CloudWatch Logs with customizable log formats
-- **Throttling and Rate Limiting**: Configure request throttling at stage and route levels to protect backend services
-- **Stage Variables**: Environment-specific configuration values accessible in integrations and authorizers
-- **API Gateway v2 Features**: Leverage latest features including better performance, lower latency, and simplified pricing
-- **Conditional Creation**: Fine-grained control over resource creation with boolean flags for flexible deployments
-- **Comprehensive Tagging**: Apply consistent tags across all resources for organization, cost tracking, and governance
-- **CloudWatch Integration**: Built-in metrics, logging, and monitoring for API performance and health tracking
-- **Multiple API Support**: Create and manage multiple API Gateway instances from a single module configuration
-- **Cost Optimization**: Benefit from simplified pricing model with no data transfer charges for HTTP APIs
-- **Serverless Framework Integration**: Part of serverless.tf ecosystem for unified serverless infrastructure management
+- **HTTP API Support**: Cost-effective HTTP APIs with up to 71% savings compared to REST APIs
+- **WebSocket API Support**: Real-time bidirectional communication for chat, gaming, streaming
+- **Lambda Integration**: Seamless AWS_PROXY integration with Lambda functions
+- **HTTP Proxy Integration**: Route requests to backend HTTP services
+- **VPC Link Integration**: Private integrations to internal ALB/NLB without public exposure
+- **JWT Authorizers**: Built-in JWT validation for OAuth2/OpenID Connect (Cognito, Auth0)
+- **Custom Lambda Authorizers**: REQUEST authorizers for custom authorization logic
+- **CORS Configuration**: Flexible cross-origin resource sharing settings
+- **Custom Domain Names**: Route 53 integration with ACM certificate management
+- **Mutual TLS**: Client certificate validation with S3-stored truststore
+- **Route Configuration**: HTTP methods, route keys, and per-route settings
+- **Stage Management**: Stage-specific configurations, variables, and throttling
+- **Auto Deployment**: Automatic API deployment on configuration changes
+- **Access Logging**: CloudWatch Logs integration with customizable log formats
+- **Throttling**: Request rate limiting at stage and route levels
+- **Conditional Creation**: Fine-grained control over which resources to create
 
 ## Main Use Cases
 
-1. **Serverless REST APIs**: Build RESTful APIs backed by AWS Lambda functions for serverless application backends
-2. **Microservices Gateway**: Create unified API gateway for routing requests to multiple microservices
-3. **WebSocket Applications**: Deploy real-time bidirectional communication for chat, gaming, and streaming applications
-4. **API Consolidation**: Aggregate multiple backend services behind a single API endpoint with custom routing
-5. **Mobile App Backends**: Provide secure, scalable API endpoints for mobile applications with JWT authentication
-6. **Third-Party Integrations**: Proxy and transform requests to external HTTP APIs with rate limiting and caching
-7. **Event-Driven Architectures**: Build event-driven systems using WebSocket connections for real-time notifications
-8. **OAuth2 API Gateway**: Implement secure API access with OAuth2 and OpenID Connect authentication flows
-9. **Multi-Tenant APIs**: Deploy multi-tenant SaaS APIs with custom domain mapping and tenant isolation
-10. **Private API Access**: Expose private VPC resources through API Gateway using VPC links without public exposure
+1. **Serverless REST APIs**: RESTful APIs backed by Lambda functions
+2. **Microservices Gateway**: Unified API gateway routing to multiple services
+3. **WebSocket Applications**: Real-time bidirectional communication (chat, gaming)
+4. **API Consolidation**: Multiple backend services behind single endpoint
+5. **Mobile App Backends**: Secure API endpoints with JWT authentication
+6. **Private API Access**: Expose private VPC resources via VPC links
+7. **Multi-Tenant APIs**: Custom domain mapping with tenant isolation
+8. **Event-Driven Architectures**: WebSocket connections for real-time notifications
+
+## Submodules
+
+### 1. wrappers
+
+- **Purpose**: Manage multiple API Gateway instances without duplicating configuration
+- **Source**: `terraform-aws-modules/apigateway-v2/aws//wrappers`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/apigateway-v2/aws/latest/submodules/wrappers
+- **Key Features**: Bulk API creation, shared defaults, Terragrunt compatibility
+- **Use Cases**: Multi-environment deployments, multi-tenant SaaS APIs
+
+#### Usage Example
+
+```hcl
+module "api_gateways" {
+  source  = "terraform-aws-modules/apigateway-v2/aws//wrappers"
+  version = "~> 6.1"
+
+  defaults = {
+    protocol_type = "HTTP"
+    tags = {
+      Terraform = "true"
+    }
+  }
+
+  items = {
+    api-dev = {
+      name        = "my-api-dev"
+      description = "Development API"
+    }
+    api-prod = {
+      name        = "my-api-prod"
+      description = "Production API"
+    }
+  }
+}
+```
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | - | **Required**. API name (max 128 chars) |
+| `protocol_type` | `string` | `"HTTP"` | API protocol: `HTTP` or `WEBSOCKET` |
+| `description` | `string` | `null` | API description (max 1024 chars) |
+| `cors_configuration` | `object` | `null` | CORS settings: allow_origins, allow_methods, allow_headers |
+| `domain_name` | `string` | `""` | Custom domain name for the API |
+| `hosted_zone_name` | `string` | `null` | Route 53 hosted zone for domain records |
+| `create_certificate` | `bool` | `true` | Create ACM certificate for custom domain |
+| `domain_name_certificate_arn` | `string` | `null` | Existing ACM certificate ARN |
+| `authorizers` | `map(object)` | `{}` | Map of JWT/REQUEST authorizers |
+| `routes` | `map(object)` | `{}` | Map of routes with integrations |
+| `stage_name` | `string` | `"$default"` | Stage name (1-128 chars) |
+| `stage_variables` | `map(string)` | `{}` | Stage-specific variables |
+| `stage_access_log_settings` | `object` | `{}` | CloudWatch access logging config |
+| `stage_default_route_settings` | `object` | `{}` | Default throttling and metrics |
+| `vpc_links` | `map(object)` | `{}` | VPC Link definitions for private integrations |
+| `mutual_tls_authentication` | `map(string)` | `{}` | mTLS config with S3 truststore |
+| `disable_execute_api_endpoint` | `bool` | `null` | Force traffic through custom domain |
+| `create` | `bool` | `true` | Control resource creation |
+| `tags` | `map(string)` | `{}` | Tags for all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `api_id` | The API identifier |
+| `api_endpoint` | URI of the API (https:// for HTTP, wss:// for WebSocket) |
+| `api_arn` | The ARN of the API |
+| `api_execution_arn` | ARN prefix for Lambda permissions |
+| `stage_id` | The stage identifier |
+| `stage_invoke_url` | URL to invoke the API via stage |
+| `domain_name_target_domain_name` | Target domain for Route 53/CloudFront |
+| `acm_certificate_arn` | Created ACM certificate ARN |
+| `authorizers` | Map of created authorizers |
+| `integrations` | Map of created integrations |
+| `routes` | Map of created routes |
+| `vpc_links` | Map of created VPC links |
+
+## Usage Examples
+
+### Basic HTTP API
+
+```hcl
+module "api_gateway" {
+  source  = "terraform-aws-modules/apigateway-v2/aws"
+  version = "~> 6.1"
+
+  name          = "my-http-api"
+  description   = "My HTTP API Gateway"
+  protocol_type = "HTTP"
+
+  tags = {
+    Environment = "dev"
+    Terraform   = "true"
+  }
+}
+```
+
+### HTTP API with Lambda Integration and JWT Auth
+
+```hcl
+module "api_gateway" {
+  source  = "terraform-aws-modules/apigateway-v2/aws"
+  version = "~> 6.1"
+
+  name          = "my-http-api"
+  description   = "HTTP API with Lambda backend"
+  protocol_type = "HTTP"
+
+  # CORS Configuration
+  cors_configuration = {
+    allow_headers = ["content-type", "x-amz-date", "authorization"]
+    allow_methods = ["GET", "POST", "PUT", "DELETE"]
+    allow_origins = ["https://example.com"]
+  }
+
+  # Custom Domain
+  domain_name      = "api.example.com"
+  hosted_zone_name = "example.com"
+
+  # Access Logging
+  stage_access_log_settings = {
+    create_log_group            = true
+    log_group_retention_in_days = 7
+    format = jsonencode({
+      requestId      = "$context.requestId"
+      ip             = "$context.identity.sourceIp"
+      requestTime    = "$context.requestTime"
+      httpMethod     = "$context.httpMethod"
+      routeKey       = "$context.routeKey"
+      status         = "$context.status"
+      responseLength = "$context.responseLength"
+    })
+  }
+
+  # Throttling
+  stage_default_route_settings = {
+    detailed_metrics_enabled = true
+    throttling_burst_limit   = 100
+    throttling_rate_limit    = 100
+  }
+
+  # JWT Authorizer (Cognito)
+  authorizers = {
+    cognito = {
+      authorizer_type  = "JWT"
+      identity_sources = ["$request.header.Authorization"]
+      name             = "cognito-authorizer"
+      jwt_configuration = {
+        audience = ["my-client-id"]
+        issuer   = "https://cognito-idp.us-east-1.amazonaws.com/us-east-1_xxxxx"
+      }
+    }
+  }
+
+  # Routes with Integrations
+  routes = {
+    "POST /items" = {
+      authorizer_key = "cognito"
+      integration = {
+        uri                    = module.lambda_create.lambda_function_arn
+        payload_format_version = "2.0"
+        timeout_milliseconds   = 12000
+      }
+    }
+
+    "GET /items/{id}" = {
+      authorizer_key = "cognito"
+      integration = {
+        uri                    = module.lambda_get.lambda_function_arn
+        payload_format_version = "2.0"
+      }
+    }
+
+    "GET /public" = {
+      authorization_type = "NONE"
+      integration = {
+        uri = module.lambda_public.lambda_function_arn
+      }
+    }
+
+    "$default" = {
+      integration = {
+        uri = module.lambda_default.lambda_function_arn
+      }
+    }
+  }
+
+  tags = {
+    Environment = "production"
+  }
+}
+
+# Lambda permission for API Gateway
+resource "aws_lambda_permission" "api_gw" {
+  for_each = toset(["create", "get", "public", "default"])
+
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = module["lambda_${each.key}"].lambda_function_name
+  principal     = "apigateway.amazonaws.com"
+  source_arn    = "${module.api_gateway.api_execution_arn}/*/*"
+}
+```
+
+### HTTP API with VPC Link (Private Integration)
+
+```hcl
+module "api_gateway" {
+  source  = "terraform-aws-modules/apigateway-v2/aws"
+  version = "~> 6.1"
+
+  name          = "vpc-link-http-api"
+  description   = "HTTP API with VPC Link to internal ALB"
+  protocol_type = "HTTP"
+
+  # VPC Link Definition
+  vpc_links = {
+    my-vpc = {
+      name               = "my-vpc-link"
+      security_group_ids = [aws_security_group.api_gateway.id]
+      subnet_ids         = module.vpc.private_subnets
+    }
+  }
+
+  # Routes with VPC Link Integration
+  routes = {
+    "ANY /api/{proxy+}" = {
+      integration = {
+        connection_type = "VPC_LINK"
+        vpc_link_key    = "my-vpc"
+        uri             = aws_lb_listener.internal.arn
+        type            = "HTTP_PROXY"
+        method          = "ANY"
+      }
+    }
+
+    "$default" = {
+      integration = {
+        uri = module.lambda_default.lambda_function_arn
+      }
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
+
+### WebSocket API
+
+```hcl
+module "websocket_api" {
+  source  = "terraform-aws-modules/apigateway-v2/aws"
+  version = "~> 6.1"
+
+  name                       = "my-websocket-api"
+  description                = "WebSocket API for real-time communication"
+  protocol_type              = "WEBSOCKET"
+  route_selection_expression = "$request.body.action"
+
+  # Access Logging
+  stage_access_log_settings = {
+    create_log_group            = true
+    log_group_retention_in_days = 7
+  }
+
+  stage_default_route_settings = {
+    detailed_metrics_enabled = true
+    throttling_burst_limit   = 100
+    throttling_rate_limit    = 100
+  }
+
+  # WebSocket Routes
+  routes = {
+    "$connect" = {
+      integration = {
+        uri = module.lambda_connect.lambda_function_arn
+      }
+    }
+
+    "$disconnect" = {
+      integration = {
+        uri = module.lambda_disconnect.lambda_function_arn
+      }
+    }
+
+    "sendmessage" = {
+      integration = {
+        uri = module.lambda_send.lambda_function_arn
+      }
+      route_response = {
+        key = "$default"
+      }
+    }
+
+    "$default" = {
+      integration = {
+        uri = module.lambda_default.lambda_function_arn
+      }
+    }
+  }
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
 
 ## Best Practices
 
-### API Configuration and Design
+### API Configuration
 
 1. **Choose HTTP APIs for Cost Efficiency**: Use HTTP APIs instead of REST APIs for 71% cost savings when advanced features aren't required
-2. **Use WebSocket for Bidirectional**: Deploy WebSocket APIs for real-time, bidirectional communication rather than polling HTTP endpoints
-3. **Design RESTful Routes**: Follow RESTful conventions for HTTP method and resource path combinations (GET /users, POST /users)
-4. **Implement API Versioning**: Use path-based versioning (/v1/, /v2/) or custom domains for major API version changes
-5. **Consolidate Routes**: Group related functionality under a single API Gateway to reduce management overhead and costs
-6. **Use Descriptive API Names**: Name APIs clearly indicating environment, purpose, and protocol (e.g., "prod-user-service-http")
-7. **Configure CORS Appropriately**: Set specific allowed origins rather than wildcards (*) in production for security
+2. **Use WebSocket for Bidirectional**: Deploy WebSocket APIs for real-time communication rather than polling HTTP endpoints
+3. **Design RESTful Routes**: Follow conventions like `GET /users`, `POST /users`, `GET /users/{id}`
+4. **Implement API Versioning**: Use path-based versioning (`/v1/`, `/v2/`) for major API changes
+5. **Configure CORS Appropriately**: Use specific allowed origins in production, not wildcards
 
-### Integration and Backend Configuration
+### Integration Configuration
 
-1. **Prefer AWS_PROXY for Lambda**: Use AWS_PROXY integration type for Lambda to automatically pass request context and simplify response handling
-2. **Set Appropriate Timeouts**: Configure integration timeouts based on backend response times (default 30s for HTTP, 29s for Lambda)
-3. **Use Payload Format 2.0**: Leverage payload format version 2.0 for Lambda integrations for simplified event structure
-4. **Implement Health Checks**: Add health check routes for monitoring backend service availability
-5. **Configure VPC Links for Private Resources**: Use VPC links instead of public endpoints when accessing resources in VPCs
-6. **Batch Operations**: Design APIs to support batch operations to reduce request count and improve performance
-7. **Use Connection Reuse**: Enable connection reuse for HTTP integrations to backend services to improve latency
+1. **Prefer AWS_PROXY for Lambda**: Automatically passes request context and simplifies response handling
+2. **Use Payload Format 2.0**: Simplified event structure for Lambda integrations
+3. **Set Appropriate Timeouts**: Configure based on backend response times (default 30s for HTTP, 29s for Lambda)
+4. **Use VPC Links for Private Resources**: Keep backend resources off the public internet
 
-### Security and Authentication
+### Security
 
-1. **Enable JWT Authorizers**: Use JWT authorizers for OAuth2 and OpenID Connect authentication instead of custom Lambda authorizers when possible
-2. **Implement Least Privilege**: Configure authorizer scopes to grant minimum necessary permissions for each route
-3. **Use Mutual TLS**: Enable mutual TLS authentication for sensitive APIs requiring client certificate validation
-4. **Secure Custom Domains**: Always use HTTPS with ACM certificates for custom domain configurations
-5. **Rotate Client Certificates**: Establish regular rotation schedules for client certificates used in mutual TLS
-6. **Validate JWT Claims**: Configure JWT authorizer to validate all required claims including issuer, audience, and scopes
-7. **Implement Rate Limiting**: Apply throttling and rate limits at API and route levels to prevent abuse and DDoS attacks
-8. **Restrict CORS Origins**: In production, specify exact allowed origins rather than using wildcard configurations
-9. **Use WAF Integration**: Deploy AWS WAF in front of API Gateway for additional protection against common web exploits
-10. **Enable Access Logging**: Always enable access logging to CloudWatch Logs for security auditing and threat detection
+1. **Enable JWT Authorizers**: Use for OAuth2/OpenID Connect authentication (Cognito, Auth0)
+2. **Implement Least Privilege**: Configure authorizer scopes to grant minimum permissions per route
+3. **Use Mutual TLS**: Enable mTLS for APIs requiring client certificate validation
+4. **Disable Execute API Endpoint**: Set `disable_execute_api_endpoint = true` to force traffic through custom domain
+5. **Apply Throttling**: Configure `throttling_burst_limit` and `throttling_rate_limit` to prevent abuse
+6. **Enable Access Logging**: Always enable for security auditing and threat detection
 
-### Performance and Optimization
+### Monitoring
 
-1. **Enable Caching**: Use API Gateway caching for frequently requested data to reduce backend load and improve latency
-2. **Optimize Payload Size**: Keep request and response payloads small; use compression for large responses
-3. **Configure Appropriate Throttling**: Set throttle limits based on backend capacity to prevent overwhelming downstream services
-4. **Use Regional Endpoints**: Deploy regional API endpoints for lower latency compared to edge-optimized endpoints
-5. **Minimize Integration Latency**: Place Lambda functions and backends in the same region as API Gateway
-6. **Implement Connection Pooling**: Reuse database and HTTP connections in Lambda functions to reduce cold start impact
-7. **Monitor Performance Metrics**: Track API latency, integration latency, and 4XX/5XX errors in CloudWatch
-8. **Optimize Lambda Cold Starts**: Use provisioned concurrency for latency-sensitive Lambda integrations
+1. **Enable Access Logging**: Configure with request ID, IP, method, route, status, response length
+2. **Use Structured Logging**: Format logs in JSON for easier parsing with log analytics tools
+3. **Set Up CloudWatch Alarms**: Monitor 4XX/5XX errors, latency, and throttled requests
+4. **Enable X-Ray Tracing**: Use for distributed tracing across API Gateway and Lambda
 
 ### Cost Optimization
 
-1. **Choose HTTP APIs Over REST**: Use HTTP APIs for up to 71% cost savings when REST API features aren't needed
-2. **Implement Efficient Throttling**: Set throttle limits to prevent runaway costs from unexpected traffic spikes
-3. **Use Regional Endpoints**: Regional endpoints are cheaper than edge-optimized endpoints and suitable for most use cases
-4. **Optimize Logging**: Log only necessary information and set appropriate CloudWatch log retention periods
-5. **Leverage Free Tier**: Take advantage of AWS Free Tier offering first 1 million API calls free per month
-6. **Batch API Calls**: Design clients to batch multiple operations into single requests to reduce API call counts
-7. **Monitor Usage Patterns**: Regularly review CloudWatch metrics to identify and optimize high-cost API routes
-8. **Consolidate APIs**: Reduce number of APIs and stages where possible to minimize management overhead
+1. **Choose HTTP APIs Over REST**: Up to 71% cost savings
+2. **Use Regional Endpoints**: Cheaper than edge-optimized and suitable for most use cases
+3. **Optimize Logging**: Set appropriate CloudWatch log retention periods
+4. **Batch API Calls**: Design clients to batch operations to reduce request count
 
-### Monitoring and Observability
+### Deployment
 
-1. **Enable Access Logging**: Configure detailed access logs with request ID, caller IP, method, path, and response codes
-2. **Use Structured Logging**: Format access logs in JSON for easier parsing and analysis with log analytics tools
-3. **Set Up CloudWatch Alarms**: Create alarms for 4XX errors, 5XX errors, latency, and throttled requests
-4. **Monitor Integration Latency**: Track integration latency separately from total latency to identify backend bottlenecks
-5. **Enable X-Ray Tracing**: Use AWS X-Ray for distributed tracing across API Gateway and Lambda integrations
-6. **Dashboard Key Metrics**: Create CloudWatch dashboards showing API request count, latency distribution, and error rates
-7. **Log Retention Strategy**: Set CloudWatch log retention to 7-30 days for non-production, 90+ days for production
-8. **Track Throttling Events**: Monitor throttled request metrics to identify capacity constraints and adjust limits
-
-### Deployment and Operations
-
-1. **Use Auto-Deployment**: Enable auto-deployment for development environments to streamline testing workflows
-2. **Implement Blue-Green Deployments**: Use multiple stages (blue, green) for zero-downtime production deployments
-3. **Stage Variables for Environments**: Use stage variables to parameterize backend endpoints across dev, staging, and production
-4. **Version Control Configuration**: Store all API Gateway configuration in Terraform for version control and reproducibility
-5. **Test in Staging First**: Deploy and test API changes in staging environment before promoting to production
-6. **Implement Canary Releases**: Use stage deployment canary settings to gradually roll out changes to production
-7. **Document API Contracts**: Maintain OpenAPI/Swagger specifications for API documentation and client SDK generation
-8. **Automate Testing**: Implement integration tests that validate API functionality in CI/CD pipelines
-
-### Custom Domain and DNS
-
-1. **Use ACM Certificates**: Always use AWS Certificate Manager for SSL/TLS certificates with automatic renewal
-2. **Configure Multiple Domains**: Use separate custom domains for different environments (api.example.com, api-staging.example.com)
-3. **Implement Domain Mapping**: Map different API stages to different paths or subdomains for organized access
-4. **Use Route 53 Alias Records**: Create Route 53 alias records pointing to API Gateway domain names for better performance
-5. **Plan for Domain Changes**: Maintain backward compatibility when changing custom domains; use redirects if needed
-6. **Enable Domain Validation**: Use DNS validation for ACM certificates for automated renewal
-7. **Consider Wildcard Certificates**: Use wildcard certificates (*.api.example.com) for flexible subdomain management
-
-### High Availability and Disaster Recovery
-
-1. **Deploy in Multiple Regions**: For critical APIs, deploy to multiple regions with Route 53 failover routing
-2. **Implement Health Checks**: Configure Route 53 health checks for multi-region failover detection
-3. **Document Recovery Procedures**: Maintain runbooks for API Gateway disaster recovery scenarios
-4. **Backup Configuration**: Store all API configurations in version-controlled Terraform code for rapid recreation
-5. **Test Failover Scenarios**: Regularly test regional failover and recovery procedures
-6. **Monitor Regional Health**: Set up cross-region monitoring to detect regional service issues
-7. **Use Multiple Availability Zones**: API Gateway automatically uses multiple AZs within a region for high availability
-
-### Development Best Practices
-
-1. **Use Infrastructure as Code**: Manage all API Gateway resources through Terraform for consistency and repeatability
-2. **Implement Local Testing**: Use tools like LocalStack or SAM Local for local API development and testing
-3. **Modularize Configuration**: Break complex API configurations into reusable Terraform modules by feature or service
-4. **Use For_Each for Multiple Routes**: Leverage Terraform for_each to define multiple routes and integrations efficiently
-5. **Tag Comprehensively**: Apply consistent tags including environment, service, cost-center, and owner
-6. **Separate Environments**: Use separate AWS accounts or isolated resources for dev, staging, and production APIs
-7. **Version Pin Module**: Pin module version in production: `version = "~> 5.3"` to prevent unexpected changes
-8. **Review API Changes**: Use terraform plan to review all API changes before applying to production
+1. **Enable Auto-Deployment for Dev**: Streamlines testing workflows
+2. **Use Stage Variables**: Parameterize backend endpoints across dev, staging, production
+3. **Version Pin Module**: Use `version = "~> 6.1"` to prevent unexpected changes
+4. **Grant Lambda Permissions**: Add `aws_lambda_permission` for each Lambda integration
 
 ## Additional Resources
 
@@ -181,31 +416,25 @@ Built as part of the serverless.tf framework, this module follows AWS best pract
 - **HTTP APIs Documentation**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api.html
 - **WebSocket APIs Documentation**: https://docs.aws.amazon.com/apigateway/latest/developerguide/apigateway-websocket-api.html
 - **JWT Authorizers**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-jwt-authorizer.html
-- **Lambda Integration**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-develop-integrations-lambda.html
 - **VPC Links**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-vpc-links.html
-- **Custom Domain Names**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-custom-domain-names.html
-- **CORS Configuration**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-cors.html
-- **Mutual TLS**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-mutual-tls.html
 - **API Gateway Pricing**: https://aws.amazon.com/api-gateway/pricing/
-- **Best Practices**: https://docs.aws.amazon.com/apigateway/latest/developerguide/http-api-best-practices.html
 - **Serverless.tf Framework**: https://serverless.tf/
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Protocol Selection**: Choose `protocol_type = "HTTP"` for REST APIs or `protocol_type = "WEBSOCKET"` for bidirectional communication
-2. **Integration Configuration**: Use `AWS_PROXY` for Lambda integrations and `HTTP_PROXY` for backend HTTP services
-3. **Payload Format**: Set `payload_format_version = "2.0"` for Lambda integrations to use simplified event structure
-4. **CORS Setup**: Configure CORS explicitly with specific origins, methods, and headers rather than using wildcards in production
-5. **Authorizer Choice**: Prefer JWT authorizers for OAuth2/OIDC flows; use Lambda authorizers for custom logic
-6. **Custom Domains**: Ensure ACM certificates are validated and in the same region as the API Gateway
-7. **Route Definition**: Define routes using format `"{METHOD} {path}"` (e.g., `"GET /users"`, `"POST /orders"`)
-8. **Stage Configuration**: Use stage variables to parameterize backend endpoints across environments
-9. **Logging Configuration**: Always enable access logging with CloudWatch log group and appropriate retention
-10. **Throttling Settings**: Configure throttle settings at both stage and route levels based on backend capacity
-11. **Monitoring Setup**: Implement CloudWatch alarms for 4XX/5XX errors, latency, and throttled requests
-12. **Tagging Strategy**: Apply comprehensive tags for environment, service, cost-center, and owner
-13. **Multi-Region Deployment**: For high availability, deploy identical configurations to multiple regions
-14. **VPC Links**: Create VPC links separately and reference them in private integrations
-15. **Testing**: Validate API configurations in non-production environments before deploying to production
+1. **Protocol Selection**: Use `protocol_type = "HTTP"` for REST APIs, `protocol_type = "WEBSOCKET"` for bidirectional communication
+2. **Integration Type**: Use `AWS_PROXY` for Lambda (default), `HTTP_PROXY` for backend HTTP services
+3. **Payload Format**: Set `payload_format_version = "2.0"` for Lambda integrations
+4. **Route Format**: Define routes as `"{METHOD} {path}"` (e.g., `"GET /users"`, `"POST /orders/{id}"`)
+5. **Lambda Permissions**: Always add `aws_lambda_permission` resources granting API Gateway invoke access
+6. **CORS in Production**: Configure specific origins, methods, and headers rather than wildcards
+7. **Authorizer Reference**: Use `authorizer_key` in routes to reference authorizers defined in `authorizers` map
+8. **VPC Link Reference**: Use `vpc_link_key` in integration to reference VPC links defined in `vpc_links` map
+9. **Custom Domain**: Requires `domain_name`, `hosted_zone_name`, and either `create_certificate = true` or existing `domain_name_certificate_arn`
+10. **Access Logging**: Set `stage_access_log_settings.create_log_group = true` for automatic CloudWatch log group creation
+11. **Throttling**: Configure both `stage_default_route_settings` (stage-level) and per-route `throttling_*` settings
+12. **WebSocket Routes**: Must include `$connect`, `$disconnect`, and `$default` routes at minimum
+13. **Certificate for Private Zones**: Use existing certificate ARN when `private_zone = true` (validation fails for private zones)
+14. **Multi-Region**: Deploy identical configurations to multiple regions for high availability

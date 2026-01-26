@@ -7,42 +7,35 @@
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-efs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/efs/aws/latest
 - **Latest Version**: 1.8.0
-- **Purpose**: Terraform module that creates and manages AWS Elastic File System (EFS) resources for scalable, shared file storage across multiple EC2 instances and containers
+- **Purpose**: Creates and manages AWS Elastic File System (EFS) resources with encryption, access points, mount targets, lifecycle policies, and cross-region replication
 - **Service**: AWS EFS (Elastic File System)
 - **Category**: Storage, File Storage, Network File System
-- **Keywords**: efs, elastic-file-system, nfs, network-file-system, shared-storage, file-storage, mount-targets, access-points, posix, file-system-encryption, kms-encryption, at-rest-encryption, in-transit-encryption, performance-mode, general-purpose, max-io, throughput-mode, bursting, elastic, provisioned-throughput, lifecycle-policy, infrequent-access, ia-storage, backup-policy, aws-backup, replication, cross-region, multi-az, availability-zones, security-groups, file-system-policy, iam-policy, nfs-mount, linux, container-storage, ecs, eks, kubernetes, persistent-storage, stateful-applications
-- **Use For**: shared application storage, container persistent volumes, content management systems, web server content sharing, development environments, big data analytics, machine learning training data, media processing workflows, home directories, database backups, cross-instance data sharing, Kubernetes persistent storage
+- **Keywords**: efs, elastic-file-system, nfs, shared-storage, mount-targets, access-points, file-system-encryption, lifecycle-policy, infrequent-access, backup-policy, replication, multi-az, security-groups, container-storage, eks, kubernetes, persistent-volumes
+- **Use For**: shared application storage, container persistent volumes, content management systems, web server content sharing, development environments, big data analytics, machine learning training data, media processing workflows, home directories, Kubernetes persistent storage
 
 ## Description
 
-AWS Elastic File System (EFS) is a fully managed, elastic, scalable network file system that provides simple, scalable file storage for use with AWS Cloud services and on-premises resources. This Terraform module provides a comprehensive solution for creating and managing EFS file systems with support for encryption, access points, mount targets, lifecycle policies, and cross-region replication. The module simplifies the process of deploying shared file storage that can be accessed simultaneously by thousands of EC2 instances, ECS containers, Lambda functions, and on-premises servers through AWS Direct Connect or VPN.
+AWS Elastic File System (EFS) is a fully managed, elastic, scalable network file system that provides simple, scalable file storage for use with AWS Cloud services and on-premises resources. This Terraform module provides a comprehensive solution for creating and managing EFS file systems with security-first defaults: encryption enabled by default, secure transport enforcement, and automatic backup policy integration.
 
-The module supports multiple performance and throughput configurations to meet different workload requirements, from general-purpose file sharing to high-throughput big data analytics. It enables fine-grained access control through EFS access points with POSIX user and group settings, allowing multiple applications or teams to share a single file system with isolated views. The module handles mount target creation across multiple availability zones for high availability, configures security groups for NFS traffic, and supports both at-rest encryption using AWS KMS and in-transit encryption using TLS. It also provides lifecycle management policies to automatically transition infrequently accessed files to a cost-optimized Infrequent Access (IA) storage class.
+The module supports multiple performance modes (generalPurpose, maxIO) and throughput modes (bursting, elastic, provisioned) to meet different workload requirements. It enables fine-grained access control through EFS access points with POSIX user and group settings, allowing multiple applications to share a single file system with isolated views. The module handles mount target creation across multiple availability zones for high availability, automatically creates and manages security groups for NFS traffic, and supports cross-region replication for disaster recovery scenarios.
 
-This module is essential for organizations running stateful applications, containerized workloads on ECS or EKS, or any scenario requiring shared file storage across multiple compute resources. It integrates seamlessly with AWS Backup for automated backup management and supports cross-region replication for disaster recovery scenarios. The module's support for access points makes it ideal for multi-tenant applications, where each tenant requires isolated access to specific directories with their own permissions. With comprehensive tagging, monitoring integration, and policy-based access control, this module serves as the foundation for enterprise-grade shared file storage in AWS.
+This module is essential for organizations running stateful applications, containerized workloads on ECS or EKS, or any scenario requiring shared file storage across multiple compute resources. With comprehensive tagging, monitoring integration, and policy-based access control, this module serves as the foundation for enterprise-grade shared file storage in AWS.
 
 ## Key Features
 
-- **Managed Network File System**: Fully managed NFSv4.1 and NFSv4.0 protocol support for Linux-based workloads
-- **Encryption at Rest**: Encrypt file system data at rest using AWS-managed or customer-managed KMS keys
-- **In-Transit Encryption**: Support for TLS encryption of data in transit between clients and EFS
-- **Performance Modes**: Choose between General Purpose (low latency) or Max I/O (high throughput, higher latency) modes
-- **Throughput Modes**: Select Bursting (scales with file system size), Elastic (automatic scaling), or Provisioned (fixed throughput) modes
-- **Multi-AZ Mount Targets**: Create mount targets in multiple availability zones for high availability and fault tolerance
-- **One Zone Storage Class**: Deploy file systems to a single availability zone for cost optimization (up to 47% savings)
-- **Access Points**: Define application-specific entry points with POSIX user identity and root directory settings
-- **POSIX Permissions**: Enforce POSIX user IDs, group IDs, and file permissions at the access point level
-- **Lifecycle Management**: Automatically transition files to Infrequent Access (IA) storage class based on access patterns
-- **Infrequent Access Storage**: Cost-optimized storage class for files accessed less frequently (up to 92% cost reduction)
-- **Backup Policies**: Enable automatic backups using AWS Backup service with configurable retention policies
-- **Cross-Region Replication**: Replicate file systems to other AWS regions for disaster recovery and compliance
-- **File System Policies**: Define IAM-based access control policies at the file system level
-- **Security Group Integration**: Configure security groups to control NFS traffic to mount targets
-- **Elastic Scaling**: Automatically scale storage capacity from gigabytes to petabytes as files are added or removed
-- **Concurrent Access**: Support thousands of concurrent connections from EC2, ECS, EKS, Lambda, and on-premises clients
-- **Tagging Support**: Comprehensive tagging for resource organization, cost allocation, and compliance tracking
-- **CloudWatch Integration**: Native integration with CloudWatch for monitoring file system metrics and performance
-- **VPC Integration**: Deploy mount targets within VPCs with subnet-level placement control
+- **Encryption by Default**: File systems are encrypted at rest using AWS KMS (configurable with custom KMS keys)
+- **Secure Transport Enforcement**: Requires `aws:SecureTransport` for all connections by default
+- **Performance Modes**: Choose between General Purpose (low latency) or Max I/O (high throughput) - cannot be changed after creation
+- **Throughput Modes**: Select Bursting (scales with size), Elastic (automatic scaling), or Provisioned (fixed throughput)
+- **Multi-AZ Mount Targets**: Create mount targets in multiple availability zones via simple map configuration
+- **One Zone Storage**: Deploy to single AZ for cost optimization by specifying `availability_zone_name`
+- **Access Points**: Define application-specific entry points with POSIX user identity (uid, gid, secondary_gids) and root directory settings
+- **Lifecycle Management**: Automatic transition to Infrequent Access (IA) and Archive storage classes
+- **AWS Backup Integration**: Backup policy enabled by default with `enable_backup_policy = true`
+- **Cross-Region Replication**: Built-in support for disaster recovery via `create_replication_configuration`
+- **Automatic Security Group**: Creates and manages security group with NFS port 2049/TCP rules
+- **IAM Policy Support**: Flexible policy attachment with statement merging capabilities
+- **Comprehensive Tagging**: Apply tags to all resources for organization and cost allocation
 
 ## Main Use Cases
 
@@ -53,120 +46,341 @@ This module is essential for organizations running stateful applications, contai
 5. **Machine Learning**: Store training datasets and model artifacts accessible by multiple training instances
 6. **Media Processing**: Share video and image files for transcoding, rendering, and processing workflows
 7. **Home Directories**: Provide network home directories for users across multiple Linux instances
-8. **Application Migration**: Lift-and-shift on-premises applications requiring shared file storage to AWS
-9. **Backup and Archive**: Store database backups, log files, and archival data with lifecycle policies
-10. **Kubernetes Persistent Volumes**: Serve as ReadWriteMany (RWX) storage class for Kubernetes workloads
+8. **Kubernetes Persistent Volumes**: Serve as ReadWriteMany (RWX) storage class for Kubernetes workloads
+
+## Input Variables
+
+### Core Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Determines whether resources will be created |
+| `name` | `string` | `""` | The name of the file system |
+| `creation_token` | `string` | `null` | Unique identifier for idempotent creation |
+| `encrypted` | `bool` | `true` | Enable encryption at rest |
+| `kms_key_arn` | `string` | `null` | ARN of KMS key for encryption (requires encrypted=true) |
+| `performance_mode` | `string` | `null` | `generalPurpose` or `maxIO` (permanent after creation) |
+| `throughput_mode` | `string` | `null` | `bursting`, `elastic`, or `provisioned` |
+| `provisioned_throughput_in_mibps` | `number` | `null` | Throughput in MiB/s for provisioned mode |
+| `availability_zone_name` | `string` | `null` | AZ for One Zone storage; omit for regional/multi-AZ |
+| `tags` | `map(string)` | `{}` | Tags to apply to all resources |
+
+### Lifecycle Policy
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `lifecycle_policy` | `any` | `{}` | Lifecycle policy configuration object |
+
+Lifecycle policy object supports:
+- `transition_to_ia`: `AFTER_1_DAY`, `AFTER_7_DAYS`, `AFTER_14_DAYS`, `AFTER_30_DAYS`, `AFTER_60_DAYS`, `AFTER_90_DAYS`, `AFTER_180_DAYS`, `AFTER_270_DAYS`, `AFTER_365_DAYS`
+- `transition_to_primary_storage_class`: `AFTER_1_ACCESS`
+- `transition_to_archive`: Similar values as `transition_to_ia`
+
+### Mount Targets
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `mount_targets` | `any` | `{}` | Map of mount target definitions |
+
+Mount target object structure:
+```hcl
+mount_targets = {
+  "az-key" = {
+    subnet_id = "subnet-xxx"  # Required
+  }
+}
+```
+
+### Access Points
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `access_points` | `any` | `{}` | Map of access point definitions |
+
+Access point object structure:
+```hcl
+access_points = {
+  "app-name" = {
+    name = "app-access-point"
+    posix_user = {
+      gid            = 1001
+      uid            = 1001
+      secondary_gids = [1002]
+    }
+    root_directory = {
+      path = "/app"
+      creation_info = {
+        owner_gid   = 1001
+        owner_uid   = 1001
+        permissions = "755"
+      }
+    }
+    tags = {}
+  }
+}
+```
+
+### Backup Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_backup_policy` | `bool` | `true` | Create backup policy resource |
+| `enable_backup_policy` | `bool` | `true` | Enable automatic backups via AWS Backup |
+
+### Replication Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_replication_configuration` | `bool` | `false` | Enable cross-region replication |
+| `replication_configuration_destination` | `any` | `null` | Destination configuration for replication |
+
+Replication destination object:
+```hcl
+replication_configuration_destination = {
+  region         = "eu-west-2"           # Required if not specifying file_system_id
+  file_system_id = null                  # Optional: replicate to existing EFS
+  kms_key_id     = null                  # Optional: KMS key for destination
+}
+```
+
+### Security Group Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_security_group` | `bool` | `true` | Create and manage security group |
+| `security_group_name` | `string` | `null` | Name for the security group |
+| `security_group_vpc_id` | `string` | `null` | VPC ID for security group |
+| `security_group_ingress_rules` | `any` | `{}` | Ingress rules (defaults to NFS 2049/TCP) |
+| `security_group_egress_rules` | `any` | `{}` | Egress rules (defaults to NFS 2049/TCP) |
+
+### IAM Policy Configuration
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `attach_policy` | `bool` | `true` | Attach file system policy |
+| `bypass_policy_lockout_safety_check` | `bool` | `false` | Bypass policy lockout safety check |
+| `deny_nonsecure_transport` | `bool` | `true` | Deny connections without TLS |
+| `policy_statements` | `any` | `null` | Custom IAM policy statements |
+
+## Outputs
+
+| Output | Description |
+|--------|-------------|
+| `id` | File system ID (e.g., fs-ccfc0d65) |
+| `arn` | Amazon Resource Name of the file system |
+| `dns_name` | DNS name for the file system |
+| `size_in_bytes` | Latest known metered size of stored data |
+| `access_points` | Map of access points and their attributes |
+| `mount_targets` | Map of mount targets and their attributes |
+| `security_group_id` | ID of the created security group |
+| `security_group_arn` | ARN of the security group |
+| `replication_configuration_destination_file_system_id` | Replica file system ID |
+
+## Usage Examples
+
+### Basic EFS File System
+
+```hcl
+module "efs" {
+  source  = "terraform-aws-modules/efs/aws"
+  version = "~> 1.8"
+
+  name = "my-app-efs"
+
+  tags = {
+    Environment = "dev"
+    Project     = "my-app"
+  }
+}
+```
+
+### EFS with Mount Targets and Access Points
+
+```hcl
+module "efs" {
+  source  = "terraform-aws-modules/efs/aws"
+  version = "~> 1.8"
+
+  name           = "my-app-efs"
+  encrypted      = true
+  kms_key_arn    = aws_kms_key.efs.arn
+
+  performance_mode = "generalPurpose"
+  throughput_mode  = "elastic"
+
+  lifecycle_policy = {
+    transition_to_ia = "AFTER_30_DAYS"
+  }
+
+  # Mount targets in multiple AZs
+  mount_targets = {
+    "us-east-1a" = {
+      subnet_id = module.vpc.private_subnets[0]
+    }
+    "us-east-1b" = {
+      subnet_id = module.vpc.private_subnets[1]
+    }
+  }
+
+  # Access point for application
+  access_points = {
+    app = {
+      name = "app-data"
+      posix_user = {
+        gid = 1001
+        uid = 1001
+      }
+      root_directory = {
+        path = "/app"
+        creation_info = {
+          owner_gid   = 1001
+          owner_uid   = 1001
+          permissions = "755"
+        }
+      }
+    }
+  }
+
+  # Security group configuration
+  security_group_vpc_id = module.vpc.vpc_id
+  security_group_ingress_rules = {
+    vpc = {
+      cidr_ipv4 = module.vpc.vpc_cidr_block
+    }
+  }
+
+  tags = {
+    Environment = "production"
+    Project     = "my-app"
+  }
+}
+```
+
+### EFS with Cross-Region Replication
+
+```hcl
+module "efs" {
+  source  = "terraform-aws-modules/efs/aws"
+  version = "~> 1.8"
+
+  name      = "replicated-efs"
+  encrypted = true
+
+  # Enable replication to another region
+  create_replication_configuration = true
+  replication_configuration_destination = {
+    region = "us-west-2"
+  }
+
+  mount_targets = {
+    "us-east-1a" = {
+      subnet_id = module.vpc.private_subnets[0]
+    }
+  }
+
+  security_group_vpc_id = module.vpc.vpc_id
+
+  tags = {
+    Environment = "production"
+    DR          = "enabled"
+  }
+}
+```
+
+### One Zone EFS (Cost Optimized)
+
+```hcl
+module "efs" {
+  source  = "terraform-aws-modules/efs/aws"
+  version = "~> 1.8"
+
+  name                   = "dev-efs"
+  availability_zone_name = "us-east-1a"  # Creates One Zone storage class
+
+  lifecycle_policy = {
+    transition_to_ia = "AFTER_7_DAYS"
+  }
+
+  mount_targets = {
+    "us-east-1a" = {
+      subnet_id = module.vpc.private_subnets[0]
+    }
+  }
+
+  security_group_vpc_id = module.vpc.vpc_id
+
+  tags = {
+    Environment = "dev"
+  }
+}
+```
+
+### EFS with Custom IAM Policy
+
+```hcl
+module "efs" {
+  source  = "terraform-aws-modules/efs/aws"
+  version = "~> 1.8"
+
+  name = "restricted-efs"
+
+  attach_policy = true
+  policy_statements = [
+    {
+      sid     = "AllowSpecificRole"
+      actions = ["elasticfilesystem:ClientMount", "elasticfilesystem:ClientWrite"]
+      principals = [
+        {
+          type        = "AWS"
+          identifiers = [aws_iam_role.app.arn]
+        }
+      ]
+    }
+  ]
+
+  mount_targets = {
+    "us-east-1a" = {
+      subnet_id = module.vpc.private_subnets[0]
+    }
+  }
+
+  security_group_vpc_id = module.vpc.vpc_id
+}
+```
 
 ## Best Practices
 
-### File System Configuration
+### Security
 
-1. **Enable Encryption by Default**: Always enable at-rest encryption for production file systems to protect sensitive data
-2. **Use Customer-Managed KMS Keys**: For compliance requirements, use customer-managed KMS keys instead of AWS-managed keys
-3. **Choose Appropriate Performance Mode**: Use General Purpose for most workloads; reserve Max I/O for massively parallel applications (1000+ instances)
-4. **Start with Elastic Throughput**: Use Elastic throughput mode for unpredictable or variable workloads; it automatically scales with demand
-5. **Use Provisioned Throughput Sparingly**: Only use Provisioned mode when you need consistent high throughput exceeding bursting limits
-6. **Deploy Multi-AZ for Production**: Create mount targets in at least two availability zones for high availability
-7. **Consider One Zone for Dev/Test**: Use One Zone storage class for non-production environments to reduce costs
-8. **Name File Systems Descriptively**: Use clear naming conventions indicating environment, application, and purpose
+1. **Keep Encryption Enabled**: The module enables encryption by default; do not disable for production workloads
+2. **Use Customer-Managed KMS Keys**: For compliance requirements, specify `kms_key_arn` with your own KMS key
+3. **Keep Secure Transport Enabled**: The `deny_nonsecure_transport = true` default enforces TLS; do not disable
+4. **Restrict Security Groups**: Limit NFS port (2049) access to only necessary CIDR blocks or security groups
+5. **Use Access Points**: Create dedicated access points with non-root POSIX users for each application
 
-### Access Control and Security
+### Performance
 
-1. **Use Access Points**: Create dedicated access points for each application or tenant to enforce consistent POSIX permissions
-2. **Enforce Least Privilege**: Configure access point POSIX users with minimum necessary permissions (non-root when possible)
-3. **Implement File System Policies**: Use IAM-based file system policies to restrict access to specific AWS principals
-4. **Deny Insecure Transport**: Configure file system policies to deny mounting without TLS encryption for sensitive data
-5. **Restrict Security Groups**: Limit NFS port (2049) access to only known security groups or IP ranges
-6. **Use VPC Endpoints**: Keep traffic within AWS network by accessing EFS through VPC endpoints
-7. **Avoid Root Access Points**: Create access points with non-root POSIX users unless root access is specifically required
-8. **Implement Defense in Depth**: Combine security groups, file system policies, and access point permissions for layered security
-9. **Audit Mount Access**: Enable CloudTrail logging to monitor file system mount and policy changes
-10. **Use IAM Roles**: Grant access through IAM roles rather than IAM users for applications and services
+1. **Choose Performance Mode Carefully**: `performance_mode` cannot be changed after creation; use `generalPurpose` for most workloads, `maxIO` only for massively parallel applications
+2. **Start with Elastic Throughput**: Use `throughput_mode = "elastic"` for unpredictable workloads
+3. **Avoid Provisioned Unless Necessary**: Provisioned throughput at 256 MiB/s costs ~$1,500/month
 
-### Performance Optimization
+### High Availability
 
-1. **Optimize for Throughput**: For large file workloads, use larger I/O sizes (1 MB) to maximize throughput
-2. **Parallelize Access**: Distribute file operations across multiple threads or instances to leverage EFS scalability
-3. **Monitor Burst Credits**: Track burst credit balance in CloudWatch and switch to Provisioned mode if consistently depleted
-4. **Use Regional Storage**: Deploy Standard storage class (multi-AZ) for frequently accessed data requiring high availability
-5. **Implement Client-Side Caching**: Use operating system caching and attribute caching to reduce latency
-6. **Pre-warm File System**: For predictable workloads, pre-warm the file system by reading data before peak usage
-7. **Benchmark Performance**: Test performance with your specific workload patterns before production deployment
-8. **Avoid Small File Workloads**: EFS is optimized for larger files; consider alternatives (S3, EBS) for many small files
+1. **Deploy Multi-AZ for Production**: Create mount targets in at least two availability zones
+2. **Use One Zone for Dev/Test**: Specify `availability_zone_name` for non-production to save up to 47%
+3. **Enable Replication for DR**: Use `create_replication_configuration = true` for critical data
 
-### Lifecycle and Cost Management
+### Cost Optimization
 
-1. **Enable Lifecycle Policies**: Automatically transition infrequently accessed files to IA storage to reduce costs by up to 92%
-2. **Choose Appropriate Transition Period**: Start with 30 days for transition to IA; adjust based on access patterns
-3. **Monitor Storage Classes**: Track distribution of data across Standard and IA storage classes using CloudWatch
-4. **Clean Up Unused Data**: Regularly audit and delete unnecessary files to optimize storage costs
-5. **Use One Zone for Dev/Test**: Deploy development and testing file systems in One Zone to save up to 47% on storage costs
-6. **Implement Data Retention Policies**: Define and enforce data retention policies to prevent unlimited storage growth
-7. **Track Throughput Costs**: Monitor Provisioned throughput usage to ensure you're not over-provisioned
-8. **Review Elastic Throughput Charges**: For Elastic mode, review throughput billing to understand actual usage patterns
+1. **Enable Lifecycle Policies**: Set `transition_to_ia` to move infrequently accessed files to cheaper storage
+2. **Monitor Storage Classes**: Track distribution across Standard, IA, and Archive tiers
+3. **Right-size Throughput**: Review Elastic throughput billing or avoid over-provisioning
 
-### Backup and Disaster Recovery
+### Operations
 
-1. **Enable AWS Backup**: Use AWS Backup for automated, centralized backup management across file systems
-2. **Configure Backup Schedules**: Implement daily or weekly backup schedules based on RPO requirements
-3. **Set Retention Policies**: Define appropriate backup retention periods based on compliance and recovery needs
-4. **Enable Cross-Region Replication**: Replicate critical file systems to secondary regions for disaster recovery
-5. **Test Recovery Procedures**: Regularly test file system restoration from backups to validate RTO
-6. **Monitor Replication Status**: Set up alarms for replication lag or failures
-7. **Document Recovery Runbooks**: Maintain clear procedures for restoring file systems in disaster scenarios
-8. **Use Multiple Backup Strategies**: Combine AWS Backup with application-level backups for defense in depth
-
-### Mount Configuration
-
-1. **Use EFS Mount Helper**: Utilize the amazon-efs-utils package and EFS mount helper for simplified mounting
-2. **Enable Automatic Mounting**: Add EFS mounts to /etc/fstab for automatic mounting on instance startup
-3. **Use TLS for In-Transit Encryption**: Mount with TLS option (efs-utils) when security requirements mandate in-transit encryption
-4. **Configure Mount Options**: Set appropriate NFS mount options (rsize, wsize, timeo, retrans) for your workload
-5. **Implement Health Checks**: Monitor mount availability and implement automatic remounting on failures
-6. **Use DNS Names**: Mount using EFS DNS names for automatic failover across availability zones
-7. **Test Cross-AZ Failover**: Validate that applications can fail over to mount targets in different AZs
-
-### Monitoring and Observability
-
-1. **Enable CloudWatch Metrics**: Monitor key metrics including ClientConnections, DataReadIOBytes, DataWriteIOBytes, and PercentIOLimit
-2. **Set Up Burst Credit Alarms**: Alert when burst credits fall below thresholds to avoid performance degradation
-3. **Monitor Throughput Utilization**: Track permitted throughput vs. metered throughput to optimize configuration
-4. **Track Storage Size**: Monitor file system size growth to predict costs and capacity planning
-5. **Alert on Mount Failures**: Create EventBridge rules to alert on failed mount attempts
-6. **Dashboard Key Metrics**: Build CloudWatch dashboards showing performance, storage, and access patterns
-7. **Log File System Events**: Enable CloudTrail logging for security auditing and compliance
-8. **Monitor Access Point Usage**: Track metrics per access point to identify high-usage applications
-
-### Application Integration
-
-1. **Use Consistent Region**: Ensure file system and accessing resources are in the same AWS region
-2. **Implement Retry Logic**: Handle transient NFS errors gracefully with exponential backoff retry logic
-3. **Use Kubernetes CSI Driver**: Deploy AWS EFS CSI driver for Kubernetes persistent volume integration
-4. **Configure Resource Limits**: Set appropriate storage quotas and limits for each access point or application
-5. **Test Concurrent Access**: Validate application behavior with multiple simultaneous connections
-6. **Handle File Locking**: Implement proper NFS file locking for applications requiring exclusive access
-7. **Optimize for Workload**: Choose between throughput modes based on whether workload is read-heavy, write-heavy, or balanced
-
-### Compliance and Governance
-
-1. **Tag Comprehensively**: Apply tags for owner, environment, compliance scope, data classification, and cost center
-2. **Implement Encryption**: Enable encryption for all file systems storing regulated data (PII, PHI, PCI)
-3. **Document Data Classification**: Clearly document what types of data are stored on each file system
-4. **Enable Audit Logging**: Use CloudTrail and VPC Flow Logs to maintain audit trails for compliance
-5. **Implement Lifecycle Policies**: Configure retention policies to meet regulatory requirements
-6. **Review Access Regularly**: Audit file system policies and access point configurations quarterly
-7. **Maintain Compliance Reports**: Include EFS configuration in SOC2, ISO 27001, and other compliance reports
-
-### Development and Deployment
-
-1. **Use Infrastructure as Code**: Manage all EFS resources through Terraform for consistency and version control
-2. **Separate Environments**: Create separate file systems for dev, staging, and production environments
-3. **Test Performance First**: Validate performance with representative workloads in staging before production
-4. **Document Mount Instructions**: Maintain clear documentation for mounting and accessing file systems
-5. **Version Pin Module**: Pin Terraform module version to prevent unexpected changes during deployments
-6. **Use Terraform Workspaces**: Leverage workspaces or separate state files for multi-environment deployments
-7. **Implement Gradual Rollouts**: Test changes in non-production before applying to production file systems
-8. **Automate Provisioning**: Include EFS provisioning in application deployment automation
+1. **Enable Backups**: Keep default `enable_backup_policy = true` for automated backups
+2. **Tag Resources**: Apply comprehensive tags for cost allocation and organization
+3. **Use Infrastructure as Code**: Pin module version (e.g., `version = "~> 1.8"`) to prevent unexpected changes
 
 ## Additional Resources
 
@@ -174,31 +388,26 @@ This module is essential for organizations running stateful applications, contai
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/efs/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-efs/tree/master/examples
 - **AWS EFS Documentation**: https://docs.aws.amazon.com/efs/latest/ug/whatisefs.html
-- **AWS EFS API Reference**: https://docs.aws.amazon.com/efs/latest/APIReference/Welcome.html
 - **EFS Performance**: https://docs.aws.amazon.com/efs/latest/ug/performance.html
 - **EFS Storage Classes**: https://docs.aws.amazon.com/efs/latest/ug/storage-classes.html
 - **EFS Access Points**: https://docs.aws.amazon.com/efs/latest/ug/efs-access-points.html
 - **EFS Encryption**: https://docs.aws.amazon.com/efs/latest/ug/encryption.html
 - **EFS Replication**: https://docs.aws.amazon.com/efs/latest/ug/efs-replication.html
 - **EFS Best Practices**: https://docs.aws.amazon.com/efs/latest/ug/best-practices.html
-- **EFS Security**: https://docs.aws.amazon.com/efs/latest/ug/security-considerations.html
 - **EFS Pricing**: https://aws.amazon.com/efs/pricing/
 - **EFS CSI Driver for Kubernetes**: https://docs.aws.amazon.com/eks/latest/userguide/efs-csi.html
-- **EFS Mount Helper**: https://docs.aws.amazon.com/efs/latest/ug/efs-mount-helper.html
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Enable Encryption**: Always set `encrypted = true` and use customer-managed KMS keys for production
-2. **Deploy Multi-AZ**: Configure mount targets in multiple availability zones for high availability
-3. **Use Access Points**: Create access points with specific POSIX users rather than relying on root access
-4. **Choose Performance Mode**: Use General Purpose for most workloads; Max I/O only for massively parallel applications
-5. **Start with Elastic Throughput**: Use Elastic throughput mode unless you have specific provisioned throughput requirements
-6. **Enable Lifecycle Policies**: Configure transition to IA storage after 30-90 days to optimize costs
-7. **Implement Security Groups**: Restrict NFS port (2049) to only necessary security groups or IP ranges
-8. **Enable Backup Policies**: Use AWS Backup for automated backup management
-9. **Tag Comprehensively**: Apply tags for owner, environment, application, and cost tracking
-10. **Monitor Performance**: Set up CloudWatch alarms for burst credits, throughput, and storage capacity
-11. **Use File System Policies**: Implement IAM-based policies to restrict access to authorized principals only
-12. **Document Access Patterns**: Maintain clear documentation of which applications use each file system and access point
+1. **Encryption is On by Default**: No action needed; `encrypted = true` is the default
+2. **Secure Transport is Enforced**: `deny_nonsecure_transport = true` is default; TLS required
+3. **Backup is Enabled by Default**: `enable_backup_policy = true` provides automatic AWS Backup
+4. **Performance Mode is Permanent**: Choose `generalPurpose` unless you need `maxIO`; cannot be changed later
+5. **Multi-AZ vs One Zone**: Omit `availability_zone_name` for multi-AZ; specify it for One Zone (cost savings)
+6. **Mount Targets Need VPC/Subnets**: VPC and subnets must exist before creating mount targets
+7. **Security Group Auto-Created**: Set `security_group_vpc_id` to enable automatic security group creation
+8. **Access Points for Isolation**: Use access points with POSIX users to isolate application access
+9. **Cost Warning**: Provisioned throughput is expensive (~$1,500/month at 256 MiB/s); prefer elastic mode
+10. **Pin Module Version**: Always specify version constraint to avoid breaking changes

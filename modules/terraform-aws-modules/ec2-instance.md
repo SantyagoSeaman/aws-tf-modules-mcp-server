@@ -6,48 +6,40 @@
 - **Source**: `terraform-aws-modules/ec2-instance/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ec2-instance
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws/latest
-- **Latest Version**: 6.1.1
-- **Purpose**: Terraform module that creates AWS EC2 instance(s) resources with comprehensive configuration options
+- **Latest Version**: 6.2.0
+- **Purpose**: Terraform module that creates AWS EC2 instance(s) with comprehensive configuration for compute, networking, storage, and IAM
 - **Service**: AWS EC2 (Elastic Compute Cloud)
 - **Category**: Compute, Infrastructure
-- **Keywords**: ec2, instance, virtual-machine, compute, spot-instance, on-demand, ami, ebs, elastic-block-store, instance-profile, iam-role, security-group, vpc, subnet, public-ip, private-ip, elastic-ip, network-interface, user-data, metadata, monitoring, tags, key-pair, ssh, linux, windows, t3, t2, m5, c5, instance-type, availability-zone, placement-group, tenancy, cpu-credits, ebs-optimized, source-dest-check, termination-protection, hibernation, capacity-reservation, ipv6, secondary-ip, elastic-network-interface, root-volume, additional-volumes, encrypted-volumes, kms, spot-price, spot-request, launch-template, associate-public-ip
-- **Use For**: Application hosting, web servers, API backends, batch processing workloads, development and testing environments, database servers, continuous integration runners, microservices deployment, containerized applications, data processing pipelines, machine learning training instances, game servers
+- **Keywords**: ec2, instance, compute, spot-instance, ami, ebs, iam-role, security-group, vpc, subnet, user-data, metadata, imdsv2, elastic-ip, network-interface, hibernation
+- **Use For**: Application hosting, web servers, API backends, batch processing, development environments, database servers, CI/CD runners, microservices, bastion hosts, machine learning workloads
 
 ## Description
 
-This Terraform module provides a flexible and comprehensive way to create and manage AWS EC2 instances with extensive configuration options. The module supports both single and multiple instance deployments, on-demand and spot instances, and integrates seamlessly with other AWS services such as IAM, VPC, security groups, and EBS volumes. It abstracts the complexity of EC2 instance configuration while providing granular control over instance settings, networking, storage, and security parameters.
+This Terraform module provides a flexible and comprehensive way to create and manage AWS EC2 instances with extensive configuration options. The module supports both single and multiple instance deployments (using `for_each`), on-demand and spot instances, and integrates seamlessly with other AWS services such as IAM, VPC, security groups, and EBS volumes. It abstracts the complexity of EC2 instance configuration while providing granular control over instance settings, networking, storage, and security parameters.
 
-The module is designed to handle common EC2 deployment patterns and use cases, from simple single-instance deployments to complex multi-instance architectures with custom networking and IAM configurations. It supports advanced features such as spot instance requests for cost optimization, custom IAM instance profiles for secure access to AWS services, multiple network interfaces for complex networking scenarios, and flexible EBS volume attachments for persistent storage. The module also handles AMI selection through direct AMI IDs or SSM parameters, making it easy to use the latest AWS-provided AMIs.
+The module handles common EC2 deployment patterns from simple single-instance deployments to complex architectures with custom networking and IAM configurations. It supports advanced features such as spot instance requests for cost optimization, built-in IAM instance profile creation, multiple network interfaces, flexible EBS volume attachments, and Elastic IP management. The module also handles AMI selection through direct AMI IDs or SSM parameters for dynamic, up-to-date AMI selection.
 
-Key architectural features include conditional resource creation for environment-specific deployments, comprehensive tagging support for resource organization and cost allocation, and detailed metadata configuration for enhanced security and monitoring. The module is regularly maintained to support the latest Terraform and AWS provider versions, ensuring compatibility with modern infrastructure-as-code practices and AWS service features.
+Key architectural features include IMDSv2 enabled by default for enhanced security, conditional resource creation for environment-specific deployments, comprehensive tagging support, and detailed metadata configuration. The module is actively maintained to support the latest Terraform and AWS provider versions.
 
 ## Key Features
 
-- **Single and Multiple Instance Support**: Create one or many EC2 instances with consistent configuration
-- **Spot Instance Support**: Enable spot instances for cost-optimized workloads with configurable pricing
-- **Flexible AMI Selection**: Use direct AMI IDs or SSM parameters for dynamic AMI selection
-- **IAM Integration**: Create and attach IAM instance profiles for secure service access
-- **Network Configuration**: Configure VPC, subnets, security groups, and multiple network interfaces
-- **EBS Volume Management**: Attach and configure root and additional EBS volumes with encryption support
-- **Public IP Assignment**: Control public IP allocation and Elastic IP association
-- **IPv6 Support**: Enable and configure IPv6 addresses for instances
-- **User Data Support**: Execute initialization scripts and cloud-init configurations
-- **Monitoring and Logging**: Enable detailed CloudWatch monitoring and instance metadata options
-- **Security Group Management**: Associate multiple security groups for layered security
-- **Key Pair Configuration**: Configure SSH key pairs for instance access
-- **Tenancy Options**: Support for default, dedicated, and host tenancy configurations
-- **Placement Groups**: Configure placement groups for low-latency networking
-- **CPU Credits**: Configure T-series instance CPU credit options (standard/unlimited)
-- **EBS Optimization**: Enable EBS optimization for enhanced storage performance
-- **Termination Protection**: Enable termination protection to prevent accidental deletion
-- **Source/Destination Checks**: Configure network source/destination checking
+- **Single and Multiple Instance Support**: Create one or many EC2 instances with consistent configuration using `for_each`
+- **Spot Instance Support**: Enable spot instances for cost-optimized workloads with configurable pricing and interruption behavior
+- **Flexible AMI Selection**: Use direct AMI IDs or SSM parameters for dynamic AMI selection with optional ignore changes
+- **Built-in IAM Integration**: Create IAM instance profiles and roles directly within the module with customizable policy attachments
+- **Security Group Management**: Create and configure security groups with customizable ingress/egress rules
+- **Elastic IP Support**: Optionally create and associate Elastic IPs with instances
+- **Network Configuration**: Configure VPC, subnets, security groups, and multiple network interfaces with IPv6 support
+- **EBS Volume Management**: Attach and configure root and additional EBS volumes with encryption and KMS support
+- **IMDSv2 by Default**: Enhanced security with Instance Metadata Service v2 required by default
+- **User Data Support**: Execute initialization scripts and cloud-init configurations with optional replace-on-change behavior
+- **Monitoring and Logging**: Enable detailed CloudWatch monitoring
+- **Tenancy and Placement**: Support for default, dedicated, and host tenancy with placement group configuration
+- **CPU Configuration**: Configure CPU credits (standard/unlimited) and CPU options (core count, threads per core)
 - **Hibernation Support**: Enable instance hibernation for faster start times
-- **Capacity Reservations**: Utilize EC2 capacity reservations for guaranteed availability
-- **Comprehensive Tagging**: Support for instance, volume, and network interface tags
-- **Conditional Creation**: Use the create flag to conditionally create resources
-- **Metadata Service Configuration**: Configure IMDSv2 and metadata options for enhanced security
-- **Credit Specification**: Configure CPU credit behavior for burstable instance types
-- **Launch Templates**: Support for launch template configurations
+- **Termination Protection**: Enable termination and stop protection to prevent accidental deletion
+- **Comprehensive Tagging**: Support for instance, volume, IAM, and security group tags
+- **Conditional Creation**: Granular resource creation control via feature flags
 
 ## Main Use Cases
 
@@ -59,10 +51,8 @@ Key architectural features include conditional resource creation for environment
 6. **Batch Processing**: Run scheduled batch jobs and data processing workloads on spot instances
 7. **API Backends**: Host RESTful APIs and GraphQL services with auto-scaling capabilities
 8. **Machine Learning Training**: Provision GPU or CPU instances for ML model training workloads
-9. **Game Servers**: Deploy dedicated game servers with persistent storage and public IPs
-10. **Data Processing Pipelines**: Run ETL jobs and data transformation workloads with temporary compute
-11. **Legacy Application Migration**: Lift-and-shift traditional applications to AWS cloud infrastructure
-12. **Bastion Hosts**: Create secure jump boxes for accessing private VPC resources
+9. **Bastion Hosts**: Create secure jump boxes for accessing private VPC resources
+10. **Session Manager Access**: Deploy instances with private network access via AWS Systems Manager
 
 ## Submodules
 
@@ -76,30 +66,68 @@ This module does not include submodules. It provides a single root module for EC
 | `name` | `string` | `""` | Name to be used on EC2 instance created |
 | `ami` | `string` | `null` | ID of AMI to use for the instance |
 | `ami_ssm_parameter` | `string` | `"/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"` | SSM parameter name for the AMI ID |
+| `ignore_ami_changes` | `bool` | `false` | Whether changes to the AMI ID should be ignored by Terraform |
 | `instance_type` | `string` | `"t3.micro"` | The type of instance to start |
 | `availability_zone` | `string` | `null` | AZ to start the instance in |
 | `subnet_id` | `string` | `null` | The VPC Subnet ID to launch in |
-| `vpc_security_group_ids` | `list(string)` | `null` | A list of security group IDs to associate with |
+| `vpc_security_group_ids` | `list(string)` | `[]` | A list of security group IDs to associate with |
 | `key_name` | `string` | `null` | Key name of the Key Pair to use for the instance |
-| `monitoring` | `bool` | `null` | If true, the launched EC2 instance will have detailed monitoring enabled |
+| `monitoring` | `bool` | `null` | If true, enables detailed CloudWatch monitoring |
 | `associate_public_ip_address` | `bool` | `null` | Whether to associate a public IP address with an instance in a VPC |
 | `private_ip` | `string` | `null` | Private IP address to associate with the instance in a VPC |
-| `iam_instance_profile` | `string` | `null` | IAM Instance Profile to launch the instance with |
-| `create_iam_instance_profile` | `bool` | `false` | Determines whether an IAM instance profile is created or to use an existing IAM instance profile |
-| `iam_role_name` | `string` | `null` | Name to use on IAM role created |
-| `iam_role_policies` | `map(string)` | `{}` | IAM policies to attach to the IAM role |
 | `user_data` | `string` | `null` | The user data to provide when launching the instance |
 | `user_data_base64` | `string` | `null` | Base64-encoded user data to provide when launching the instance |
-| `user_data_replace_on_change` | `bool` | `null` | When used in combination with user_data will trigger a destroy and recreate when set to true |
-| `enable_volume_tags` | `bool` | `true` | Whether to enable volume tags (if enabled it conflicts with root_block_device tags) |
-| `root_block_device` | `list(any)` | `[]` | Customize details about the root block device of the instance |
-| `ebs_block_device` | `list(any)` | `[]` | Additional EBS block devices to attach to the instance |
+| `user_data_replace_on_change` | `bool` | `null` | Trigger a destroy and recreate when user_data changes |
+| `metadata_options` | `object` | `{http_endpoint="enabled", http_put_response_hop_limit=1, http_tokens="required"}` | Customize the metadata options (IMDSv2 required by default) |
+| `root_block_device` | `object` | `null` | Customize root block device (encryption, size, type, IOPS, throughput, KMS key) |
+| `ebs_volumes` | `map(object)` | `null` | Additional EBS volumes to attach to the instance |
+| `enable_volume_tags` | `bool` | `true` | Whether to enable volume tags (conflicts with root_block_device tags) |
+| `disable_api_termination` | `bool` | `null` | If true, enables EC2 Instance Termination Protection |
+| `disable_api_stop` | `bool` | `null` | If true, enables EC2 Instance Stop Protection |
+| `ebs_optimized` | `bool` | `null` | If true, the launched EC2 instance will be EBS-optimized |
+| `hibernation` | `bool` | `null` | If true, the launched EC2 instance will support hibernation |
+| `cpu_credits` | `string` | `null` | The credit option for CPU usage (unlimited or standard) |
+| `cpu_options` | `object` | `null` | CPU options (core_count, threads_per_core, amd_sev_snp) |
+| `tenancy` | `string` | `null` | Instance tenancy (default, dedicated, host) |
+| `placement_group` | `string` | `null` | The Placement Group to start the instance in |
+| `tags` | `map(string)` | `{}` | A mapping of tags to assign to the resource |
+
+**Spot Instance Variables**:
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
 | `create_spot_instance` | `bool` | `false` | Depicts if the instance is a spot instance |
 | `spot_price` | `string` | `null` | The maximum price to request on the spot market |
-| `spot_type` | `string` | `null` | If set to one-time, after the instance is terminated, the spot request will be closed |
-| `metadata_options` | `map(string)` | `{}` | Customize the metadata options of the instance |
-| `enclave_options_enabled` | `bool` | `null` | Whether Nitro Enclaves will be enabled on the instance |
-| `tags` | `map(string)` | `{}` | A mapping of tags to assign to the resource |
+| `spot_type` | `string` | `null` | one-time or persistent |
+| `spot_instance_interruption_behavior` | `string` | `null` | terminate, stop, or hibernate |
+| `spot_wait_for_fulfillment` | `bool` | `null` | Wait for Spot Request to be fulfilled |
+
+**IAM Instance Profile Variables**:
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `iam_instance_profile` | `string` | `null` | IAM Instance Profile name to launch the instance with (existing) |
+| `create_iam_instance_profile` | `bool` | `false` | Determines whether an IAM instance profile is created |
+| `iam_role_name` | `string` | `null` | Name to use on IAM role created |
+| `iam_role_policies` | `map(string)` | `{}` | Policies attached to the IAM role |
+| `iam_role_permissions_boundary` | `string` | `null` | ARN of the policy for permissions boundary |
+
+**Security Group Variables**:
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_security_group` | `bool` | `true` | Determines whether a security group will be created |
+| `security_group_name` | `string` | `null` | Name to use on security group created |
+| `security_group_vpc_id` | `string` | `null` | VPC ID to create the security group in |
+| `security_group_ingress_rules` | `map(object)` | `null` | Ingress rules to add to the security group |
+| `security_group_egress_rules` | `map(object)` | `{allow_all_ipv4, allow_all_ipv6}` | Egress rules (defaults to allow all traffic) |
+
+**Elastic IP Variables**:
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_eip` | `bool` | `false` | Determines whether a public EIP will be created and associated |
+| `eip_domain` | `string` | `"vpc"` | Indicates if this EIP is for use in VPC |
 
 ## Main Outputs
 
@@ -108,21 +136,26 @@ This module does not include submodules. It provides a single root module for EC
 | `id` | The ID of the instance |
 | `arn` | The ARN of the instance |
 | `instance_state` | The state of the instance |
+| `ami` | AMI ID that was used to create the instance |
+| `availability_zone` | The availability zone of the created instance |
 | `public_dns` | The public DNS name assigned to the instance |
-| `public_ip` | The public IP address assigned to the instance, if applicable |
+| `public_ip` | The public IP address assigned to the instance (includes EIP if created) |
 | `private_dns` | The private DNS name assigned to the instance |
 | `private_ip` | The private IP address assigned to the instance |
-| `ipv6_addresses` | The IPv6 address assigned to the instance, if applicable |
+| `ipv6_addresses` | The IPv6 address assigned to the instance |
 | `primary_network_interface_id` | The ID of the instance's primary network interface |
-| `availability_zone` | The availability zone of the created instance |
-| `ami` | AMI ID that was used to create the instance |
+| `root_block_device` | Root block device information |
+| `ebs_block_device` | EBS block device information |
+| `ebs_volumes` | Map of EBS volumes created and their attributes |
 | `spot_bid_status` | The current bid status of the Spot Instance Request |
 | `spot_request_state` | The current request state of the Spot Instance Request |
-| `spot_instance_id` | The Instance ID (if any) that is currently fulfilling the Spot Instance request |
+| `spot_instance_id` | The Instance ID fulfilling the Spot Instance request |
 | `iam_role_name` | The name of the IAM role |
-| `iam_role_arn` | The Amazon Resource Name (ARN) specifying the IAM role |
+| `iam_role_arn` | The ARN of the IAM role |
 | `iam_instance_profile_arn` | ARN assigned by AWS to the instance profile |
 | `iam_instance_profile_id` | Instance profile's ID |
+| `security_group_arn` | Amazon Resource Name (ARN) of the security group |
+| `security_group_id` | ID of the security group |
 | `tags_all` | A map of tags assigned to the resource |
 
 ## Usage Examples
@@ -132,11 +165,11 @@ This module does not include submodules. It provides a single root module for EC
 ```hcl
 module "ec2_instance" {
   source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
   name = "my-web-server"
 
   instance_type          = "t3.micro"
-  ami                    = "ami-0c55b159cbfafe1f0"
   key_name               = "my-key-pair"
   monitoring             = true
   vpc_security_group_ids = ["sg-12345678"]
@@ -155,22 +188,23 @@ module "ec2_instance" {
 ```hcl
 module "ec2_multiple" {
   source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
   for_each = toset(["web-1", "web-2", "web-3"])
 
   name = "web-server-${each.key}"
 
   instance_type          = "t3.small"
-  ami                    = "ami-0c55b159cbfafe1f0"
   key_name               = "my-key-pair"
   vpc_security_group_ids = ["sg-12345678"]
   subnet_id              = "subnet-eddcdzz4"
 
-  root_block_device = [{
+  enable_volume_tags = false
+  root_block_device = {
     volume_type = "gp3"
     volume_size = 20
     encrypted   = true
-  }]
+  }
 
   tags = {
     Terraform   = "true"
@@ -184,18 +218,19 @@ module "ec2_multiple" {
 ```hcl
 module "ec2_spot" {
   source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
   name = "batch-processor"
 
   # Spot instance configuration
-  create_spot_instance = true
-  spot_price           = "0.05"
-  spot_type            = "persistent"
+  create_spot_instance                 = true
+  spot_price                           = "0.05"
+  spot_type                            = "persistent"
+  spot_instance_interruption_behavior  = "stop"
 
-  instance_type          = "c5.xlarge"
-  ami_ssm_parameter      = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
-  vpc_security_group_ids = ["sg-12345678"]
-  subnet_id              = "subnet-eddcdzz4"
+  instance_type     = "c5.xlarge"
+  ami_ssm_parameter = "/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64"
+  subnet_id         = "subnet-eddcdzz4"
 
   # Create IAM instance profile
   create_iam_instance_profile = true
@@ -205,14 +240,13 @@ module "ec2_spot" {
   }
 
   # User data for initialization
-  user_data = base64encode(<<-EOF
+  user_data = <<-EOF
     #!/bin/bash
     yum update -y
     yum install -y docker
     systemctl start docker
     systemctl enable docker
   EOF
-  )
 
   tags = {
     Terraform   = "true"
@@ -227,6 +261,7 @@ module "ec2_spot" {
 ```hcl
 module "ec2_database" {
   source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
   name = "database-server"
 
@@ -238,25 +273,28 @@ module "ec2_database" {
   subnet_id              = "subnet-private-1"
 
   # Root volume configuration
-  root_block_device = [{
+  enable_volume_tags = false
+  root_block_device = {
     volume_type           = "gp3"
     volume_size           = 50
     encrypted             = true
     delete_on_termination = true
-  }]
+  }
 
-  # Additional data volume for database files
-  ebs_block_device = [
-    {
-      device_name           = "/dev/sdf"
+  # Additional data volumes
+  ebs_volumes = {
+    "/dev/sdf" = {
       volume_type           = "gp3"
       volume_size           = 100
       iops                  = 3000
       throughput            = 125
       encrypted             = true
       delete_on_termination = false
+      tags = {
+        MountPoint = "/mnt/data"
+      }
     }
-  ]
+  }
 
   tags = {
     Terraform   = "true"
@@ -266,28 +304,44 @@ module "ec2_database" {
 }
 ```
 
-### Example 5: Instance with Enhanced Security (IMDSv2)
+### Example 5: Complete Instance with Security Group and EIP
 
 ```hcl
-module "ec2_secure" {
+module "ec2_complete" {
   source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
 
   name = "secure-application-server"
 
-  instance_type          = "t3.medium"
-  ami                    = "ami-0c55b159cbfafe1f0"
-  key_name               = "my-key-pair"
-  monitoring             = true
-  vpc_security_group_ids = ["sg-12345678"]
-  subnet_id              = "subnet-private"
+  instance_type = "t3.medium"
+  ami           = "ami-0c55b159cbfafe1f0"
+  key_name      = "my-key-pair"
+  monitoring    = true
+  subnet_id     = "subnet-private"
 
-  # Enhanced metadata security (IMDSv2 only)
-  metadata_options = {
-    http_endpoint               = "enabled"
-    http_tokens                 = "required"  # IMDSv2 only
-    http_put_response_hop_limit = 1
-    instance_metadata_tags      = "enabled"
+  # Create Elastic IP
+  create_eip = true
+
+  # Create security group with custom rules
+  create_security_group  = true
+  security_group_name    = "app-server-sg"
+  security_group_vpc_id  = "vpc-12345678"
+  security_group_ingress_rules = {
+    https = {
+      from_port   = 443
+      to_port     = 443
+      ip_protocol = "tcp"
+      cidr_ipv4   = "10.0.0.0/8"
+      description = "HTTPS from internal"
+    }
   }
+
+  # IMDSv2 is enabled by default - this is the default config
+  # metadata_options = {
+  #   http_endpoint               = "enabled"
+  #   http_tokens                 = "required"
+  #   http_put_response_hop_limit = 1
+  # }
 
   # Create IAM role with specific permissions
   create_iam_instance_profile = true
@@ -297,13 +351,20 @@ module "ec2_secure" {
     SSM            = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
   }
 
-  # Encrypted root volume
-  root_block_device = [{
+  # Encrypted root volume with custom KMS key
+  enable_volume_tags = false
+  root_block_device = {
     volume_type = "gp3"
     volume_size = 30
     encrypted   = true
     kms_key_id  = "arn:aws:kms:us-east-1:123456789012:key/12345678-1234-1234-1234-123456789012"
-  }]
+    tags = {
+      Name = "app-server-root"
+    }
+  }
+
+  # Enable termination protection
+  disable_api_termination = true
 
   tags = {
     Terraform   = "true"
@@ -313,73 +374,86 @@ module "ec2_secure" {
 }
 ```
 
+### Example 6: Session Manager Access (No SSH Keys)
+
+```hcl
+module "ec2_ssm" {
+  source  = "terraform-aws-modules/ec2-instance/aws"
+  version = "~> 6.0"
+
+  name = "ssm-managed-instance"
+
+  instance_type = "t3.micro"
+  subnet_id     = "subnet-private"  # Private subnet
+
+  # No key_name needed - access via Session Manager
+  # No public IP needed
+  associate_public_ip_address = false
+
+  # IAM role for Systems Manager
+  create_iam_instance_profile = true
+  iam_role_name               = "ssm-instance-role"
+  iam_role_policies = {
+    SSMManagedInstance = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+  }
+
+  tags = {
+    Terraform   = "true"
+    Environment = "production"
+  }
+}
+```
+
 ## Best Practices
 
 ### Security and Access Control
 
-1. **Use IMDSv2**: Enable IMDSv2 (Instance Metadata Service Version 2) for enhanced security by setting `http_tokens = "required"` in metadata_options to prevent SSRF attacks.
-2. **Implement IAM Roles**: Use IAM instance profiles instead of hardcoding credentials for accessing AWS services, following the principle of least privilege.
-3. **Enable Encryption**: Always encrypt EBS volumes at rest using AWS KMS, especially for production workloads and sensitive data.
-4. **Restrict Security Groups**: Use specific security group rules with minimal required ports and source IP ranges, avoiding 0.0.0.0/0 where possible.
-5. **SSH Key Management**: Use unique SSH key pairs per environment and rotate them regularly, never sharing keys across environments.
-6. **Enable Systems Manager**: Attach the `AmazonSSMManagedInstanceCore` policy to enable AWS Systems Manager Session Manager for secure shell access without SSH keys.
-7. **Disable Public IPs**: For private workloads, avoid associating public IPs and use NAT gateways or VPC endpoints for outbound connectivity.
-8. **Enable Termination Protection**: Set termination protection on critical instances to prevent accidental deletion.
+1. **IMDSv2 Is Default**: The module enables IMDSv2 by default (`http_tokens = "required"`). Do not disable this unless absolutely necessary.
+2. **Use IAM Roles Over Keys**: Use `create_iam_instance_profile = true` with `iam_role_policies` instead of hardcoding credentials.
+3. **Enable Encryption**: Always encrypt EBS volumes using `encrypted = true` in `root_block_device` and `ebs_volumes`, especially for production.
+4. **Use KMS Keys**: For regulated workloads, specify `kms_key_id` for customer-managed encryption keys.
+5. **Restrict Security Groups**: Use specific security group rules with minimal required ports. Create security groups with `create_security_group = true` and define `security_group_ingress_rules`.
+6. **Use Session Manager**: For secure shell access without SSH keys, attach `AmazonSSMManagedInstanceCore` policy and use AWS Systems Manager Session Manager.
+7. **Disable Public IPs**: For private workloads, set `associate_public_ip_address = false` and use NAT gateways or VPC endpoints.
+8. **Enable Termination Protection**: Set `disable_api_termination = true` on critical instances to prevent accidental deletion.
+
+### Spot Instance Considerations
+
+1. **Grant KMS Access**: For spot instances with encrypted volumes, grant the `AWSServiceRoleForEC2Spot` service-linked role access to your KMS keys.
+2. **Configure Interruption Behavior**: Set `spot_instance_interruption_behavior` to `stop` or `hibernate` for stateful workloads.
+3. **Use Persistent Requests**: Set `spot_type = "persistent"` for workloads that should automatically restart after interruption.
 
 ### Monitoring and Observability
 
-1. **Enable Detailed Monitoring**: Set `monitoring = true` to enable detailed CloudWatch monitoring for better visibility into instance metrics at 1-minute intervals.
-2. **Implement CloudWatch Alarms**: Create alarms for key metrics such as CPU utilization, disk usage, memory pressure, and status checks.
-3. **Configure CloudWatch Logs**: Use CloudWatch Logs agent to collect application and system logs for centralized monitoring and troubleshooting.
-4. **Enable VPC Flow Logs**: Capture network traffic information for security analysis and troubleshooting.
-5. **Use AWS CloudTrail**: Enable CloudTrail logging to track all API calls and changes to EC2 instances for audit and compliance.
-6. **Tag All Resources**: Implement comprehensive tagging strategy including Environment, Owner, CostCenter, and Application for cost allocation and resource organization.
+1. **Enable Detailed Monitoring**: Set `monitoring = true` to enable CloudWatch monitoring at 1-minute intervals.
+2. **Implement CloudWatch Alarms**: Create alarms for CPU utilization, disk usage, memory pressure, and status checks.
+3. **Use Comprehensive Tags**: Implement tagging strategy including Environment, Owner, CostCenter, and Application for cost allocation and organization.
 
 ### Cost Optimization
 
-1. **Right-Size Instances**: Start with smaller instance types and scale up based on actual usage patterns rather than overprovisioning.
-2. **Use Spot Instances**: For fault-tolerant and flexible workloads, use spot instances to reduce costs by up to 90% compared to on-demand pricing.
-3. **Enable EBS Optimization**: For workloads with high I/O requirements, enable EBS optimization to ensure consistent performance without additional network traffic.
-4. **Use GP3 Volumes**: Migrate from GP2 to GP3 volumes for better performance-to-cost ratio with independent IOPS and throughput configuration.
-5. **Implement Auto-Scaling**: Use Auto Scaling groups to automatically adjust capacity based on demand, terminating unused instances.
-6. **Schedule Non-Production Instances**: Stop development and testing instances during off-hours to reduce costs.
-7. **Use Reserved Instances**: For predictable workloads, purchase Reserved Instances or Savings Plans for significant cost savings over on-demand pricing.
+1. **Right-Size Instances**: Start with smaller instance types and scale up based on actual usage patterns.
+2. **Use Spot Instances**: For fault-tolerant workloads, enable `create_spot_instance = true` to reduce costs by up to 90%.
+3. **Use GP3 Volumes**: Configure `volume_type = "gp3"` in block device settings for better performance-to-cost ratio.
+4. **Ignore AMI Changes**: Set `ignore_ami_changes = true` to prevent instance replacement during automated AMI updates.
 
 ### High Availability and Disaster Recovery
 
-1. **Multi-AZ Deployment**: Deploy instances across multiple Availability Zones for high availability and fault tolerance.
-2. **Regular Backups**: Implement automated EBS snapshot policies using AWS Backup or Data Lifecycle Manager for disaster recovery.
-3. **Use Auto Recovery**: Enable auto recovery for EC2 instances to automatically recover from system status check failures.
-4. **Implement Load Balancing**: Distribute traffic across multiple instances using Application Load Balancer or Network Load Balancer.
-5. **Configure Health Checks**: Implement application-level health checks to detect and replace unhealthy instances automatically.
-6. **Document Recovery Procedures**: Maintain runbooks for incident response and disaster recovery scenarios.
-
-### Performance and Optimization
-
-1. **Choose Appropriate Instance Types**: Select instance types optimized for your workload (compute-optimized, memory-optimized, storage-optimized, or general-purpose).
-2. **Use Enhanced Networking**: For network-intensive applications, choose instances with enhanced networking support (ENA) for higher bandwidth and lower latency.
-3. **Configure Placement Groups**: Use cluster placement groups for HPC workloads requiring low-latency network communication between instances.
-4. **Optimize EBS Performance**: For databases and high-performance applications, use provisioned IOPS (io1/io2) volumes with appropriate IOPS configuration.
-5. **Enable EBS-Optimized**: Ensure EBS-optimized is enabled for consistent storage performance, especially for production databases.
-6. **Use Latest Generation Instances**: Migrate to the latest generation instance types (e.g., T3 instead of T2, M6i instead of M5) for better performance-to-cost ratio.
+1. **Multi-AZ Deployment**: Deploy instances across multiple Availability Zones using `for_each` with different `subnet_id` values.
+2. **Regular Backups**: Implement automated EBS snapshot policies using AWS Backup or Data Lifecycle Manager.
+3. **Use Auto Recovery**: Enable auto recovery for EC2 instances through CloudWatch alarms with EC2 actions.
 
 ### Configuration Management
 
-1. **Use User Data Carefully**: Keep user data scripts idempotent and minimal, preferring configuration management tools like Ansible, Chef, or Puppet for complex configurations.
-2. **Separate Concerns**: Use separate modules for different components (compute, networking, storage) to maintain clean architecture and reusability.
-3. **Implement Immutable Infrastructure**: Prefer creating new instances with updated AMIs rather than modifying running instances for consistency and reliability.
-4. **Version Control AMIs**: Maintain versioned AMIs with required software and configurations for faster and consistent instance launches.
-5. **Use Launch Templates**: Consider using launch templates for complex configurations that need to be reused across Auto Scaling groups and spot fleets.
-6. **Validate Configurations**: Test instance configurations in non-production environments before deploying to production.
+1. **Use User Data Carefully**: Keep user data scripts idempotent and minimal. Set `user_data_replace_on_change = true` only when instance replacement is acceptable.
+2. **Version Control AMIs**: Maintain versioned AMIs; use `ignore_ami_changes = true` for production instances with automated AMI updates.
+3. **Use SSM Parameters for AMIs**: Leverage `ami_ssm_parameter` for dynamic AMI selection from AWS-provided latest AMIs.
+4. **Volume Tags Conflict**: Set `enable_volume_tags = false` when using custom tags in `root_block_device` to avoid conflicts.
 
-### Compliance and Governance
+### Important Gotchas
 
-1. **Implement Tagging Policies**: Enforce mandatory tags using AWS Organizations tag policies or AWS Config rules for governance and cost allocation.
-2. **Use AWS Config**: Enable AWS Config to continuously monitor and record resource configurations for compliance auditing.
-3. **Regular Security Audits**: Conduct periodic security assessments using AWS Security Hub, Trusted Advisor, and third-party security tools.
-4. **Patch Management**: Implement automated patching using AWS Systems Manager Patch Manager to keep instances up-to-date with security patches.
-5. **Enable Encryption Everywhere**: Use KMS keys for EBS encryption and enforce encryption at rest and in transit for all data.
-6. **Document Compliance Requirements**: Maintain documentation of compliance requirements (HIPAA, PCI-DSS, SOC2) and how the infrastructure meets them.
+1. **Network Interface Conflict**: `network_interface` cannot be specified together with `vpc_security_group_ids`, `associate_public_ip_address`, or `subnet_id`. Choose one approach.
+2. **Hibernation vs Enclaves**: Only one of `hibernation` or `enclave_options_enabled` can be enabled at a time.
+3. **Spot KMS Failures**: Check spot request failures with `aws ec2 describe-spot-instance-requests` - often caused by missing KMS permissions for the EC2 Spot service role.
 
 ## Additional Resources
 
@@ -390,27 +464,25 @@ module "ec2_secure" {
 - **AWS EC2 Instance Types**: https://aws.amazon.com/ec2/instance-types/
 - **EC2 Pricing**: https://aws.amazon.com/ec2/pricing/
 - **EC2 Best Practices**: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-best-practices.html
-- **EC2 Security Best Practices**: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-security.html
-- **IMDSv2**: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
+- **IMDSv2 Documentation**: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/configuring-instance-metadata-service.html
 - **EBS Volume Types**: https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ebs-volume-types.html
 - **EC2 Spot Instances**: https://aws.amazon.com/ec2/spot/
 - **AWS Systems Manager**: https://docs.aws.amazon.com/systems-manager/
-- **AWS Well-Architected Framework**: https://aws.amazon.com/architecture/well-architected/
-- **Terraform AWS Provider**: https://registry.terraform.io/providers/hashicorp/aws/latest/docs
+- **AWS SSM AMI Parameters**: https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Security First**: Always apply least privilege principle when creating IAM roles and security groups
-2. **Use IAM Roles Over Keys**: Prefer IAM instance profiles with temporary credentials over SSH keys or hardcoded credentials
-3. **Encrypt Everything**: Use KMS encryption for all EBS volumes, especially in production environments
-4. **Enable IMDSv2**: Always configure `http_tokens = "required"` in metadata_options for enhanced security
+1. **IMDSv2 by Default**: The module requires IMDSv2 by default - no additional configuration needed for enhanced security
+2. **Use IAM Roles Over Keys**: Prefer `create_iam_instance_profile = true` with `iam_role_policies` over SSH keys or hardcoded credentials
+3. **Encrypt Everything**: Use `encrypted = true` for all EBS volumes in production environments
+4. **Create Security Groups**: Use `create_security_group = true` with `security_group_ingress_rules` for controlled network access
 5. **Tag Consistently**: Implement comprehensive tagging including Environment, Owner, CostCenter, and Application tags
-6. **Monitor Usage**: Enable detailed monitoring and set up CloudWatch alarms for critical metrics
-7. **Use Spot Wisely**: For cost optimization, use spot instances for stateless, fault-tolerant workloads with appropriate fallback strategies
-8. **Test Before Production**: Always test instance configurations in development or staging environments before deploying to production
-9. **Document Dependencies**: Clearly document dependencies on VPCs, security groups, subnets, and other resources
-10. **Implement Backups**: Set up automated EBS snapshot schedules using AWS Backup or Data Lifecycle Manager
-11. **Version Control**: Store all Terraform configurations in version control with proper branching and review processes
-12. **Regular Audits**: Review and rotate credentials regularly, audit IAM policies, and perform security assessments
+6. **Use Spot Wisely**: Enable `create_spot_instance = true` for stateless, fault-tolerant workloads with appropriate interruption behavior
+7. **Grant Spot KMS Access**: For encrypted spot instances, ensure `AWSServiceRoleForEC2Spot` has access to KMS keys
+8. **Session Manager for SSH**: Use `AmazonSSMManagedInstanceCore` policy for secure shell access without SSH keys
+9. **Handle AMI Updates**: Set `ignore_ami_changes = true` for production instances with automated AMI patching
+10. **Volume Tags Conflict**: Set `enable_volume_tags = false` when defining custom tags in `root_block_device`
+11. **Monitor Spot Requests**: Check `spot_bid_status` and `spot_request_state` outputs for spot instance debugging
+12. **Use SSM for AMIs**: Leverage `ami_ssm_parameter` for dynamic, up-to-date AMI selection from AWS
