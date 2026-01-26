@@ -34,8 +34,26 @@ from nltk.tokenize import word_tokenize
 from rank_bm25 import BM25Okapi
 from sentence_transformers import SentenceTransformer
 
-# Project root and NLTK data directory constants
-_PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+
+# Project root detection: handles both development (src/) and installed package layouts
+def _detect_project_root() -> Path:
+    """Detect project root for both development and installed package layouts."""
+    # When installed as package: tfmod_search_lib.py is at package root
+    # When in development: tfmod_search_lib.py is in src/ subdirectory
+    parent = Path(__file__).parent.resolve()
+    parent_parent = parent.parent.resolve()
+
+    # Check if model/ exists at parent level (installed package)
+    if (parent / "model").is_dir():
+        return parent
+    # Check if model/ exists at parent.parent level (development)
+    if (parent_parent / "model").is_dir():
+        return parent_parent
+    # Fallback to parent.parent (original behavior)
+    return parent_parent
+
+
+_PROJECT_ROOT = _detect_project_root()
 _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
 
 # Model cache to avoid reloading SentenceTransformer on every query

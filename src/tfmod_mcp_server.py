@@ -993,7 +993,7 @@ def resolve_config_path(config_arg: str) -> Path | None:
 
     Tries multiple locations:
     1. Absolute path if provided
-    2. Relative to project root (parent of src/)
+    2. Relative to project root (handles both dev and installed layouts)
     3. Relative to current directory
 
     Args:
@@ -1002,14 +1002,13 @@ def resolve_config_path(config_arg: str) -> Path | None:
     Returns:
         Resolved Path to config file, or None if not found
     """
-    script_dir = Path(__file__).parent
     config_path = Path(config_arg)
 
     if config_path.is_absolute():
         return config_path if config_path.exists() else None
 
-    # Try relative to project root
-    project_root_config = script_dir.parent / config_path
+    # Try relative to project root (uses detected root for both dev/installed)
+    project_root_config = _PROJECT_ROOT / config_path
     if project_root_config.exists():
         return project_root_config
 
