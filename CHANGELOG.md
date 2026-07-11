@@ -22,6 +22,10 @@ The skills release: the plugin grows from two skills to a full toolkit — seven
 
 - **Narrowed the `aws-terraform-modules` skill trigger to authoring** — reviewing, upgrading, migrating, and troubleshooting now have dedicated skills; an e2e test enforces that trigger keywords (reviewing, pull request, upgrade, fails) are claimed by exactly one model-invoked skill.
 
+### Fixed
+
+- **Pinned `fastmcp<3`**: fastmcp 3.x (released upstream) fails on import with the current MCP SDK, which broke fresh `uvx tfmodsearch` installs of 0.4.0 (the dependency was unbounded). Caught by the new CI gate before publication; the server targets the fastmcp 2.x API.
+
 ### Tests
 
 - E2E suite grew from 20 to 49 tests: prefilter script tests against a fixture log (all three formats), plugin agent contracts, per-skill Codex binding checks, user-invoked vs model-invoked invariants, trigger-disjointness check, maintainer-skill checks (including that they are not gitignored), and live-install verification extended to all seven skills and the shipped agent files. Full suite: 288 tests passing.
