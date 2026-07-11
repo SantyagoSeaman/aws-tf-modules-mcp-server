@@ -87,11 +87,12 @@ cython_debug/
 # NLTK data
 nltk_data/
 
-# Log files
+# Log files (except test fixtures)
 logs/
 *.log
 startup.log
 mcp_server.log
+!tests/e2e/fixtures/*.log
 
 # Temporary files
 *.tmp
