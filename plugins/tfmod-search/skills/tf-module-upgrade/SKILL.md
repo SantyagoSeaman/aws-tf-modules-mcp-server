@@ -15,7 +15,9 @@ change — *before* a version bump or `terraform plan` does.
    `terraform-aws-modules/...`. For each block record: file:line, source,
    pinned `version` (or its absence), and every variable set.
 2. **Ground truth.** For each distinct module: `get_module` → current version
-   and input schema. One call per module, reused across blocks.
+   and input schema. One call per module, reused across blocks. Passing
+   `sections=["inputs", "outputs"]` keeps responses small — version pins and
+   gotchas are always included.
 3. **Compare, per block:**
    - **Version drift** — pinned version vs current; flag major-version gaps
      loudest; flag missing pins.

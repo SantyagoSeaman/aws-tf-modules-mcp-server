@@ -79,7 +79,7 @@ The module follows terraform-aws-modules conventions: nearly every resource grou
 - **Key Features**: Kubernetes namespace/RBAC role creation, IAM job execution role scoped to the namespace, S3 bucket access policy, dedicated CloudWatch log group
 - **Use Cases**: Containerized EMR workloads, multi-tenant EKS-based data platforms, shared-cluster cost optimization
 
-## Variables
+## Main Input Variables
 
 ### Core Configuration
 
@@ -156,7 +156,7 @@ The module follows terraform-aws-modules conventions: nearly every resource grou
 | `visible_to_all_users` | `bool` | `null` (AWS default `true`) | Whether the job flow is visible to all IAM users in the account |
 | `list_steps_states` | `list(string)` | `[]` | Step states used to filter the `steps` data returned by the provider |
 
-## Outputs
+## Main Outputs
 
 | Output | Description |
 |--------|-------------|
@@ -496,7 +496,7 @@ module "emr_virtual_cluster" {
 19. **Set Step Concurrency**: Configure `step_concurrency_level` for parallel step execution
 20. **Monitor with CloudWatch**: Enable CloudWatch metrics/log delivery and alarm on cluster health for long-running clusters
 
-## Important Notes
+## Important Gotchas
 
 1. **Instance Fleet vs Instance Group**: A node type (master/core/task) can use a fleet or a group, but not both; fleets offer more flexibility, groups are simpler.
 

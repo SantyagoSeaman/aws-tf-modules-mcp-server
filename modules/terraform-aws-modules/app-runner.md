@@ -10,7 +10,7 @@
 - **Purpose**: Terraform module that creates and configures AWS App Runner services, auto-scaling configurations, VPC networking, IAM roles, custom domains, and observability for deploying containerized web applications
 - **Service**: AWS App Runner (Fully Managed Container Application Service)
 - **Category**: Compute, Serverless, Container Orchestration
-- **⚠️ Service Status**: AWS closed App Runner to **new customers as of April 30, 2026**. Only AWS accounts that already used App Runner before that date can create new services; AWS plans no new features and recommends **Amazon ECS Express Mode** for new container deployments. See [Important Notes](#important-notes) before using this module for a brand-new account or workload.
+- **⚠️ Service Status**: AWS closed App Runner to **new customers as of April 30, 2026**. Only AWS accounts that already used App Runner before that date can create new services; AWS plans no new features and recommends **Amazon ECS Express Mode** for new container deployments. See [Important Notes](#important-gotchas) before using this module for a brand-new account or workload.
 - **Keywords**: app-runner, container, serverless, paas, auto-scaling, github, ecr, vpc-connector, custom-domain, observability, ci-cd, web-application, deprecated, ecs-express-mode
 - **Use For**: deploying containerized web APIs and microservices on *existing* App Runner-enabled accounts, code-based deployments that auto-build from GitHub on commit, image-based deployments from ECR, private internal services reachable only from a VPC, egress connectivity to RDS/ElastiCache via VPC Connector, custom-domain public APIs with managed TLS, multi-service architectures sharing GitHub connections and auto-scaling configurations, migrating legacy VM workloads to managed containers without adopting ECS/EKS
 
@@ -379,7 +379,7 @@ module "app_runner_with_domain" {
 - **App Runner Security**: https://docs.aws.amazon.com/apprunner/latest/dg/security.html
 - **Amazon ECS Express Mode (recommended for new deployments)**: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-getting-started-console.html
 
-## Important Notes
+## Important Gotchas
 
 - **⚠️ Closed to New Customers**: AWS announced on March 31, 2026 that App Runner would stop accepting new customers effective April 30, 2026. Existing customers keep full functionality (including creating new services), but AWS plans no new App Runner features and is steering new workloads to Amazon ECS Express Mode. The Terraform AWS provider maintainers have flagged eventual removal of all `aws_apprunner_*` resources in a future major version once App Runner reaches end of support (tracked in `hashicorp/terraform-provider-aws#47162`) — pin provider versions carefully for long-lived App Runner deployments.
 - **No Submodules**: All functionality is in the root module, controlled by `create_*` flags.

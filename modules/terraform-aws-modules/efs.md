@@ -49,7 +49,7 @@ This module is the standard building block for stateful, shared-storage workload
 7. **Home Directories**: Provide network home directories for users across multiple Linux instances
 8. **Disaster Recovery**: Replicate file systems cross-region/cross-AZ with overwrite protection for business continuity
 
-## Input Variables
+## Main Input Variables
 
 ### Core Configuration
 
@@ -170,7 +170,7 @@ replication_configuration_destination = {
 | `source_policy_documents` | `list(string)` | `[]` | JSON policy documents merged in as the base document (statements must have unique `sid`s) |
 | `override_policy_documents` | `list(string)` | `[]` | JSON policy documents merged last; statements with matching `sid`s override earlier ones |
 
-## Outputs
+## Main Outputs
 
 | Output | Description |
 |--------|-------------|

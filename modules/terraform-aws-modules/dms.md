@@ -87,7 +87,7 @@ DMS Serverless is supported by adding a `serverless_config` block inside a `repl
 | `access_kms_key_arns` | `list(string)` | `[]` | KMS key ARNs the access role is permitted to decrypt |
 | `access_iam_statements` | `any` | `{}` | Additional custom IAM policy statements for the access role |
 
-## Key Outputs
+## Main Outputs
 
 | Output | Description |
 |--------|-------------|

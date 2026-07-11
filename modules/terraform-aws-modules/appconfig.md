@@ -294,7 +294,7 @@ resource "aws_ssm_parameter" "app_config" {
 }
 ```
 
-## Critical Warnings and Gotchas
+## Important Gotchas
 
 1. **No custom retrieval-role policy input**: The retrieval role's IAM policy is derived entirely from `use_s3_configuration` / `use_ssm_parameter_configuration` / `use_ssm_document_configuration`. There is no variable for arbitrary policy statements — bring your own role via `config_profile_retrieval_role_arn` + `create_retrieval_role = false` if you need custom permissions.
 2. **No retrieval role for hosted configuration**: When `use_hosted_configuration = true`, `create_retrieval_role` is effectively ignored and no role/policy is created — AppConfig does not need one to read its own hosted store.

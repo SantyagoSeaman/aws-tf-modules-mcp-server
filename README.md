@@ -430,14 +430,15 @@ List all available Terraform modules in the catalog.
 }
 ```
 
-### `search_modules(query: str)`
+### `search_modules(query: str, top_k: int = 3)`
 
 Search for Terraform modules using keywords, exact names, or natural language queries.
 
 **Parameters**:
 - `query` (string): Free-text search query
+- `top_k` (int, optional): Number of results to return, 1–10 (default 3). Raise it for ambiguous queries like `"iam"`.
 
-**Returns**: Top-3 ranked modules with metadata and relevance scores.
+**Returns**: Top-ranked modules with metadata and relevance scores.
 
 **Example queries**:
 - `"vpc"` - Find VPC module by exact name
@@ -445,14 +446,15 @@ Search for Terraform modules using keywords, exact names, or natural language qu
 - `"kubernetes cluster management"` - Find EKS module
 - `"serverless functions"` - Find Lambda module
 
-### `get_module(module_identifier: str)`
+### `get_module(module_identifier: str, sections: list[str] | None = None)`
 
 Retrieve full documentation for a specific Terraform module.
 
 **Parameters**:
 - `module_identifier` (string): Module name (e.g., `"vpc"`) or relative path (e.g., `"modules/terraform-aws-modules/vpc.md"`)
+- `sections` (list of strings, optional): Return only the requested sections instead of the full document — large modules run to 10k+ tokens in full. Accepts logical keys (`inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`) or case-insensitive substrings of section headings (e.g. `"karpenter"` for a single EKS submodule). Core context — description, pinned versions, notes for AI agents, gotchas — is always included, and a footer lists the omitted sections so they can be requested later.
 
-**Returns**: Complete module documentation as markdown text.
+**Returns**: Complete module documentation as markdown text, or a filtered subset if `sections` is given.
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
@@ -474,7 +476,7 @@ A coding assistant discovers and uses a module in two steps:
    → full EKS module reference: inputs, outputs, submodules, and copy-paste HCL examples
    ```
 
-The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing.
+The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates by default (raise `top_k` for broader queries) so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing. When only part of the documentation is needed, `get_module(..., sections=["inputs", "examples"])` keeps the response small without losing version pins or gotchas.
 
 ## ⚙️ Configuration
 
@@ -570,7 +572,7 @@ pytest tests/ -v
 # Run specific test suite
 pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 54 modules (169 tests)
 pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
-pytest tests/integration/test_mcp_server.py -v              # MCP server tools (23 tests)
+pytest tests/integration/test_mcp_server.py -v              # MCP server tools (38 tests)
 pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (12 tests)
 pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
 
@@ -582,12 +584,12 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
-- **MCP Server** (23 tests): `search_modules`, `get_module`, and `modules_list` tools, security validation, integration workflows
+- **MCP Server** (38 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters, security validation, integration workflows
 - **End-to-End** (49 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
 
-**Total**: 288 tests (integration + e2e)
+**Total**: 318 tests (integration + e2e)
 
 ## 🏗️ Architecture
 

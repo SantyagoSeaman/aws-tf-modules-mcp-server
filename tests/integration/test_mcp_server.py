@@ -19,6 +19,7 @@ from tfmod_mcp_server import (
     SearchWeights,
     ServerState,
     ServerStateManager,
+    filter_module_sections,
     get_module_documentation,
     get_module_impl,
     modules_list_impl,
@@ -223,6 +224,101 @@ class TestGetModuleTool:
 
         assert len(content_path) > 1000, "Should return substantial content"
         assert "s3" in content_path.lower() or "bucket" in content_path.lower(), "Should contain S3/bucket content"
+
+
+class TestSearchTopK:
+    """Test the top_k parameter of search_modules."""
+
+    def test_default_returns_three(self, server_state):
+        """Test that search returns 3 results by default."""
+        result = search_modules_impl("aws", server_state)
+        assert len(result.results) == 3, "Default should return exactly 3 results"
+
+    def test_custom_top_k(self, server_state):
+        """Test that top_k=5 returns 5 results."""
+        result = search_modules_impl("aws", server_state, top_k=5)
+        assert len(result.results) == 5, "top_k=5 should return exactly 5 results"
+
+    def test_top_k_one(self, server_state):
+        """Test that top_k=1 returns only the best match."""
+        result = search_modules_impl("vpc", server_state, top_k=1)
+        assert len(result.results) == 1, "top_k=1 should return exactly 1 result"
+        assert "vpc" in result.results[0].module_name.lower(), "Top result should be VPC module"
+
+    def test_top_k_clamped_to_max(self, server_state):
+        """Test that top_k above 10 is clamped to 10."""
+        result = search_modules_impl("aws", server_state, top_k=50)
+        assert len(result.results) == 10, "top_k=50 should be clamped to 10 results"
+
+    def test_top_k_clamped_to_min(self, server_state):
+        """Test that top_k below 1 is clamped to 1."""
+        result = search_modules_impl("aws", server_state, top_k=0)
+        assert len(result.results) == 1, "top_k=0 should be clamped to 1 result"
+
+    def test_larger_top_k_extends_ranking(self, server_state):
+        """Test that a larger top_k keeps the same top results, just adds more."""
+        top3 = search_modules_impl("kubernetes cluster", server_state).results
+        top5 = search_modules_impl("kubernetes cluster", server_state, top_k=5).results
+        assert [r.module_name for r in top5[:3]] == [
+            r.module_name for r in top3
+        ], "First 3 of top-5 should match top-3 ranking"
+
+
+class TestGetModuleSections:
+    """Test the sections parameter of get_module."""
+
+    def test_no_sections_returns_full_document(self, server_state):
+        """Test that omitting sections returns the unmodified full document."""
+        full = get_module_impl("security-group", server_state)
+        assert get_module_impl("security-group", server_state, sections=None) == full
+
+    def test_sections_reduce_payload(self, server_state):
+        """Test that requesting sections returns a smaller document containing them."""
+        full = get_module_impl("security-group", server_state)
+        filtered = get_module_impl("security-group", server_state, sections=["inputs"])
+        assert len(filtered) < len(full), "Filtered response should be smaller than full document"
+        assert "## Main Input Variables" in filtered, "Requested inputs section should be present"
+
+    def test_core_sections_always_included(self, server_state):
+        """Test that core context is included regardless of the request."""
+        filtered = get_module_impl("security-group", server_state, sections=["inputs"])
+        assert "## Module Information" in filtered, "Module Information (version pins) must always be included"
+        assert "## Description" in filtered, "Description must always be included"
+        assert "## Notes for AI Agents" in filtered, "Notes for AI Agents must always be included"
+
+    def test_gotchas_always_included(self, server_state):
+        """Test that a doc's Important Gotchas section survives filtering."""
+        filtered = get_module_impl("emr", server_state, sections=["outputs"])
+        assert "## Important Gotchas" in filtered, "Important Gotchas must always be included"
+        assert "## Main Outputs" in filtered, "Requested outputs section should be present"
+
+    def test_omitted_sections_listed_in_footer(self, server_state):
+        """Test that the footer lists omitted sections as a table of contents."""
+        filtered = get_module_impl("security-group", server_state, sections=["inputs"])
+        assert "Sections omitted from this response" in filtered, "Footer should list omitted sections"
+        assert "Best Practices" in filtered, "Omitted section titles should appear in the footer"
+
+    def test_freeform_heading_substring_match(self, server_state):
+        """Test that free-form entries match H2 headings by substring."""
+        filtered = get_module_impl("eks", server_state, sections=["karpenter"])
+        assert "## Submodule 4: karpenter" in filtered, "Substring should match the submodule heading"
+
+    def test_submodules_key_matches_numbered_sections(self, server_state):
+        """Test that the submodules key pulls the index and all numbered submodule sections."""
+        filtered = get_module_impl("eks", server_state, sections=["submodules"])
+        assert "## Submodules" in filtered, "Submodules index section should be present"
+        assert "## Submodule 1:" in filtered, "Numbered submodule sections should be present"
+
+    def test_unmatched_section_reported(self, server_state):
+        """Test that unmatched entries are reported with available sections."""
+        filtered = get_module_impl("vpc", server_state, sections=["nonexistent-section-xyz"])
+        assert "Requested sections not found: nonexistent-section-xyz" in filtered
+        assert "Available sections:" in filtered, "Footer should list available sections for retry"
+
+    def test_filter_returns_text_without_h2_unchanged(self):
+        """Test that documents without H2 sections pass through unfiltered."""
+        text = "# Title\n\nJust a paragraph, no sections.\n"
+        assert filter_module_sections(text, ["inputs"]) == text
 
 
 class TestModulesListTool:

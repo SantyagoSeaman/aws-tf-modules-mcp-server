@@ -1,5 +1,20 @@
 # Terraform AWS {{MODULE_SHORT_NAME}} Module
 
+<!-- CANONICAL H2 HEADINGS:
+Use EXACTLY these H2 titles — the MCP server's get_module `sections` filter and
+its always-included core depend on them. Do not invent variants (no "Variables",
+"Key Outputs", "Important Notes", "Critical Warnings and Gotchas", etc.).
+
+Every doc: Module Information, Description, Key Features, Main Use Cases,
+Best Practices, Notes for AI Agents, Additional Resources.
+Flat (single-module) docs also use: Usage Examples, Main Input Variables,
+Main Outputs.
+Submodule-structured docs instead use: Submodules, "Submodule N: {name}",
+optionally "Main Module: {name}" (inputs/outputs/examples go in H3s inside them).
+Optional in either layout: Important Gotchas (always returned by get_module,
+even in filtered responses — put must-know warnings there).
+-->
+
 ## Module Information
 
 <!-- TEMPLATE INSTRUCTIONS:

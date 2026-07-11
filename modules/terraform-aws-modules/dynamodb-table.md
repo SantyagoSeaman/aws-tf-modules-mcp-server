@@ -456,7 +456,7 @@ module "dynamodb_shared_table" {
 }
 ```
 
-## Critical Warnings and Gotchas
+## Important Gotchas
 
 **IMPORTANT**: Read these before generating configuration for this module — several are non-obvious and will cause plan/apply failures or silently ignored settings:
 

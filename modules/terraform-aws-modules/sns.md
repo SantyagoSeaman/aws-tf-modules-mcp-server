@@ -249,7 +249,7 @@ module "sns_complete" {
 }
 ```
 
-## Critical Warnings and Gotchas
+## Important Gotchas
 
 1. **FIFO naming is automatic**: When `fifo_topic = true`, the module strips any trailing `.fifo` from `name` and re-appends it — do not manually append `.fifo` to avoid a double suffix; just set the base name.
 2. **FIFO subscribers must also be FIFO**: SQS queues subscribed to a FIFO SNS topic must themselves be FIFO queues (`.fifo` name, `fifo_queue = true`).

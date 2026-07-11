@@ -36,8 +36,13 @@ work from the retrieved documentation.
 ## Notes
 
 - `modules_list` returns the full catalog when it is unclear which module fits.
-- Search returns the top-3 matches; if none fits, retry with different terms
-  before concluding no module exists.
+- Search returns the top-3 matches by default; pass `top_k` (up to 10) for
+  ambiguous queries, and if nothing fits, retry with different terms before
+  concluding no module exists.
+- `get_module` returns the full document by default; pass `sections`
+  (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
+  to keep the response small — version pins, agent notes, and gotchas are
+  always included.
 - The corpus covers the terraform-aws-modules organization only. Modules from
   other namespaces (cloudposse, project-specific) are not indexed — say so
   rather than guessing their APIs.

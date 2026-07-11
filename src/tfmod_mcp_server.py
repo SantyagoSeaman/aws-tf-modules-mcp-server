@@ -13,6 +13,7 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 
 import argparse
 import logging
+import re
 import sys
 import threading
 from dataclasses import asdict, dataclass
@@ -57,13 +58,17 @@ community terraform-aws-modules. Module APIs change between major versions;
 memorized variable names are frequently stale. Before writing or modifying
 Terraform that uses AWS community modules, ALWAYS:
 
-1. `search_modules(query)` — find the right module. Returns the top-3 ranked
-   matches with name, path, keywords, description, and relevance score.
-   Query by functionality ("s3 bucket with encryption and versioning"),
-   technology ("kubernetes cluster"), or exact module name ("vpc", "eks").
-2. `get_module(module_identifier)` — fetch the complete, current documentation
-   for the chosen module (no truncation). Accepts a module name ("vpc") or a
-   relative doc path ("modules/terraform-aws-modules/vpc.md").
+1. `search_modules(query, top_k=3)` — find the right module. Returns the
+   top-ranked matches (default 3, up to 10) with name, path, keywords,
+   description, and relevance score. Query by functionality ("s3 bucket with
+   encryption and versioning"), technology ("kubernetes cluster"), or exact
+   module name ("vpc", "eks").
+2. `get_module(module_identifier, sections=None)` — fetch the complete,
+   current documentation for the chosen module. Accepts a module name ("vpc")
+   or a relative doc path ("modules/terraform-aws-modules/vpc.md"). Pass
+   `sections` (e.g. ["inputs", "examples"]) to keep the response small; core
+   context (version pins, agent notes, gotchas) is always included and a
+   footer lists what was omitted.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 
@@ -464,7 +469,7 @@ class SearchHit(BaseModel):
 
 
 class SearchOutput(BaseModel):
-    results: list[SearchHit] = Field(..., description="Top-3 ranked Terraform modules matching the query.")
+    results: list[SearchHit] = Field(..., description="Top-ranked Terraform modules matching the query.")
 
 
 class ModuleListItem(BaseModel):
@@ -542,6 +547,121 @@ def _read_module_file(file_path: Path, identifier: str, logger: logging.Logger) 
         raise ValueError(f"Failed to read module file {identifier}: {e}") from e
 
 
+# Logical section keys accepted by get_module's `sections` parameter, mapped
+# to the canonical H2 headings used across the module documentation corpus.
+_SECTION_ALIASES: dict[str, str] = {
+    "description": "Description",
+    "module-info": "Module Information",
+    "features": "Key Features",
+    "use-cases": "Main Use Cases",
+    "examples": "Usage Examples",
+    "usage": "Usage Examples",
+    "inputs": "Main Input Variables",
+    "variables": "Main Input Variables",
+    "outputs": "Main Outputs",
+    "submodules": "Submodules",
+    "best-practices": "Best Practices",
+    "gotchas": "Important Gotchas",
+    "ai-notes": "Notes for AI Agents",
+    "resources": "Additional Resources",
+}
+
+# Sections always included in a filtered get_module response: short, high-value
+# context (version pins, agent guidance, gotchas) that must not be trimmed away.
+_CORE_SECTIONS = ("Description", "Module Information", "Notes for AI Agents", "Important Gotchas")
+
+_H2_RE = re.compile(r"^## .+$", re.MULTILINE)
+
+
+def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
+    """
+    Split a module document into preamble and H2 sections.
+
+    Args:
+        text: Full markdown document text
+
+    Returns:
+        Tuple of (preamble, sections). Preamble is everything before the first
+        H2 heading (front-matter, title, keywords). Sections is a list of
+        (heading_title, block_text) in document order, where block_text
+        includes the heading line and runs until the next H2 or end of file.
+    """
+    matches = list(_H2_RE.finditer(text))
+    if not matches:
+        return text, []
+    preamble = text[: matches[0].start()]
+    sections: list[tuple[str, str]] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+        title = m.group(0)[3:].strip()
+        sections.append((title, text[m.start() : end]))
+    return preamble, sections
+
+
+def filter_module_sections(text: str, requested: list[str]) -> str:
+    """
+    Reduce a module document to core sections plus the requested ones.
+
+    Each requested entry is either a logical key from _SECTION_ALIASES
+    (e.g. "inputs", "examples", "submodules") or a free-form case-insensitive
+    substring matched against H2 headings (e.g. "karpenter" to fetch a single
+    EKS submodule section). Core sections — front-matter, Description,
+    Module Information, Notes for AI Agents, Important Gotchas — are always
+    included regardless of the request. A footer lists the omitted sections
+    (serving as a table of contents) and any requested entries that matched
+    nothing.
+
+    Args:
+        text: Full markdown document text
+        requested: Section keys or heading substrings to include
+
+    Returns:
+        Filtered document text; the original text if it has no H2 sections
+    """
+    preamble, sections = _split_h2_sections(text)
+    if not sections:
+        return text
+
+    wanted: set[str] = {title for title, _ in sections if title in _CORE_SECTIONS}
+    unmatched: list[str] = []
+    for entry in requested:
+        key = entry.strip().lower()
+        if not key:
+            continue
+        canonical = _SECTION_ALIASES.get(key)
+        matched = False
+        for title, _ in sections:
+            if canonical is not None:
+                hit = title == canonical or (canonical == "Submodules" and title.lower().startswith("submodule"))
+            else:
+                hit = key in title.lower()
+            if hit:
+                wanted.add(title)
+                matched = True
+        if not matched:
+            unmatched.append(entry)
+
+    parts = [preamble.rstrip()] if preamble.strip() else []
+    parts.extend(block.rstrip() for title, block in sections if title in wanted)
+
+    footer_lines = ["---"]
+    omitted = [title for title, _ in sections if title not in wanted]
+    if omitted:
+        footer_lines.append(
+            "Sections omitted from this response (request them via the `sections` "
+            "parameter, by key or by heading substring): " + "; ".join(omitted)
+        )
+    if unmatched:
+        available = "; ".join(title for title, _ in sections)
+        footer_lines.append(
+            "Requested sections not found: " + ", ".join(unmatched) + ". Available sections: " + available
+        )
+    if len(footer_lines) > 1:
+        parts.append("\n".join(footer_lines))
+
+    return "\n\n".join(parts) + "\n"
+
+
 def get_module_documentation(module_identifier: str, state: ServerState) -> str:
     """
     Helper function to retrieve module documentation.
@@ -607,7 +727,7 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
     return _read_module_file(full_path, doc.module_name or doc.path, state.logger)
 
 
-def search_modules_impl(query: str, state: ServerState) -> SearchOutput:
+def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> SearchOutput:
     """
     Helper function to search for modules.
 
@@ -617,13 +737,16 @@ def search_modules_impl(query: str, state: ServerState) -> SearchOutput:
     Args:
         query: Search query string
         state: Server state containing index and configuration
+        top_k: Number of results to return (clamped to 1..10, default 3)
 
     Returns:
-        SearchOutput with top-3 ranked results
+        SearchOutput with top-k ranked results
 
     See search_modules() tool documentation for full details.
     """
     assert state.logger is not None, "ServerState must have a logger"
+
+    top_k = max(1, min(int(top_k), 10))
 
     # Use configured weights from state
     weights = state.weights
@@ -634,7 +757,7 @@ def search_modules_impl(query: str, state: ServerState) -> SearchOutput:
         w_exact=weights.w_exact,
         w_bm25=weights.w_bm25,
         w_sem=weights.w_sem,
-        top_k=3,  # Always return top-3
+        top_k=top_k,
         query_instruction=state.query_instruction,
         logger=state.logger,
     )
@@ -659,7 +782,7 @@ def search_modules_impl(query: str, state: ServerState) -> SearchOutput:
     return SearchOutput(results=out)
 
 
-def get_module_impl(module_identifier: str, state: ServerState) -> str:
+def get_module_impl(module_identifier: str, state: ServerState, sections: list[str] | None = None) -> str:
     """
     Helper function to get module documentation.
 
@@ -669,13 +792,18 @@ def get_module_impl(module_identifier: str, state: ServerState) -> str:
     Args:
         module_identifier: Module name or relative file path
         state: Server state containing index and configuration
+        sections: Optional section keys or heading substrings; when given,
+            the response is reduced to core sections plus the requested ones
 
     Returns:
-        Full module documentation text
+        Full module documentation text, or a filtered subset if sections given
 
     See get_module() tool documentation for full details.
     """
-    return get_module_documentation(module_identifier, state)
+    content = get_module_documentation(module_identifier, state)
+    if sections:
+        return filter_module_sections(content, sections)
+    return content
 
 
 def modules_list_impl(state: ServerState) -> ModulesListOutput:
@@ -777,7 +905,8 @@ def modules_list() -> ModulesListOutput:
 @app.tool(
     description=(
         "Search for Terraform AWS modules by keywords, exact name, or free-text query. "
-        "Returns top-3 ranked results with module name, path, keywords, description, and relevance score. "
+        "Returns top-ranked results (top_k, default 3) with module name, path, keywords, "
+        "description, and relevance score. "
         "After finding modules, use get_module tool to retrieve brief documentation."
     ),
     tags={"search", "terraform", "aws", "modules"},
@@ -791,6 +920,15 @@ def search_modules(
             "May include keywords, module names, or natural language descriptions."
         ),
     ],
+    top_k: Annotated[
+        int,
+        Field(
+            ge=1,
+            le=10,
+            description="Number of results to return (1-10). Default 3 suits most queries; "
+            "raise it for ambiguous queries like 'iam'.",
+        ),
+    ] = 3,
 ) -> SearchOutput:
     """
     Search for Terraform AWS modules using hybrid search.
@@ -810,9 +948,10 @@ def search_modules(
         query: Free-text query for Terraform module search. May include
                keywords (e.g., "s3 encryption"), module names (e.g., "vpc"),
                or natural language descriptions (e.g., "object storage with versioning").
+        top_k: Number of results to return (1-10, default 3).
 
     Returns:
-        SearchOutput: Container with top-3 ranked results. Each result includes:
+        SearchOutput: Container with top-k ranked results. Each result includes:
             - module_name: Normalized module identifier (e.g., "s3-bucket", "eks")
             - path: Relative path to module documentation file
             - keywords: List of extracted module keywords/tags
@@ -836,13 +975,13 @@ def search_modules(
             Output: Returns EKS module as top result
 
     Notes:
-        - Always returns exactly 3 results (or fewer if index has < 3 modules)
+        - Returns top_k results (default 3, or fewer if index has fewer modules)
         - Results are ranked by combined score from multiple search components
         - Search weights are configured server-wide and cannot be changed per-query
         - Empty queries return empty results
     """
     state = ServerStateManager.get()
-    return search_modules_impl(query, state)
+    return search_modules_impl(query, state, top_k=top_k)
 
 
 @app.tool(
@@ -850,6 +989,8 @@ def search_modules(
         "Get compacted documentation for a specific Terraform module. "
         "Use this tool after search_modules to retrieve module documentation including "
         "usage examples, inputs, outputs, and configuration details. "
+        "Pass `sections` to fetch only the parts you need (large modules run to 10k+ tokens in full); "
+        "version pins, agent notes, and gotchas are always included. "
         "To get original documentation including full lists inputs/outputs for each sub-module, "
         "use direct links to registry.terraform.io from documentation."
     ),
@@ -864,6 +1005,18 @@ def get_module(
             "or relative path (e.g., 'modules/terraform-aws-modules/vpc.md')"
         ),
     ],
+    sections: Annotated[
+        list[str] | None,
+        Field(
+            description="Optional list of sections to return instead of the full document. "
+            "Accepts logical keys — inputs, outputs, examples, submodules, features, use-cases, "
+            "best-practices, resources — or case-insensitive substrings of section headings "
+            "(e.g. 'karpenter' for a single EKS submodule). Core context (description, version "
+            "pins, notes for AI agents, gotchas) is always included. Omitted sections are listed "
+            "in a footer so you can request them later. Omit this parameter for the complete "
+            "documentation."
+        ),
+    ] = None,
 ) -> str:
     """
     Get full documentation for a specific Terraform module.
@@ -876,9 +1029,15 @@ def get_module(
         module_identifier: Either:
             - Module name (e.g., "vpc", "s3-bucket", "eks")
             - Relative path to module file (e.g., "modules/terraform-aws-modules/vpc.md")
+        sections: Optional list of section keys or heading substrings. When
+            given, the response contains the core sections (front-matter,
+            Description, Module Information, Notes for AI Agents, Important
+            Gotchas) plus the requested ones, with a footer listing what was
+            omitted. When omitted, the full document is returned.
 
     Returns:
-        str: Full documentation text from the module's Markdown file
+        str: Full documentation text from the module's Markdown file,
+            or a filtered subset if sections were requested
 
     Raises:
         ValueError: If module not found or path is invalid/insecure
@@ -908,12 +1067,16 @@ def get_module(
             Input: "modules/terraform-aws-modules/s3-bucket.md"
             Returns: Full S3 bucket module documentation
 
+        Get only specific sections:
+            Input: "s3-bucket", sections=["inputs", "examples"]
+            Returns: Core sections plus input variables and usage examples
+
         Typical workflow:
             1. search_modules("s3 encryption") → get top result path
             2. get_module(path) → retrieve full documentation
     """
     state = ServerStateManager.get()
-    return get_module_impl(module_identifier, state)
+    return get_module_impl(module_identifier, state, sections=sections)
 
 
 # -----------------------------

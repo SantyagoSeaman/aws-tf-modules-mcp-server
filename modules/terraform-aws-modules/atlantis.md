@@ -48,7 +48,7 @@ Atlantis itself runs as **exactly one ECS task** — `desired_count` is hardcode
 7. **Multi-Account Terraform Management**: Run a central Atlantis with `sts:AssumeRole` permissions into target-account Terraform roles
 8. **Self-Hosted Alternative to Terraform Cloud/HCP Terraform**: Keep plan/apply execution inside your own VPC instead of a SaaS runner
 
-## Key Root Module Variables
+## Main Input Variables
 
 ### Core
 
@@ -114,7 +114,7 @@ Passed to the ECS container-definition module; important properties:
 | `enable_efs` | `bool` | `false` | Mount an EFS volume at `/home/atlantis` for persistent plan storage |
 | `efs` | `object` | `{}` | EFS settings — `mount_targets` (required per-AZ if enabled), encryption, lifecycle policy |
 
-## Key Outputs
+## Main Outputs
 
 | Output | Description |
 |--------|-------------|

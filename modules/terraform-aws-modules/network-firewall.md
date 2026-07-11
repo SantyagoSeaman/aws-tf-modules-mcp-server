@@ -333,7 +333,7 @@ module "rule_group_stateless" {
 }
 ```
 
-## Complete Module Usage
+## Usage Examples
 
 ```hcl
 # Rule groups are created independently and referenced by ARN

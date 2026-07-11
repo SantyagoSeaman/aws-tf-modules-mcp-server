@@ -51,19 +51,19 @@ Because the module was archived in November 2021, its lookup table is frozen at 
 - **Minimal Interface**: Single required input (`instance_type`), single output (`answer`)
 - **Legacy-Friendly**: Fits patterns built around `aws_launch_configuration` that predate provider-level instance-type introspection
 
-## Input Variables
+## Main Input Variables
 
 | Variable | Type | Required | Description |
 |----------|------|----------|-------------|
 | `instance_type` | `string` | Yes | EC2 instance type to check for EBS optimization support (e.g., `"m5.large"`) |
 
-## Outputs
+## Main Outputs
 
 | Output | Description |
 |--------|-------------|
 | `answer` | `1` if the instance type supports EBS optimization, `0` otherwise (including unknown/newer types) |
 
-## Usage Example
+## Usage Examples
 
 ```hcl
 module "ebs_optimized" {
@@ -96,7 +96,7 @@ The lookup table contains 430 entries, frozen as of the November 2021 archive da
 
 Within older, mixed families (`c1`, `c3`, `m1`, `m2`, `m3`, `r3`), support varies by size — always check the exact size string rather than assuming a whole family behaves uniformly.
 
-## Recommendations
+## Best Practices
 
 1. **Do not use in new code**: use the `aws_ec2_instance_type` data source instead (see Important Notice above)
 2. **Pin the version** if this module must be kept for legacy compatibility: `version = "0.2.1"`, its final release

@@ -270,7 +270,7 @@ module "secrets_manager" {
 }
 ```
 
-## Critical Warnings and Gotchas
+## Important Gotchas
 
 **IMPORTANT**: Read these before generating configuration for this module — several are non-obvious and can cause failed applies or silently ignored settings:
 

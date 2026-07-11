@@ -124,7 +124,7 @@ module "global_accelerator_custom_routing" {
 }
 ```
 
-## Main Input Variables (Root Module)
+## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|

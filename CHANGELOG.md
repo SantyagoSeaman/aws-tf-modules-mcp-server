@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0] - 2026-07-11
+
+[0.7.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.7.0
+
+Driven by field feedback from a real agent session: search ranking and doc freshness earned their keep, but full-document `get_module` responses were heavier than needed and top-3 was tight for ambiguous queries.
+
+### Added
+
+- **`top_k` parameter on `search_modules`** (1–10, default 3) — raise it for ambiguous queries like `"iam"` where three results are too tight to disambiguate.
+- **`sections` parameter on `get_module`** — fetch only the parts you need instead of the full document (large modules run to 10k+ tokens in full; `s3-bucket` with `sections=["inputs"]` is ~5x smaller). Accepts logical keys (`inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`) or case-insensitive heading substrings (e.g. `"karpenter"` for a single EKS submodule). Core context — description, pinned versions, notes for AI agents, gotchas — is always included regardless of the request, and every filtered response ends with a footer listing the omitted sections, so nothing is silently hidden and the agent can request more.
+
+### Changed
+
+- **Normalized H2 headings across 14 module docs** to the canonical template names (`Main Input Variables`, `Main Outputs`, `Usage Examples`, `Best Practices`, `Important Gotchas`), eliminating naming variants (`Variables`, `Input Variables`, `Key Outputs`, `Critical Warnings and Gotchas`, `Important Notes`, `Recommendations`, `Complete Module Usage`, and two others). Heading renames only — no content changed; intra-doc anchor links updated; index rebuilt and the full searchability suite re-verified with no ranking regressions. This gives section extraction a single canonical heading set to key on.
+
 ## [0.6.0] - 2026-07-11
 
 [0.6.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.6.0

@@ -160,7 +160,7 @@ Every preset submodule (`modules/<service>/`) shares the same interface: it wrap
 | `jmx` | 1099/tcp |
 | `storm` | 6627/tcp nimbus, 6700-6703/tcp supervisor, 8080/tcp ui |
 
-## Main Input Variables (Root Module)
+## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|

@@ -413,7 +413,7 @@ module "batch_hpc" {
 3. **Use Fargate for Short/Bursty Jobs**: Avoids EC2 instance warm-up latency for small, intermittent workloads
 4. **Tag for Cost Allocation**: Apply consistent `tags` across the module call for cost tracking and chargeback
 
-## Important Notes
+## Important Gotchas
 
 1. **Nested Variables Default to `null`, Not `{}`**: `compute_environments`, `job_queues`, and `job_definitions` all default to `null` (module v3.x) — you must explicitly define at least one entry in each for the module to provision a working pipeline
 2. **Tag Changes Force Replacement**: Modifying `compute_resources.tags` forces compute environment replacement, which can transiently disrupt job queues referencing it
