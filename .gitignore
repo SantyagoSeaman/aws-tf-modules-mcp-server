@@ -98,8 +98,9 @@ mcp_server.log
 .temp/
 temp/
 
-# User-specific Claude Code settings
-.claude/
+# User-specific Claude Code settings (except shared maintainer skills)
+.claude/*
+!.claude/skills/
 CLAUDE.md
 /.serena/
 

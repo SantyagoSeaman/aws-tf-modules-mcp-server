@@ -1,5 +1,6 @@
 # TFModSearch MCP Server
 
+[![CI](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tfmodsearch)](https://pypi.org/project/tfmodsearch/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -71,8 +72,15 @@ The plugin configures the MCP server automatically **and** adds workflow skills 
 
 Both bundle:
 - The **tfmod-search MCP server** (runs via `uvx tfmodsearch` — [uv](https://github.com/astral-sh/uv) required)
-- **`aws-terraform-modules` skill** — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
-- **`/tf-module <query>` skill** — instant module lookup with a ready-to-paste snippet
+- **Seven skills**:
+  - `aws-terraform-modules` — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
+  - `/tf-module <query>` — instant module lookup with a ready-to-paste snippet
+  - `/tf-stack <requirement>` — scaffold a multi-module stack with correct output→input wiring
+  - `tf-migrate` — replace hand-written `aws_*` resources with a covering module, verified attribute-by-attribute
+  - `tf-module-upgrade` — audit pinned versions and variable usage against current docs
+  - `tf-review` — review a diff or PR's module usage
+  - `tf-troubleshoot` — diagnose terraform failures; ships a prefilter script that reduces logs of any size to just the diagnostics
+- **Two subagents** (Claude Code): `tf-log-analyst` and `tf-diff-reviewer` analyze large logs and diffs in an isolated context, so your session only sees the findings
 
 ### Quick Install (Any MCP Client)
 
@@ -575,11 +583,11 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
 - **MCP Server** (23 tests): `search_modules`, `get_module`, and `modules_list` tools, security validation, integration workflows
-- **End-to-End** (20 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill contracts for Claude Code and Codex, live plugin install via the `claude` CLI
+- **End-to-End** (49 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
 
-**Total**: 259 tests (integration + e2e)
+**Total**: 288 tests (integration + e2e)
 
 ## 🏗️ Architecture
 

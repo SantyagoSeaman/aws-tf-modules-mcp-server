@@ -368,7 +368,7 @@ def test_print_timing_summary(request):
                 if speedup > 1:
                     print(f"    bge-base is {speedup:.2f}x faster")
                 else:
-                    print(f"    gte-small is {1/speedup:.2f}x faster")
+                    print(f"    gte-small is {1 / speedup:.2f}x faster")
 
             print("\n  Success rate comparison:")
             print(f"    gte-small:         {gte.success_rate * 100:.1f}%")

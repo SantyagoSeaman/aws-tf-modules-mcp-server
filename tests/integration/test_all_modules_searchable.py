@@ -257,9 +257,9 @@ class TestAllModulesSearchable:
         result = search_modules_impl(test_case.module_name, server_state)
 
         # Verify we got results
-        assert len(result.results) > 0, (
-            f"No results found for module name '{test_case.module_name}' " f"(doc: {test_case.doc_path})"
-        )
+        assert (
+            len(result.results) > 0
+        ), f"No results found for module name '{test_case.module_name}' (doc: {test_case.doc_path})"
 
         # Get top result
         top_result = result.results[0]
@@ -347,10 +347,9 @@ class TestModuleResultCompleteness:
             if not doc.text or len(doc.text) < 100:  # At least 100 chars
                 modules_without_content.append(doc.module_name or doc.path)
 
-        assert len(modules_without_content) == 0, (
-            f"Found {len(modules_without_content)} modules without sufficient text content: "
-            f"{modules_without_content}"
-        )
+        assert (
+            len(modules_without_content) == 0
+        ), f"Found {len(modules_without_content)} modules without sufficient text content: {modules_without_content}"
 
     def test_module_count(self, server_state):
         """Verify that index contains exactly 54 modules."""

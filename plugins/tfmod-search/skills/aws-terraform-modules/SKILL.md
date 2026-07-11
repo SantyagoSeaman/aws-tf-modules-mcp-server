@@ -1,6 +1,6 @@
 ---
 name: aws-terraform-modules
-description: Use when writing, reviewing, refactoring, or upgrading Terraform code for AWS. Finds the right community terraform-aws-modules module and its current variable names, defaults, and version via the tfmod-search MCP server, instead of relying on memorized module APIs, which are frequently stale.
+description: Use when writing new or modifying existing Terraform code for AWS. Finds the right community terraform-aws-modules module and its current variable names, defaults, and version via the tfmod-search MCP server, instead of relying on memorized module APIs, which are frequently stale. (Dedicated skills exist for diffs/PRs, module version audits, converting raw resources, and diagnosing terraform errors — this one is for authoring.)
 ---
 
 # Writing Terraform with AWS community modules

@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.5.0] - 2026-07-11
+
+[0.5.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.5.0
+
+The skills release: the plugin grows from two skills to a full toolkit — seven skills and two subagents covering the whole lifecycle of working with community modules: author, scaffold, migrate, upgrade, review, and troubleshoot.
+
+### Added
+
+- **`tf-migrate` skill** — detects clusters of hand-written `aws_*` resources that a community module covers (security group + rules, VPC + subnets + NAT, S3 + policies) and proposes a replacement: multiple search angles, attribute-by-attribute coverage mapping against the current doc, an explicit "not covered" list, and state-migration caveats (`moved` blocks / `terraform state mv`). Proposal only — never rewrites.
+- **`tf-module-upgrade` skill** — audits existing module blocks against current documentation: version drift, dead/renamed variables, deprecations, changed defaults. Severity-ranked report with exact fixes; applies changes only on approval.
+- **`tf-review` skill** — reviews a git diff/branch/PR's module usage: variables exist, required inputs present, versions pinned, deprecations; flags raw-resource clusters a module could replace. Review only, scope-disciplined (no style nits).
+- **`tf-stack` skill** (user-invoked) — scaffolds a multi-module stack from a requirement with correct output→input wiring (vpc subnets → rds/alb inputs), pinned versions, and an explicit list of what was left out.
+- **`tf-troubleshoot` skill** — diagnoses `terraform plan/apply/init` failures against current module documentation, with a bundled prefilter script.
+- **`scripts/extract_tf_errors.py`** (inside tf-troubleshoot) — stdlib-only prefilter that reduces terraform logs of any size to structured diagnostics (severity, summary, file:line, module addresses); handles human-readable `╷│╵` blocks, `-json` output, and bare CI error lines.
+- **Two plugin subagents** (Claude Code): `tf-log-analyst` (log forensics: prefilter → verify each finding via get_module → compact root-cause report) and `tf-diff-reviewer` (reads the diff in its own context, returns a findings table). Large logs and diffs never enter the main conversation; skills degrade gracefully to inline analysis on Codex.
+- **Maintainer skills** in `.claude/skills/` (now committed via a `.gitignore` exception): `refresh-module-docs` (the multi-agent corpus refresh pipeline, codified) and `add-module` (onboard a new module: doc, keywords, index rebuild, searchability verification).
+- **CI workflow** (`.github/workflows/ci.yml`): lint (pre-commit, all files) and the full test suite on every push and pull request, with dependency and embedding-model caching. The publish workflow now calls it as its first job — **PyPI publication is gated on a green test run**. CI status badge added to the README.
+
+### Changed
+
+- **Narrowed the `aws-terraform-modules` skill trigger to authoring** — reviewing, upgrading, migrating, and troubleshooting now have dedicated skills; an e2e test enforces that trigger keywords (reviewing, pull request, upgrade, fails) are claimed by exactly one model-invoked skill.
+
+### Tests
+
+- E2E suite grew from 20 to 49 tests: prefilter script tests against a fixture log (all three formats), plugin agent contracts, per-skill Codex binding checks, user-invoked vs model-invoked invariants, trigger-disjointness check, maintainer-skill checks (including that they are not gitignored), and live-install verification extended to all seven skills and the shipped agent files. Full suite: 288 tests passing.
+
 ## [0.4.0] - 2026-07-11
 
 [0.4.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.4.0
