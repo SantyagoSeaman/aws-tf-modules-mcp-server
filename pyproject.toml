@@ -1,7 +1,7 @@
 [project]
-name = "aws-tf-modules-mcp-server"
-version = "0.3.0"
-description = "MCP server for AI agents (Claude Code, Copilot, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
+name = "tfmodsearch"
+version = "0.4.0"
+description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -25,7 +25,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Systems Administration",
 ]
-keywords = ["terraform", "aws", "mcp", "mcp-server", "claude", "claude-code", "copilot", "ai-agents", "semantic-search", "hybrid-search", "fastmcp", "sentence-transformers", "infrastructure"]
+keywords = ["terraform", "aws", "mcp", "mcp-server", "claude", "claude-code", "codex", "copilot", "ai-agents", "semantic-search", "hybrid-search", "fastmcp", "sentence-transformers", "infrastructure"]
 
 [project.optional-dependencies]
 dev = [
@@ -40,13 +40,16 @@ dev = [
 ]
 
 [project.scripts]
-tfmod-search-cli = "tfmod_search_cli:main"
+tfmodsearch = "tfmod_mcp_server:main"
+tfmodsearch-cli = "tfmod_search_cli:main"
+# Deprecated aliases (pre-0.4.0 names), kept for existing installs
 aws-tf-modules-mcp-server = "tfmod_mcp_server:main"
+tfmod-search-cli = "tfmod_search_cli:main"
 
 [project.urls]
-Homepage = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"
-"Bug Reports" = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/issues"
-"Source" = "https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"
+Homepage = "https://github.com/SantyagoSeaman/tfmodsearch"
+"Bug Reports" = "https://github.com/SantyagoSeaman/tfmodsearch/issues"
+"Source" = "https://github.com/SantyagoSeaman/tfmodsearch"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -60,6 +63,7 @@ addopts = [
 ]
 markers = [
     "integration: Integration tests that may take longer to run",
+    "e2e: End-to-end tests that spawn real processes (MCP stdio sessions, wheel builds, uvx, claude CLI)",
 ]
 
 [tool.ruff]
@@ -143,6 +147,6 @@ packages = ["src/tfmod_mcp_server.py", "src/tfmod_search_cli.py", "src/tfmod_sea
 "src" = ""
 
 [tool.hatch.build.targets.wheel.force-include]
-"model" = "model"
-"modules" = "modules"
+"model/tfmod_bge_base_index.pkl" = "model/tfmod_bge_base_index.pkl"
+"modules/terraform-aws-modules" = "modules/terraform-aws-modules"
 "config.yaml" = "config.yaml"

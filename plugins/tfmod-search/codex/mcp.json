@@ -1,0 +1,6 @@
+{
+  "tfmod-search": {
+    "command": "uvx",
+    "args": ["tfmodsearch"]
+  }
+}

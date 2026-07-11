@@ -7,8 +7,8 @@ Thank you for your interest in contributing! This document provides guidelines f
 1. Fork the repository
 2. Clone your fork:
    ```bash
-   git clone https://github.com/YOUR_USERNAME/aws-tf-modules-mcp-server.git
-   cd aws-tf-modules-mcp-server
+   git clone https://github.com/YOUR_USERNAME/tfmodsearch.git
+   cd tfmodsearch
    ```
 
 3. Set up development environment:

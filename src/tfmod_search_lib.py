@@ -216,11 +216,11 @@ class ModuleDocumentParser:
         # Log parsing result
         if module_name or keywords:
             self.logger.debug(
-                f"Parsed {filename}: module={module_name}, " f"keywords={len(keywords)}, strategy={parse_strategy}"
+                f"Parsed {filename}: module={module_name}, keywords={len(keywords)}, strategy={parse_strategy}"
             )
         else:
             self.logger.warning(
-                f"File {filename} missing module_name or keywords " f"(name={module_name}, kw_count={len(keywords)})"
+                f"File {filename} missing module_name or keywords (name={module_name}, kw_count={len(keywords)})"
             )
 
         return module_name, keywords, body

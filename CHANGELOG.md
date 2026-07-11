@@ -1,8 +1,43 @@
 # Changelog
 
+## [0.4.0] - 2026-07-11
+
+[0.4.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.4.0
+
+The distribution release: the project is renamed to **tfmodsearch**, published to PyPI, and ships plugins for Claude Code and Codex CLI that bundle the MCP server with agent workflow skills.
+
+### Changed
+
+- **Project renamed to `tfmodsearch`** (repository, PyPI package, and primary command). The GitHub repository moved to `SantyagoSeaman/tfmodsearch`; old `aws-tf-modules-mcp-server` URLs redirect automatically.
+- **New console commands**: `tfmodsearch` (MCP server) and `tfmodsearch-cli` (indexing/search CLI). The previous `aws-tf-modules-mcp-server` and `tfmod-search-cli` commands are kept as deprecated aliases.
+- **Trimmed the published wheel** from ~11 MB to ~1.6 MB: it now ships only the production index (`model/tfmod_bge_base_index.pkl`) and the curated `modules/terraform-aws-modules/` docs, excluding the legacy gte-small index, work-in-progress docs, and internal templates.
+- **Rewrote the MCP server `instructions`**: corrected the stale catalog size, fixed grammar, and added explicit workflow steering ("search before writing Terraform; use documented variable names, not memorized ones"). The advertised server version now derives from the installed package metadata instead of a hardcoded string.
+
+### Added
+
+- **PyPI publication** with Trusted Publishing: a `publish.yml` GitHub Actions workflow builds and publishes to PyPI on version tags via OIDC (no API tokens), with a tag-vs-version consistency check.
+- **Claude Code plugin** (`/plugin marketplace add SantyagoSeaman/tfmodsearch` → `/plugin install tfmod-search@tfmodsearch`): auto-configures the MCP server via `uvx tfmodsearch` and ships two skills.
+- **Codex CLI plugin** with the same two-command install, plus an `agents/openai.yaml` declaring the MCP tool dependency for implicit skill invocation.
+- **Skills** (portable SKILL.md format, shared by both plugins):
+  - `aws-terraform-modules` — auto-invoked when writing/reviewing Terraform for AWS: search first, write from current docs, pin module versions, prefer community modules.
+  - `tf-module` — user-invoked lookup (`/tf-module s3 bucket with lifecycle rules`) returning a ready-to-paste module block with current variable names.
+- **`--warmup` flag** for the MCP server: pre-downloads the embedding model (~220 MB), loads the index, runs a test query, and exits — keeps first server startup within MCP client timeouts.
+
+### Fixed
+
+- **`get_module` no longer guesses**: unknown module names previously fell through to hybrid search and silently returned the highest-scoring module's documentation (a hallucinated name could return the lambda docs). Name lookup is now exact-match first, then unique-substring; unknown or ambiguous names return an error listing the closest matches and directing the caller to `search_modules`.
+
+### Tests
+
+- **New end-to-end suite** (`tests/e2e/`, 20 tests): full MCP stdio protocol sessions against a spawned server process (initialize handshake, tool discovery, all three tools, security rejections, `--warmup`), wheel payload/metadata/entry-point verification, a `uvx` packaged-server smoke test from a foreign directory, plugin manifest and skill contract checks for both the Claude Code and Codex layouts, and a live `claude plugin` install into an isolated config. Full suite: 259 tests passing.
+
+### Documentation
+
+- README: new plugin-first installation section, Codex CLI integration guide (with `startup_timeout_sec` note), `claude mcp add` one-liner, AGENTS.md/CLAUDE.md steering snippet, and a PyPI badge. All install configs now use the published `tfmodsearch` package instead of `git+https` URLs.
+
 ## [0.3.0] - 2026-07-11
 
-[0.3.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.3.0
+[0.3.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.3.0
 
 This release refreshes the entire module catalog against the latest upstream `terraform-aws-modules` versions, rebuilds the pre-built search index, and overhauls the README. It also rolls up the previously unreleased 0.2.1 changes.
 
@@ -34,7 +69,7 @@ This release refreshes the entire module catalog against the latest upstream `te
 
 ## [0.2.1] - 2026-01-26
 
-[0.2.1]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.1
+[0.2.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.2.1
 
 ### Added
 
@@ -61,7 +96,7 @@ This release refreshes the entire module catalog against the latest upstream `te
 
 ## [0.2.0] - 2026-01-25
 
-[0.2.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.0
+[0.2.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.2.0
 
 ### Changed
 
@@ -147,7 +182,7 @@ This release refreshes the entire module catalog against the latest upstream `te
 
 ## [0.1.2] - 2025-10-13
 
-[0.1.2]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.2
+[0.1.2]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.1.2
 
 ### Changed
 
@@ -220,7 +255,7 @@ This release refreshes the entire module catalog against the latest upstream `te
 
 ## [0.1.1] - 2025-10-12
 
-[0.1.1]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.1
+[0.1.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.1.1
 
 ### Changed
 - **Expanded Module Catalog**: Search index now includes 54 Terraform AWS modules
@@ -240,7 +275,7 @@ This release refreshes the entire module catalog against the latest upstream `te
 
 ## [0.1.0] - 2025-10-11
 
-[0.1.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.1.0
+[0.1.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.1.0
 
 ### Added
 - Initial release of TFModSearch MCP Server

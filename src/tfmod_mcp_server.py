@@ -3,6 +3,7 @@
 TFModSearch MCP Server (stdio) using fastmcp.
 
 Tools exposed:
+- modules_list() -> complete catalog of indexed modules
 - search_modules(query: str) -> top-3 ranked hits
 - get_module(module_identifier: str) -> full module documentation
 
@@ -15,6 +16,8 @@ import logging
 import sys
 import threading
 from dataclasses import asdict, dataclass
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Annotated, Any
 
@@ -32,87 +35,47 @@ from tfmod_search_lib import (
     extract_purpose,
     initialize_nltk,
     load_index,
+    normalize_modname,
     resolve_index_path,
     setup_logging,
     switch_log_file,
 )
 
+try:
+    _SERVER_VERSION = package_version("tfmodsearch")
+except PackageNotFoundError:
+    _SERVER_VERSION = "0.0.0.dev0"
+
 app = FastMCP(
-    name="tfmod-search-mcp",
-    version="0.1.0",
+    name="tfmod-search",
+    version=_SERVER_VERSION,
     instructions="""
-# Terraform AWS Module Search Server
+# TFModSearch — Terraform AWS Module Documentation Search
 
-This MCP server provides intelligent search and retrieval for Terraform AWS modules documentation using hybrid search.
+Hybrid search (keyword + BM25 + semantic) over current documentation for all 54
+community terraform-aws-modules. Module APIs change between major versions;
+memorized variable names are frequently stale. Before writing or modifying
+Terraform that uses AWS community modules, ALWAYS:
 
-## Available Tools
+1. `search_modules(query)` — find the right module. Returns the top-3 ranked
+   matches with name, path, keywords, description, and relevance score.
+   Query by functionality ("s3 bucket with encryption and versioning"),
+   technology ("kubernetes cluster"), or exact module name ("vpc", "eks").
+2. `get_module(module_identifier)` — fetch the complete, current documentation
+   for the chosen module (no truncation). Accepts a module name ("vpc") or a
+   relative doc path ("modules/terraform-aws-modules/vpc.md").
+3. Use the exact variable names, defaults, and pinned version shown in the
+   retrieved documentation — not values recalled from training data.
 
-### modules_list()
-List all available Terraform modules in the catalog.
-
-**When to use:**
-- Discover what modules exist before searching
-- Browse the complete catalog of available modules
-- Get an overview of all indexed documentation
-
-**Parameters:** None
-
-**Returns:** Complete list of modules with names, paths, descriptions, and keywords.
-
-### search_modules(query: str)
-Search for Terraform AWS modules using natural language queries, keywords, or exact module names.
-
-**When to use:**
-- Finding modules by functionality: "s3 bucket with encryption"
-- Searching by technology: "kubernetes cluster", "serverless functions"
-- Locating modules by exact name: "vpc", "eks", "lambda"
-- When user try to find Terraform resources by it may be more efficient to use module
-
-**Returns:** Top-3 ranked modules with name, path, keywords, description, and relevance score.
-
-**Best practices:**
-- Use descriptive queries for better results: "object storage with versioning" > "storage"
-- Include key requirements: "vpc with multiple availability zones"
-- Try exact module names first if known: "vpc", "s3-bucket"
-- Use direct links to documentation for sub-modules with full lists of inputs/outputs
-
-## Available Tools (continued)
-
-### get_module(module_identifier: str)
-Retrieve full documentation for a specific Terraform module.
-
-**When to use:**
-- After search_modules to get complete documentation
-- When you need detailed usage examples, inputs, outputs
-- To understand module configuration options
-
-**Accepts:**
-- Module name: `"vpc"`, `"s3-bucket"`, `"eks"`
-- File path: `"modules/terraform-aws-modules/vpc.md"`
-
-**Returns:** Complete module documentation without truncation.
-
-## Recommended Workflow
-
-1. **Browse Catalog (Optional):** Use `modules_list` to see all available modules
-   - Example: modules_list() → returns complete catalog with all 6 modules
-
-2. **Search:** Use `search_modules` to find relevant modules
-   - Example: search_modules("container orchestration") → returns EKS module
-
-3. **Deep Dive:** Use `get_module` to get full documentation
-   - Example: get_module("eks") → full EKS module docs with all inputs/outputs
-
-4. **Iteration:** Refine search if needed
-   - Too broad: Add more specific terms
-   - Too narrow: Use broader/alternative terms
+`modules_list()` returns the full catalog (names, paths, descriptions,
+keywords) when browsing is preferable to search.
 
 ## Search Tips
 
-- **Functionality-based:** "database subnet routing", "load balancer configuration"
-- **Technology-based:** "kubernetes", "serverless", "nosql"
-- **Feature-based:** "encryption", "monitoring", "high availability"
-- **AWS service names:** "s3", "rds", "lambda", "vpc"
+- Descriptive queries beat single words: "object storage with versioning" > "storage"
+- Include key requirements: "vpc with multiple availability zones"
+- Exact module names work too: "vpc", "s3-bucket", "rds"
+- If results are too broad, add specific terms; too narrow, use broader ones
 """,
 )
 
@@ -548,7 +511,7 @@ def _validate_and_resolve_module_path(path_str: str) -> Path:
     try:
         full_path.relative_to(modules_dir)
     except ValueError as err:
-        raise ValueError(f"Access denied: Path must be under 'modules/' directory. " f"Attempted: {path_str}") from err
+        raise ValueError(f"Access denied: Path must be under 'modules/' directory. Attempted: {path_str}") from err
 
     return full_path
 
@@ -608,28 +571,38 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
         full_path = _validate_and_resolve_module_path(module_identifier)
         return _read_module_file(full_path, module_identifier, state.logger)
 
-    # Strategy 2: Search by module name
-    weights = state.weights
-    results = compute_scores(
-        state.index,
-        module_identifier,
-        w_kw=weights.w_kw,
-        w_exact=weights.w_exact,
-        w_bm25=weights.w_bm25,
-        w_sem=weights.w_sem,
-        top_k=1,
-        query_instruction=state.query_instruction,
-        logger=state.logger,
-    )
+    # Strategy 2: Lookup by module name — exact match first, then a unique
+    # substring match. Unknown names raise with suggestions instead of
+    # silently returning the highest-scoring search hit.
+    identifier = normalize_modname(module_identifier)
+    named_docs = [doc for doc in state.index.docs if doc.module_name]
 
-    if not results:
-        raise ValueError(f"No module found matching: {module_identifier}")
+    matches = [doc for doc in named_docs if doc.module_name == identifier]
+    if not matches:
+        matches = [doc for doc in named_docs if identifier in doc.module_name or doc.module_name in identifier]
 
-    # Get the top result and read its documentation
-    _, doc_idx = results[0]
-    doc = state.index.docs[doc_idx]
+    if len(matches) != 1:
+        weights = state.weights
+        results = compute_scores(
+            state.index,
+            module_identifier,
+            w_kw=weights.w_kw,
+            w_exact=weights.w_exact,
+            w_bm25=weights.w_bm25,
+            w_sem=weights.w_sem,
+            top_k=3,
+            query_instruction=state.query_instruction,
+            logger=state.logger,
+        )
+        suggestions = ", ".join(state.index.docs[doc_idx].module_name or "?" for _, doc_idx in results)
+        kind = "Ambiguous" if matches else "No"
+        raise ValueError(
+            f"{kind} module name: '{module_identifier}'. Closest matches: {suggestions}. "
+            f"Use search_modules to find the right module, then call get_module "
+            f"with its exact name or path."
+        )
 
-    # Validate and read the module file
+    doc = matches[0]
     full_path = (_PROJECT_ROOT / doc.path).resolve()
     return _read_module_file(full_path, doc.module_name or doc.path, state.logger)
 
@@ -983,6 +956,11 @@ def parse_arguments() -> argparse.Namespace:
         default=None,
         help=f"Optional query instruction prefix for BGE models. Use '{BGE_QUERY_INSTRUCTION}' for improved short query retrieval",
     )
+    parser.add_argument(
+        "--warmup",
+        action="store_true",
+        help="Load the index and embedding model (downloading the model if needed), run a test query, and exit",
+    )
 
     return parser.parse_args()
 
@@ -1113,7 +1091,17 @@ def main() -> None:
         logger.info("MCP Server starting up...")
 
         # Initialize server state (all startup errors go to startup.log)
-        initialize_server(args, logger)
+        state = initialize_server(args, logger)
+
+        if args.warmup:
+            logger.info("Warmup requested: loading embedding model via test query")
+            result = search_modules_impl("vpc networking", state)
+            logger.info(f"Warmup complete: test query returned {len(result.results)} results")
+            print(
+                f"Warmup complete: index ({len(state.index.docs)} modules) and "
+                f"embedding model loaded, test query returned {len(result.results)} results."
+            )
+            return
 
         # Switch to operational logging after successful initialization
         logger.info("Initialization complete, switching to mcp_server.log")

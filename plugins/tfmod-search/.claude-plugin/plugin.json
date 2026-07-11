@@ -1,0 +1,20 @@
+{
+  "name": "tfmod-search",
+  "displayName": "TFModSearch",
+  "version": "0.4.0",
+  "description": "Search current Terraform AWS module documentation before writing Terraform — hybrid keyword + BM25 + semantic search over all 54 community terraform-aws-modules.",
+  "author": {
+    "name": "Alexander Makeev",
+    "url": "https://github.com/SantyagoSeaman"
+  },
+  "homepage": "https://github.com/SantyagoSeaman/tfmodsearch",
+  "repository": "https://github.com/SantyagoSeaman/tfmodsearch",
+  "license": "MIT",
+  "keywords": ["terraform", "aws", "mcp", "search", "infrastructure"],
+  "mcpServers": {
+    "tfmod-search": {
+      "command": "uvx",
+      "args": ["tfmodsearch"]
+    }
+  }
+}

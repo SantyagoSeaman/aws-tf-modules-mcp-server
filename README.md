@@ -1,5 +1,6 @@
 # TFModSearch MCP Server
 
+[![PyPI](https://img.shields.io/pypi/v/tfmodsearch)](https://pypi.org/project/tfmodsearch/)
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -31,9 +32,12 @@ Think of it as an always-available, searchable reference card for every terrafor
 
 - [Why TFModSearch?](#-why-tfmodsearch)
 - [Installation](#-installation)
+  - [Plugin Install (Claude Code / Codex)](#plugin-install-claude-code--codex--recommended)
+  - [Quick Install (Any MCP Client)](#quick-install-any-mcp-client)
 - [Quick Start](#-quick-start)
   - [Claude Code CLI Integration](#claude-code-cli-integration)
   - [Claude Desktop Integration](#claude-desktop-integration)
+  - [Codex CLI Integration](#codex-cli-integration)
   - [GitHub Copilot Integration](#github-copilot-integration-vs-code)
 - [Usage](#-usage)
   - [Building the Index](#1-building-the-index)
@@ -49,9 +53,30 @@ Think of it as an always-available, searchable reference card for every terrafor
 
 ## 📦 Installation
 
-### Quick Install (No Clone Required)
+### Plugin Install (Claude Code / Codex — Recommended)
 
-The easiest way to use this MCP server is with `uvx` - no need to clone the repository.
+The plugin configures the MCP server automatically **and** adds workflow skills that make the agent search current module documentation before writing Terraform.
+
+**Claude Code:**
+```
+/plugin marketplace add SantyagoSeaman/tfmodsearch
+/plugin install tfmod-search@tfmodsearch
+```
+
+**Codex CLI:**
+```
+/plugin marketplace add SantyagoSeaman/tfmodsearch
+/plugin install tfmod-search@tfmodsearch
+```
+
+Both bundle:
+- The **tfmod-search MCP server** (runs via `uvx tfmodsearch` — [uv](https://github.com/astral-sh/uv) required)
+- **`aws-terraform-modules` skill** — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
+- **`/tf-module <query>` skill** — instant module lookup with a ready-to-paste snippet
+
+### Quick Install (Any MCP Client)
+
+The server is on PyPI — no need to clone the repository.
 
 **Install uv first** (if not already installed):
 ```bash
@@ -65,11 +90,13 @@ Then add to your MCP client config:
   "mcpServers": {
     "terraform-modules": {
       "command": "uvx",
-      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+      "args": ["tfmodsearch"]
     }
   }
 }
 ```
+
+> **Tip**: Run `uvx tfmodsearch --warmup` once after installing — it pre-downloads the embedding model (~220 MB) and verifies the server end-to-end, so the first real query is instant.
 
 > **Bundled and ready**: The pre-built search index and all 54 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `BAAI/bge-base-en-v1.5` embedding model — ~220 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
 
@@ -93,8 +120,8 @@ Then add to your MCP client config:
 
 ```bash
 # Clone the repository
-git clone https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server.git
-cd aws-tf-modules-mcp-server
+git clone https://github.com/SantyagoSeaman/tfmodsearch.git
+cd tfmodsearch
 
 # Create virtual environment and install dependencies
 uv venv --python 3.13
@@ -106,8 +133,8 @@ uv pip install -e .
 
 ```bash
 # Clone the repository
-git clone https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server.git
-cd aws-tf-modules-mcp-server
+git clone https://github.com/SantyagoSeaman/tfmodsearch.git
+cd tfmodsearch
 
 # Create virtual environment and install dependencies
 python -m venv .venv
@@ -144,16 +171,22 @@ python src/tfmod_search_cli.py search \
 
 #### Claude Code CLI Integration
 
-**Option 1: Using uvx (Recommended - No Clone Required)**
+> **Prefer the [plugin install](#plugin-install-claude-code--codex--recommended)** — it configures the server and adds the workflow skills in two commands.
 
-Add to your Claude Code settings (`~/.claude/settings.json`):
+**Option 1: Using uvx (No Clone Required)**
+
+```bash
+claude mcp add terraform-modules -- uvx tfmodsearch
+```
+
+Or add to your Claude Code settings (`~/.claude/settings.json`):
 
 ```json
 {
   "mcpServers": {
     "terraform-modules": {
       "command": "uvx",
-      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+      "args": ["tfmodsearch"]
     }
   }
 }
@@ -169,8 +202,8 @@ Add to your Claude Code settings (`~/.claude/settings.json`):
 ```bash
 # Add the MCP server (replace with your actual path)
 claude mcp add --transport stdio terraform-modules -- \
-  /absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python \
-  /absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py
+  /absolute/path/to/tfmodsearch/.venv/bin/python \
+  /absolute/path/to/tfmodsearch/src/tfmod_mcp_server.py
 
 # Verify the server was added
 claude mcp list
@@ -182,9 +215,9 @@ Or manually add to your Claude Code settings (`~/.claude/settings.json`):
 {
   "mcpServers": {
     "terraform-modules": {
-      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "command": "/absolute/path/to/tfmodsearch/.venv/bin/python",
       "args": [
-        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+        "/absolute/path/to/tfmodsearch/src/tfmod_mcp_server.py"
       ]
     }
   }
@@ -202,7 +235,7 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
   "mcpServers": {
     "terraform-modules": {
       "command": "uvx",
-      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+      "args": ["tfmodsearch"]
     }
   }
 }
@@ -219,13 +252,42 @@ Add to your Claude Desktop configuration (`~/Library/Application Support/Claude/
 {
   "mcpServers": {
     "terraform-modules": {
-      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "command": "/absolute/path/to/tfmodsearch/.venv/bin/python",
       "args": [
-        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+        "/absolute/path/to/tfmodsearch/src/tfmod_mcp_server.py"
       ]
     }
   }
 }
+```
+
+#### Codex CLI Integration
+
+> **Prefer the [plugin install](#plugin-install-claude-code--codex--recommended)** — it configures the server and adds the workflow skills in two commands.
+
+For manual setup, register the server globally:
+
+```bash
+codex mcp add tfmod-search -- uvx tfmodsearch
+```
+
+Or add to `~/.codex/config.toml` (global) or `.codex/config.toml` (per project):
+
+```toml
+[mcp_servers.tfmod-search]
+command = "uvx"
+args = ["tfmodsearch"]
+startup_timeout_sec = 30   # default 10s is tight while the embedding model loads
+```
+
+> **First run**: execute `uvx tfmodsearch --warmup` once beforehand — it downloads the embedding model (~220 MB) so server startup stays well within the timeout.
+
+To nudge Codex (or any agent) to use the server proactively, add a line to your project's `AGENTS.md` (or `CLAUDE.md` for Claude Code):
+
+```markdown
+Before writing Terraform that uses AWS, call the tfmod-search MCP server:
+search_modules to find the module, then get_module for current variable
+names and versions. Do not write module blocks from memory.
 ```
 
 #### GitHub Copilot Integration (VS Code)
@@ -242,7 +304,7 @@ Add the MCP server to GitHub Copilot in VS Code (requires VS Code 1.99+):
     "terraform-modules": {
       "type": "stdio",
       "command": "uvx",
-      "args": ["git+https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server"]
+      "args": ["tfmodsearch"]
     }
   }
 }
@@ -257,9 +319,9 @@ Add the MCP server to GitHub Copilot in VS Code (requires VS Code 1.99+):
   "servers": {
     "terraform-modules": {
       "type": "stdio",
-      "command": "/absolute/path/to/aws-tf-modules-mcp-server/.venv/bin/python",
+      "command": "/absolute/path/to/tfmodsearch/.venv/bin/python",
       "args": [
-        "/absolute/path/to/aws-tf-modules-mcp-server/src/tfmod_mcp_server.py"
+        "/absolute/path/to/tfmodsearch/src/tfmod_mcp_server.py"
       ]
     }
   }
@@ -453,8 +515,8 @@ Module description and documentation...
 
 ```bash
 # Clone the repository
-git clone https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server.git
-cd aws-tf-modules-mcp-server
+git clone https://github.com/SantyagoSeaman/tfmodsearch.git
+cd tfmodsearch
 
 # Install with development dependencies
 uv pip install -e ".[dev]"
@@ -513,10 +575,11 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
 - **MCP Server** (23 tests): `search_modules`, `get_module`, and `modules_list` tools, security validation, integration workflows
+- **End-to-End** (20 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill contracts for Claude Code and Codex, live plugin install via the `claude` CLI
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
 
-**Total**: 239 integration tests
+**Total**: 259 tests (integration + e2e)
 
 ## 🏗️ Architecture
 
@@ -721,7 +784,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 📞 Support
 
 For questions, issues, or feature requests:
-- Open an issue on [GitHub Issues](https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/issues)
+- Open an issue on [GitHub Issues](https://github.com/SantyagoSeaman/tfmodsearch/issues)
 - Check existing issues for common problems and solutions
 
 ---

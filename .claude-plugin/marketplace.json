@@ -1,0 +1,17 @@
+{
+  "name": "tfmodsearch",
+  "owner": {
+    "name": "Alexander Makeev",
+    "url": "https://github.com/SantyagoSeaman"
+  },
+  "description": "TFModSearch — current Terraform AWS module documentation search for AI agents",
+  "plugins": [
+    {
+      "name": "tfmod-search",
+      "source": "./plugins/tfmod-search",
+      "description": "Search current terraform-aws-modules documentation before writing Terraform: MCP server (hybrid keyword + BM25 + semantic search) plus workflow skills",
+      "displayName": "TFModSearch",
+      "keywords": ["terraform", "aws", "mcp", "search", "infrastructure"]
+    }
+  ]
+}
