@@ -29,7 +29,7 @@ multi-agent workflows). Budget: roughly one agent per module.
    ```bash
    python src/tfmod_search_cli.py index \
      --docs_dir ./modules/terraform-aws-modules \
-     --index_path ./model/tfmod_bge_base_index.pkl
+     --index_path ./model/tfmod_e5_small_index.pkl
    ```
 
 4. **Run the suite**, searchability first:

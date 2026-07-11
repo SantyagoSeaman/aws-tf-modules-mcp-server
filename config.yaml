@@ -1,6 +1,6 @@
 # TFModSearch MCP Server Configuration
 #
-# Default embedding model: BAAI/bge-base-en-v1.5
+# Default embedding model: intfloat/e5-small-v2
 # Model is configured at index build time via CLI --model argument
 
 # Logging level for application loggers
@@ -8,9 +8,11 @@
 # Valid values: DEBUG, INFO, WARNING, ERROR, CRITICAL
 log_level: INFO
 
-# Optional query instruction for BGE models
-# BGE v1.5 works well without instruction, but this can improve short query retrieval
-# Set to null/empty to disable (default), or use the BGE instruction:
+# Optional query instruction prefix, prepended to the query before embedding.
+# Set to null/empty to disable (default). Benchmarked with e5-small-v2's own
+# "query: " / "passage: " convention on this corpus — no measurable retrieval
+# gain over leaving this unset, so it stays disabled. For BGE models, the
+# equivalent instruction is:
 # query_instruction: "Represent this sentence for searching relevant passages: "
 query_instruction: null
 

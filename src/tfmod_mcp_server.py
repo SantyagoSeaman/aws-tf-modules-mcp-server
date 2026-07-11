@@ -935,7 +935,7 @@ def parse_arguments() -> argparse.Namespace:
     parser.add_argument(
         "--index_path",
         type=str,
-        help="Path to the search index file (.pkl). Defaults to './model/tfmod_bge_base_index.pkl'",
+        help="Path to the search index file (.pkl). Defaults to './model/tfmod_e5_small_index.pkl'",
     )
     parser.add_argument("--config", type=str, default="config.yaml", help="Path to YAML config file")
     parser.add_argument(
@@ -1042,7 +1042,7 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
             logger.error(
                 f"Index file not found at: {index_path}\n"
                 f"Please specify a valid path using --index_path argument or ensure "
-                f"the default index exists at ./model/tfmod_bge_base_index.pkl"
+                f"the default index exists at ./model/tfmod_e5_small_index.pkl"
             )
             sys.exit(1)
 

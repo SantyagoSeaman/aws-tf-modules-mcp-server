@@ -11,7 +11,7 @@
 - **Purpose**: Static lookup utility that returns whether a given EC2 instance type supports the `ebs_optimized` flag
 - **Service**: AWS EC2 (Elastic Compute Cloud)
 - **Category**: Utility, Compute
-- **Keywords**: ebs-optimized, ebs, ec2, instance-type, launch-configuration, autoscaling-group, deprecated, archived, lookup-table, hardcoded-map, ebs-optimized-flag, instance-compatibility
+- **Keywords**: ebs-optimized, ebs, ec2, storage, optimization, instance-type, launch-configuration, autoscaling-group, deprecated, archived, lookup-table, hardcoded-map, ebs-optimized-flag, instance-compatibility
 - **Use For**: maintaining legacy Terraform code that already depends on this module, historical reference — for all new code, use the `aws_ec2_instance_type` data source instead (see notice below)
 
 ## Important Notice — Prefer the Data Source for New Code

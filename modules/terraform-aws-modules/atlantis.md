@@ -12,7 +12,7 @@
 - **Purpose**: Deploy Atlantis as a single always-on ECS Fargate task, fronted by an ALB, for pull-request-driven Terraform plan/apply automation
 - **Service**: AWS ECS Fargate, Application Load Balancer, ACM, Route53, EFS
 - **Category**: DevOps, CI/CD, Infrastructure Automation
-- **Keywords**: atlantis, terraform-automation, gitops, ecs-fargate, fargate, alb, webhook, github, gitlab, pull-request, infrastructure-as-code, ci-cd, secrets-manager, efs, terraform-plan
+- **Keywords**: atlantis, terraform-automation, automation, workflow, gitops, ecs-fargate, fargate, alb, webhook, github, gitlab, pull-request, infrastructure-as-code, ci-cd, secrets-manager, efs, terraform-plan
 
 ## Description
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.6.0] - 2026-07-11
+
+[0.6.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.6.0
+
+The efficiency release: a smaller, faster embedding model matches the previous default's retrieval quality exactly, backed by a full-catalog benchmark and two keyword-matching fixes.
+
+### Changed
+
+- **Default embedding model switched from `BAAI/bge-base-en-v1.5` to `intfloat/e5-small-v2`**: benchmarked 5 candidate models against the full 54-module/162-query golden set (exact-name, keyword, and natural-language queries per module) using production search weights. `e5-small-v2` is the only smaller candidate that matches the old default's 100% success rate — at ~3x smaller (~138 MB vs ~419 MB) and ~3x lower query latency (~8ms vs ~23ms), with no weight retuning or query/passage prompt-prefix convention needed (both were tried; neither moved the needle on this corpus). See the "Embedding Model Comparison" section in README.md for the full comparison table, including the other candidates evaluated (`gte-small`, `bge-small-en-v1.5`, `all-MiniLM-L12-v2`) and why they weren't selected.
+- **Pre-built index renamed**: `model/tfmod_bge_base_index.pkl` → `model/tfmod_e5_small_index.pkl`, consistent with the existing gte-small→bge-base rename precedent.
+- **`test_model_comparison.py` extended** to a 3-way comparison (`gte-small`, `bge-base-en-v1.5`, `e5-small-v2`); the pairwise summary logic was generalized to N models.
+
+### Fixed
+
+- **Closed 3 keyword-matching gaps** found during the model comparison: added `virtual-private-cloud` to `vpc.md`, `automation` + `workflow` to `atlantis.md`, and `storage` + `optimization` to `ebs-optimized.md`. These were queries whose tokenized form (e.g. two space-separated words) never matched an existing hyphenated compound keyword (e.g. `terraform-automation`), so the keyword-scoring component silently contributed nothing and the query relied on embedding quality alone. The fix benefits every embedding model uniformly, not just the new default.
+
 ## [0.5.0] - 2026-07-11
 
 [0.5.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.5.0

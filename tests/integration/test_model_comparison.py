@@ -2,11 +2,14 @@
 Integration tests comparing embedding models for search quality and performance.
 
 This test suite compares:
-- thenlper/gte-small (384 dims, ~67MB)
-- BAAI/bge-base-en-v1.5 (768 dims, ~220MB)
+- thenlper/gte-small (384 dims, ~65MB)
+- BAAI/bge-base-en-v1.5 (768 dims, ~419MB) — previous default (through 0.5.0)
+- intfloat/e5-small-v2 (384 dims, ~138MB) — current default (since 0.6.0)
 
 Tests verify that target modules appear in top-3 results for auto-generated
-queries of varying lengths, and measures timing for each model.
+queries of varying lengths, and measures timing for each model. See the
+"Embedding Model Comparison" section in README.md for the full 54-module /
+162-query benchmark that motivated the switch to e5-small-v2.
 """
 
 import logging
@@ -22,6 +25,7 @@ from tfmod_search_lib import build_index, compute_scores, load_index, save_index
 MODELS = [
     "thenlper/gte-small",
     "BAAI/bge-base-en-v1.5",
+    "intfloat/e5-small-v2",
 ]
 
 # Target modules for testing
@@ -189,11 +193,28 @@ def bge_base_index(tmp_path_factory, docs_dir, test_logger):
 
 
 @pytest.fixture(scope="module")
-def model_indexes(gte_small_index, bge_base_index):
-    """Provide both indexes keyed by model name."""
+def e5_small_index(tmp_path_factory, docs_dir, test_logger):
+    """Build and return search index using intfloat/e5-small-v2 model."""
+    model_name = "intfloat/e5-small-v2"
+    index_path = tmp_path_factory.mktemp("indexes") / "e5_small_index.pkl"
+
+    test_logger.info(f"Building index with {model_name}...")
+    start = time.time()
+    idx = build_index(docs_dir, model_name=model_name, logger=test_logger)
+    save_index(idx, str(index_path), logger=test_logger)
+    duration = time.time() - start
+
+    test_logger.info(f"Built {model_name} index in {duration:.2f}s ({len(idx.docs)} docs)")
+    return load_index(str(index_path), logger=test_logger)
+
+
+@pytest.fixture(scope="module")
+def model_indexes(gte_small_index, bge_base_index, e5_small_index):
+    """Provide all indexes keyed by model name."""
     return {
         "thenlper/gte-small": gte_small_index,
         "BAAI/bge-base-en-v1.5": bge_base_index,
+        "intfloat/e5-small-v2": e5_small_index,
     }
 
 
@@ -241,11 +262,11 @@ def test_search_finds_target_in_top3(model, query_case, model_indexes, test_logg
     Test that the target module appears in top-3 search results.
 
     This test is parametrized across:
-    - 2 models (gte-small, bge-base-en-v1.5)
+    - 3 models (gte-small, bge-base-en-v1.5, e5-small-v2)
     - 3 modules (s3-bucket, rds, ec2-instance)
     - 5 query types per module (15 queries total)
 
-    Total: 2 × 15 = 30 test cases
+    Total: 3 × 15 = 45 test cases
     """
     index = model_indexes[model]
 
@@ -349,30 +370,20 @@ def test_print_timing_summary(request):
             for f in failures:
                 print(f"    - [{f.query_type}] '{f.query[:40]}...' -> {f.target_module}")
 
-    # Comparison
-    if len(_timing_results) == 2:
+    # Comparison across all models (generalized to N models, not just a pair)
+    if len(_timing_results) >= 2:
         print("\n" + "=" * 80)
         print("COMPARISON")
         print("=" * 80)
 
-        gte = _timing_results.get("thenlper/gte-small")
-        bge = _timing_results.get("BAAI/bge-base-en-v1.5")
+        rows = [(model, _timing_results[model]) for model in MODELS if model in _timing_results]
+        fastest = min(rows, key=lambda r: r[1].avg_duration_ms)
 
-        if gte and bge:
-            print("\n  Speed comparison:")
-            print(f"    gte-small avg:     {gte.avg_duration_ms:.2f} ms")
-            print(f"    bge-base avg:      {bge.avg_duration_ms:.2f} ms")
-
-            if gte.avg_duration_ms > 0:
-                speedup = gte.avg_duration_ms / bge.avg_duration_ms
-                if speedup > 1:
-                    print(f"    bge-base is {speedup:.2f}x faster")
-                else:
-                    print(f"    gte-small is {1 / speedup:.2f}x faster")
-
-            print("\n  Success rate comparison:")
-            print(f"    gte-small:         {gte.success_rate * 100:.1f}%")
-            print(f"    bge-base:          {bge.success_rate * 100:.1f}%")
+        print(f"\n  {'model':<28} {'avg latency':>12} {'success rate':>13}")
+        print(f"  {'-' * 28} {'-' * 12} {'-' * 13}")
+        for model, timings in rows:
+            speed_note = "  (fastest)" if model == fastest[0] else ""
+            print(f"  {model:<28} {timings.avg_duration_ms:>9.2f} ms {timings.success_rate * 100:>12.1f}%{speed_note}")
 
     print("\n" + "=" * 80)
 

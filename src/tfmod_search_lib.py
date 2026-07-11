@@ -2,7 +2,7 @@
 Reusable library for hybrid search over Markdown docs describing Terraform modules.
 CPU-only, sub-second queries for hundreds of docs.
 
-Default embedding model: BAAI/bge-base-en-v1.5
+Default embedding model: intfloat/e5-small-v2
 
 Exports:
 - initialize_nltk() -> None
@@ -14,7 +14,7 @@ Exports:
 - extract_description(text, max_length) -> str
 - get_default_index_path() -> Path
 - resolve_index_path(index_path) -> Path
-- DEFAULT_MODEL_NAME: str (BAAI/bge-base-en-v1.5)
+- DEFAULT_MODEL_NAME: str (intfloat/e5-small-v2)
 - BGE_QUERY_INSTRUCTION: str (optional query prefix for BGE models)
 """
 
@@ -60,7 +60,7 @@ _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
 _MODEL_CACHE: dict[str, SentenceTransformer] = {}
 
 # Default embedding model
-DEFAULT_MODEL_NAME = "BAAI/bge-base-en-v1.5"
+DEFAULT_MODEL_NAME = "intfloat/e5-small-v2"
 
 # Optional query instruction for BGE models (improves short query retrieval)
 # BGE v1.5 works well without instruction, but this can provide slight improvement
@@ -496,7 +496,7 @@ def get_default_index_path() -> Path:
     Get the default index path relative to the project root.
 
     Returns the standard location for the search index file:
-    `<project_root>/model/tfmod_bge_base_index.pkl`
+    `<project_root>/model/tfmod_e5_small_index.pkl`
 
     Returns:
         Path object pointing to the default index location
@@ -504,9 +504,9 @@ def get_default_index_path() -> Path:
     Example:
         >>> default_path = get_default_index_path()
         >>> print(default_path)
-        /path/to/project/model/tfmod_bge_base_index.pkl
+        /path/to/project/model/tfmod_e5_small_index.pkl
     """
-    return _PROJECT_ROOT / "model" / "tfmod_bge_base_index.pkl"
+    return _PROJECT_ROOT / "model" / "tfmod_e5_small_index.pkl"
 
 
 def resolve_index_path(index_path: str | None = None) -> Path:
@@ -528,7 +528,7 @@ def resolve_index_path(index_path: str | None = None) -> Path:
         >>> # Use default path
         >>> path = resolve_index_path()
         >>> print(path)
-        /path/to/project/model/tfmod_bge_base_index.pkl
+        /path/to/project/model/tfmod_e5_small_index.pkl
 
         >>> # Use custom absolute path
         >>> path = resolve_index_path("/custom/path/index.pkl")
@@ -664,7 +664,7 @@ def build_index(
     Args:
         docs_dir: Directory containing Terraform module .md files
         model_name: Sentence transformer model for embeddings
-                   (default: BAAI/bge-base-en-v1.5)
+                   (default: intfloat/e5-small-v2)
         logger: Logger instance for logging operations
 
     Returns:
@@ -674,7 +674,7 @@ def build_index(
         RuntimeError: If no valid Markdown documents found in docs_dir
 
     Notes:
-        - Downloads the embedding model on first use (~220MB for bge-base-en-v1.5)
+        - Downloads the embedding model on first use (~130MB for e5-small-v2)
         - All processing is CPU-only, no GPU required
         - Embedding generation may take 1-5 minutes for hundreds of documents
         - Files that fail to parse are silently skipped
@@ -761,7 +761,7 @@ def save_index(index: SearchIndex, path: str, logger: logging.Logger) -> None:
 
     Example:
         >>> logger = logging.getLogger(__name__)
-        >>> save_index(index, "./model/tfmod_bge_base_index.pkl", logger)
+        >>> save_index(index, "./model/tfmod_e5_small_index.pkl", logger)
     """
     logger.info(f"Saving index to {path}")
     with open(path, "wb") as f:
@@ -798,7 +798,7 @@ def load_index(path: str, logger: logging.Logger) -> SearchIndex:
 
     Example:
         >>> logger = logging.getLogger(__name__)
-        >>> index = load_index("./model/tfmod_bge_base_index.pkl", logger)
+        >>> index = load_index("./model/tfmod_e5_small_index.pkl", logger)
         >>> print(f"Loaded {len(index.docs)} documents")
     """
     logger.info(f"Loading index from {path}")

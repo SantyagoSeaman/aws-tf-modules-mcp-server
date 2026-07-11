@@ -11,7 +11,7 @@
 - **Purpose**: Terraform module that creates and configures an AWS VPC and all its supporting networking resources (subnets, route tables, gateways, NACLs, DHCP options, VPN/customer gateways, IPAM CIDR allocation, VPC Block Public Access)
 - **Service**: AWS VPC (Virtual Private Cloud)
 - **Category**: Networking, Infrastructure
-- **Keywords**: vpc, subnet, nat-gateway, internet-gateway, route-table, network-acl, ipv6, cidr, availability-zone, vpc-endpoints, flow-logs, ipam, vpn-gateway, transit-gateway, private-subnet, public-subnet, database-subnet
+- **Keywords**: vpc, virtual-private-cloud, subnet, nat-gateway, internet-gateway, route-table, network-acl, ipv6, cidr, availability-zone, vpc-endpoints, flow-logs, ipam, vpn-gateway, transit-gateway, private-subnet, public-subnet, database-subnet
 - **Use For**: multi-tier application hosting, microservices networking, hybrid cloud connectivity via VPN/Direct Connect, isolated database/cache/analytics subnet hosting, container orchestration networking (EKS/ECS), high-availability multi-AZ architectures, regulatory-compliance network segmentation (PCI-DSS, HIPAA), hub-and-spoke topologies with Transit Gateway, zero-trust networking with private subnets and VPC endpoints, IPAM-managed enterprise IP address space, dual-stack IPv4/IPv6 workloads, AWS Outposts hybrid infrastructure
 
 ## Description

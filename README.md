@@ -23,8 +23,8 @@ Think of it as an always-available, searchable reference card for every terrafor
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
-- **Fast & Efficient**: Pre-built search index with CPU-only inference using `BAAI/bge-base-en-v1.5` model
-- **Ready to Use**: Includes pre-built index (`model/tfmod_bge_base_index.pkl`) with embeddings from `BAAI/bge-base-en-v1.5` model and curated Terraform AWS module documentation
+- **Fast & Efficient**: Pre-built search index with CPU-only inference using `intfloat/e5-small-v2` model
+- **Ready to Use**: Includes pre-built index (`model/tfmod_e5_small_index.pkl`) with embeddings from `intfloat/e5-small-v2` model and curated Terraform AWS module documentation
 - **Comprehensive Catalog**: Access to terraform-aws-modules documentation compiled from official sources with rich metadata
 - **Security-First**: Built-in path validation and access controls for safe file operations
 - **Configurable Weights**: Fine-tune search scoring through YAML config or CLI arguments
@@ -104,9 +104,9 @@ Then add to your MCP client config:
 }
 ```
 
-> **Tip**: Run `uvx tfmodsearch --warmup` once after installing — it pre-downloads the embedding model (~220 MB) and verifies the server end-to-end, so the first real query is instant.
+> **Tip**: Run `uvx tfmodsearch --warmup` once after installing — it pre-downloads the embedding model (~130 MB) and verifies the server end-to-end, so the first real query is instant.
 
-> **Bundled and ready**: The pre-built search index and all 54 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `BAAI/bge-base-en-v1.5` embedding model — ~220 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
+> **Bundled and ready**: The pre-built search index and all 54 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `intfloat/e5-small-v2` embedding model — ~130 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
 
 > **Note**: If you get "command not found" error, use the full path to `uvx`:
 > ```bash
@@ -156,7 +156,7 @@ pip install -e .
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_bge_base_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_e5_small_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
@@ -165,7 +165,7 @@ python src/tfmod_search_cli.py index \
   --docs_dir ./modules/terraform-aws-modules
 ```
 
-**Note**: The first run will download the `BAAI/bge-base-en-v1.5` model (~220MB).
+**Note**: The first run will download the `intfloat/e5-small-v2` model (~130MB).
 
 ### 2. Test the Search (CLI)
 
@@ -366,13 +366,13 @@ Build or rebuild the search index from your module documentation:
 ```bash
 python src/tfmod_search_cli.py index \
   --docs_dir ./modules/terraform-aws-modules \
-  --index_path ./model/tfmod_bge_base_index.pkl
+  --index_path ./model/tfmod_e5_small_index.pkl
 ```
 
 **Options**:
 - `--docs_dir`: Directory containing Terraform module markdown files (required)
-- `--index_path`: Output path for the pickled index file (optional, defaults to `./model/tfmod_bge_base_index.pkl`)
-- `--model`: Sentence transformer model to use (default: `BAAI/bge-base-en-v1.5`)
+- `--index_path`: Output path for the pickled index file (optional, defaults to `./model/tfmod_e5_small_index.pkl`)
+- `--model`: Sentence transformer model to use (default: `intfloat/e5-small-v2`)
 
 ### 2. CLI Search (Standalone)
 
@@ -595,11 +595,11 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 This repository includes:
 
-- **Pre-built Search Index** (`model/tfmod_bge_base_index.pkl`):
-  - Ready-to-use search index with pre-computed embeddings using `BAAI/bge-base-en-v1.5` model
+- **Pre-built Search Index** (`model/tfmod_e5_small_index.pkl`):
+  - Ready-to-use search index with pre-computed embeddings using `intfloat/e5-small-v2` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
   - Includes 54 curated Terraform AWS modules
-  - File size: ~4.35 MB
+  - File size: ~4.27 MB
 
 - **Curated Module Documentation** (`modules/terraform-aws-modules/`):
   - Compiled documentation for 54 Terraform AWS modules covering compute, storage, networking, databases, security, and more
@@ -738,26 +738,19 @@ All scores are min-max normalized before weighted combination.
 
 ### Embedding Model Comparison
 
-The project supports multiple embedding models. Here are benchmark results comparing `thenlper/gte-small` and `BAAI/bge-base-en-v1.5`:
+The project supports any sentence-transformers model via `--model`. The table below benchmarks 5 candidates against the **full catalog**: all 54 modules, each queried 3 ways (exact name, keyword, natural language) — 162 queries per model — using the production search weights from `config.yaml`.
 
-| Metric | thenlper/gte-small | BAAI/bge-base-en-v1.5 |
-|--------|-------------------|----------------------|
-| **Embedding Dimensions** | 384 | 768 |
-| **Model Size** | ~67 MB | ~220 MB |
-| **Index Size** | ~4.30 MB | ~4.38 MB |
-| **Index Build Time** | ~4.2s | ~7.3s |
-| **Avg Query Time** | ~14 ms | ~35 ms |
-| **Success Rate** (top-3) | 100% | 100% |
+| Model | Dim | Size | Build | Avg Query | Success Rate (top-3) |
+|---|---:|---:|---:|---:|---:|
+| **`intfloat/e5-small-v2`** ⭐ *(default, since 0.6.0)* | 384 | ~138 MB | ~4.1s | ~8 ms | **100.0%** |
+| `BAAI/bge-base-en-v1.5` *(default through 0.5.0)* | 768 | ~419 MB | ~7.5s | ~23 ms | 100.0% |
+| `thenlper/gte-small` | 384 | ~65 MB | ~3.9s | ~8 ms | 98.8% |
+| `BAAI/bge-small-en-v1.5` | 384 | ~129 MB | ~4.1s | ~8 ms | 98.8% |
+| `sentence-transformers/all-MiniLM-L12-v2` | 384 | ~129 MB | ~3.0s | ~8 ms | 98.1% |
 
-**Test conditions**: 15 queries across 3 modules (s3-bucket, rds, ec2-instance) with 5 query types each (1-word, 2-word, short-phrase, medium-phrase, long natural language query).
+**Why `e5-small-v2`**: it's the only smaller model that matches `bge-base-en-v1.5`'s 100% success rate on this corpus — at **~3x smaller** and **~3x faster per query**, with no weight retuning or query/passage prompt prefixes required (both were tried; neither moved the needle on this corpus). `gte-small` is the smallest option (~65 MB, ~6x smaller than the old default) and is a reasonable choice if binary size matters more than the last percentage point of recall — see `tests/integration/test_model_comparison.py` for a repo-committed, CI-run comparison across all three (`gte-small`, `bge-base-en-v1.5`, `e5-small-v2`). `bge-small-en-v1.5` and `all-MiniLM-L12-v2` were also evaluated and are documented here for completeness, but weren't selected: no clear edge over `gte-small`/`e5-small-v2` on either size or accuracy.
 
-**Key findings**:
-- Both models achieve 100% success rate for finding target modules in top-3 results
-- `gte-small` is ~2.5x faster per query
-- `bge-base-en-v1.5` provides better similarity distribution for semantic search (addresses narrow clustering)
-- BGE v1.5 supports optional query instruction prefix for improved short query retrieval
-
-**Default model**: `BAAI/bge-base-en-v1.5` is the default for better retrieval quality with larger embedding dimensions.
+To use a different model, rebuild the index with `--model <name>` (see [Building the Index](#1-building-the-index)) and point `--index_path` / `config.yaml` at the new file.
 
 ## 🤝 Contributing
 

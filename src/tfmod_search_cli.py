@@ -34,7 +34,7 @@ def cmd_index(args, logger: logging.Logger):
         args: Namespace object with the following attributes:
             - docs_dir (str): Directory containing .md files to index
             - index_path (str): Output path for the pickled index file
-            - model (str): Sentence transformer model name (default: BAAI/bge-base-en-v1.5)
+            - model (str): Sentence transformer model name (default: intfloat/e5-small-v2)
 
     Returns:
         None. Prints summary and saves index to disk.
@@ -42,8 +42,8 @@ def cmd_index(args, logger: logging.Logger):
     Example:
         $ python tfmod_search_cli.py index \\
             --docs_dir ./modules/terraform-aws-modules \\
-            --index_path ./model/tfmod_bge_base_index.pkl \\
-            --model BAAI/bge-base-en-v1.5
+            --index_path ./model/tfmod_e5_small_index.pkl \\
+            --model intfloat/e5-small-v2
     """
     logger.info("Starting index command")
     logger.info(f"  docs_dir: {args.docs_dir}")
@@ -97,7 +97,7 @@ def cmd_search(args, logger: logging.Logger):
 
     Example:
         $ python tfmod_search_cli.py search \\
-            --index_path ./model/tfmod_bge_base_index.pkl \\
+            --index_path ./model/tfmod_e5_small_index.pkl \\
             --query "s3 bucket with encryption" \\
             --top_k 5
     """
@@ -160,7 +160,7 @@ def build_argparser():
     p_idx.add_argument(
         "--index_path",
         type=str,
-        help="Output path for the pickled search index file. If not specified, uses './model/tfmod_bge_base_index.pkl'",
+        help="Output path for the pickled search index file. If not specified, uses './model/tfmod_e5_small_index.pkl'",
     )
     p_idx.add_argument(
         "--model",
@@ -174,7 +174,7 @@ def build_argparser():
     p_s.add_argument(
         "--index_path",
         type=str,
-        help="Path to the pickled search index file. If not specified, uses './model/tfmod_bge_base_index.pkl'",
+        help="Path to the pickled search index file. If not specified, uses './model/tfmod_e5_small_index.pkl'",
     )
     p_s.add_argument("--query", required=True, help="Natural language search query (e.g., 's3 bucket with encryption')")
     p_s.add_argument("--top_k", type=int, default=10, help="Number of top results to return (default: 10)")

@@ -41,7 +41,7 @@ def built_wheel(tmp_path_factory) -> Path:
 def test_wheel_payload(built_wheel):
     names = zipfile.ZipFile(built_wheel).namelist()
 
-    assert "model/tfmod_bge_base_index.pkl" in names
+    assert "model/tfmod_e5_small_index.pkl" in names
     assert "config.yaml" in names
     for module in ("tfmod_mcp_server.py", "tfmod_search_cli.py", "tfmod_search_lib.py"):
         assert module in names
