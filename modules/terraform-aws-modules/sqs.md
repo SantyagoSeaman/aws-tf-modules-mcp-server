@@ -6,96 +6,97 @@
 - **Source**: `terraform-aws-modules/sqs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-sqs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest
-- **Latest Version**: 5.2.1
-- **Purpose**: Creates and manages Amazon SQS queues with support for standard and FIFO queues, dead letter queues, encryption, and IAM policies
+- **Latest Version**: 5.2.2 (Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Purpose**: Creates and manages Amazon SQS standard and FIFO queues, including an optional companion dead-letter queue, KMS/SSE encryption, and IAM queue policies
 - **Service**: AWS SQS (Simple Queue Service)
 - **Category**: Messaging, Integration, Application Services
-- **Keywords**: sqs, queue, message-queue, fifo-queue, dead-letter-queue, dlq, kms-encryption, async-processing, event-driven, microservices, serverless, lambda-trigger
-- **Use For**: Asynchronous microservices communication, decoupling application components, task queue management, batch job processing, event-driven architectures, message buffering, order processing systems, serverless application integration, background job processing
+- **Keywords**: sqs, queue, message-queue, fifo-queue, dead-letter-queue, dlq, redrive-policy, kms-encryption, sse, async-processing, event-driven, microservices, serverless, lambda-trigger, queue-policy
+- **Use For**: asynchronous microservices communication, decoupling application components, background/batch job processing, event-driven architectures, message buffering and load leveling, order processing with FIFO ordering, serverless (Lambda/SNS/EventBridge) integration, fault-tolerant message handling via DLQ
 
 ## Description
 
-The Terraform AWS SQS module provides a complete solution for creating and managing Amazon Simple Queue Service (SQS) queues. Amazon SQS is a fully managed message queuing service enabling asynchronous communication between distributed application components with reliable, scalable, and cost-effective message delivery. The module supports both standard queues (maximum throughput, at-least-once delivery) and FIFO queues (exactly-once processing, strict message ordering).
+The Terraform AWS SQS module creates and configures Amazon Simple Queue Service (SQS) queues, the fully managed message-queuing service used for asynchronous, decoupled communication between distributed application components. A single module call manages one `aws_sqs_queue` (standard or FIFO), and can optionally provision a paired dead-letter queue (DLQ), IAM queue policies for both the primary queue and the DLQ, and redrive/redrive-allow policies — all with sane, production-ready defaults.
 
-This module simplifies SQS queue management with infrastructure-as-code configuration for queue attributes, encryption settings, access policies, and AWS service integrations. It handles dead letter queue configuration for automatic routing of failed messages to a separate queue for analysis. The module supports multiple encryption options including SQS-managed keys (SSE-SQS, enabled by default) and customer-managed KMS keys for enhanced security and compliance.
+Encryption is server-side by default using SQS-owned keys (SSE-SQS), with an easy switch to a customer-managed KMS key (CMK) via `kms_master_key_id`. The module exposes fine-grained control over queue behavior (visibility timeout, message retention, delivery delay, long polling, max message size, FIFO deduplication/throughput scope) and lets every DLQ attribute be overridden independently of the source queue via `dlq_*` variables (falling back to the source queue's value when unset). Queue and DLQ IAM policies are built from a structured `queue_policy_statements` / `dlq_queue_policy_statements` map (compiled with `aws_iam_policy_document`), avoiding hand-written JSON.
 
-The module enables advanced features such as content-based deduplication for FIFO queues, configurable visibility timeouts, message delay capabilities, and long polling. It provides static ARN outputs to prevent circular dependencies with Step Functions and integrates seamlessly with Lambda, SNS, and EventBridge for building resilient distributed systems.
+The module also emits static ARN outputs (`queue_arn_static`, `dead_letter_queue_arn_static`) computed from account ID/partition/region rather than the resource attribute, specifically to avoid Terraform cycle errors when a queue ARN is referenced by a resource that the queue policy also depends on (e.g., Step Functions state machines). A `wrappers` submodule is included for creating many queues from one `for_each`-style block, primarily for Terragrunt-driven, multi-instance deployments.
 
 ## Key Features
 
-- **Standard Queue Support**: High-throughput queues with at-least-once delivery and best-effort ordering
-- **FIFO Queue Support**: Exactly-once processing with strict message ordering (automatically adds `.fifo` suffix)
-- **Dead Letter Queue (DLQ)**: Built-in DLQ creation with configurable redrive policies and maxReceiveCount
-- **SQS-Managed Encryption**: Server-side encryption enabled by default using AWS-owned keys (free, no management overhead)
-- **KMS Encryption**: Optional customer-managed KMS encryption with configurable data key reuse periods (60-86,400 seconds)
-- **Content-Based Deduplication**: Automatic FIFO message deduplication based on message content hash
-- **Queue Policies**: IAM policy creation for both primary and dead letter queues with fine-grained access control
-- **Static ARN Outputs**: Prevents circular dependencies in Step Functions and other services
-- **Long Polling Support**: Configurable receive wait times (0-20 seconds) to reduce costs
-- **Flexible Naming**: Auto-generated names or custom names with optional prefixes
-- **Conditional Creation**: All resources can be conditionally created via `create` flags
-- **Visibility Timeout**: Configurable message visibility (0-43,200 seconds / 12 hours max)
-- **Message Retention**: Configurable retention period (60 seconds to 14 days, default 4 days)
-- **Message Delay**: Delivery delay configuration (0-900 seconds / 15 minutes max)
-- **Comprehensive Tagging**: Full tag support for cost allocation and resource organization
+- **Standard & FIFO Queues**: `fifo_queue = true` creates a FIFO queue with exactly-once processing and strict ordering; the module auto-appends the `.fifo` suffix to the name
+- **Dead Letter Queue (DLQ)**: `create_dlq = true` provisions a matching DLQ and wires up the redrive policy automatically (default `maxReceiveCount = 5` if not overridden)
+- **Independent DLQ Tuning**: Any `dlq_*` variable (retention, visibility timeout, KMS key, SSE, FIFO throughput, tags, etc.) overrides the corresponding source-queue setting just for the DLQ
+- **Redrive Allow Policy**: `create_dlq_redrive_allow_policy` (default `true`) automatically restricts the DLQ's redrive permission to only the source queue (`redrivePermission = "byQueue"`)
+- **SSE / KMS Encryption**: SQS-managed SSE is enabled by default (`sqs_managed_sse_enabled = true`); setting `kms_master_key_id` switches the queue to customer-managed KMS encryption (SSE is automatically disabled when a KMS key is set)
+- **Structured IAM Queue Policies**: `queue_policy_statements` / `dlq_queue_policy_statements` build policies via `aws_iam_policy_document` with support for `source_queue_policy_documents` and `override_queue_policy_documents` merging
+- **Static ARN Outputs**: `queue_arn_static` / `dead_letter_queue_arn_static` prevent circular dependencies (e.g., Step Functions referencing the queue in both a policy and a state machine definition)
+- **Content-Based Deduplication & Scope**: FIFO-specific `content_based_deduplication`, `deduplication_scope`, and `fifo_throughput_limit` for high-throughput FIFO configurations
+- **Long Polling**: `receive_wait_time_seconds` (0-20s) reduces empty-response API calls and cost
+- **Flexible Naming**: Explicit `name`, or `use_name_prefix = true` to treat `name` as a prefix (note: FIFO queues cannot use a name prefix)
+- **Conditional Creation**: `create`, `create_dlq`, `create_queue_policy`, `create_dlq_queue_policy` toggle each resource group independently
+- **Multi-Region Provider Support**: `region` variable pins the resources to a specific AWS region independent of the default provider region
+- **Comprehensive Tagging**: `tags` applied to the queue; `dlq_tags` merged on top for the DLQ
 
 ## Main Use Cases
 
-1. **Asynchronous Microservices Communication**: Decouple microservices using queues for non-blocking inter-service messaging
-2. **Background Job Processing**: Queue long-running tasks for asynchronous processing by workers or Lambda functions
-3. **Load Leveling and Traffic Buffering**: Absorb traffic spikes by buffering requests for controlled processing
-4. **Event-Driven Architectures**: Build event-driven systems with SQS as the message backbone
-5. **Order Processing Systems**: Use FIFO queues to maintain strict ordering for e-commerce transactions
-6. **Serverless Application Integration**: Connect Lambda functions with SQS for scalable event processing
-7. **Fault-Tolerant Message Handling**: Capture failed messages in DLQ for analysis and reprocessing
-8. **System Decoupling**: Isolate application components to prevent cascading failures
+1. **Asynchronous Microservices Communication**: Decouple services using queues for non-blocking inter-service messaging
+2. **Background Job Processing**: Queue long-running tasks for asynchronous processing by workers or Lambda
+3. **Load Leveling and Traffic Buffering**: Absorb traffic spikes by buffering requests for controlled downstream processing
+4. **Event-Driven Architectures**: Use SQS as the message backbone between producers and consumers
+5. **Order Processing Systems**: Use FIFO queues with content-based deduplication to preserve strict ordering
+6. **Serverless Application Integration**: Trigger Lambda functions from SQS, or fan out from SNS/EventBridge into SQS
+7. **Fault-Tolerant Message Handling**: Route failed/unprocessable messages to a DLQ for analysis and reprocessing
+8. **Cross-Account/Service Messaging**: Grant scoped `sqs:SendMessage`/`sqs:ReceiveMessage` access via queue policies (e.g., allowing SNS or another AWS account to publish)
 
 ## Submodules
 
 ### 1. wrappers
 
-- **Purpose**: Manage multiple SQS queue instances using the single module wrapper pattern
-- **Source**: `terraform-aws-modules/sqs/aws//modules/wrapper`
-- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest/submodules/wrapper
-- **Key Features**: Bulk queue creation with shared defaults, useful for Terragrunt configurations
-- **Use Cases**: Multi-environment deployments, managing multiple related queues with consistent settings
+- **Purpose**: Create and manage multiple SQS queue instances from a single module block using the `for_each`-over-map wrapper pattern
+- **Source**: `terraform-aws-modules/sqs/aws//wrappers`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest/submodules/wrappers
+- **Key Features**: Accepts `defaults` (shared config applied to every item) and `items` (map of per-queue overrides); adds no functionality beyond the root module, purely a `for_each` shim
+- **Use Cases**: Terragrunt configurations that cannot use native `for_each`, managing many similarly-configured queues (e.g., one per tenant/environment) from one config block
 
 ## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Whether to create SQS queue |
-| `name` | `string` | `null` | Queue name (auto-generated if omitted) |
-| `use_name_prefix` | `bool` | `false` | Use name as prefix for unique naming |
-| `fifo_queue` | `bool` | `false` | Create FIFO queue (auto-adds `.fifo` suffix) |
+| `create` | `bool` | `true` | Whether to create the SQS queue (and dependent resources) |
+| `name` | `string` | `null` | Queue name; Terraform assigns a random name if omitted |
+| `use_name_prefix` | `bool` | `false` | Treat `name` as a prefix instead of an exact name (not usable with FIFO queues) |
+| `fifo_queue` | `bool` | `false` | Create a FIFO queue; `.fifo` suffix is added automatically |
 | `content_based_deduplication` | `bool` | `null` | Enable content-based deduplication for FIFO queues |
+| `deduplication_scope` | `string` | `null` | FIFO dedup scope: `messageGroup` or `queue` |
+| `fifo_throughput_limit` | `string` | `null` | FIFO throughput quota scope: `perQueue` or `perMessageGroupId` |
 | `visibility_timeout_seconds` | `number` | `null` | Visibility timeout (0-43,200 seconds) |
-| `message_retention_seconds` | `number` | `null` | Message retention (60-1,209,600 seconds, default 4 days) |
+| `message_retention_seconds` | `number` | `null` | Message retention (60-1,209,600 seconds; AWS default 4 days) |
 | `delay_seconds` | `number` | `null` | Message delivery delay (0-900 seconds) |
-| `receive_wait_time_seconds` | `number` | `null` | Long polling wait time (0-20 seconds) |
+| `receive_wait_time_seconds` | `number` | `null` | Long-polling wait time (0-20 seconds) |
 | `max_message_size` | `number` | `null` | Max message size (1,024-262,144 bytes) |
-| `sqs_managed_sse_enabled` | `bool` | `true` | Enable SSE with SQS-owned keys |
-| `kms_master_key_id` | `string` | `null` | KMS key ID for encryption (overrides SSE-SQS) |
-| `kms_data_key_reuse_period_seconds` | `number` | `null` | KMS key reuse period (60-86,400 seconds) |
-| `create_dlq` | `bool` | `false` | Create Dead Letter Queue |
-| `redrive_policy` | `any` | `{}` | DLQ redrive policy with `maxReceiveCount` |
-| `create_queue_policy` | `bool` | `false` | Create IAM queue policy |
-| `queue_policy_statements` | `map(object)` | `null` | Custom IAM policy statements |
-| `tags` | `map(string)` | `{}` | Resource tags |
+| `sqs_managed_sse_enabled` | `bool` | `true` | Enable SSE with SQS-owned keys (ignored/overridden if `kms_master_key_id` is set) |
+| `kms_master_key_id` | `string` | `null` | KMS key ID/ARN for encryption; setting this disables SSE-SQS |
+| `kms_data_key_reuse_period_seconds` | `number` | `null` | KMS data key reuse period (60-86,400 seconds) |
+| `create_dlq` | `bool` | `false` | Create a companion dead-letter queue and wire up its redrive policy |
+| `redrive_policy` | `any` | `{}` | Redrive policy merged over the auto-generated default (`maxReceiveCount = 5`); `maxReceiveCount` must be an integer |
+| `create_dlq_redrive_allow_policy` | `bool` | `true` | Create a redrive-allow policy scoping the DLQ to only accept redrives from this source queue |
+| `dlq_name`, `dlq_tags`, `dlq_kms_master_key_id`, `dlq_visibility_timeout_seconds`, `dlq_message_retention_seconds`, etc. | various | `null` | Per-attribute overrides for the DLQ; each falls back to the matching source-queue value (e.g. `visibility_timeout_seconds`) when unset |
+| `create_queue_policy` / `create_dlq_queue_policy` | `bool` | `false` | Create an IAM queue policy for the primary queue / DLQ |
+| `queue_policy_statements` / `dlq_queue_policy_statements` | `map(object)` | `null` | Structured IAM policy statements (sid, actions, principals, conditions) for the queue / DLQ |
+| `region` | `string` | `null` | AWS region for the resources; defaults to the provider's configured region |
+| `tags` | `map(string)` | `{}` | Tags applied to the primary queue (and DLQ, merged with `dlq_tags`) |
 
 ## Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `queue_id` | The URL of the SQS queue |
-| `queue_url` | The URL of the SQS queue (alias) |
-| `queue_arn` | The ARN of the SQS queue |
-| `queue_arn_static` | Static ARN (use for Step Functions to avoid cycles) |
+| `queue_id` / `queue_url` | The URL of the SQS queue (both are aliases of the same value) |
+| `queue_arn` | The ARN of the SQS queue (resource attribute) |
+| `queue_arn_static` | Statically computed ARN (account/partition/region + name); use to avoid dependency cycles, e.g. with Step Functions |
 | `queue_name` | The name of the SQS queue |
-| `dead_letter_queue_id` | The URL of the DLQ |
-| `dead_letter_queue_url` | The URL of the DLQ (alias) |
-| `dead_letter_queue_arn` | The ARN of the DLQ |
-| `dead_letter_queue_arn_static` | Static DLQ ARN (use for Step Functions) |
+| `dead_letter_queue_id` / `dead_letter_queue_url` | The URL of the DLQ |
+| `dead_letter_queue_arn` | The ARN of the DLQ (resource attribute) |
+| `dead_letter_queue_arn_static` | Statically computed DLQ ARN; same cycle-avoidance use case |
 | `dead_letter_queue_name` | The name of the DLQ |
 
 ## Usage Examples
@@ -129,13 +130,13 @@ module "fifo_queue" {
   # Enable content-based deduplication
   content_based_deduplication = true
 
-  # Create DLQ with redrive policy
+  # Create DLQ with redrive policy (default maxReceiveCount is 5 if omitted)
   create_dlq = true
   redrive_policy = {
-    maxReceiveCount = 5  # Must be integer, not string
+    maxReceiveCount = 5  # must be an integer, not a string
   }
 
-  # Configure visibility timeout (6x expected processing time)
+  # Configure visibility timeout (~6x expected processing time)
   visibility_timeout_seconds = 300
 
   tags = {
@@ -145,10 +146,9 @@ module "fifo_queue" {
 }
 ```
 
-### Example 3: Encrypted Queue with KMS
+### Example 3: Encrypted Queue with Customer-Managed KMS Key
 
 ```hcl
-# Create KMS key for SQS encryption
 resource "aws_kms_key" "sqs" {
   description             = "KMS key for SQS encryption"
   deletion_window_in_days = 10
@@ -161,18 +161,16 @@ module "encrypted_queue" {
 
   name = "sensitive-data-queue"
 
-  # Enable KMS encryption (disables SSE-SQS)
-  kms_master_key_id                 = aws_kms_key.sqs.id
+  # Setting kms_master_key_id disables SSE-SQS automatically
+  kms_master_key_id                 = aws_kms_key.sqs.key_id
   kms_data_key_reuse_period_seconds = 3600
 
-  # Queue configuration
   message_retention_seconds  = 1209600  # 14 days
   visibility_timeout_seconds = 300
-  receive_wait_time_seconds  = 20  # Enable long polling
+  receive_wait_time_seconds  = 20       # long polling
 
-  # Create DLQ with same encryption
-  create_dlq            = true
-  dlq_kms_master_key_id = aws_kms_key.sqs.id
+  # DLQ inherits the same KMS key unless dlq_kms_master_key_id is set
+  create_dlq = true
   redrive_policy = {
     maxReceiveCount = 3
   }
@@ -180,20 +178,11 @@ module "encrypted_queue" {
   tags = {
     Environment   = "production"
     SecurityLevel = "high"
-    Encryption    = "kms-cmk"
   }
-}
-
-output "queue_url" {
-  value = module.encrypted_queue.queue_url
-}
-
-output "queue_arn" {
-  value = module.encrypted_queue.queue_arn
 }
 ```
 
-### Example 4: Queue with IAM Policy (Cross-Account/SNS)
+### Example 4: Cross-Account / SNS Queue Policy
 
 ```hcl
 data "aws_caller_identity" "current" {}
@@ -204,10 +193,8 @@ module "queue_with_policy" {
 
   name = "cross-account-queue"
 
-  # Enable queue policy
   create_queue_policy = true
   queue_policy_statements = {
-    # Allow cross-account access
     cross_account_send = {
       sid     = "AllowCrossAccountSend"
       actions = ["sqs:SendMessage"]
@@ -219,7 +206,6 @@ module "queue_with_policy" {
       ]
     }
 
-    # Allow SNS to publish
     sns_publish = {
       sid     = "AllowSNSPublish"
       actions = ["sqs:SendMessage"]
@@ -229,7 +215,7 @@ module "queue_with_policy" {
           identifiers = ["sns.amazonaws.com"]
         }
       ]
-      conditions = [
+      condition = [
         {
           test     = "ArnEquals"
           variable = "aws:SourceArn"
@@ -241,44 +227,11 @@ module "queue_with_policy" {
 
   tags = {
     Environment = "production"
-    Integration = "cross-account"
   }
 }
 ```
 
-### Example 5: High-Throughput Queue with Long Polling
-
-```hcl
-module "high_throughput_queue" {
-  source  = "terraform-aws-modules/sqs/aws"
-  version = "~> 5.2"
-
-  name = "high-volume-events"
-
-  # Optimize for throughput
-  visibility_timeout_seconds = 30
-  message_retention_seconds  = 345600  # 4 days
-  receive_wait_time_seconds  = 20      # Long polling (cost savings)
-  delay_seconds              = 0       # No delivery delay
-  max_message_size           = 262144  # 256 KB
-
-  # Use SSE-SQS (lower latency than KMS)
-  sqs_managed_sse_enabled = true
-
-  # DLQ for failed messages
-  create_dlq = true
-  redrive_policy = {
-    maxReceiveCount = 10
-  }
-
-  tags = {
-    Environment = "production"
-    Throughput  = "high"
-  }
-}
-```
-
-### Example 6: Queue for Step Functions (Static ARN)
+### Example 5: Queue Referenced by Step Functions (Static ARN)
 
 ```hcl
 module "step_function_queue" {
@@ -300,7 +253,6 @@ module "step_function_queue" {
   }
 }
 
-# Use static ARN to prevent circular dependency
 resource "aws_sfn_state_machine" "example" {
   name     = "example-state-machine"
   role_arn = aws_iam_role.step_function.arn
@@ -321,11 +273,42 @@ resource "aws_sfn_state_machine" "example" {
   })
 }
 
-# Use queue_arn_static in IAM policy to avoid cycles
+# Use queue_arn_static in the IAM policy to avoid a dependency cycle
 data "aws_iam_policy_document" "step_function" {
   statement {
     actions   = ["sqs:SendMessage"]
     resources = [module.step_function_queue.queue_arn_static]
+  }
+}
+```
+
+### Example 6: Multiple Queues via the `wrappers` Submodule
+
+```hcl
+module "sqs_queues" {
+  source  = "terraform-aws-modules/sqs/aws//wrappers"
+  version = "~> 5.2"
+
+  defaults = {
+    visibility_timeout_seconds = 60
+    create_dlq                 = true
+    redrive_policy = {
+      maxReceiveCount = 5
+    }
+    tags = {
+      Environment = "production"
+    }
+  }
+
+  items = {
+    orders = {
+      name = "orders-queue"
+    }
+    notifications = {
+      name                = "notifications-queue"
+      fifo_queue          = true
+      visibility_timeout_seconds = 120
+    }
   }
 }
 ```
@@ -335,41 +318,43 @@ data "aws_iam_policy_document" "step_function" {
 ### Queue Design
 
 1. **Choose Queue Type Wisely**: Use standard queues for maximum throughput; use FIFO only when strict ordering and exactly-once processing are required
-2. **Always Configure DLQ**: Set `create_dlq = true` with appropriate `maxReceiveCount` (typically 3-10) to capture failed messages
-3. **Design for Idempotency**: Standard queues may deliver messages more than once; ensure consumers handle duplicates
-4. **Use Separate Queues**: Create dedicated queues for different message types or priorities
+2. **Always Configure a DLQ**: Set `create_dlq = true` with an explicit `maxReceiveCount` (typically 3-10) so failed messages are captured instead of retried forever or silently dropped
+3. **Design for Idempotency**: Standard queues can deliver a message more than once; consumers must handle duplicates safely
+4. **Use Separate Queues per Workload**: Create dedicated queues per message type/priority rather than multiplexing unrelated traffic on one queue
 
 ### Configuration
 
-1. **Set Visibility Timeout**: Configure to at least 6x expected processing time to prevent duplicate processing
-2. **Enable Long Polling**: Set `receive_wait_time_seconds = 20` to reduce empty responses and costs
-3. **FIFO Queue Naming**: Do not include `.fifo` suffix in name; module adds it automatically
-4. **maxReceiveCount Type**: Must be integer in `redrive_policy`, not string
+1. **Set Visibility Timeout Generously**: Configure it to roughly 6x the expected consumer processing time to avoid duplicate delivery while a message is still being processed
+2. **Enable Long Polling**: Set `receive_wait_time_seconds = 20` to cut empty-response API calls and cost
+3. **FIFO Naming**: Do not include `.fifo` in `name` — the module appends it automatically; also note FIFO queues cannot use `use_name_prefix`
+4. **`maxReceiveCount` Type**: Must be a number in `redrive_policy` (e.g., `5`), not a string (`"5"`)
 
 ### Security
 
-1. **Encryption Enabled by Default**: SSE-SQS is enabled by default; no action needed for basic encryption
-2. **Use KMS for Compliance**: Switch to KMS encryption when audit trails or key rotation policies are required
-3. **Explicit Queue Policies**: Set `create_queue_policy = true` only when cross-account access or specific IAM restrictions needed
-4. **Use VPC Endpoints**: Access SQS through VPC endpoints to keep traffic within AWS network
+1. **Encryption Is On by Default**: SSE-SQS is enabled out of the box; no action is needed for baseline at-rest encryption
+2. **Use a Customer-Managed KMS Key for Compliance**: Set `kms_master_key_id` when audit trails, key rotation policies, or cross-account key sharing are required; this automatically disables SSE-SQS
+3. **Scope Queue Policies Narrowly**: Only set `create_queue_policy = true` when cross-account or cross-service (SNS/EventBridge) access is genuinely needed, and constrain principals/conditions as tightly as possible
+4. **Prefer VPC Endpoints**: Access SQS through an interface VPC endpoint to keep traffic off the public internet
 
-### Performance
+### Performance & Cost
 
-1. **Use Batch Operations**: Send/receive up to 10 messages per request to reduce API calls
-2. **Configure KMS Reuse**: Set `kms_data_key_reuse_period_seconds = 300-3600` to reduce KMS API calls when using KMS encryption
-3. **Monitor Queue Depth**: Track ApproximateNumberOfMessagesVisible to detect processing bottlenecks
+1. **Batch Operations**: Send/receive up to 10 messages per API call to reduce request volume and cost
+2. **Tune KMS Reuse Period**: Set `kms_data_key_reuse_period_seconds` in the 300-3600s range to reduce KMS API calls when using CMK encryption
+3. **Monitor Queue Depth**: Track `ApproximateNumberOfMessagesVisible` (CloudWatch) to detect consumer bottlenecks or scaling needs
 
 ### Integration
 
-1. **Static ARNs for Step Functions**: Use `queue_arn_static` and `dead_letter_queue_arn_static` outputs to prevent circular dependencies
-2. **Fan-Out with SNS**: Use SNS topics to fan out messages to multiple SQS queues
-3. **Lambda Event Source**: Configure Lambda event source mappings with appropriate batch size and concurrency
+1. **Static ARNs for Step Functions**: Use `queue_arn_static` / `dead_letter_queue_arn_static` instead of `queue_arn` when the ARN is needed by a resource (e.g., an IAM policy) that the queue itself also depends on, to avoid a Terraform dependency cycle
+2. **Fan-Out with SNS**: Subscribe multiple SQS queues to one SNS topic for fan-out message delivery
+3. **Lambda Event Source Mapping**: Pair the queue with a Lambda `aws_lambda_event_source_mapping`, tuning `batch_size` and reserved concurrency to match downstream capacity
+4. **Multi-Queue Deployments**: Use the `wrappers` submodule (source `terraform-aws-modules/sqs/aws//wrappers`) when creating many similarly-shaped queues, especially from Terragrunt
 
 ## Additional Resources
 
 - **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-sqs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest
-- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-sqs/tree/master/examples
+- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-sqs/tree/master/examples/complete
+- **Wrappers Submodule**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest/submodules/wrappers
 - **AWS SQS Documentation**: https://docs.aws.amazon.com/sqs/
 - **SQS Developer Guide**: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/welcome.html
 - **SQS FIFO Queues**: https://docs.aws.amazon.com/AWSSimpleQueueService/latest/SQSDeveloperGuide/FIFO-queues.html
@@ -382,15 +367,15 @@ data "aws_iam_policy_document" "step_function" {
 
 When using this module in automated workflows:
 
-1. **Version**: Use `version = "~> 5.2"` for latest stable features
-2. **Queue Type**: Set `fifo_queue = true` only when strict ordering required; standard queues offer higher throughput
-3. **FIFO Naming**: Do NOT include `.fifo` in name variable; module adds suffix automatically
-4. **DLQ Setup**: Always set `create_dlq = true` with `redrive_policy = { maxReceiveCount = 5 }` (integer, not string)
-5. **Encryption Default**: SSE-SQS is enabled by default; set `kms_master_key_id` only for compliance requirements
-6. **Long Polling**: Always set `receive_wait_time_seconds = 20` to reduce costs
-7. **Visibility Timeout**: Set to 6x expected processing time (e.g., 300 for 50-second processing)
-8. **Static ARN**: Use `queue_arn_static` output when referencing in Step Functions or IAM policies to avoid circular dependencies
-9. **Queue Policy**: Only set `create_queue_policy = true` when cross-account access or SNS integration needed
-10. **Tags**: Apply consistent tags including `Environment`, `Application`, `Owner` for governance
-11. **DLQ Encryption**: DLQ inherits encryption settings; use `dlq_kms_master_key_id` to override
-12. **Message Retention**: Default is 4 days; set `message_retention_seconds = 1209600` for 14 days max
+1. **Version Pin**: Use `version = "~> 5.2"`; v5.0 was a breaking change requiring Terraform >= 1.5.7 and AWS provider >= 6.0
+2. **Queue Type**: Set `fifo_queue = true` only when strict ordering/exactly-once semantics are required; standard queues offer higher throughput
+3. **FIFO Naming**: Do NOT include `.fifo` in `name` — the module appends it automatically, and FIFO queues cannot combine with `use_name_prefix`
+4. **DLQ Setup**: Prefer `create_dlq = true` with `redrive_policy = { maxReceiveCount = 5 }` (integer, not string) for production queues; the module already defaults `maxReceiveCount` to 5 if `redrive_policy` is left empty
+5. **Encryption Default**: SSE-SQS is enabled by default; set `kms_master_key_id` only when compliance/audit requirements call for a CMK (this disables SSE-SQS automatically, no need to also set `sqs_managed_sse_enabled = false`)
+6. **Long Polling**: Set `receive_wait_time_seconds = 20` by default to reduce API costs, unless near-real-time short polling is explicitly required
+7. **Visibility Timeout**: Set to roughly 6x the expected consumer processing time (e.g., 300 for ~50-second processing)
+8. **Static ARNs**: Use `queue_arn_static` / `dead_letter_queue_arn_static` instead of `queue_arn` when the ARN feeds into a resource (Step Functions, IAM policy) that would otherwise create a dependency cycle back to the queue
+9. **Queue Policy**: Only set `create_queue_policy = true` (or `create_dlq_queue_policy = true`) when cross-account access or service integration (SNS, EventBridge) requires it — don't add it by default
+10. **DLQ Overrides**: Use `dlq_*` variables to diverge DLQ settings (retention, KMS key, tags) from the source queue; unset `dlq_*` values fall back to the corresponding source-queue value
+11. **Multiple Queues**: For many similarly-configured queues, prefer the `wrappers` submodule (`terraform-aws-modules/sqs/aws//wrappers`) over repeating the root module block
+12. **Tags**: Apply consistent tags (`Environment`, `Application`, `Owner`) for cost allocation and governance; use `dlq_tags` to add DLQ-specific tags on top of `tags`

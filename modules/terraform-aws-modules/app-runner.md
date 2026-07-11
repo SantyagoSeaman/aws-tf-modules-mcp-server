@@ -6,55 +6,109 @@
 - **Source**: `terraform-aws-modules/app-runner/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-app-runner
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/app-runner/aws/latest
-- **Latest Version**: 1.2.2
-- **Purpose**: Terraform module that creates and manages AWS App Runner services for deploying containerized web applications from source code or container images
+- **Latest Version**: 1.2.2 (Terraform >= 1.0, AWS Provider >= 4.51)
+- **Purpose**: Terraform module that creates and configures AWS App Runner services, auto-scaling configurations, VPC networking, IAM roles, custom domains, and observability for deploying containerized web applications
 - **Service**: AWS App Runner (Fully Managed Container Application Service)
-- **Category**: Serverless, Compute, Platform-as-a-Service, Container Orchestration
-- **Keywords**: app-runner, container, serverless, paas, auto-scaling, github, ecr, vpc-connector, custom-domain, x-ray, web-application, ci-cd, deployment, load-balancer, managed-service
-- **Use For**: Deploying containerized web APIs and microservices without managing infrastructure, building serverless web applications with automatic scaling, creating CI/CD pipelines for container-based applications, hosting internal services with private VPC networking, deploying GitHub repositories as web services with automatic builds, running container images from ECR with managed deployments, implementing auto-scaling web applications with custom domains, building multi-tenant SaaS platforms with isolated App Runner services, migrating web workloads to serverless without Kubernetes complexity, developing rapid prototypes with container-based deployments
+- **Category**: Compute, Serverless, Container Orchestration
+- **⚠️ Service Status**: AWS closed App Runner to **new customers as of April 30, 2026**. Only AWS accounts that already used App Runner before that date can create new services; AWS plans no new features and recommends **Amazon ECS Express Mode** for new container deployments. See [Important Notes](#important-notes) before using this module for a brand-new account or workload.
+- **Keywords**: app-runner, container, serverless, paas, auto-scaling, github, ecr, vpc-connector, custom-domain, observability, ci-cd, web-application, deprecated, ecs-express-mode
+- **Use For**: deploying containerized web APIs and microservices on *existing* App Runner-enabled accounts, code-based deployments that auto-build from GitHub on commit, image-based deployments from ECR, private internal services reachable only from a VPC, egress connectivity to RDS/ElastiCache via VPC Connector, custom-domain public APIs with managed TLS, multi-service architectures sharing GitHub connections and auto-scaling configurations, migrating legacy VM workloads to managed containers without adopting ECS/EKS
 
 ## Description
 
-The AWS App Runner Terraform module provides a comprehensive solution for deploying and managing containerized web applications on AWS without the operational overhead of managing servers, clusters, or container orchestration platforms. App Runner is a fully managed service that takes source code or container images as input and automatically builds, deploys, scales, and load balances web applications and APIs. The module abstracts the complexity of configuring App Runner services, auto-scaling policies, networking, observability, and IAM roles into a declarative Terraform interface with flexible configuration options for both simple and advanced deployment scenarios.
+AWS App Runner is a fully managed container application service that builds, deploys, scales, and load-balances containerized web applications and APIs directly from source code or container images, without requiring users to provision servers, clusters, or orchestration infrastructure. **AWS closed App Runner to new customers on April 30, 2026** — existing App Runner customers can continue creating and managing services normally and this module remains fully functional for them, but AWS does not plan further feature investment and is directing new workloads toward Amazon ECS Express Mode. Confirm the target AWS account already has App Runner access before generating new infrastructure with this module.
 
-This module supports two primary deployment models: code-based services that connect directly to GitHub repositories and automatically build and deploy on code commits, and image-based services that deploy pre-built container images from Amazon ECR or public registries. It provides comprehensive control over instance configurations including CPU, memory, and concurrency limits, auto-scaling parameters for request-based scaling, health check settings for application monitoring, and network configurations for VPC integration. The module handles the creation and management of IAM roles for both the App Runner access role (for pulling code/images) and the instance role (for application runtime permissions), supporting custom policy attachments and permissions boundaries.
+For accounts that can still use the service, this module provides a declarative Terraform interface over App Runner's two deployment models: code-based services that connect to a GitHub repository via an `aws_apprunner_connection` and rebuild automatically on commit, and image-based services that deploy pre-built container images from Amazon ECR (private or public). It manages instance sizing (CPU/memory), request-based auto-scaling configurations, health checks, and two distinct IAM roles — an access role used by App Runner to pull code or private ECR images, and an instance role used by the running application for AWS API calls — both supporting custom policy attachments and permissions boundaries.
 
-The module enables advanced networking scenarios including private App Runner services accessible only within VPCs via VPC Ingress Connections, VPC Connectors for egress traffic to private resources like RDS databases, and custom domain associations with automatic certificate management. It integrates with AWS X-Ray for distributed tracing and observability, supports encryption configuration with KMS keys, manages environment variables and AWS Secrets Manager integration, and provides multiple auto-scaling configuration profiles. The module follows infrastructure-as-code best practices with support for tagging, conditional resource creation, and modular reusable configurations for managing multiple App Runner services across different environments.
+The module also covers App Runner's networking and platform integrations: VPC Connectors for egress to private resources such as RDS or ElastiCache, VPC Ingress Connections for making a service reachable only from within a VPC, custom domain associations with ACM-backed certificate validation, KMS encryption configuration, and AWS X-Ray observability. Reusable top-level resources — GitHub `connections` and named `auto_scaling_configurations` — can be created once (with `create_service = false`) and shared by reference (ARN) across multiple service module calls, a common pattern for multi-service architectures. The module has no submodules; every resource is created in the root module and toggled through `create_*` feature flags.
 
 ## Key Features
 
-- **Code-based Deployments**: Direct integration with GitHub repositories for automatic build and deployment on code commits
-- **Image-based Deployments**: Support for deploying pre-built container images from Amazon ECR or public container registries
-- **Auto-scaling Configuration**: Request-based auto-scaling with configurable min/max instances and target concurrent requests
-- **Instance Configuration**: Flexible CPU (0.25-4 vCPU) and memory (0.5-12 GB) configurations with concurrency limits
-- **VPC Connector**: Egress connectivity to private VPC resources like RDS, ElastiCache, and internal APIs
-- **VPC Ingress Connection**: Private App Runner services accessible only from within specified VPCs
-- **Custom Domain Association**: Automatic SSL certificate provisioning and DNS configuration for custom domains
-- **Health Check Configuration**: Configurable health check paths, intervals, timeouts, thresholds, and protocols
-- **Observability Integration**: AWS X-Ray distributed tracing for performance monitoring and debugging
-- **IAM Role Management**: Automatic creation of access roles (for ECR/GitHub) and instance roles (for runtime permissions)
-- **Environment Variables**: Support for runtime environment variables and AWS Secrets Manager integration
-- **Encryption Configuration**: KMS encryption for service data and configuration
-- **GitHub Connections**: Managed GitHub connections for code repository authentication
-- **Multiple Auto-scaling Profiles**: Support for defining and reusing multiple auto-scaling configurations
-- **Connection Management**: Centralized management of GitHub connections across multiple services
-- **Conditional Creation**: Fine-grained control over which resources are created (service, roles, VPC resources)
-- **Custom IAM Policies**: Support for attaching additional IAM policies to instance roles
-- **Service Status Monitoring**: Outputs for service status, URLs, and resource identifiers
-- **Tagging Support**: Comprehensive tagging for cost allocation and resource management
+- **Code-based Deployments**: Connects to a GitHub repository via a managed connection and auto-builds/deploys on commit
+- **Image-based Deployments**: Deploys pre-built container images from private or public Amazon ECR repositories
+- **Auto-scaling Configurations**: Request-based scaling with configurable min/max instance count and max concurrency; definable once and shared across services
+- **Instance Configuration**: CPU and memory sizing per service, expressed in App Runner's vCPU/MB units
+- **VPC Connector**: Egress connectivity from the service to private VPC resources (RDS, ElastiCache, internal APIs)
+- **VPC Ingress Connection**: Restricts a service to be reachable only from within specified VPCs (no public endpoint)
+- **Custom Domain Association**: Associates a custom domain and returns the ACM certificate validation CNAME records
+- **Dual IAM Roles**: Separate, independently configurable access role (image/code pull) and instance role (runtime permissions), each supporting custom policy statements and permissions boundaries
+- **Health Check Configuration**: Configurable path, protocol, interval, timeout, and healthy/unhealthy thresholds
+- **X-Ray Observability**: Optional observability configuration for distributed tracing, enabled by default
+- **Encryption Configuration**: Optional KMS key for encrypting service configuration and data
+- **Secrets Integration**: `runtime_environment_secrets` wires AWS Secrets Manager or SSM Parameter Store values into the container as environment variables
+- **Shared Connections & Configs**: Create GitHub connections and auto-scaling configurations independently of any service (`create_service = false`) and reference them by ARN from multiple service instances
+- **Conditional Resource Creation**: Fine-grained `create_*` flags for the service, each IAM role, VPC connector, ingress connection, and custom domain association
+- **No Submodules**: All functionality lives in the root module behind feature flags — simple to reason about and compose
 
 ## Main Use Cases
 
-1. **Serverless Web APIs**: Deploy RESTful APIs and GraphQL endpoints without managing servers or container orchestration
-2. **Microservices Architecture**: Build microservices applications with independent, auto-scaling container deployments
-3. **CI/CD Integration**: Implement continuous deployment pipelines with GitHub integration for automatic updates on code commits
-4. **Internal Tools and Services**: Deploy private web applications accessible only within VPCs for internal team use
-5. **Multi-tenant SaaS Platforms**: Create isolated App Runner services per tenant with dedicated scaling and networking
-6. **Rapid Prototyping**: Quickly deploy containerized applications for proof-of-concept and development environments
-7. **Migration from VMs**: Simplify infrastructure by migrating traditional VM-based web applications to managed containers
-8. **Event-driven Applications**: Build web applications that integrate with other AWS services using VPC connectivity
-9. **Static Site Backends**: Deploy backend APIs for JAMstack applications with automatic scaling
-10. **Container Modernization**: Migrate Docker-based applications from on-premises or ECS/EKS without Kubernetes complexity
+1. **Serverless Web APIs**: Deploy RESTful or GraphQL APIs without managing servers or container orchestration
+2. **Microservices Architecture**: Run independently scaling containerized services, optionally sharing auto-scaling configs
+3. **GitHub-driven CI/CD**: Auto-deploy on every commit to a connected repository without a separate build pipeline
+4. **Internal Tools**: Deploy VPC Ingress-only services for internal team applications with no public exposure
+5. **Multi-tenant SaaS**: Provision isolated App Runner services per tenant with dedicated scaling and networking
+6. **Rapid Prototyping**: Stand up a containerized proof-of-concept quickly on an already-eligible account
+7. **Database-backed Services**: Use a VPC Connector for egress to RDS, ElastiCache, or other private VPC resources
+8. **Custom-domain Public APIs**: Serve production traffic on a branded domain with automatic TLS validation
+
+## Submodules
+
+This module has **no submodules**. All resources — service, auto-scaling configuration, VPC connector, VPC ingress connection, custom domain association, access/instance IAM roles, observability configuration, and connections — are created directly in the root module and toggled via `create_*` feature flags.
+
+## Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Controls whether any resources are created |
+| `create_service` | `bool` | `true` | Controls whether the App Runner service itself is created (set `false` for shared connections/auto-scaling-config-only calls) |
+| `service_name` | `string` | `""` | Name of the App Runner service (required when `create_service = true`) |
+| `source_configuration` | `any` | `{}` | Source configuration: either `code_repository` (GitHub) or `image_repository` (ECR) block |
+| `auto_scaling_configuration_arn` | `string` | `null` | ARN of an existing auto-scaling configuration to associate; App Runner's default is used if omitted |
+| `instance_configuration` | `any` | `{}` | Instance `cpu`/`memory` sizing for the service |
+| `health_check_configuration` | `any` | `{}` | Health check path, protocol, interval, timeout, thresholds |
+| `network_configuration` | `any` | `{}` | Ingress (`is_publicly_accessible`) and egress (`egress_type`, VPC connector ARN) configuration |
+| `encryption_configuration` | `any` | `{}` | KMS key ARN for encrypting service data |
+| `observability_configuration` | `any` | `{}` | X-Ray observability configuration reference |
+| `create_access_iam_role` | `bool` | `false` | Create the IAM role App Runner uses to pull private code/images |
+| `private_ecr_arn` | `string` | `null` | ARN of a private ECR repository to grant the access role pull permissions on |
+| `access_iam_role_policies` | `map(string)` | `{}` | Additional IAM policy ARNs to attach to the access role |
+| `create_instance_iam_role` | `bool` | `true` | Create the IAM role assumed by the running application |
+| `instance_iam_role_policies` | `map(string)` | `{}` | Additional IAM policy ARNs to attach to the instance role |
+| `instance_policy_statements` | `any` | `{}` | Map of inline IAM policy statements for custom instance-role permissions |
+| `create_vpc_connector` | `bool` | `false` | Create a VPC Connector for egress to private VPC resources |
+| `vpc_connector_subnets` | `list(string)` | `[]` | Subnets for the VPC Connector (private subnets with NAT/internet route) |
+| `vpc_connector_security_groups` | `list(string)` | `[]` | Security groups for the VPC Connector |
+| `create_ingress_vpc_connection` | `bool` | `false` | Create a VPC Ingress Connection to restrict the service to private access |
+| `ingress_vpc_id` | `string` | `""` | VPC ID for the ingress configuration |
+| `ingress_vpc_endpoint_id` | `string` | `""` | VPC endpoint ID (`com.amazonaws.<region>.apprunner.requests`) for the ingress configuration |
+| `create_custom_domain_association` | `bool` | `false` | Create a custom domain association |
+| `domain_name` | `string` | `""` | Custom domain (base or subdomain) to associate |
+| `enable_www_subdomain` | `bool` | `null` | Also associate the `www` subdomain (App Runner default is `true`) |
+| `connections` | `any` | `{}` | Map of reusable connection definitions (e.g., GitHub) to create |
+| `auto_scaling_configurations` | `any` | `{}` | Map of reusable auto-scaling configuration definitions (`max_concurrency`, `max_size`, `min_size`) to create |
+| `enable_observability_configuration` | `bool` | `true` | Create and assign an X-Ray observability configuration |
+| `tags` | `map(string)` | `{}` | Tags to add to all resources |
+
+## Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `service_arn` | ARN of the App Runner service |
+| `service_id` | Unique alphanumeric ID generated by App Runner |
+| `service_url` | Full HTTPS URL to access the service |
+| `service_status` | Current state of the App Runner service |
+| `access_iam_role_arn` / `access_iam_role_name` | Identifiers of the access IAM role |
+| `instance_iam_role_arn` / `instance_iam_role_name` | Identifiers of the instance IAM role |
+| `vpc_connector_arn` | ARN of the VPC connector |
+| `vpc_connector_status` | Current state of the VPC connector |
+| `vpc_ingress_connection_arn` | ARN of the VPC Ingress Connection |
+| `vpc_ingress_connection_domain_name` | Domain name associated with the VPC Ingress Connection |
+| `custom_domain_association_id` | `domain_name` and `service_arn` separated by a comma |
+| `custom_domain_association_certificate_validation_records` | CNAME records to create in DNS for certificate validation |
+| `custom_domain_association_dns_target` | App Runner subdomain that the custom domain should map to |
+| `connections` | Map of attribute maps for all connections created |
+| `auto_scaling_configurations` | Map of attribute maps for all auto-scaling configurations created |
+| `observability_configuration_arn` | ARN of the observability configuration |
 
 ## Usage Examples
 
@@ -121,6 +175,8 @@ module "app_runner_code_base" {
   }
 }
 ```
+
+> **Note**: After Terraform creates a GitHub `connection`, you must manually complete the OAuth handshake in the App Runner console before it can be used by a service.
 
 ### Example 3: Image-Based Service with VPC Connector
 
@@ -243,8 +299,8 @@ module "app_runner_with_domain" {
   }
 
   instance_configuration = {
-    cpu    = "1024"  # 1 vCPU
-    memory = "2048"  # 2 GB
+    cpu    = "1024" # 1 vCPU
+    memory = "2048" # 2 GB
   }
 
   health_check_configuration = {
@@ -270,199 +326,78 @@ module "app_runner_with_domain" {
 # to create Route53 CNAME records for certificate validation
 ```
 
-## Main Input Variables
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls whether any resources will be created |
-| `create_service` | `bool` | `true` | Controls whether the App Runner service will be created |
-| `service_name` | `string` | `""` | Name of the App Runner service (required when `create_service = true`) |
-| `source_configuration` | `any` | `{}` | Source configuration for the service (code repository or image) |
-| `auto_scaling_configuration_arn` | `string` | `null` | ARN of auto scaling configuration to associate |
-| `instance_configuration` | `any` | `{}` | Instance configuration (CPU, memory) for the service |
-| `health_check_configuration` | `any` | `{}` | Health check configuration for the service |
-| `network_configuration` | `any` | `{}` | Network configuration for ingress/egress |
-| `encryption_configuration` | `any` | `{}` | Encryption configuration (KMS key ARN) |
-| `observability_configuration` | `any` | `{}` | Observability configuration for the service |
-| `create_access_iam_role` | `bool` | `false` | Create IAM role for ECR access |
-| `private_ecr_arn` | `string` | `null` | ARN of private ECR repository (grants pull permissions) |
-| `access_iam_role_policies` | `map(string)` | `{}` | IAM policies to attach to access role |
-| `create_instance_iam_role` | `bool` | `true` | Create IAM role for service instances |
-| `instance_iam_role_policies` | `map(string)` | `{}` | IAM policies to attach to instance role |
-| `instance_policy_statements` | `any` | `{}` | Map of IAM policy statements for custom instance permissions |
-| `create_vpc_connector` | `bool` | `false` | Create VPC Connector for egress to private resources |
-| `vpc_connector_subnets` | `list(string)` | `[]` | Subnets for VPC Connector |
-| `vpc_connector_security_groups` | `list(string)` | `[]` | Security groups for VPC Connector |
-| `create_ingress_vpc_connection` | `bool` | `false` | Create VPC Ingress Connection for private services |
-| `ingress_vpc_id` | `string` | `""` | VPC ID for ingress configuration |
-| `ingress_vpc_endpoint_id` | `string` | `""` | VPC endpoint ID for ingress configuration |
-| `create_custom_domain_association` | `bool` | `false` | Create custom domain association |
-| `domain_name` | `string` | `""` | Custom domain name to associate |
-| `enable_www_subdomain` | `bool` | `null` | Associate the www subdomain |
-| `connections` | `any` | `{}` | Map of connection definitions (e.g., GitHub) |
-| `auto_scaling_configurations` | `any` | `{}` | Map of auto-scaling configuration definitions |
-| `enable_observability_configuration` | `bool` | `true` | Enable X-Ray observability configuration |
-| `tags` | `map(string)` | `{}` | Tags to add to all resources |
-
-## Main Outputs
-
-| Output | Description |
-|--------|-------------|
-| `service_arn` | ARN of the App Runner service |
-| `service_id` | Unique alphanumeric ID generated by App Runner |
-| `service_url` | Subdomain URL to access the service |
-| `service_status` | Current state of the App Runner service |
-| `access_iam_role_arn` | ARN of the access IAM role |
-| `access_iam_role_name` | Name of the access IAM role |
-| `instance_iam_role_arn` | ARN of the instance IAM role |
-| `instance_iam_role_name` | Name of the instance IAM role |
-| `vpc_connector_arn` | ARN of the VPC connector |
-| `vpc_connector_status` | Current state of the VPC connector |
-| `vpc_ingress_connection_arn` | ARN of the VPC Ingress Connection |
-| `vpc_ingress_connection_domain_name` | Domain name for VPC Ingress Connection |
-| `custom_domain_association_id` | Domain name and service ARN separated by comma |
-| `custom_domain_association_certificate_validation_records` | CNAME records for DNS validation |
-| `custom_domain_association_dns_target` | App Runner subdomain mapped to custom domain |
-| `connections` | Map of attribute maps for all connections created |
-| `auto_scaling_configurations` | Map of attribute maps for all autoscaling configurations |
-| `observability_configuration_arn` | ARN of the observability configuration |
-
 ## Best Practices
 
-### Service Configuration and Design
-
-1. **Instance Sizing**: Start with smaller instance sizes (0.25 vCPU, 0.5 GB memory) and scale up based on performance metrics
-2. **Concurrency Settings**: Configure concurrent requests per instance based on application thread model and blocking I/O patterns
-3. **Stateless Design**: Design applications to be stateless; use external data stores (RDS, DynamoDB, ElastiCache) for session state
-4. **Health Check Endpoints**: Implement dedicated health check endpoints that verify application dependencies and return quickly
-5. **Graceful Shutdown**: Handle SIGTERM signals for graceful shutdown when App Runner replaces instances during deployments
-6. **Container Optimization**: Use multi-stage Docker builds to minimize image size and improve deployment times
-7. **Port Configuration**: Ensure application listens on the port specified in instance configuration (default 8080)
-8. **Startup Time**: Optimize application startup time to reduce deployment duration and improve scaling responsiveness
+### Service & Instance Configuration
+1. **Right-size Instances**: Start with the smallest CPU/memory pair that meets load-test results; only specific CPU/memory pairs are valid (e.g., 0.25 vCPU pairs with 0.5–2 GB, 1 vCPU with 2–4+ GB) — verify against the current AWS App Runner instance-configuration matrix before hardcoding values
+2. **Stateless Design**: Keep application instances stateless; use RDS, DynamoDB, or ElastiCache for session/shared state, since instances are replaced during deploys and scaling events
+3. **Graceful Shutdown**: Handle `SIGTERM` so in-flight requests complete before App Runner replaces an instance
+4. **Port Alignment**: Ensure the container listens on the port declared in `image_configuration.port` / `code_configuration`
+5. **Health Check Design**: Point the health check at a lightweight endpoint that validates critical dependencies without heavy computation
+6. **Auto-deployments**: Set `auto_deployments_enabled = true` only when you want every push/image tag update to trigger an automatic redeploy; keep `false` for controlled releases via CI/CD
 
 ### Auto-scaling Strategy
+1. **Understand the Knobs**: `max_concurrency` triggers scale-out per instance, `max_size` caps instance count, `min_size` sets the always-provisioned floor
+2. **Reserve Capacity Cost Model**: Instances between the active count and `min_size` sit as a warm reserve — you pay for their memory but not their CPU, so a higher `min_size` improves cold-start latency at a partial cost, not the full instance cost
+3. **Share Configurations Deliberately**: Define `auto_scaling_configurations` once with `create_service = false` and reference the ARN from multiple services that should share scaling behavior
+4. **Load Test Before Tuning**: Set `max_concurrency` based on measured per-instance capacity, not a guess; too high delays scale-out, too low over-provisions
+5. **Cost vs Availability**: Use `min_size = 0` (via a dedicated low-cost configuration) for dev/test; use `min_size >= 2` for production availability
 
-1. **Min/Max Instances**: Set minimum instances to 1 for cost savings in non-production; use 2+ for production high availability
-2. **Concurrent Request Tuning**: Set target concurrent requests based on application capacity testing (typically 50-100)
-3. **Scale-up Aggressiveness**: Configure conservative concurrent request targets to ensure responsive scaling during traffic spikes
-4. **Scale-down Behavior**: Account for 5-minute scale-down delay when planning for variable traffic patterns
-5. **Load Testing**: Perform load testing to determine optimal concurrency settings and instance sizing
-6. **Monitoring Scaling Metrics**: Track App Runner's active instance count and request metrics to tune auto-scaling parameters
-7. **Cost vs Availability**: Balance minimum instance count with cost considerations; use 0 min instances for dev environments
-8. **Regional Scaling**: For global applications, deploy App Runner services in multiple regions with Route53 routing
+### Networking (VPC Connector & Ingress)
+1. **VPC Connector for Egress Only**: Use `create_vpc_connector` when the service must reach RDS, ElastiCache, or other private VPC/on-prem resources; it is not required for public-only services
+2. **NAT/Route Requirement**: Subnets passed to `vpc_connector_subnets` need a route to any required internet destinations (e.g., NAT Gateway) since App Runner does not provide one
+3. **Multi-AZ Subnets**: Provide subnets across multiple availability zones for VPC connector resiliency
+4. **VPC Ingress Prerequisite**: `create_ingress_vpc_connection` requires an existing VPC endpoint for `com.amazonaws.<region>.apprunner.requests`; create it before or alongside this module
+5. **Security Group Scoping**: Restrict `vpc_connector_security_groups` to only the ports/CIDRs the application actually needs to reach
 
-### Networking and Connectivity
+### Security
+1. **Least-privilege Instance Role**: Grant `instance_policy_statements` / `instance_iam_role_policies` only the permissions the application needs at runtime
+2. **Secrets, Not Env Vars**: Use `runtime_environment_secrets` (Secrets Manager/SSM) for credentials instead of plain-text `runtime_environment_variables`
+3. **Private Images in Production**: Prefer `ECR` (private) over `ECR_PUBLIC` for production images, and set `create_access_iam_role` + `private_ecr_arn` for pull permissions
+4. **Private Services**: Combine `create_ingress_vpc_connection` with `is_publicly_accessible = false` for internal-only applications
+5. **Permissions Boundaries**: Set `access_iam_role_permissions_boundary` / `instance_iam_role_permissions_boundary` where organizational policy requires them
+6. **Encrypt Sensitive Configs**: Set `encryption_configuration` with a customer-managed KMS key when compliance requires encryption beyond the AWS-managed default
+7. **HTTPS by Default**: App Runner terminates TLS for you; custom domains additionally require ACM validation via the module's certificate-validation output
 
-1. **VPC Connector Use Cases**: Use VPC connectors for accessing private RDS databases, ElastiCache, internal APIs, and on-premises resources via VPN
-2. **Private Services**: Deploy private App Runner services with VPC Ingress Connections for internal-only applications
-3. **Security Group Configuration**: Configure security groups on VPC connectors to restrict outbound access to specific resources
-4. **Subnet Selection**: Use private subnets for VPC connector configuration; require NAT Gateway for internet access
-5. **Multi-AZ Subnets**: Specify subnets in multiple availability zones for VPC connector high availability
-6. **Network Isolation**: Use separate VPC connectors for different security zones (production vs development databases)
-7. **Connection Pooling**: Implement connection pooling in applications when accessing VPC resources to avoid connection exhaustion
-8. **DNS Configuration**: Use Route53 for custom domain configuration with health checks and failover routing
-
-### Security Best Practices
-
-1. **IAM Least Privilege**: Grant instance roles only the minimum permissions required for application functionality
-2. **Secrets Management**: Store sensitive configuration (database passwords, API keys) in AWS Secrets Manager, not environment variables
-3. **Encryption at Rest**: Enable KMS encryption for App Runner configuration data and service logs
-4. **Private Image Repositories**: Use private ECR repositories for production container images; avoid public registries
-5. **GitHub Connection Security**: Use GitHub App connections with granular repository access permissions
-6. **Network Segmentation**: Deploy sensitive applications as private services with VPC Ingress Connections
-7. **IAM Permissions Boundaries**: Apply permissions boundaries to App Runner IAM roles for regulatory compliance
-8. **Secrets Rotation**: Implement automatic secret rotation for database credentials and API keys accessed by App Runner services
-9. **TLS Enforcement**: App Runner enforces HTTPS by default; ensure all traffic uses TLS 1.2+
-10. **Access Logging**: Enable CloudWatch Logs for App Runner service requests for security auditing
-
-### Monitoring and Observability
-
-1. **X-Ray Tracing**: Enable AWS X-Ray integration for distributed tracing and performance bottleneck identification
-2. **CloudWatch Logs**: Configure structured logging with JSON format for easier querying and analysis
-3. **Metrics and Alarms**: Create CloudWatch alarms for 4xx/5xx error rates, request latency, and active instance count
-4. **Health Check Configuration**: Set health check intervals (5-20 seconds) and thresholds based on application reliability needs
-5. **Application Logs**: Use CloudWatch Logs Insights for querying application logs and identifying errors
-6. **Performance Baselines**: Establish baseline metrics for request latency and error rates for anomaly detection
-7. **Deployment Tracking**: Monitor deployment success rates and rollback events in CloudWatch Events
-8. **Custom Metrics**: Publish custom application metrics to CloudWatch from within the application code
-
-### Cost Optimization
-
-1. **Right-sizing Instances**: Choose the smallest instance size that meets performance requirements; avoid over-provisioning
-2. **Minimum Instance Count**: Set minimum instances to 0 for dev/test environments to eliminate idle costs
-3. **Request Optimization**: Optimize application code to handle more concurrent requests per instance
-4. **Efficient Builds**: For code-based deployments, optimize build times to reduce build compute costs
-5. **Image Caching**: Use Docker layer caching effectively to speed up builds and reduce ECR storage costs
-6. **Environment Consolidation**: Use service tags and environment variables to run multiple tenants per service where appropriate
-7. **Reserved Capacity**: Consider AWS Savings Plans for predictable, long-term workloads
-8. **Traffic Routing**: Use ALB in front of multiple App Runner services to consolidate requests and reduce per-service minimums
-9. **Idle Service Deletion**: Automatically delete or pause unused development App Runner services
-10. **CloudWatch Log Retention**: Set appropriate log retention periods (7-30 days) to manage storage costs
-
-### Deployment and CI/CD
-
-1. **Blue-Green Deployments**: App Runner performs rolling deployments automatically; leverage for zero-downtime updates
-2. **Deployment Rollback**: Monitor deployment health and use previous image versions or Git commits for quick rollback
-3. **Pre-deployment Testing**: Run integration tests before deploying to App Runner using CI/CD pipeline stages
-4. **Environment Promotion**: Use consistent Terraform modules across dev/staging/prod with different variable files
-5. **Version Tagging**: Use semantic versioning for container images and Git tags for code-based deployments
-6. **Deployment Validation**: Implement post-deployment smoke tests to verify service health after updates
-7. **Infrastructure as Code**: Manage all App Runner resources via Terraform for reproducibility and version control
-8. **Terraform State Management**: Use remote state (S3 + DynamoDB) with state locking for team environments
-9. **Automated Deployments**: Configure GitHub Actions or CodePipeline to trigger deployments on merge to main branch
-10. **Configuration Drift Detection**: Regularly run terraform plan to detect manual configuration changes
-
-### High Availability and Disaster Recovery
-
-1. **Multi-Region Deployments**: Deploy App Runner services in multiple AWS regions with Route53 failover for global availability
-2. **Health Check Tuning**: Configure health check parameters to balance between fast failure detection and false positives
-3. **Database Failover**: Use RDS read replicas or Aurora Global Database for multi-region database availability
-4. **Backup Strategy**: While App Runner is stateless, ensure backing data stores have automated backups and point-in-time recovery
-5. **Disaster Recovery Testing**: Periodically test failover procedures and recovery time objectives (RTO)
-6. **Connection Redundancy**: For critical services, configure multiple VPC connectors across availability zones
-7. **Service Dependencies**: Design applications with circuit breakers and retry logic for resilient dependency communication
-8. **Graceful Degradation**: Implement fallback mechanisms when downstream services are unavailable
-9. **Monitoring and Alerting**: Set up PagerDuty or SNS alerts for service failures and health check failures
-10. **Runbook Documentation**: Maintain operational runbooks for common failure scenarios and recovery procedures
+### Observability & Cost
+1. **Enable X-Ray in Production**: Keep `enable_observability_configuration = true` for distributed tracing; disable for low-value dev/test services to reduce noise
+2. **CloudWatch Log Retention**: App Runner ships logs to CloudWatch automatically — set a retention policy on the created log groups to control storage cost
+3. **Scale-to-zero for Non-prod**: Use a dedicated low-`min_size` auto-scaling configuration for development environments
+4. **Consolidate Behind One Domain**: For many small services, evaluate whether a shared connection/auto-scaling-config pattern reduces duplicated resource overhead
 
 ## Additional Resources
 
+- **⚠️ AWS App Runner Availability Change & ECS Express Mode Migration Guide**: https://docs.aws.amazon.com/apprunner/latest/dg/apprunner-availability-change.html
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-app-runner
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/app-runner/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-app-runner/tree/master/examples
-- **AWS App Runner Documentation**: https://docs.aws.amazon.com/apprunner/latest/dg/what-is-apprunner.html
-- **App Runner Developer Guide**: https://docs.aws.amazon.com/apprunner/latest/dg/
-- **App Runner Service Configuration**: https://docs.aws.amazon.com/apprunner/latest/dg/service-source-code.html
+- **AWS App Runner Developer Guide**: https://docs.aws.amazon.com/apprunner/latest/dg/what-is-apprunner.html
+- **App Runner Source Configuration**: https://docs.aws.amazon.com/apprunner/latest/dg/service-source-code.html
 - **App Runner VPC Networking**: https://docs.aws.amazon.com/apprunner/latest/dg/network.html
 - **App Runner Auto-scaling**: https://docs.aws.amazon.com/apprunner/latest/dg/manage-autoscaling.html
 - **App Runner Custom Domains**: https://docs.aws.amazon.com/apprunner/latest/dg/manage-custom-domains.html
-- **App Runner Observability**: https://docs.aws.amazon.com/apprunner/latest/dg/monitor.html
 - **App Runner Security**: https://docs.aws.amazon.com/apprunner/latest/dg/security.html
-- **App Runner Pricing**: https://aws.amazon.com/apprunner/pricing/
-- **Container Best Practices**: https://docs.docker.com/develop/dev-best-practices/
-- **AWS Well-Architected Framework**: https://aws.amazon.com/architecture/well-architected/
+- **Amazon ECS Express Mode (recommended for new deployments)**: https://docs.aws.amazon.com/AmazonECS/latest/developerguide/express-getting-started-console.html
 
 ## Important Notes
 
-- **No Submodules**: This module has no submodules; all functionality is in the root module
-- **GitHub Connection**: GitHub connections require **manual OAuth handshake completion** in AWS Console after Terraform creates the connection resource
-- **Terraform Requirements**: Terraform >= 1.0, AWS Provider >= 4.51
-- **VPC Connector Networking**: VPC connector subnets must have NAT Gateway access for outbound internet connectivity
-- **VPC Ingress**: Requires a VPC endpoint for App Runner service (`com.amazonaws.<region>.apprunner.requests`)
+- **⚠️ Closed to New Customers**: AWS announced on March 31, 2026 that App Runner would stop accepting new customers effective April 30, 2026. Existing customers keep full functionality (including creating new services), but AWS plans no new App Runner features and is steering new workloads to Amazon ECS Express Mode. The Terraform AWS provider maintainers have flagged eventual removal of all `aws_apprunner_*` resources in a future major version once App Runner reaches end of support (tracked in `hashicorp/terraform-provider-aws#47162`) — pin provider versions carefully for long-lived App Runner deployments.
+- **No Submodules**: All functionality is in the root module, controlled by `create_*` flags.
+- **GitHub Connection Handshake**: A GitHub `connection` created by Terraform is left in `PENDING_HANDSHAKE` state until a human completes OAuth authorization in the App Runner console; automation cannot fully replace this manual step.
+- **VPC Connector Networking**: VPC connector subnets need their own route to any required internet destinations (e.g., a NAT Gateway); App Runner does not provide one.
+- **VPC Ingress Prerequisite**: Requires a pre-existing VPC endpoint for `com.amazonaws.<region>.apprunner.requests`.
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Deployment Model Selection**: Choose code-based deployment for GitHub repositories with CI/CD, image-based for pre-built containers from ECR
-2. **Instance Configuration**: Start with 1 vCPU and 2 GB memory for typical web APIs; adjust based on load testing results
-3. **Auto-scaling Setup**: Configure min=1, max=10, concurrent_requests=100 as starting point for production services
-4. **VPC Networking**: Use VPC connector when application needs to access RDS, ElastiCache, or internal services; not required for public APIs
-5. **IAM Roles**: Always create separate access and instance roles; attach custom policies to instance role for AWS service access
-6. **Secrets Management**: Use AWS Secrets Manager for sensitive values; avoid plain-text environment variables for credentials
-7. **Health Checks**: Configure health check path to an endpoint that validates critical dependencies without heavy computation
-8. **Observability**: Enable X-Ray tracing in production; configure CloudWatch log retention based on compliance requirements
-9. **Custom Domains**: Use custom_domain_association for production; validate DNS configuration and certificate status
-10. **Cost Management**: Set min_size=0 for non-production environments; monitor active instance count and request metrics
-11. **Security Posture**: Use private App Runner services with VPC Ingress for internal applications; encrypt with KMS
-12. **Deployment Strategy**: Use Terraform workspaces or separate state files for multi-environment deployments
+1. **Check Eligibility First**: Before generating *new* App Runner infrastructure, confirm the target AWS account already had App Runner access before April 30, 2026. For brand-new accounts/workloads, tell the user App Runner is closed to new customers and propose Amazon ECS Express Mode (or ECS/Fargate) instead, unless they explicitly confirm the account is already eligible.
+2. **Deployment Model Selection**: Use `code_repository` for GitHub-connected services needing build-on-commit; use `image_repository` for pre-built containers from ECR.
+3. **Instance Sizing**: Start around 1 vCPU / 2 GB for typical web APIs and adjust from load-test data; only specific CPU/memory pairs are valid — do not invent arbitrary combinations.
+4. **Auto-scaling Defaults**: A reasonable production starting point is `min_size = 2`, `max_size = 10`, `max_concurrency = 100`; use `min_size = 0` for non-production via a separate shared configuration.
+5. **VPC Networking**: Only add `create_vpc_connector` when the service needs to reach private VPC resources (RDS, ElastiCache, internal APIs); skip it for purely public services.
+6. **IAM Roles**: Create the access role only when pulling from a private ECR repo or a code repository; always create the instance role and scope `instance_policy_statements` to least privilege.
+7. **Secrets**: Wire credentials through `runtime_environment_secrets` (Secrets Manager/SSM ARNs), never through plain `runtime_environment_variables`.
+8. **GitHub Connections**: Remind the user that a manual console step is required after `terraform apply` to complete the OAuth handshake before a code-based service can build.
+9. **Custom Domains**: When `create_custom_domain_association = true`, surface `custom_domain_association_certificate_validation_records` so the caller can create the DNS records needed for ACM validation.
+10. **Provider Pinning**: Given the announced provider-removal plan for `aws_apprunner_*` resources, pin the AWS provider version explicitly in generated configurations rather than using an open-ended constraint.

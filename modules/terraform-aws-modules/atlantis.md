@@ -9,67 +9,146 @@
 - **AWS Provider**: >= 6.28
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-atlantis
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/atlantis/aws/latest
-- **Purpose**: Deploy Atlantis on AWS Fargate for automated Terraform workflow management through pull requests
-- **Service**: AWS ECS Fargate, Application Load Balancer, EFS
+- **Purpose**: Deploy Atlantis as a single always-on ECS Fargate task, fronted by an ALB, for pull-request-driven Terraform plan/apply automation
+- **Service**: AWS ECS Fargate, Application Load Balancer, ACM, Route53, EFS
 - **Category**: DevOps, CI/CD, Infrastructure Automation
-- **Keywords**: atlantis, terraform-automation, gitops, ecs-fargate, alb, webhook, github, gitlab, pull-request, infrastructure-as-code, ci-cd, secrets-manager, efs
+- **Keywords**: atlantis, terraform-automation, gitops, ecs-fargate, fargate, alb, webhook, github, gitlab, pull-request, infrastructure-as-code, ci-cd, secrets-manager, efs, terraform-plan
 
 ## Description
 
-This module deploys Atlantis on AWS using Amazon ECS Fargate for automated Terraform workflow management through pull requests. Atlantis enables teams to collaborate on infrastructure changes by automatically running Terraform plan and apply operations directly from pull requests in GitHub, GitLab, or Bitbucket Cloud. The module creates a complete infrastructure stack including an Application Load Balancer, ECS Fargate cluster and service, optional EFS storage for persistent plan files, ACM certificates, Route53 DNS records, and IAM roles.
+This module deploys [Atlantis](https://www.runatlantis.io/) on AWS using Amazon ECS Fargate to enable pull-request-driven Terraform workflows. Atlantis listens for GitHub, GitLab, or Bitbucket Cloud webhook events and automatically runs `terraform plan` (and, after approval, `terraform apply`) directly against pull requests, giving teams a collaborative, auditable way to review infrastructure changes before they are applied. The module provisions the full stack required to run it in production: an internet-facing Application Load Balancer with HTTPS listener and HTTP→HTTPS redirect, an ECS Fargate cluster and service running the official Atlantis container image, an ACM certificate validated via Route53 DNS, Route53 `A`/`AAAA` alias records, and (optionally) an EFS file system so Terraform plan output survives task restarts and redeployments.
 
-Version 5.x introduces a redesigned configuration model using object-based parameters (`atlantis`, `service`, `alb`, `cluster`, `efs`) instead of flat variables. This provides better organization and allows reusing existing infrastructure components (ECS clusters, ALBs) via `create_cluster: false` and `create_alb: false` flags. The module integrates with AWS Secrets Manager for secure credential handling and supports multi-VCS providers through webhook submodules.
+Version 5.x uses an object-based configuration model (`atlantis`, `service`, `alb`, `cluster`, `efs`) instead of many flat top-level variables, mirroring the underlying `terraform-aws-modules/ecs`, `terraform-aws-modules/alb`, and `terraform-aws-modules/efs` submodules it composes. `create_cluster = false` and `create_alb = false` let an existing ECS cluster or ALB be reused instead of creating new ones, which is the common pattern for centralizing Atlantis with other services. Credentials (VCS tokens, webhook secrets) are expected to be stored in AWS Secrets Manager and injected into the container via the `secrets` block, never as plain environment variables.
+
+Atlantis itself runs as **exactly one ECS task** — `desired_count` is hardcoded to `1` inside the module and is not exposed as a variable, because Atlantis relies on local file-based plan storage and locking and does not support horizontal scaling. High availability is achieved through fast, EFS-backed task replacement (Multi-AZ ALB, quick ECS-driven recovery) rather than running multiple concurrent tasks. Two small companion submodules (`github-repository-webhook`, `gitlab-repository-webhook`) automate creation of the VCS-side webhooks that point at the deployed Atlantis URL.
 
 ## Key Features
 
-- **ECS Fargate Deployment**: Serverless container deployment with automatic scaling and no server management
-- **Application Load Balancer**: HTTPS load balancer with SSL/TLS termination, health checks, and optional WAF integration
-- **Multi-VCS Support**: Integration with GitHub, GitLab, and Bitbucket Cloud through webhook configuration
-- **EFS Persistent Storage**: Optional Amazon EFS for persistent Terraform plan storage across container restarts
-- **Secrets Management**: AWS Secrets Manager integration for GitHub/GitLab tokens and webhook secrets
-- **ACM Certificate Support**: Automatic certificate creation and validation via Route53 DNS
-- **Route53 Integration**: Automatic DNS record creation for custom domain names
-- **Existing Infrastructure Reuse**: Support for existing ECS clusters and ALBs via feature flags
-- **Object-Based Configuration**: Organized configuration through `atlantis`, `service`, `alb`, `cluster`, `efs` objects
-- **Auto-Planning**: Automatic Terraform plan generation on pull request events
-- **Plan Locking**: Prevents concurrent infrastructure modifications through project locking
-- **CloudWatch Logs**: Container logs integration for monitoring and debugging
+- **Single-Task ECS Fargate Deployment**: Serverless, always-on container running the official `ghcr.io/runatlantis/atlantis` image (ARM64 by default)
+- **Application Load Balancer**: HTTPS listener with TLS 1.3 policy by default, automatic HTTP→HTTPS redirect, health check on `/healthz`
+- **Multi-VCS Support**: GitHub, GitLab, and Bitbucket Cloud, configured purely through `ATLANTIS_*` environment variables/secrets (no code branching)
+- **EFS Persistent Storage**: Optional EFS volume, auto-mounted at `/home/atlantis`, with an IAM-authorized access point scoped to the task role — survives task replacement/redeploys
+- **Secrets Manager Integration**: VCS tokens, webhook secrets, and GitHub App keys are injected as ECS `secrets`, never as plain `environment` values
+- **GitHub App Auth**: Supports GitHub App-based authentication (`ATLANTIS_GH_APP_ID`/`ATLANTIS_GH_APP_KEY`) as a more secure alternative to a personal access token
+- **ACM + Route53 Automation**: Creates and DNS-validates an ACM certificate and creates the `A`/`AAAA` alias records automatically
+- **Bring-Your-Own-Infrastructure**: `create_cluster = false` / `create_alb = false` / `create_certificate = false` reuse an existing ECS cluster, ALB, or ACM certificate
+- **Object-Based Configuration**: `atlantis`, `service`, `alb`, `cluster`, `efs` objects pass straight through to the respective nested `terraform-aws-modules` submodules
+- **Webhook Automation Submodules**: Dedicated submodules create GitHub/GitLab webhooks pointed at `${module.atlantis.url}/events`
+- **CloudWatch Logs**: Container and ECS cluster logging enabled by default (14/90-day retention respectively)
+- **Auto-Injected Runtime Config**: `ATLANTIS_PORT` and `ATLANTIS_ATLANTIS_URL` are computed and injected automatically — do not set them manually
 
-## Use Cases
+## Main Use Cases
 
-1. **Pull Request-Based Infrastructure Changes**: Automate Terraform workflows where changes are proposed, reviewed, and applied through Git pull requests
-2. **Collaborative Infrastructure Management**: Enable teams to safely propose and review infrastructure changes with approval workflows
-3. **GitOps Implementation**: Use Git as the single source of truth for infrastructure state and changes
-4. **Centralized Terraform Execution**: Provide consistent Terraform execution environment with standardized versions and configurations
-5. **Multi-Repository Infrastructure**: Manage Terraform code across multiple repositories with centralized execution
-6. **Infrastructure Code Review**: Facilitate code review with automatic plan generation showing exact infrastructure impacts
-7. **Compliance and Auditability**: Create audit trails through Git history and pull request approvals
-8. **Multi-Account Terraform Management**: Centralize Atlantis with cross-account IAM roles for managing multiple AWS accounts
+1. **Pull Request-Based Infrastructure Changes**: Automate `terraform plan`/`apply` triggered by pull/merge request events
+2. **Collaborative Infrastructure Review**: Require peer approval before Terraform changes can be applied
+3. **GitOps for Infrastructure**: Use Git history as the audit trail and source of truth for infrastructure state changes
+4. **Centralized Terraform Execution**: Provide one consistent runner/version for Terraform across many repositories
+5. **Multi-Repository Infrastructure Management**: Run one Atlantis instance serving several infrastructure repositories via `ATLANTIS_REPO_ALLOWLIST`
+6. **Compliance and Auditability**: Generate a durable record of plan output, approvals, and applies tied to pull requests
+7. **Multi-Account Terraform Management**: Run a central Atlantis with `sts:AssumeRole` permissions into target-account Terraform roles
+8. **Self-Hosted Alternative to Terraform Cloud/HCP Terraform**: Keep plan/apply execution inside your own VPC instead of a SaaS runner
+
+## Key Root Module Variables
+
+### Core
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create` | `bool` | `true` | Controls creation of (nearly) all resources |
+| `name` | `string` | `"atlantis"` | Common name applied to all resources |
+| `vpc_id` | `string` | `""` (effectively required) | VPC ID for all networked resources |
+| `region` | `string` | `null` | Region to manage resources in; defaults to provider's region |
+| `tags` | `map(string)` | `{}` | Tags applied to all resources |
+
+### `atlantis` object (container definition)
+
+Passed to the ECS container-definition module; important properties:
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `image` | `string` | `"ghcr.io/runatlantis/atlantis:latest"` | Container image |
+| `cpu` | `number` | `2048` | Container CPU units |
+| `memory` | `number` | `4096` | Container memory (MiB) |
+| `port` | `number` | `4141` | Container port; also used for ALB target group and security group ingress |
+| `environment` | `list(object)` | `[]` | `{ name, value }` plain env vars |
+| `secrets` | `list(object)` | `[]` | `{ name, valueFrom }` — Secrets Manager/SSM-backed env vars |
+| `command` / `entrypoint` | `list(string)` | `null` | Override container command/entrypoint |
+| `healthCheck` | `object` | `null` | Optional ECS container health check (separate from ALB health check) |
+| `cloudwatch_log_group_retention_in_days` | `number` | `14` | Container log retention |
+
+### `service` object (ECS service/task definition)
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `subnet_ids` | `list(string)` | `[]` | Subnets for ECS tasks (private, with NAT/VPC endpoints — tasks get no public IP by default) |
+| `task_exec_secret_arns` | `list(string)` | `[]` | Secret ARNs the task **execution** role may read (needed for `atlantis.secrets`) |
+| `tasks_iam_role_policies` | `map(string)` | `{}` | Policy ARNs attached to the task (application) role — grants Atlantis its actual AWS permissions |
+| `cpu` / `memory` | `number` | `2048` / `4096` | Task-level CPU/memory (should match or exceed container-level values) |
+| `runtime_platform` | `object` | `{ operating_system_family = "LINUX", cpu_architecture = "ARM64" }` | Override to `X86_64` if using a custom amd64-only image |
+| `assign_public_ip` | `bool` | `false` | Tasks are not publicly addressable by default |
+| `launch_type` | `string` | `"FARGATE"` | Compute engine |
+
+**Not configurable**: `desired_count` is hardcoded to `1` and `enable_execute_command` is hardcoded to `false` (ECS Exec disabled) — neither is exposed as an override.
+
+### `alb` object
+
+| Property | Type | Default | Description |
+|----------|------|---------|-------------|
+| `subnet_ids` | `list(string)` | `[]` | Subnets for the ALB (public for internet-facing) |
+| `internal` | `bool` | `false` (AWS default) | ALB is internet-facing unless set to `true` |
+| `enable_deletion_protection` | `bool` | `true` | Prevents accidental `terraform destroy`; disable explicitly for throwaway/dev stacks |
+| `security_group_ingress_rules` | `map` | `80/tcp` + `443/tcp` from `0.0.0.0/0` | **Public by default** — restrict this for private/internal deployments |
+| `access_logs` / `connection_logs` | `object` | `null` | S3 bucket for ALB access/connection logs |
+| `associate_web_acl` / `web_acl_arn` | `bool` / `string` | `false` / `null` | Attach an existing WAFv2 Web ACL |
+
+### Certificate, DNS, cluster, and EFS
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `create_cluster` / `cluster_arn` | `bool` / `string` | `true` / `""` | Create a new ECS cluster or attach to an existing one |
+| `create_alb` / `alb_target_group_arn` / `alb_security_group_id` | `bool` / `string` / `string` | `true` / `""` / `""` | Create a new ALB or reuse an existing target group + security group |
+| `create_certificate` / `certificate_arn` | `bool` / `string` | `true` / `""` | Create+validate an ACM cert or bring your own |
+| `certificate_domain_name` | `string` | `""` | Domain to request the ACM certificate for |
+| `route53_zone_id` | `string` | `""` | Zone for ACM validation records and the `A`/`AAAA` alias records |
+| `create_route53_records` / `route53_record_name` | `bool` / `string` | `true` / `null` | Toggle and name the Route53 alias records |
+| `enable_efs` | `bool` | `false` | Mount an EFS volume at `/home/atlantis` for persistent plan storage |
+| `efs` | `object` | `{}` | EFS settings — `mount_targets` (required per-AZ if enabled), encryption, lifecycle policy |
+
+## Key Outputs
+
+| Output | Description |
+|--------|-------------|
+| `url` | HTTPS URL of the Atlantis instance (used as the webhook base URL, `${url}/events`) |
+| `alb` | Full ALB submodule output object (ARN, DNS name, security group ID, target groups, Route53 records) |
+| `cluster` | Full ECS cluster submodule output object (ARN, name) |
+| `service` | Full ECS service submodule output object (task role ARN, task exec role ARN, security group ID, task definition ARN) |
+| `efs` | Full EFS submodule output object (file system ID, DNS name, access points) — only populated when `enable_efs = true` |
 
 ## Submodules
 
 ### 1. github-repository-webhook
 
-Creates GitHub repository webhooks for Atlantis integration.
-
-**Purpose**: Automate GitHub webhook creation to trigger Atlantis on pull request events.
-
-**Requirements**: GitHub Provider >= 5.0
-
-**Key Variables**:
+**Purpose**: Creates GitHub repository webhooks pointed at the deployed Atlantis `/events` endpoint.
+**Source**: `terraform-aws-modules/atlantis/aws//modules/github-repository-webhook`
+**Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/atlantis/aws/latest/submodules/github-repository-webhook
+**Requirements**: GitHub provider (`integrations/github`) >= 5.0
+**Key Features**: Bulk webhook creation across repositories, configurable webhook secret, minimal single-resource (`github_repository_webhook`) implementation
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Whether to create webhooks |
-| `repositories` | `list(string)` | `[]` | List of repository names |
-| `webhook_url` | `string` | `""` | Atlantis webhook URL (e.g., `${module.atlantis.url}/events`) |
-| `webhook_secret` | `string` | `""` | Webhook secret for authentication |
+| `create` | `bool` | `true` | Whether to create the webhooks |
+| `repositories` | `list(string)` | `[]` | Repository names under the provider's configured `owner` |
+| `webhook_url` | `string` | `""` | Atlantis webhook URL, e.g. `${module.atlantis.url}/events` |
+| `webhook_secret` | `string` | `""` | Shared secret Atlantis uses to validate incoming webhook payloads |
 
-**Output**: `repository_webhook_urls` - Map of repository names to webhook URLs
-
-**Usage Example**:
+**Output**: `repository_webhook_urls` — map of repository name to webhook URL
 
 ```hcl
+provider "github" {
+  token = var.github_token
+  owner = "myorg"
+}
+
 module "github_webhooks" {
   source = "terraform-aws-modules/atlantis/aws//modules/github-repository-webhook"
 
@@ -77,35 +156,31 @@ module "github_webhooks" {
   webhook_url    = "${module.atlantis.url}/events"
   webhook_secret = random_password.webhook_secret.result
 }
-
-provider "github" {
-  token = var.github_token
-  owner = "myorg"
-}
 ```
 
 ### 2. gitlab-repository-webhook
 
-Creates GitLab project webhooks for Atlantis integration.
-
-**Purpose**: Automate GitLab webhook creation to trigger Atlantis on merge request events.
-
-**Requirements**: GitLab Provider >= 16.0
-
-**Key Variables**:
+**Purpose**: Creates GitLab project webhooks pointed at the deployed Atlantis `/events` endpoint.
+**Source**: `terraform-aws-modules/atlantis/aws//modules/gitlab-repository-webhook`
+**Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/atlantis/aws/latest/submodules/gitlab-repository-webhook
+**Requirements**: GitLab provider (`gitlabhq/gitlab`) >= 16.0
+**Key Features**: Bulk webhook creation across projects, configurable webhook secret, supports self-hosted GitLab via provider `base_url`
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Whether to create webhooks |
-| `repositories` | `list(string)` | `[]` | List of project names |
+| `create` | `bool` | `true` | Whether to create the webhooks |
+| `repositories` | `list(string)` | `[]` | Project names/paths under the configured GitLab instance |
 | `webhook_url` | `string` | `""` | Atlantis webhook URL |
-| `webhook_secret` | `string` | `""` | Webhook secret for authentication |
+| `webhook_secret` | `string` | `""` | Shared secret Atlantis uses to validate incoming webhook payloads |
 
-**Output**: `repository_webhook_urls` - Map of project names to webhook URLs
-
-**Usage Example**:
+**Output**: `repository_webhook_urls` — map of project name to webhook URL
 
 ```hcl
+provider "gitlab" {
+  token    = var.gitlab_token
+  base_url = "https://gitlab.example.com/api/v4/"
+}
+
 module "gitlab_webhooks" {
   source = "terraform-aws-modules/atlantis/aws//modules/gitlab-repository-webhook"
 
@@ -113,103 +188,9 @@ module "gitlab_webhooks" {
   webhook_url    = "${module.atlantis.url}/events"
   webhook_secret = random_password.webhook_secret.result
 }
-
-provider "gitlab" {
-  token    = var.gitlab_token
-  base_url = "https://gitlab.example.com/api/v4/"
-}
 ```
 
-## Variables
-
-### Core Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls resource creation |
-| `name` | `string` | `"atlantis"` | Common name for all resources |
-| `vpc_id` | `string` | **required** | VPC ID for resource provisioning |
-| `tags` | `map(string)` | `{}` | Tags applied to all resources |
-
-### Atlantis Container Configuration
-
-The `atlantis` object configures the container:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `cpu` | `number` | CPU units (default: 512) |
-| `memory` | `number` | Memory in MiB (default: 1024) |
-| `image` | `string` | Docker image (default: official Atlantis image) |
-| `environment` | `list(object)` | Environment variables (`name`, `value` pairs) |
-| `secrets` | `list(object)` | Secrets from Secrets Manager (`name`, `valueFrom` pairs) |
-| `command` | `list(string)` | Override container command |
-| `entrypoint` | `list(string)` | Override container entrypoint |
-
-### ECS Cluster Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `create_cluster` | `bool` | `true` | Create ECS cluster or use existing |
-| `cluster_arn` | `string` | `""` | Existing cluster ARN (required if `create_cluster` is false) |
-| `cluster` | `object` | `{}` | Cluster settings, logging, capacity providers |
-
-### ECS Service Configuration
-
-The `service` object configures the ECS service:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `subnet_ids` | `list(string)` | Subnets for ECS tasks (typically private) |
-| `task_exec_secret_arns` | `list(string)` | Secret ARNs for task execution role |
-| `tasks_iam_role_policies` | `map(string)` | IAM policies for task role |
-| `desired_count` | `number` | Number of tasks to run |
-| `enable_execute_command` | `bool` | Enable ECS Exec for debugging |
-
-### Application Load Balancer Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `create_alb` | `bool` | `true` | Create ALB or use existing |
-| `alb_target_group_arn` | `string` | `""` | Existing target group ARN |
-| `alb_security_group_id` | `string` | `""` | Existing ALB security group ID |
-
-The `alb` object configures the ALB:
-
-| Property | Type | Description |
-|----------|------|-------------|
-| `subnet_ids` | `list(string)` | Subnets for ALB (typically public) |
-| `enable_deletion_protection` | `bool` | Prevent accidental deletion |
-| `access_logs` | `object` | S3 bucket for access logs |
-| `security_group_ingress_rules` | `map` | Custom ingress rules |
-
-### Certificate and DNS Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `create_certificate` | `bool` | `true` | Create ACM certificate |
-| `certificate_arn` | `string` | `""` | Existing certificate ARN |
-| `certificate_domain_name` | `string` | `""` | Domain for certificate |
-| `validate_certificate` | `bool` | `true` | Validate via Route53 DNS |
-| `create_route53_records` | `bool` | `true` | Create Route53 A/AAAA records |
-| `route53_zone_id` | `string` | `""` | Route53 zone ID |
-| `route53_record_name` | `string` | `null` | DNS record name |
-
-### EFS Configuration
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `enable_efs` | `bool` | `false` | Create EFS filesystem |
-| `efs` | `object` | `{}` | EFS settings including mount targets |
-
-## Outputs
-
-| Output | Description |
-|--------|-------------|
-| `url` | URL of the Atlantis instance |
-| `alb` | ALB and all associated outputs (ARN, DNS name, security groups) |
-| `cluster` | ECS cluster and all associated outputs (ARN, name) |
-| `service` | ECS service and all associated outputs (ARN, task definition) |
-| `efs` | EFS and all associated outputs (file system ID, DNS name) |
+**Note**: Bitbucket Cloud is supported by Atlantis itself (via `ATLANTIS_BITBUCKET_*` env vars), but this module ships no `bitbucket-repository-webhook` submodule — the webhook must be created manually in Bitbucket.
 
 ## Usage Examples
 
@@ -225,33 +206,15 @@ module "atlantis" {
 
   # Atlantis container configuration
   atlantis = {
-    cpu    = 1024
-    memory = 2048
-
     environment = [
-      {
-        name  = "ATLANTIS_GH_USER"
-        value = "atlantis-bot"
-      },
-      {
-        name  = "ATLANTIS_REPO_ALLOWLIST"
-        value = "github.com/myorg/*"
-      },
-      {
-        name  = "ATLANTIS_DEFAULT_TF_VERSION"
-        value = "1.6.0"
-      },
+      { name = "ATLANTIS_GH_USER", value = "atlantis-bot" },
+      { name = "ATLANTIS_REPO_ALLOWLIST", value = "github.com/myorg/*" },
+      { name = "ATLANTIS_DEFAULT_TF_VERSION", value = "1.9.0" },
     ]
 
     secrets = [
-      {
-        name      = "ATLANTIS_GH_TOKEN"
-        valueFrom = aws_secretsmanager_secret.github_token.arn
-      },
-      {
-        name      = "ATLANTIS_GH_WEBHOOK_SECRET"
-        valueFrom = aws_secretsmanager_secret.webhook_secret.arn
-      },
+      { name = "ATLANTIS_GH_TOKEN", valueFrom = aws_secretsmanager_secret.github_token.arn },
+      { name = "ATLANTIS_GH_WEBHOOK_SECRET", valueFrom = aws_secretsmanager_secret.webhook_secret.arn },
     ]
   }
 
@@ -264,23 +227,22 @@ module "atlantis" {
       aws_secretsmanager_secret.webhook_secret.arn,
     ]
 
-    # IAM policies for Terraform operations
+    # Permissions Atlantis itself needs to run terraform plan/apply
     tasks_iam_role_policies = {
-      AdministratorAccess = "arn:aws:iam::aws:policy/AdministratorAccess"
+      terraform_permissions = aws_iam_policy.atlantis_terraform.arn
     }
   }
 
   # ALB configuration
   alb = {
-    subnet_ids                 = module.vpc.public_subnets
-    enable_deletion_protection = false
+    subnet_ids = module.vpc.public_subnets
   }
 
   # DNS and certificate
   certificate_domain_name = "atlantis.example.com"
   route53_zone_id         = data.aws_route53_zone.this.id
 
-  # Enable EFS for persistent storage
+  # Persist plan output across task restarts/redeploys
   enable_efs = true
   efs = {
     mount_targets = {
@@ -294,7 +256,6 @@ module "atlantis" {
   }
 }
 
-# GitHub webhooks
 module "github_webhooks" {
   source = "terraform-aws-modules/atlantis/aws//modules/github-repository-webhook"
 
@@ -303,7 +264,6 @@ module "github_webhooks" {
   webhook_secret = random_password.webhook_secret.result
 }
 
-# Secrets
 resource "aws_secretsmanager_secret" "github_token" {
   name = "atlantis/github-token"
 }
@@ -318,7 +278,7 @@ resource "random_password" "webhook_secret" {
 }
 ```
 
-### Using Existing ECS Cluster and ALB
+### Using an Existing ECS Cluster and ALB
 
 ```hcl
 module "atlantis" {
@@ -328,16 +288,13 @@ module "atlantis" {
   name   = "atlantis"
   vpc_id = module.vpc.vpc_id
 
-  # Use existing ECS cluster
   create_cluster = false
   cluster_arn    = aws_ecs_cluster.existing.arn
 
-  # Use existing ALB
   create_alb            = false
   alb_target_group_arn  = aws_lb_target_group.atlantis.arn
   alb_security_group_id = aws_security_group.alb.id
 
-  # Use existing certificate
   create_certificate = false
   certificate_arn    = aws_acm_certificate.existing.arn
 
@@ -362,66 +319,6 @@ module "atlantis" {
 }
 ```
 
-### GitLab Integration
-
-```hcl
-module "atlantis" {
-  source  = "terraform-aws-modules/atlantis/aws"
-  version = "~> 5.1"
-
-  name   = "atlantis"
-  vpc_id = module.vpc.vpc_id
-
-  atlantis = {
-    environment = [
-      { name = "ATLANTIS_GITLAB_USER", value = "atlantis-bot" },
-      { name = "ATLANTIS_GITLAB_HOSTNAME", value = "gitlab.example.com" },
-      { name = "ATLANTIS_REPO_ALLOWLIST", value = "gitlab.example.com/mygroup/*" },
-    ]
-    secrets = [
-      { name = "ATLANTIS_GITLAB_TOKEN", valueFrom = aws_secretsmanager_secret.gitlab_token.arn },
-      { name = "ATLANTIS_GITLAB_WEBHOOK_SECRET", valueFrom = aws_secretsmanager_secret.webhook_secret.arn },
-    ]
-  }
-
-  service = {
-    subnet_ids            = module.vpc.private_subnets
-    task_exec_secret_arns = [
-      aws_secretsmanager_secret.gitlab_token.arn,
-      aws_secretsmanager_secret.webhook_secret.arn,
-    ]
-    tasks_iam_role_policies = {
-      AdministratorAccess = "arn:aws:iam::aws:policy/AdministratorAccess"
-    }
-  }
-
-  alb = {
-    subnet_ids = module.vpc.public_subnets
-  }
-
-  certificate_domain_name = "atlantis.example.com"
-  route53_zone_id         = data.aws_route53_zone.this.id
-
-  tags = {
-    Environment = "production"
-    GitProvider = "gitlab"
-  }
-}
-
-module "gitlab_webhooks" {
-  source = "terraform-aws-modules/atlantis/aws//modules/gitlab-repository-webhook"
-
-  repositories   = ["mygroup/infrastructure", "mygroup/terraform-modules"]
-  webhook_url    = "${module.atlantis.url}/events"
-  webhook_secret = random_password.webhook_secret.result
-}
-
-provider "gitlab" {
-  token    = var.gitlab_token
-  base_url = "https://gitlab.example.com/api/v4/"
-}
-```
-
 ### Multi-Account with Cross-Account IAM Roles
 
 ```hcl
@@ -433,9 +330,6 @@ module "atlantis" {
   vpc_id = module.vpc.vpc_id
 
   atlantis = {
-    cpu    = 2048
-    memory = 4096
-
     environment = [
       { name = "ATLANTIS_GH_USER", value = "atlantis-bot" },
       { name = "ATLANTIS_REPO_ALLOWLIST", value = "github.com/myorg/infra-*" },
@@ -449,13 +343,13 @@ module "atlantis" {
   }
 
   service = {
-    subnet_ids            = module.vpc.private_subnets
+    subnet_ids = module.vpc.private_subnets
     task_exec_secret_arns = [
       aws_secretsmanager_secret.github_token.arn,
       aws_secretsmanager_secret.webhook_secret.arn,
     ]
 
-    # Cross-account assume role permissions
+    # Cross-account assume-role permissions
     tasks_iam_role_policies = {
       cross_account = aws_iam_policy.assume_terraform_roles.arn
       state_access  = aws_iam_policy.terraform_state.arn
@@ -500,105 +394,96 @@ resource "aws_iam_policy" "assume_terraform_roles" {
 
 ### Deployment
 
-1. **Use Private Subnets for ECS**: Deploy Atlantis tasks in private subnets with NAT gateway for security
-2. **Enable EFS for Production**: Use EFS persistent storage to prevent plan file loss during container restarts
-3. **Deploy Multi-AZ**: Configure ALB across multiple AZs for high availability
-4. **Size Resources Appropriately**: Start with 1024 CPU and 2048 MB memory; scale for concurrent plans
+1. **Use Private Subnets for `service.subnet_ids`**: Tasks get no public IP by default (`assign_public_ip = false`); ensure private subnets have a NAT Gateway or VPC endpoints (`ecr.api`, `ecr.dkr`, `secretsmanager`, `logs`, `s3`) for image pulls and outbound calls
+2. **Enable EFS in Production**: Without EFS, in-flight plan output is lost whenever the single task is replaced (deploys, crashes, AZ failure)
+3. **Expect Brief Downtime on Deploy**: `desired_count` is fixed at 1 and deployment uses `minimum_healthy_percent = 0`, so the old task is stopped before the new one starts — plan a maintenance window or communicate expected blips
+4. **Don't Try to Scale Horizontally**: Atlantis supports exactly one task; scale vertically (`atlantis.cpu`/`atlantis.memory`, `service.cpu`/`service.memory`) if plans are slow, not by increasing task count
 
 ### Security
 
-5. **Use Secrets Manager**: Store GitHub/GitLab tokens and webhook secrets in Secrets Manager, not environment variables
-6. **Configure Repository Allowlist**: Always set `ATLANTIS_REPO_ALLOWLIST` to restrict unauthorized repository access
-7. **Use HTTPS Only**: Always use ACM certificates; never expose Atlantis over HTTP
-8. **Implement Webhook Secrets**: Always configure webhook secrets to validate incoming requests
-9. **Restrict ALB Ingress**: Limit ALB ingress to specific IP ranges when possible
-10. **Scope IAM Permissions**: Apply least-privilege to task role; avoid AdministratorAccess in production
+5. **Store Credentials in Secrets Manager**: Pass VCS tokens and webhook secrets via `atlantis.secrets` (+ `service.task_exec_secret_arns`), never via `atlantis.environment`
+6. **Prefer GitHub App Auth Over PAT**: Use `ATLANTIS_GH_APP_ID`/`ATLANTIS_GH_APP_KEY` where possible — scoped, revocable, and not tied to a human account
+7. **Always Set `ATLANTIS_REPO_ALLOWLIST`**: Without it Atlantis will refuse to run, but an overly broad allowlist (`*`) exposes any repo with access to the webhook to plan/apply
+8. **Always Configure a Webhook Secret**: Required to validate that inbound `/events` requests actually originate from your VCS
+9. **The ALB is Public by Default**: `alb.security_group_ingress_rules` defaults to `0.0.0.0/0` on 80/443 — restrict to known CIDRs, put it behind a WAF (`alb.associate_web_acl`), or set `alb.internal = true` for VPN/private access
+10. **Scope `tasks_iam_role_policies` Tightly**: This is the IAM identity Atlantis assumes to run `terraform apply` — grant only the state bucket, lock table, KMS key, and target-account `AssumeRole` permissions actually needed, not `AdministratorAccess`
 
-### Terraform State
+### Terraform State Access
 
-11. **Grant S3 State Access**: Provide task role with read/write access to S3 state buckets
-12. **Configure DynamoDB Lock Access**: Grant permissions to DynamoDB lock tables
-13. **Enable KMS Access**: If using encrypted state, grant decrypt/encrypt permissions
+11. **Grant S3 State Access**: Task role needs read/write on the relevant state bucket(s)/prefixes
+12. **Grant Lock Table Access**: DynamoDB (or S3-native locking) permissions for the backend in use
+13. **Grant KMS Access**: `kms:Decrypt`/`kms:GenerateDataKey` if state or secrets are encrypted with a customer-managed key
 
 ### Configuration
 
-14. **Set Default Terraform Version**: Configure `ATLANTIS_DEFAULT_TF_VERSION` for consistency
-15. **Configure Apply Requirements**: Require pull request approvals before allowing applies
-16. **Enable Parallel Execution**: Set `ATLANTIS_PARALLEL_PLAN` and `ATLANTIS_PARALLEL_APPLY` for faster processing
+14. **Pin `ATLANTIS_DEFAULT_TF_VERSION`**: Avoid surprise Terraform version drift between local dev and Atlantis
+15. **Require Approvals Before Apply**: Configure `apply_requirements: [approved]` in the Atlantis server/repo config
+16. **Enable Parallel Plan/Apply for Multi-Project Repos**: `ATLANTIS_PARALLEL_PLAN` / `ATLANTIS_PARALLEL_APPLY` speed up monorepos, but combine with tight `tasks_iam_role_policies` since applies can run concurrently
+17. **Match `service.runtime_platform` to Your Image**: Default is ARM64; override `cpu_architecture = "X86_64"` if supplying a custom amd64-only image
 
 ### Operations
 
-17. **Run Multiple Tasks for HA**: Configure desired_count of 2+ for high availability
-18. **Enable CloudWatch Logs**: Monitor container logs for debugging and auditing
-19. **Implement Comprehensive Tagging**: Apply tags for environment, cost center, and owner
-20. **Test in Non-Production First**: Validate upgrades and configuration changes before production
+18. **Enable CloudWatch Logs (default on)**: Keep `atlantis.enable_cloudwatch_logging = true` for plan/apply auditability
+19. **Tag Consistently**: Apply `tags` for environment, cost center, and owner across the module and reused resources
+20. **Test Upgrades in Non-Production**: Validate new Atlantis image versions and module upgrades in a staging deployment before rolling to production
 
 ## Additional Resources
 
 - **Atlantis Documentation**: https://www.runatlantis.io/docs/
 - **Module GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-atlantis
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/atlantis/aws/latest
+- **Supplemental Module Docs (GitHub App setup)**: https://github.com/terraform-aws-modules/terraform-aws-atlantis/blob/master/docs/README.md
 - **Atlantis Server Configuration**: https://www.runatlantis.io/docs/server-configuration.html
-- **Repository Configuration**: https://www.runatlantis.io/docs/repo-level-atlantis-yaml.html
+- **Repository-Level `atlantis.yaml`**: https://www.runatlantis.io/docs/repo-level-atlantis-yaml.html
 - **Custom Workflows**: https://www.runatlantis.io/docs/custom-workflows.html
-- **Security Best Practices**: https://www.runatlantis.io/docs/security.html
+- **Atlantis Security Guidance**: https://www.runatlantis.io/docs/security.html
 - **AWS ECS Best Practices**: https://docs.aws.amazon.com/AmazonECS/latest/bestpracticesguide/
 
 ## Notes for AI Agents
 
 ### Module Selection
 
-- **Use this module** for collaborative, pull request-based Terraform workflows with automated planning
-- **Use AWS CodePipeline** for fully automated CI/CD without pull request interaction
-- **Use Terraform Cloud/Enterprise** for HashiCorp-managed solution with similar capabilities
+- **Use this module** for collaborative, pull-request-based Terraform workflows with automated planning and human-gated applies
+- **Use AWS CodePipeline/CodeBuild** for fully automated CI/CD that doesn't need pull-request-triggered plans
+- **Use Terraform Cloud/HCP Terraform** for a HashiCorp-managed SaaS equivalent instead of self-hosting on ECS
 
-### Architecture Patterns
+### Critical Constraints (do not design around these incorrectly)
 
-- **Small teams (1-10)**: Single instance, 1024 CPU, 2048 MB, EFS enabled, private subnets
-- **Medium teams (10-50)**: 2048 CPU, 4096 MB, 2+ tasks, multi-AZ, separate instances per environment
-- **Large organizations (50+)**: Multiple instances per team, custom workflows, policy checking
-- **Multi-account**: Atlantis in central account with cross-account IAM roles
+- **`desired_count` is hardcoded to `1`** — do not expose it as a variable in generated code or assume multi-task HA is possible
+- **`enable_execute_command` is hardcoded to `false`** — ECS Exec cannot be enabled through this module
+- **`ATLANTIS_PORT` and `ATLANTIS_ATLANTIS_URL` are auto-injected** by the module — do not set them in `atlantis.environment`, they will be duplicated
+- **The ALB is internet-facing and open to `0.0.0.0/0` on 80/443 by default** — flag this to the user and set `alb.security_group_ingress_rules` or `alb.internal = true` for anything beyond a public demo
 
-### Required Environment Variables
+### Sizing Guidance
 
-**GitHub**:
-- `ATLANTIS_GH_USER`: GitHub username for Atlantis bot
-- `ATLANTIS_GH_TOKEN`: GitHub personal access token (via secrets)
-- `ATLANTIS_GH_WEBHOOK_SECRET`: Webhook secret (via secrets)
-- `ATLANTIS_REPO_ALLOWLIST`: Allowed repositories pattern
+- **Defaults**: `atlantis.cpu = 2048` / `atlantis.memory = 4096` (2 vCPU / 4 GB), ARM64 — sufficient for small-to-medium teams
+- **Larger/parallel workloads**: increase `atlantis`/`service` `cpu`/`memory` (e.g., 4096/8192) and enable `ATLANTIS_PARALLEL_PLAN`/`ATLANTIS_PARALLEL_APPLY`, since there is only ever one task to absorb load
+- **Multi-account**: keep Atlantis in a central "tooling" account with `tasks_iam_role_policies` granting `sts:AssumeRole` into per-account Terraform roles
 
-**GitLab**:
-- `ATLANTIS_GITLAB_USER`: GitLab username
-- `ATLANTIS_GITLAB_TOKEN`: GitLab access token (via secrets)
-- `ATLANTIS_GITLAB_WEBHOOK_SECRET`: Webhook secret (via secrets)
-- `ATLANTIS_GITLAB_HOSTNAME`: GitLab hostname (for self-hosted)
-- `ATLANTIS_REPO_ALLOWLIST`: Allowed repositories pattern
+### Required Environment Variables (via `atlantis.environment` / `atlantis.secrets`)
+
+**GitHub (PAT)**: `ATLANTIS_GH_USER`, `ATLANTIS_GH_TOKEN` (secret), `ATLANTIS_GH_WEBHOOK_SECRET` (secret), `ATLANTIS_REPO_ALLOWLIST`
+**GitHub (App, preferred)**: `ATLANTIS_GH_APP_ID` (secret), `ATLANTIS_GH_APP_KEY` (secret), `ATLANTIS_GH_WEBHOOK_SECRET` (secret), `ATLANTIS_REPO_ALLOWLIST`
+**GitLab**: `ATLANTIS_GITLAB_USER`, `ATLANTIS_GITLAB_TOKEN` (secret), `ATLANTIS_GITLAB_WEBHOOK_SECRET` (secret), `ATLANTIS_GITLAB_HOSTNAME` (self-hosted only), `ATLANTIS_REPO_ALLOWLIST`
+**Bitbucket Cloud**: `ATLANTIS_BITBUCKET_USER`, `ATLANTIS_BITBUCKET_TOKEN` (secret), `ATLANTIS_REPO_ALLOWLIST` — webhook must be created manually (no submodule)
 
 ### IAM Permissions
 
-**Task Execution Role** (automatic):
-- SecretsManager:GetSecretValue for configured secrets
-- CloudWatch Logs permissions
-- ECR image pull (if using custom image)
+**Task execution role** (managed automatically): `secretsmanager:GetSecretValue` for the ARNs in `service.task_exec_secret_arns`, CloudWatch Logs write, ECR image pull
+**Task (application) role** — configure via `service.tasks_iam_role_policies`: S3 read/write on state buckets, DynamoDB read/write on lock tables, KMS decrypt/encrypt for encrypted state, `sts:AssumeRole` for cross-account access, plus whatever AWS resource permissions the managed Terraform code itself needs
 
-**Task Role** (configure via `tasks_iam_role_policies`):
-- S3 read/write on state buckets
-- DynamoDB read/write on lock tables
-- KMS decrypt/encrypt for encrypted state
-- sts:AssumeRole for cross-account access
-- Terraform resource permissions (varies by infrastructure)
+### Cost Estimation (rough, region-dependent, single task only — no HA multiplier)
 
-### Cost Estimation
-
-- **Fargate**: ~$30-50/month for single task (1024 CPU, 2048 MB); double for HA
-- **ALB**: ~$20-30/month base cost plus LCU charges
-- **EFS**: ~$0.30/GB-month (typically $1-5/month for plan storage)
-- **Total**: $50-100/month basic, $100-200/month HA production
+- **Fargate compute** (default 2 vCPU / 4 GB, always-on): ~$70-90/month
+- **ALB**: ~$20-25/month base + LCU usage charges
+- **EFS**: ~$0.30/GB-month (typically a few dollars/month for plan storage)
+- **Total baseline**: roughly $90-130/month
 
 ### Troubleshooting
 
-- **Webhooks not received**: Check ALB security group, Route53 DNS, GitHub/GitLab webhook delivery logs
-- **Plans failing with auth**: Verify GitHub token permissions, check Secrets Manager access
-- **Apply stuck**: Check apply requirements, verify PR approval, check plan locks
-- **Tasks restarting**: Check CloudWatch Logs, memory limits, health checks, IAM permissions
-- **State access errors**: Verify S3 permissions, bucket policy, KMS key policy
+- **Webhooks not received**: check ALB security group ingress, Route53 DNS resolution, and the VCS provider's webhook delivery logs
+- **Plans failing with auth errors**: verify VCS token/App key validity and that `service.task_exec_secret_arns` includes the relevant secret ARNs
+- **Apply stuck**: check `apply_requirements` (e.g., `approved`), confirm the PR is approved, and check for existing plan locks
+- **Task restarting/unhealthy**: check CloudWatch Logs, container `healthCheck`/ALB target group health (`/healthz`), and CPU/memory limits
+- **State access errors**: verify `tasks_iam_role_policies` grants S3/DynamoDB/KMS access matching the backend configuration
+- **Plan output lost after redeploy**: `enable_efs` was likely `false` — enable it and provide `efs.mount_targets` for each AZ used by `service.subnet_ids`

@@ -7,18 +7,29 @@ A **Model Context Protocol (MCP)** server that provides intelligent search capab
 
 **Ready to Use**: Includes a pre-built search index with embeddings for 54 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
 
+## 🤔 Why TFModSearch?
+
+When an AI assistant writes Terraform, it often guesses at module names, invents variables that don't exist, or reaches for outdated syntax. TFModSearch gives your assistant a **curated, versioned, offline knowledge base** of the official [`terraform-aws-modules`](https://github.com/terraform-aws-modules) so it can:
+
+- **Find the right module from intent** — "I need a Redis cache" resolves to `elasticache`, not a hallucinated module name.
+- **Ground generated code in real inputs/outputs** — the assistant pulls the full, current module documentation (submodules, variables, outputs, examples) on demand instead of improvising.
+- **Stay fast, private, and deterministic** — search runs locally on CPU against a pre-built index. No external API calls, no rate limits, no network round-trips.
+
+Think of it as an always-available, searchable reference card for every terraform-aws-modules module — kept accurate and shipped ready to run.
+
 ## 🚀 Features
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
 - **Fast & Efficient**: Pre-built search index with CPU-only inference using `BAAI/bge-base-en-v1.5` model
-- **Ready to Use**: Includes pre-built index (`model/tfmod_index.pkl`) with embeddings from `BAAI/bge-base-en-v1.5` model and curated Terraform AWS module documentation
+- **Ready to Use**: Includes pre-built index (`model/tfmod_bge_base_index.pkl`) with embeddings from `BAAI/bge-base-en-v1.5` model and curated Terraform AWS module documentation
 - **Comprehensive Catalog**: Access to terraform-aws-modules documentation compiled from official sources with rich metadata
 - **Security-First**: Built-in path validation and access controls for safe file operations
 - **Configurable Weights**: Fine-tune search scoring through YAML config or CLI arguments
 
 ## 📋 Table of Contents
 
+- [Why TFModSearch?](#-why-tfmodsearch)
 - [Installation](#-installation)
 - [Quick Start](#-quick-start)
   - [Claude Code CLI Integration](#claude-code-cli-integration)
@@ -60,6 +71,8 @@ Then add to your MCP client config:
 }
 ```
 
+> **Bundled and ready**: The pre-built search index and all 54 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `BAAI/bge-base-en-v1.5` embedding model — ~220 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
+
 > **Note**: If you get "command not found" error, use the full path to `uvx`:
 > ```bash
 > # Find uvx location
@@ -86,7 +99,7 @@ cd aws-tf-modules-mcp-server
 # Create virtual environment and install dependencies
 uv venv --python 3.13
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-uv pip install -r pyproject.toml
+uv pip install -e .
 ```
 
 ### Using pip
@@ -99,7 +112,7 @@ cd aws-tf-modules-mcp-server
 # Create virtual environment and install dependencies
 python -m venv .venv
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-pip install -r pyproject.toml
+pip install -e .
 ```
 
 **Ready to Go**: The repository includes a pre-built search index, so you can skip the index building step and run the MCP server immediately after installation!
@@ -108,7 +121,7 @@ pip install -r pyproject.toml
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_bge_base_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
@@ -288,7 +301,7 @@ python src/tfmod_search_cli.py index \
 
 **Options**:
 - `--docs_dir`: Directory containing Terraform module markdown files (required)
-- `--index_path`: Output path for the pickled index file (optional, defaults to `./model/tfmod_index.pkl`)
+- `--index_path`: Output path for the pickled index file (optional, defaults to `./model/tfmod_bge_base_index.pkl`)
 - `--model`: Sentence transformer model to use (default: `BAAI/bge-base-en-v1.5`)
 
 ### 2. CLI Search (Standalone)
@@ -373,6 +386,26 @@ Retrieve full documentation for a specific Terraform module.
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
+### Typical Workflow
+
+A coding assistant discovers and uses a module in two steps:
+
+1. **Search by intent** — the assistant turns a natural-language need into a module:
+
+   ```
+   search_modules("managed kubernetes cluster with node groups")
+   → eks (score 8.9), eks-pod-identity (2.1), autoscaling (1.7)
+   ```
+
+2. **Fetch the full docs** — it pulls the complete documentation to ground the generated code:
+
+   ```
+   get_module("eks")
+   → full EKS module reference: inputs, outputs, submodules, and copy-paste HCL examples
+   ```
+
+The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing.
+
 ## ⚙️ Configuration
 
 ### Search Weights Configuration
@@ -391,6 +424,8 @@ search_weights:
   w_bm25: 2.0    # BM25 text relevance weight
   w_sem: 3.0     # Semantic similarity weight
 ```
+
+> The values above are the weights shipped in the repo's `config.yaml` (bundled with the package), so they are what the server uses out of the box.
 
 **Configuration Precedence** (highest to lowest):
 1. CLI arguments (`--w_kw`, `--w_exact`, `--query-instruction`, etc.)
@@ -463,10 +498,11 @@ The project includes comprehensive integration tests covering all major function
 pytest tests/ -v
 
 # Run specific test suite
-pytest tests/integration/test_mcp_server.py -v           # MCP server tests (17 tests)
-pytest tests/integration/test_parse_markdown.py -v       # Parsing tests (12 tests)
-pytest tests/integration/test_cli_index.py -v            # CLI index tests (4 tests)
-pytest tests/integration/test_model_comparison.py -v -s  # Model comparison tests (31 tests)
+pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 54 modules (169 tests)
+pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
+pytest tests/integration/test_mcp_server.py -v              # MCP server tools (23 tests)
+pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (12 tests)
+pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
@@ -474,12 +510,13 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 ### Test Coverage
 
-- **MCP Server** (17 tests): `search_modules` tool, `get_module` resource, security validation, integration workflows
+- **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
+- **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
+- **MCP Server** (23 tests): `search_modules`, `get_module`, and `modules_list` tools, security validation, integration workflows
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
-- **CLI Index Building** (4 tests): Index creation, validation, search integration
-- **Model Comparison** (31 tests): Embedding model performance comparison with timing analysis
+- **CLI Index Building** (4 tests): index creation, validation, search integration
 
-**Total**: 64 integration tests
+**Total**: 239 integration tests
 
 ## 🏗️ Architecture
 
@@ -487,11 +524,11 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 This repository includes:
 
-- **Pre-built Search Index** (`model/tfmod_index.pkl`):
+- **Pre-built Search Index** (`model/tfmod_bge_base_index.pkl`):
   - Ready-to-use search index with pre-computed embeddings using `BAAI/bge-base-en-v1.5` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
   - Includes 54 curated Terraform AWS modules
-  - File size: ~4.38 MB
+  - File size: ~4.35 MB
 
 - **Curated Module Documentation** (`modules/terraform-aws-modules/`):
   - Compiled documentation for 54 Terraform AWS modules covering compute, storage, networking, databases, security, and more
@@ -562,7 +599,7 @@ The search index includes 54 Terraform AWS modules across multiple service categ
 - `sqs` - Simple Queue Service
 - `step-functions` - Serverless workflow orchestration
 
-**Networking & Content Delivery:**
+**Content Delivery & Network Security:**
 - `cloudfront` - CloudFront CDN
 - `global-accelerator` - Global Accelerator for performance
 - `network-firewall` - AWS Network Firewall
@@ -573,6 +610,9 @@ The search index includes 54 Terraform AWS modules across multiple service categ
 - `atlantis` - Terraform pull request automation
 - `notify-slack` - Slack notification integration
 - `ssm-parameter` - Systems Manager Parameter Store
+
+**Big Data & Analytics:**
+- `emr` - Elastic MapReduce (Hadoop, Spark) for big data processing
 
 All modules include detailed documentation with:
 - Module metadata and version information

@@ -10,48 +10,43 @@
 - **Purpose**: Terraform module that creates Classic Load Balancer (ELB) resources on AWS
 - **Service**: AWS Elastic Load Balancing - Classic Load Balancer (ELB)
 - **Category**: Networking, Load Balancing, Legacy
-- **Keywords**: elb, classic-load-balancer, load-balancer, health-check, listener, ssl, https, connection-draining, cross-zone, instance-attachment, access-logs, tcp, http, security-group, route53
-- **Use For**: legacy application support, maintaining existing Classic Load Balancer infrastructure, TCP/SSL load balancing for specific requirements, backward compatibility with older AWS deployments, simple HTTP/HTTPS load balancing for non-containerized applications, migrating from Classic to Application Load Balancer, supporting applications requiring instance-level load balancing, cross-zone traffic distribution for EC2 instances
+- **Keywords**: elb, classic-load-balancer, load-balancer, health-check, listener, ssl, https, tcp, connection-draining, cross-zone, instance-attachment, access-logs, security-group, route53, layer4, layer7
+- **Use For**: legacy application support, maintaining existing Classic Load Balancer infrastructure, TCP/SSL load balancing without HTTP-aware routing, backward compatibility with older AWS/EC2-Classic-era deployments, simple HTTP/HTTPS load balancing for non-containerized EC2 applications, staged migration from Classic to Application/Network Load Balancer, instance-level (not target-group) load balancing, cross-AZ traffic distribution for EC2 instances
 
 ## Description
 
-The AWS ELB Terraform module provides a declarative way to create and manage AWS Classic Load Balancers, also known as Elastic Load Balancers (ELB). Classic Load Balancer is AWS's previous-generation load balancing service that distributes incoming application traffic across multiple EC2 instances in multiple Availability Zones to increase application fault tolerance and availability. While AWS recommends using Application Load Balancer (ALB) or Network Load Balancer (NLB) for new deployments, this module remains essential for maintaining existing infrastructure and supporting legacy applications that depend on Classic Load Balancer features.
+The AWS ELB module provisions AWS Classic Load Balancers (the `aws_elb` resource), the previous-generation Elastic Load Balancing product that distributes TCP/SSL (Layer 4) or HTTP/HTTPS (Layer 7) traffic directly across EC2 instances in one or more Availability Zones. AWS now recommends Application Load Balancer (ALB) for HTTP/HTTPS workloads and Network Load Balancer (NLB) for TCP/UDP workloads for all new deployments — Classic Load Balancer is a legacy/maintenance-mode service. This module exists to manage existing Classic ELB infrastructure and applications with hard dependencies on Classic ELB semantics (e.g., instance-level health checks and registration rather than target groups) as code.
 
-The module abstracts the complexity of ELB configuration by providing a simplified interface for defining listeners, health checks, security groups, and instance attachments. It supports both internet-facing and internal load balancers, with configurable options for cross-zone load balancing, connection draining, idle timeouts, and access logging. The module handles critical operational concerns such as SSL/TLS certificate attachment, health check configuration with customizable thresholds, and security group management for controlling inbound and outbound traffic.
+The module wraps two internal submodules: `modules/elb`, which creates the `aws_elb` resource itself (listeners, health check, access logs, cross-zone load balancing, idle timeout, connection draining), and `modules/elb_attachment`, which creates `aws_elb_attachment` resources to register EC2 instances with the load balancer. The root module composes both automatically — passing `instances`/`number_of_instances` at the root level attaches instances as part of the same `terraform apply`. The `elb_attachment` submodule can also be called independently to attach instances to an ELB created elsewhere (e.g., by an Auto Scaling group lifecycle hook or a separate Terraform state), decoupling instance registration from the load balancer's own lifecycle.
 
-Classic Load Balancers operate at both Layer 4 (TCP) and Layer 7 (HTTP/HTTPS), making them suitable for applications that require basic load balancing across EC2 instances without the advanced routing capabilities of modern load balancers. The module includes a separate submodule for managing instance attachments, enabling dynamic scaling scenarios where instances are added or removed from the load balancer pool. With built-in support for Route 53 integration via zone IDs, SSL policy configuration, and comprehensive tagging, this module enables teams to maintain existing Classic Load Balancer deployments with infrastructure-as-code best practices.
+Because Classic ELB predates target groups, instances are registered directly by instance ID and health-checked individually rather than through a shared target group, and there is no native support for container/IP-based targets, path-based routing, or WebSocket-aware routing — those require ALB. The module supports internet-facing and internal (VPC-only) load balancers, multiple listeners per protocol/port combination, SSL certificate attachment (typically sourced from ACM), S3 access logging, and standard resource tagging, and it exposes the ELB's canonical hosted zone ID for Route 53 alias records.
 
 ## Key Features
 
-- **Classic Load Balancer Creation**: Creates AWS Classic Load Balancers with configurable names and network placement
-- **Multiple Listener Support**: Configure multiple listeners for different protocols (HTTP, HTTPS, TCP, SSL) and port combinations
-- **Health Check Configuration**: Customizable health checks with configurable protocols, intervals, thresholds, and timeout values
-- **Cross-Zone Load Balancing**: Enable traffic distribution across instances in all configured Availability Zones
-- **Connection Draining**: Gracefully remove instances from service with configurable draining timeout periods
-- **SSL/TLS Support**: Attach SSL certificates and configure SSL security policies for HTTPS and SSL listeners
-- **Access Logging**: Optional S3 bucket logging for detailed request analysis and compliance requirements
-- **Internal and External Load Balancers**: Support for both internet-facing and internal (VPC-only) load balancers
-- **Security Group Management**: Attach security groups to control inbound and outbound traffic to the load balancer
-- **Instance Attachment**: Directly attach EC2 instances to the load balancer pool or use separate attachment submodule
-- **Idle Timeout Configuration**: Customize connection idle timeout values from 1 to 4000 seconds
-- **Route 53 Integration**: Outputs canonical hosted zone ID for creating Route 53 alias records
-- **Tagging Support**: Comprehensive tagging for cost allocation, resource organization, and compliance tracking
-- **Multi-AZ Deployment**: Deploy load balancers across multiple subnets in different Availability Zones
-- **Dynamic Instance Management**: Submodule for programmatically attaching and detaching instances
-- **Conditional Creation**: Control resource creation with create_elb flag for flexible module usage
+- **Classic Load Balancer Creation**: Creates an `aws_elb` resource with configurable name/name_prefix and subnet placement
+- **Multiple Listener Support**: Configure multiple listener blocks mixing HTTP, HTTPS, TCP, and SSL protocols/ports on one ELB
+- **Instance-Level Health Checks**: Customizable health checks (target, interval, thresholds, timeout) evaluated per registered instance
+- **Cross-Zone Load Balancing**: Enabled by default; evenly distributes traffic across instances in all attached AZs at no extra charge
+- **Connection Draining**: Gracefully deregisters instances over a configurable timeout instead of dropping in-flight connections
+- **SSL/TLS Termination**: Attach an SSL certificate (ACM ARN) per listener and terminate HTTPS/SSL at the load balancer
+- **S3 Access Logging**: Optional per-request access logs delivered to an S3 bucket for auditing and troubleshooting
+- **Internal or Internet-Facing**: Deploy as a public-facing ELB or restrict to a VPC-internal ELB via `internal = true`
+- **Direct or Decoupled Instance Attachment**: Attach instances inline via `instances`/`number_of_instances`, or manage attachment independently with the `elb_attachment` submodule
+- **Route 53 Ready**: Outputs the canonical hosted zone ID (`elb_zone_id`) needed for alias records
+- **Conditional Creation**: `create_elb` flag (`count`-based) allows disabling the module entirely per environment without removing the block
 
 ## Main Use Cases
 
-1. **Legacy Application Support**: Maintain existing Classic Load Balancer infrastructure for applications not yet migrated to ALB/NLB
-2. **TCP/SSL Load Balancing**: Distribute TCP or SSL traffic when Layer 4 load balancing is required without HTTP-specific features
-3. **Simple HTTP Load Balancing**: Basic HTTP/HTTPS load balancing for traditional EC2-based web applications
-4. **Backward Compatibility**: Support applications with hard dependencies on Classic Load Balancer behavior
-5. **Migration Planning**: Gradual migration from Classic to Application/Network Load Balancers with parallel deployments
-6. **Cost Optimization**: Maintain Classic Load Balancers where migration costs exceed operational benefits
-7. **Instance-Level Load Balancing**: Distribute traffic directly to EC2 instances without container or IP-based routing
-8. **Cross-Zone High Availability**: Ensure traffic distribution across multiple Availability Zones for fault tolerance
-9. **SSL Termination**: Offload SSL/TLS encryption from backend instances to the load balancer
-10. **Health-Based Routing**: Automatically route traffic only to healthy instances based on configurable health checks
+1. **Legacy Application Support**: Maintain existing Classic Load Balancer infrastructure not yet migrated to ALB/NLB
+2. **TCP/SSL Load Balancing**: Distribute raw TCP or SSL traffic (e.g., non-HTTP protocols) at Layer 4
+3. **Simple HTTP/HTTPS Load Balancing**: Basic web traffic distribution for traditional, non-containerized EC2 fleets
+4. **Backward Compatibility**: Support applications or tooling with hard dependencies on Classic ELB instance registration behavior
+5. **Migration Planning**: Run Classic ELB alongside a new ALB/NLB during a phased cutover, shifting traffic via Route 53 weighted routing
+6. **Auto Scaling Group Backends**: Register EC2 instances launched by an ASG using the `elb_attachment` submodule
+7. **Instance-Level Load Balancing**: Distribute traffic directly to EC2 instances without target groups or container-based routing
+8. **Multi-AZ High Availability**: Spread traffic across instances in multiple Availability Zones for fault tolerance
+9. **SSL Offload**: Terminate SSL/TLS at the load balancer to reduce CPU load on backend instances
+10. **Health-Based Traffic Routing**: Automatically stop routing to instances that fail configurable health checks
 
 ## Submodules
 
@@ -59,34 +54,33 @@ This module contains the following submodules:
 
 ### 1. elb_attachment
 
-- **Purpose**: Manages the attachment of EC2 instances to an existing Classic Load Balancer
+- **Purpose**: Manages `aws_elb_attachment` resources to register EC2 instances with an existing Classic Load Balancer
 - **Source**: `terraform-aws-modules/elb/aws//modules/elb_attachment`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/elb/aws/latest/submodules/elb_attachment
-- **Key Features**: Dynamic instance attachment, conditional creation control, supports multiple instances
-- **Use Cases**: Auto-scaling group integration, blue-green deployments, gradual instance rollouts, dynamic capacity management
+- **Key Features**: Attach one or many instances by ID, conditional creation via `create_attachment`, independent lifecycle from the ELB itself
+- **Use Cases**: Auto Scaling group integration, blue-green deployments, gradual/rolling instance rollouts, attaching instances managed in a separate Terraform state
 
 ## Submodule 1: elb_attachment
 
 ### Description
 
-The elb_attachment submodule provides a dedicated resource for attaching EC2 instances to an existing Classic Load Balancer. This submodule is particularly useful in scenarios where the load balancer and instances are managed separately, such as auto-scaling groups, blue-green deployments, or when instances need to be dynamically added or removed from the load balancer pool independently of the load balancer lifecycle.
+The `elb_attachment` submodule creates `aws_elb_attachment` resources that register EC2 instances with an existing Classic Load Balancer by name/ID. It is used when instance registration must be managed separately from the ELB's own lifecycle — for example, when instances come from an Auto Scaling group, a separate Terraform configuration/state, or need to be attached/detached without touching the ELB resource itself. The root `elb` module already calls this submodule internally when `instances`/`number_of_instances` are set, so calling it directly is only needed for decoupled attachment scenarios.
 
 ### Key Features
 
-- Attach one or multiple EC2 instances to an existing Classic Load Balancer
-- Conditional attachment creation with `create_attachment` flag
-- Supports dynamic instance lists for scaling scenarios
-- Independent lifecycle management from the main ELB resource
-- Useful for programmatic instance management in automation workflows
+- Attaches one or many EC2 instances to an existing Classic Load Balancer by ID
+- `create_attachment` flag allows disabling attachment per environment without removing the block
+- Accepts a dynamic instance list, suitable for scaling scenarios
+- Independent lifecycle from the ELB resource — safe to apply/destroy separately
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `elb` | `string` | Required | Name of the ELB to attach instances to |
-| `instances` | `list(string)` | Required | List of instance IDs to attach to the ELB pool |
-| `number_of_instances` | `number` | Required | Number of instances to attach |
-| `create_attachment` | `bool` | `true` | Whether to create the attachment resource |
+| `elb` | `string` | Required | Name/ID of the ELB to attach instances to |
+| `instances` | `list(string)` | Required | List of EC2 instance IDs to attach to the ELB pool |
+| `number_of_instances` | `number` | Required | Number of instances to attach (must match length used from `instances`) |
+| `create_attachment` | `bool` | `true` | Whether to create the attachment resources |
 
 ### Main Outputs
 
@@ -95,39 +89,7 @@ This submodule does not expose any outputs.
 ### Usage Example
 
 ```hcl
-# Create the ELB first
-module "web_elb" {
-  source = "terraform-aws-modules/elb/aws"
-
-  name = "web-elb"
-
-  subnets         = ["subnet-12345678", "subnet-87654321"]
-  security_groups = ["sg-12345678"]
-  internal        = false
-
-  listener = [
-    {
-      instance_port     = 80
-      instance_protocol = "HTTP"
-      lb_port           = 80
-      lb_protocol       = "HTTP"
-    }
-  ]
-
-  health_check = {
-    target              = "HTTP:80/"
-    interval            = 30
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-  }
-
-  tags = {
-    Environment = "production"
-  }
-}
-
-# Attach instances separately using the submodule
+# Attach instances to an ELB created elsewhere (e.g., a separate module/state)
 module "elb_instance_attachment" {
   source = "terraform-aws-modules/elb/aws//modules/elb_attachment"
 
@@ -136,7 +98,7 @@ module "elb_instance_attachment" {
   number_of_instances = 2
 }
 
-# Example: Conditional attachment based on environment
+# Conditional attachment, e.g. only in production
 module "elb_conditional_attachment" {
   source = "terraform-aws-modules/elb/aws//modules/elb_attachment"
 
@@ -152,21 +114,21 @@ module "elb_conditional_attachment" {
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create_elb` | `bool` | `true` | Whether to create the load balancer or not |
-| `name` | `string` | `null` | The name of the ELB |
-| `name_prefix` | `string` | `null` | The prefix name of the ELB |
 | `subnets` | `list(string)` | Required | List of subnet IDs to attach to the ELB |
 | `security_groups` | `list(string)` | Required | List of security group IDs to assign to the ELB |
-| `internal` | `bool` | `false` | If true, ELB will be an internal ELB |
-| `listener` | `list(map(string))` | Required | List of listener blocks (instance_port, instance_protocol, lb_port, lb_protocol, ssl_certificate_id) |
-| `health_check` | `map(string)` | Required | Health check block (target, interval, healthy_threshold, unhealthy_threshold, timeout) |
-| `instances` | `list(string)` | `[]` | List of instance IDs to place in the ELB pool |
-| `number_of_instances` | `number` | `0` | Number of instances to attach to ELB |
-| `cross_zone_load_balancing` | `bool` | `true` | Enable cross-zone load balancing |
-| `idle_timeout` | `number` | `60` | The time in seconds that the connection is allowed to be idle |
-| `connection_draining` | `bool` | `false` | Boolean to enable connection draining |
-| `connection_draining_timeout` | `number` | `300` | The time in seconds to allow for connections to drain |
-| `access_logs` | `map(string)` | `{}` | Access logs block (bucket, bucket_prefix, interval, enabled) |
+| `listener` | `list(map(string))` | Required | List of listener blocks: `instance_port`, `instance_protocol`, `lb_port`, `lb_protocol`, optional `ssl_certificate_id` |
+| `health_check` | `map(string)` | Required | Health check block: `target`, `interval`, `healthy_threshold`, `unhealthy_threshold`, `timeout` |
+| `create_elb` | `bool` | `true` | Whether to create the ELB (and its instance attachments) |
+| `name` | `string` | `null` | The name of the ELB (also used as the `Name` tag) |
+| `name_prefix` | `string` | `null` | Creates a unique name using this prefix instead of `name` |
+| `internal` | `bool` | `false` | If `true`, creates a VPC-internal ELB instead of internet-facing |
+| `instances` | `list(string)` | `[]` | List of instance IDs to register with the ELB pool directly |
+| `number_of_instances` | `number` | `0` | Number of instances to attach from `instances` |
+| `cross_zone_load_balancing` | `bool` | `true` | Enable cross-zone load balancing (free of charge; leave enabled) |
+| `idle_timeout` | `number` | `60` | Idle connection timeout in seconds (1–4000); increase for WebSockets/long-polling |
+| `connection_draining` | `bool` | `false` | Enable connection draining on deregistration |
+| `connection_draining_timeout` | `number` | `300` | Seconds to allow in-flight connections to drain |
+| `access_logs` | `map(string)` | `{}` | Access logs block: `bucket`, optional `bucket_prefix`, `interval`, `enabled` |
 | `tags` | `map(string)` | `{}` | A mapping of tags to assign to the resource |
 
 ## Main Outputs
@@ -177,9 +139,9 @@ module "elb_conditional_attachment" {
 | `elb_arn` | The ARN of the ELB |
 | `elb_name` | The name of the ELB |
 | `elb_dns_name` | The DNS name of the ELB |
-| `elb_instances` | The list of instances in the ELB |
-| `elb_source_security_group_id` | The ID of the security group for inbound rules for load balancer's back-end application instances |
-| `elb_zone_id` | The canonical hosted zone ID of the ELB (for use in a Route 53 Alias record) |
+| `elb_instances` | The list of instance IDs currently registered with the ELB |
+| `elb_source_security_group_id` | Security group ID to reference in backend instance security group ingress rules (VPC only) |
+| `elb_zone_id` | Canonical hosted zone ID of the ELB, for use in a Route 53 alias record |
 
 ## Usage Examples
 
@@ -237,7 +199,7 @@ module "elb_https" {
       instance_protocol  = "HTTPS"
       lb_port            = 443
       lb_protocol        = "HTTPS"
-      ssl_certificate_id = "arn:aws:acm:us-east-1:123456789012:certificate/12345678-1234-1234-1234-123456789012"
+      ssl_certificate_id = module.acm.acm_certificate_arn
     },
     {
       instance_port     = 80
@@ -263,12 +225,11 @@ module "elb_https" {
   tags = {
     Name        = "secure-web-elb"
     Environment = "production"
-    Terraform   = "true"
   }
 }
 ```
 
-### Example 3: Internal Load Balancer with Access Logs
+### Example 3: Internal Load Balancer with Access Logs and Direct Instance Attachment
 
 ```hcl
 module "elb_internal" {
@@ -304,17 +265,18 @@ module "elb_internal" {
     enabled       = true
   }
 
-  cross_zone_load_balancing = true
+  # Attach instances inline — the module handles this via the elb_attachment submodule
+  number_of_instances = 2
+  instances            = [aws_instance.app[0].id, aws_instance.app[1].id]
 
   tags = {
     Name        = "internal-app-elb"
     Environment = "production"
-    Internal    = "true"
   }
 }
 ```
 
-### Example 4: TCP Load Balancer for Database Connections
+### Example 4: TCP Load Balancer for a Non-HTTP Service
 
 ```hcl
 module "elb_tcp" {
@@ -343,337 +305,85 @@ module "elb_tcp" {
     timeout             = 5
   }
 
-  cross_zone_load_balancing   = true
   connection_draining         = true
   connection_draining_timeout = 60
 
   tags = {
     Name        = "database-proxy-elb"
     Environment = "production"
-    Service     = "postgresql"
-  }
-}
-```
-
-### Example 5: Load Balancer with Instance Attachment
-
-```hcl
-module "elb_with_instances" {
-  source = "terraform-aws-modules/elb/aws"
-
-  name = "app-elb-with-instances"
-
-  subnets         = module.vpc.public_subnets
-  security_groups = [module.elb_sg.security_group_id]
-  internal        = false
-
-  listener = [
-    {
-      instance_port     = 80
-      instance_protocol = "HTTP"
-      lb_port           = 80
-      lb_protocol       = "HTTP"
-    },
-    {
-      instance_port      = 443
-      instance_protocol  = "HTTPS"
-      lb_port            = 443
-      lb_protocol        = "HTTPS"
-      ssl_certificate_id = data.aws_acm_certificate.main.arn
-    }
-  ]
-
-  health_check = {
-    target              = "HTTP:80/health"
-    interval            = 30
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-  }
-
-  # Attach instances directly
-  number_of_instances = 3
-  instances = [
-    aws_instance.web[0].id,
-    aws_instance.web[1].id,
-    aws_instance.web[2].id
-  ]
-
-  cross_zone_load_balancing   = true
-  idle_timeout                = 60
-  connection_draining         = true
-  connection_draining_timeout = 300
-
-  tags = {
-    Name        = "app-elb"
-    Environment = "production"
-  }
-}
-```
-
-### Example 6: Multi-Protocol Load Balancer
-
-```hcl
-module "elb_multi_protocol" {
-  source = "terraform-aws-modules/elb/aws"
-
-  name = "multi-protocol-elb"
-
-  subnets         = module.vpc.public_subnets
-  security_groups = [aws_security_group.elb.id]
-  internal        = false
-
-  listener = [
-    {
-      instance_port     = 80
-      instance_protocol = "HTTP"
-      lb_port           = 80
-      lb_protocol       = "HTTP"
-    },
-    {
-      instance_port      = 443
-      instance_protocol  = "HTTPS"
-      lb_port            = 443
-      lb_protocol        = "HTTPS"
-      ssl_certificate_id = aws_acm_certificate.cert.arn
-    },
-    {
-      instance_port     = 8080
-      instance_protocol = "HTTP"
-      lb_port           = 8080
-      lb_protocol       = "HTTP"
-    }
-  ]
-
-  health_check = {
-    target              = "HTTP:80/"
-    interval            = 30
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-  }
-
-  cross_zone_load_balancing   = true
-  idle_timeout                = 90
-  connection_draining         = true
-  connection_draining_timeout = 300
-
-  tags = {
-    Name        = "multi-protocol-elb"
-    Environment = "staging"
-  }
-}
-```
-
-### Example 7: Load Balancer with Custom Health Check
-
-```hcl
-module "elb_custom_healthcheck" {
-  source = "terraform-aws-modules/elb/aws"
-
-  name = "custom-health-elb"
-
-  subnets         = module.vpc.public_subnets
-  security_groups = [aws_security_group.elb.id]
-  internal        = false
-
-  listener = [
-    {
-      instance_port     = 8080
-      instance_protocol = "HTTP"
-      lb_port           = 80
-      lb_protocol       = "HTTP"
-    }
-  ]
-
-  # Custom health check with aggressive settings
-  health_check = {
-    target              = "HTTP:8080/api/health"
-    interval            = 10
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
-  }
-
-  cross_zone_load_balancing   = true
-  idle_timeout                = 300
-  connection_draining         = true
-  connection_draining_timeout = 60
-
-  tags = {
-    Name        = "custom-health-elb"
-    Environment = "production"
-    Monitoring  = "enhanced"
-  }
-}
-```
-
-### Example 8: Conditional ELB Creation
-
-```hcl
-module "elb_conditional" {
-  source = "terraform-aws-modules/elb/aws"
-
-  create_elb = var.environment == "production"
-
-  name = "conditional-elb"
-
-  subnets         = module.vpc.public_subnets
-  security_groups = [aws_security_group.elb.id]
-  internal        = false
-
-  listener = [
-    {
-      instance_port     = 80
-      instance_protocol = "HTTP"
-      lb_port           = 80
-      lb_protocol       = "HTTP"
-    }
-  ]
-
-  health_check = {
-    target              = "HTTP:80/"
-    interval            = 30
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-  }
-
-  tags = {
-    Name        = "conditional-elb"
-    Environment = var.environment
   }
 }
 ```
 
 ## Best Practices
 
-### Migration and Modernization
+### When to Use Classic ELB
 
-1. **Plan Migration to ALB/NLB**: For new deployments, use Application Load Balancer (ALB) or Network Load Balancer (NLB) instead of Classic Load Balancer
-2. **Evaluate Migration Path**: Assess existing Classic Load Balancers for migration opportunities to modern load balancer types
-3. **Document Dependencies**: Identify and document applications with hard dependencies on Classic Load Balancer behavior before migration
-4. **Parallel Deployment**: Run ALB/NLB in parallel with Classic ELB during migration to validate functionality
-5. **Feature Comparison**: Review ALB/NLB features that may benefit your application (path-based routing, WebSocket, HTTP/2, etc.)
-6. **Cost Analysis**: Compare costs between Classic ELB and modern load balancers for your traffic patterns
+1. **Prefer ALB/NLB for New Work**: Use Application Load Balancer for HTTP/HTTPS and Network Load Balancer for TCP/UDP/TLS in all new deployments; only use Classic ELB to maintain existing infrastructure
+2. **Document Hard Dependencies**: Before migrating, identify applications relying on Classic ELB-specific behavior (instance-level health checks, `X-Forwarded-For` handling, sticky session cookies)
+3. **Migrate Incrementally**: Run the replacement ALB/NLB in parallel and shift traffic gradually with Route 53 weighted routing rather than a hard cutover
 
-### Listener Configuration
+### Listener and SSL Configuration
 
-1. **Use HTTPS for Production**: Always use HTTPS listeners with valid SSL certificates for production traffic
-2. **Configure SSL Policies**: Use the latest TLS policies (ELBSecurityPolicy-TLS-1-2-2017-01 or newer) for secure connections
-3. **Separate HTTP and HTTPS**: Configure both HTTP (port 80) and HTTPS (port 443) listeners with HTTP redirecting to HTTPS at application level
-4. **Match Instance Protocols**: Ensure instance_protocol matches the actual protocol your instances are listening on
-5. **Validate Port Mapping**: Double-check that lb_port and instance_port are correctly mapped for your application architecture
-6. **Limit Listener Count**: Use only necessary listeners; each listener adds complexity and potential attack surface
+1. **Terminate SSL with ACM**: Source `ssl_certificate_id` from the `terraform-aws-modules/acm` module or an `aws_acm_certificate` data source; never hardcode certificate ARNs
+2. **Redirect HTTP to HTTPS at the App Layer**: Classic ELB cannot redirect protocols itself, so handle HTTP→HTTPS redirection in the application if both listeners are exposed
+3. **Match Instance Protocol to Backend**: Ensure `instance_protocol` matches what the instance actually serves, or requests will fail after passing the health check
+4. **Keep Listener Count Minimal**: Each additional listener/port increases the security group surface area that must be opened
 
-### Health Check Configuration
+### Health Checks
 
-1. **Use Dedicated Health Endpoints**: Create specific health check endpoints (e.g., /health, /healthcheck) rather than checking root paths
-2. **Set Appropriate Intervals**: Use 15-30 second intervals for most applications; shorter intervals for critical services
-3. **Balance Thresholds**: Set healthy_threshold to 2-3 and unhealthy_threshold to 2-3 based on your tolerance for false positives/negatives
-4. **Match Health Check Protocol**: Use the same protocol for health checks as your primary listener when possible
-5. **Optimize Timeout Values**: Set health check timeout to less than the interval (typically 5-10 seconds)
-6. **Test Health Endpoints**: Ensure health check endpoints respond quickly (under 1 second) to avoid unnecessary instance removal
-7. **Monitor Health Check Failures**: Set up CloudWatch alarms for unhealthy instance counts to detect application issues
+1. **Use a Dedicated Endpoint**: Point `target` at a lightweight, purpose-built health endpoint (e.g., `/health`) rather than `/`
+2. **Balance Thresholds and Interval**: `healthy_threshold`/`unhealthy_threshold` of 2–3 with a 15–30s `interval` is a reasonable default; detection time is roughly `interval × unhealthy_threshold`
+3. **Keep Timeout Below Interval**: Set `timeout` to less than `interval` (typically 5s) so checks don't overlap
+4. **Match Health Check Protocol**: Use the same protocol as the primary listener where practical for the most representative signal
 
-### Network Configuration
+### Network and Security
 
-1. **Enable Cross-Zone Load Balancing**: Always enable cross_zone_load_balancing for even traffic distribution across AZs
-2. **Deploy Multi-AZ**: Place load balancers in at least two Availability Zones for high availability
-3. **Use Private Subnets for Internal ELBs**: Deploy internal load balancers in private subnets to prevent direct internet access
-4. **Validate Subnet Routing**: Ensure subnets have appropriate route tables for internet-facing or internal load balancers
-5. **Security Group Best Practices**: Create dedicated security groups for ELBs separate from instance security groups
-6. **Restrict Source IPs**: For internal ELBs, limit security group ingress to specific CIDR blocks or VPC ranges
+1. **Use Private Subnets for Internal ELBs**: Set `internal = true` and place the ELB in private subnets to avoid public exposure
+2. **Dedicated Security Group**: Give the ELB its own security group; reference `elb_source_security_group_id` in backend instance security group ingress rules rather than opening backend ports broadly
+3. **Deploy Across Multiple AZs**: Pass subnets from at least two Availability Zones so cross-zone load balancing (enabled by default, at no extra cost) provides real fault tolerance
 
-### Security
+### Reliability and Performance
 
-1. **Implement Least Privilege**: Use restrictive security group rules allowing only necessary ports and protocols
-2. **Use ACM for Certificates**: Leverage AWS Certificate Manager for SSL certificate provisioning and automatic renewal
-3. **Enable Access Logs**: Configure access logging to S3 for security auditing and troubleshooting
-4. **Encrypt Logs**: Enable S3 bucket encryption for access log storage
-5. **Regular Certificate Rotation**: Monitor certificate expiration and rotate before expiry
-6. **Implement Backend Encryption**: Use HTTPS/SSL for both listener and instance protocols when handling sensitive data
-7. **Review Security Policies**: Regularly review and update SSL security policies to address new vulnerabilities
-
-### Performance Optimization
-
-1. **Configure Appropriate Idle Timeout**: Set idle_timeout based on your application's connection patterns (60-300 seconds typical)
-2. **Enable Connection Draining**: Always enable connection_draining with appropriate timeout (60-300 seconds) for graceful instance removal
-3. **Optimize Health Check Frequency**: Balance health check frequency with instance overhead; more frequent checks increase load
-4. **Monitor Connection Metrics**: Track ELB connection metrics to identify bottlenecks or scaling needs
-5. **Pre-Warm for Traffic Spikes**: Contact AWS support to pre-warm ELBs before expected traffic increases
-6. **Use Keep-Alive**: Configure backend instances to support HTTP keep-alive for connection reuse
-
-### Cost Optimization
-
-1. **Evaluate ELB Necessity**: Assess if Classic ELB is required or if a modern load balancer offers better cost efficiency
-2. **Right-Size Capacity**: Monitor traffic patterns and ensure you're not over-provisioned
-3. **Clean Up Unused ELBs**: Regularly audit and remove load balancers with no traffic or attached instances
-4. **Optimize Data Transfer**: Minimize cross-AZ data transfer by understanding traffic patterns
-5. **Use Internal ELBs**: For internal services, use internal ELBs to avoid internet gateway charges
-6. **Monitor Costs**: Set up AWS Cost Explorer alerts for ELB costs to detect unexpected increases
-
-### High Availability
-
-1. **Multi-AZ Deployment**: Deploy across at least two Availability Zones for fault tolerance
-2. **Health Check Redundancy**: Configure health checks to quickly detect and remove unhealthy instances
-3. **Connection Draining**: Enable connection draining to gracefully handle instance termination during deployments
-4. **Auto Scaling Integration**: Integrate with Auto Scaling groups for automatic capacity management
-5. **Route 53 Integration**: Use Route 53 alias records with health checks for DNS-level failover
-6. **Monitor ELB Health**: Set up CloudWatch alarms for ELB health metrics (healthy host count, HTTP errors, etc.)
+1. **Enable Connection Draining**: Set `connection_draining = true` with a timeout covering the longest expected in-flight request (60–300s typical) so deploys/scale-in don't drop active connections
+2. **Tune Idle Timeout for Long-Lived Connections**: Raise `idle_timeout` toward 3600s for WebSocket or long-polling workloads; the default 60s is fine for typical request/response traffic
+3. **Leave Cross-Zone Load Balancing Enabled**: It is free and improves distribution evenness across AZs — there is no cost reason to disable it
+4. **Integrate with Auto Scaling**: Use the `elb_attachment` submodule (or an ASG's own load balancer attachment) so instances register/deregister automatically as the group scales
 
 ### Operational Excellence
 
-1. **Implement Comprehensive Tagging**: Use consistent tags for cost allocation, environment identification, and automation
-2. **Document Configuration**: Maintain documentation of listener configurations, health check settings, and security groups
-3. **Use Infrastructure as Code**: Manage all ELB configuration through Terraform for reproducibility and version control
-4. **Automate Deployments**: Integrate ELB creation/updates into CI/CD pipelines
-5. **Regular Backups**: Export Terraform state and configuration to version control
-6. **Change Management**: Use Terraform plan before applying changes to production load balancers
-7. **Monitoring and Alerting**: Configure CloudWatch dashboards and alarms for ELB metrics
-
-### Logging and Monitoring
-
-1. **Enable Access Logs**: Configure access_logs to S3 for detailed request analysis
-2. **Set Appropriate Log Intervals**: Use 5 or 60-minute intervals based on traffic volume and analysis needs
-3. **Implement Log Lifecycle**: Configure S3 lifecycle policies to transition or delete old logs for cost management
-4. **CloudWatch Metrics**: Monitor key metrics like HealthyHostCount, UnHealthyHostCount, RequestCount, Latency
-5. **Set Up Alarms**: Create CloudWatch alarms for critical metrics (unhealthy hosts, high latency, 5xx errors)
-6. **Log Analysis**: Use CloudWatch Insights or Athena to analyze access logs for security and performance insights
-7. **Integrate with SIEM**: Forward logs to security information and event management (SIEM) systems for compliance
+1. **Tag Consistently**: Populate `tags` for cost allocation and ownership; the module always merges in a `Name` tag from `var.name`
+2. **Enable Access Logs for Auditing**: Set `access_logs.bucket` to an S3 bucket with correct ELB log-delivery permissions in the same region
+3. **Use `create_elb` for Environment Gating**: Toggle the whole module on/off per environment (e.g., `create_elb = var.environment == "production"`) instead of conditionally including the module block
+4. **Reference, Don't Hardcode, Instance IDs**: Pass instance IDs from `aws_instance`/ASG resources or the `elb_attachment` submodule rather than literal strings, so attachment stays in sync with instance lifecycle
 
 ## Additional Resources
 
 - **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-elb
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/elb/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-elb/tree/master/examples
-- **AWS Classic Load Balancer Documentation**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/introduction.html
-- **Classic Load Balancer User Guide**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/
+- **AWS Classic Load Balancer Guide**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/introduction.html
 - **ELB Health Checks**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-healthchecks.html
+- **Cross-Zone Load Balancing**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/enable-disable-crosszone-lb.html
 - **SSL Security Policies**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-security-policy-table.html
-- **Migration to Application Load Balancer**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-migrate.html
+- **Migrating to Application Load Balancer**: https://docs.aws.amazon.com/elasticloadbalancing/latest/application/load-balancer-migrate.html
 - **ELB Access Logs**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/access-log-collection.html
-- **Classic Load Balancer Pricing**: https://aws.amazon.com/elasticloadbalancing/pricing/
-- **AWS Certificate Manager**: https://docs.aws.amazon.com/acm/latest/userguide/acm-overview.html
-- **ELB Best Practices**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/best-practices.html
-- **Troubleshooting Classic Load Balancers**: https://docs.aws.amazon.com/elasticloadbalancing/latest/classic/elb-troubleshooting.html
+- **Elastic Load Balancing Pricing**: https://aws.amazon.com/elasticloadbalancing/pricing/
+- **terraform-aws-modules/acm**: https://registry.terraform.io/modules/terraform-aws-modules/acm/aws/latest
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Legacy Service**: Classic Load Balancer is a previous-generation service; prefer ALB or NLB for new deployments
-2. **Subnet Requirements**: Ensure subnets are in different Availability Zones for high availability configurations
-3. **Health Check Validation**: Verify health check endpoints return 200 status codes before deploying to production
-4. **SSL Certificate Management**: Use ACM module or data sources to reference SSL certificates; never hardcode certificate IDs
-5. **Listener Protocol Matching**: Ensure instance_protocol matches what instances actually listen on to avoid connection failures
-6. **Security Group Coordination**: Create ELB security groups before the ELB and instance security groups referencing ELB SG
-7. **Connection Draining Timing**: Set connection_draining_timeout based on longest expected request duration (typically 60-300s)
-8. **Access Log Bucket**: If enabling access_logs, ensure S3 bucket exists, has proper ELB permissions, and is in the same region
-9. **Instance Attachment Timing**: When using instances parameter, ensure instances exist before ELB creation or use depends_on
-10. **Cross-Zone Data Transfer**: Enabling cross_zone_load_balancing incurs cross-AZ data transfer costs; factor into budget
-11. **Health Check Tuning**: Calculate health check response time as interval × unhealthy_threshold to understand failure detection time
-12. **Route 53 Integration**: Use elb_zone_id output for creating Route 53 alias records instead of CNAME records
-13. **Conditional Creation**: Use create_elb flag for environment-specific deployments or migration scenarios
-14. **Idle Timeout for WebSockets**: Increase idle_timeout to 3600 seconds for applications using WebSockets or long-polling
-15. **Migration Strategy**: When migrating to ALB, run both load balancers in parallel, gradually shifting traffic using Route 53 weighted routing
+1. **Legacy Service**: Classic ELB is in maintenance mode; default to ALB (`terraform-aws-modules/alb`) or NLB for new HTTP/HTTPS or TCP workloads unless the user explicitly needs Classic ELB compatibility
+2. **Requires Terraform >= 1.0 and AWS provider >= 4.0**
+3. **Listener Blocks Are Maps, Not HCL Blocks**: `listener` and `health_check` are passed as `list(map(string))`/`map(string)` variables, not native `aws_elb` nested blocks — build them as Terraform lists/maps
+4. **`ssl_certificate_id` Is Optional Per Listener**: Only include it on listeners that terminate SSL/HTTPS; omit it entirely for plain HTTP/TCP listeners
+5. **Instance Attachment Timing**: Instances passed via `instances` must already exist (or use `depends_on`) — the module does not create EC2 instances itself
+6. **Root vs. Submodule Attachment**: Only call `modules/elb_attachment` directly when attaching instances to an ELB not created by the same `elb` module call; otherwise pass `instances`/`number_of_instances` to the root module
+7. **`name` vs `name_prefix`**: Provide exactly one; `name` also becomes the merged `Name` tag, `name_prefix` does not
+8. **Cross-Zone Load Balancing Is Free**: Do not disable `cross_zone_load_balancing` for cost reasons — it incurs no additional data transfer charge
+9. **Access Log Bucket Prerequisites**: The target S3 bucket must exist, be in the same region, and grant the ELB log-delivery principal write access (see `terraform-aws-modules/s3-bucket` `attach_elb_log_delivery_policy`)
+10. **Route 53 Alias, Not CNAME**: Use the `elb_zone_id` and `elb_dns_name` outputs to create a Route 53 alias record rather than a CNAME
+11. **`elb_source_security_group_id` Is VPC-Only**: This output is only meaningful for ELBs launched inside a VPC (the default for all modern accounts)
+12. **`create_elb` Also Gates Attachment**: Setting `create_elb = false` disables both the ELB and its inline instance attachments in the same apply

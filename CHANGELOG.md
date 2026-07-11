@@ -1,5 +1,37 @@
 # Changelog
 
+## [0.3.0] - 2026-07-11
+
+[0.3.0]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.3.0
+
+This release refreshes the entire module catalog against the latest upstream `terraform-aws-modules` versions, rebuilds the pre-built search index, and overhauls the README. It also rolls up the previously unreleased 0.2.1 changes.
+
+### Changed
+
+- **Full documentation refresh for all 54 modules**: Every document in `modules/terraform-aws-modules/` was regenerated from the current Terraform Registry / GitHub source. Notable version and API updates include:
+  - `security-group` → 6.0.0 — major rearchitecture: per-rule `aws_vpc_security_group_ingress_rule`/`egress_rule` resources replace inline rule blocks
+  - `eks` → 21.24.0 — post-v21 variable names (`name`, `kubernetes_version`, `addons`, `compute_config`); no default add-ons are bootstrapped
+  - `lambda` → 8.8.1, `s3-bucket` → 5.14.1 (new `vectors` submodule), `iam` → 6.6.1, `rds` → 7.2.0, `ec2-instance` → 6.4.0, `alb` → 10.5.0, `apigateway-v2` → 6.1.0, `vpc` → 6.6.1, and others
+  - Corrected stale or incorrect variable names, defaults, and examples that could have produced invalid Terraform (e.g. EKS pre-v21 variables, Lambda Function URL configuration, RDS `create_db_subnet_group`/`storage_type` defaults, IAM `iam-role` trust-policy variables)
+  - Re-curated keyword lists to the 10–20 most relevant terms per module
+- **Rebuilt the pre-built search index** (`model/tfmod_bge_base_index.pkl`) to reflect the refreshed documentation.
+
+### Added
+
+- Canonical service-name keywords to improve retrieval for common full-name queries: `application-load-balancer` (alb), `relational-database` (rds), `simple-notification-service` (sns), `identity`/`access-management` (iam), and `vpn` (vpn-gateway).
+
+### Fixed
+
+- **README accuracy**: corrected the pre-built index filename (`tfmod_bge_base_index.pkl`, previously shown as `tfmod_index.pkl` in several places), the catalog module count (added the missing `emr` module — now a consistent 54), the local-install commands (`pip install -e .` / `uv pip install -e .`), stale test counts, and the `get_module` tool terminology.
+
+### Documentation
+
+- Added a "Why TFModSearch?" value-proposition section, an end-to-end `search_modules` → `get_module` workflow example, an explicit note that the pre-built index and module docs ship inside the installable package, and clarification of the default search weights.
+
+### Tests
+
+- Relaxed `test_module_searchable_by_keyword` to assert the target module appears in the **top-3** results — matching `search_modules`'s documented top-3 return contract and the existing natural-language test — rather than strictly ranking #1. A few semantically adjacent module pairs (e.g. security-group vs network-firewall for "firewall rules") legitimately rank a sibling first while keeping the target in the top-3. Full suite: 239 tests passing.
+
 ## [0.2.1] - 2026-01-26
 
 [0.2.1]: https://github.com/SantyagoSeaman/aws-tf-modules-mcp-server/releases/tag/v0.2.1

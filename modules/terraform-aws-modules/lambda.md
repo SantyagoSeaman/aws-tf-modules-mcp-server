@@ -2,128 +2,129 @@
 
 ## Module Information
 
-- **Module Name**: terraform-aws-lambda
+- **Module Name**: `lambda`
 - **Source**: `terraform-aws-modules/lambda/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-lambda
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest
-- **Latest Version**: 8.1.0
-- **Purpose**: Terraform module that creates and manages AWS Lambda functions, layers, and aliases with comprehensive support for building, packaging, and deploying serverless applications
+- **Latest Version**: 8.8.1
+- **Purpose**: Terraform module that creates and manages AWS Lambda functions, layers, and aliases, including building and packaging deployment artifacts
 - **Service**: AWS Lambda (Serverless Compute)
 - **Category**: Compute, Serverless, Application Integration
-- **Keywords**: lambda, serverless, faas, lambda-function, lambda-layer, lambda-alias, lambda-edge, container-image, vpc-lambda, event-source-mapping, provisioned-concurrency, function-url, dead-letter-queue, codedeploy, canary-deployment, docker-build
+- **Keywords**: lambda, serverless, faas, lambda-layer, lambda-alias, lambda-edge, container-image, event-source-mapping, provisioned-concurrency, function-url, dead-letter-queue, codedeploy, canary-deployment, docker-build, vpc-lambda
 - **Use For**: API backend implementation, event-driven data processing, real-time file processing, scheduled task automation, microservices architecture, stream processing from Kinesis or DynamoDB, IoT data processing, chatbot and voice assistant backends, image and video processing, ETL workflows, serverless web applications, webhook handlers
 
 ## Description
 
-This Terraform module provides comprehensive management of AWS Lambda resources including functions, layers, and aliases with advanced capabilities for building, packaging, and deploying serverless applications. The module is part of the serverless.tf framework and handles the complete lifecycle of Lambda deployments from dependency installation to production deployment. It supports multiple deployment strategies including .zip file archives, container images, and Lambda@Edge, with flexible options for storing packages locally or in S3 buckets.
+This Terraform module provides comprehensive management of AWS Lambda resources — Functions, Layers, and Aliases — and, uniquely among most Lambda modules, also owns the build and packaging pipeline that turns application source code into a deployable artifact. It is part of the serverless.tf framework and handles the full lifecycle from dependency installation (pip/poetry for Python, npm for Node.js, or arbitrary custom build commands), through zip-archive creation with content-based hashing (to avoid unnecessary redeployments), to storing the package locally or in S3 and deploying it. It supports .zip-file deployments, container images from ECR, and Lambda@Edge, and can build dependencies either on the local machine or inside Docker (including private package installs via a forwarded SSH agent).
 
-The module addresses common Lambda deployment challenges by automating dependency management for multiple runtimes (Python, Node.js, Java, Go, .NET, Ruby), building deployment packages with customizable build commands, and managing complex infrastructure configurations. It supports both local and Docker-based builds, enabling consistent deployment packages across different development environments. The module integrates seamlessly with AWS services through configurable event source mappings, VPC networking, EFS file system mounts, and comprehensive IAM policy management with six different methods for attaching permissions.
+The module addresses the operational complexity of running Lambda in production: VPC networking (subnets, security groups), EFS mounts, dead-letter queues and asynchronous invocation configuration, event source mappings (SQS, Kinesis, DynamoDB Streams, MSK, Amazon MQ, etc.), Function URLs with CORS, code signing, provisioned/reserved concurrency, X-Ray tracing, structured CloudWatch logging with configurable retention/encryption, and six independent methods of attaching IAM policies to the execution role (inline JSON, JSON list, managed policy ARN, ARN list, generated policy statements, and assume-role trust statements). It also exposes newer AWS Lambda capabilities such as SnapStart, tenant isolation mode, Managed Instances capacity providers, and Durable Functions (execution-state retention/timeout configuration).
 
-Key architectural capabilities include controlled deployment strategies (rolling updates, canary deployments, rollbacks), version management, provisioned concurrency for consistent performance, function URLs for direct HTTP access, and asynchronous event configurations with dead letter queues. The module handles Lambda@Edge deployments for CloudFront, supports code signing for enhanced security, and provides flexible configuration for environment variables, runtime settings, and resource limits. With support for conditional resource creation and extensive configuration options, this module enables teams to implement sophisticated serverless architectures while maintaining infrastructure as code best practices.
+Because creating a Lambda Function and a Lambda Layer share almost identical mechanics, the same module root is used for both (toggled via `create_layer`). Controlled, zero-downtime deployment strategies — rolling updates, canary releases, weighted traffic shifting, and automatic rollback — are implemented through two companion submodules (`alias` and `deploy`) that build on top of Lambda aliases and AWS CodeDeploy, while a third submodule (`docker-build`) builds and pushes container images to ECR for container-based Lambda deployments. The module supports conditional resource creation throughout (`create`, `create_function`, `create_layer`, `create_role`, etc.), making it composable for advanced, multi-module serverless architectures.
 
 ## Key Features
 
-- **Automated Dependency Management**: Build and install dependencies for Python (pip), Node.js (npm), and other runtimes
-- **Flexible Package Building**: Create deployment packages from single directories, multiple sources, or custom build commands
-- **Docker Build Support**: Use Docker containers for consistent dependency builds across environments
-- **S3 Package Storage**: Store deployment packages in S3 buckets for large functions or centralized package management
-- **Container Image Deployment**: Deploy Lambda functions using container images from ECR
-- **Lambda Layers**: Create and manage Lambda layers for shared code and dependencies
-- **Lambda Aliases**: Configure function aliases for blue/green deployments and traffic shifting
-- **Lambda@Edge Support**: Deploy Lambda functions at CloudFront edge locations
-- **VPC Integration**: Configure Lambda functions to access resources in VPCs with subnet and security group configuration
-- **EFS File System Access**: Mount Elastic File System for persistent storage across invocations
-- **Event Source Mapping**: Configure event sources from Kinesis, DynamoDB Streams, SQS, and other services
-- **Asynchronous Configuration**: Set up async invocation with retry behavior and dead letter queues
-- **Function URLs**: Create direct HTTPS endpoints for Lambda functions without API Gateway
-- **IAM Policy Management**: Six flexible methods to attach IAM policies (JSON, ARN, statement, assume role, CloudWatch logs, VPC)
-- **Provisioned Concurrency**: Pre-initialize execution environments for consistent low-latency performance
-- **Reserved Concurrency**: Set maximum concurrent executions to control scaling and costs
-- **Code Signing**: Implement code signing for enhanced security and integrity verification
-- **CloudWatch Logs Integration**: Automatic log group creation with configurable retention periods
-- **X-Ray Tracing**: Enable AWS X-Ray for distributed tracing and performance analysis
-- **Environment Variables**: Configure runtime environment variables with optional encryption
-- **Multiple Runtimes**: Support for Python, Node.js, Java, Go, .NET, Ruby, and custom runtimes
-- **Architecture Support**: Deploy for x86_64 or ARM64 (Graviton2) architectures
-- **Version Management**: Automatic function version publishing for rollback and alias management
-- **Conditional Creation**: Create or skip Lambda resources based on variables
-- **Custom Build Commands**: Execute arbitrary build commands during package creation
-- **Source Path Patterns**: Include/exclude files from deployment packages with glob patterns
-- **CloudFormation Deployment**: Advanced deployment controls including rolling updates and canary deployments
+- **Build & Package Pipeline**: Installs dependencies (pip, poetry, npm) and builds deployment zip-archives with content-based hashing to avoid needless redeploys
+- **Docker Builds**: Builds dependencies inside Docker (with optional SSH agent forwarding) for any runtime/architecture, decoupled from the local toolchain
+- **Flexible Source Composition**: `source_path` accepts a single directory, a list of directories/files, or per-entry build config (patterns, commands, prefix-in-zip) for complex multi-source packages
+- **Multiple Deployment Origins**: Deploy a freshly built package, an existing local zip, a package already in S3, or a container image from ECR
+- **S3 or Local Package Storage**: Store built artifacts locally or centrally in S3 (`store_on_s3`)
+- **Lambda Layers**: Same module creates Layers (`create_layer = true`) for shared code/dependencies, reusable across functions
+- **Lambda@Edge**: First-class support for edge functions deployed to CloudFront (`lambda_at_edge = true`)
+- **VPC & EFS Integration**: Attaches Lambda to VPC subnets/security groups and mounts EFS access points for persistent storage
+- **Event Source Mapping**: Native configuration of triggers from SQS, Kinesis, DynamoDB Streams, MSK, and Amazon MQ
+- **Function URLs**: Direct HTTPS invocation endpoints with IAM or NONE authorization, CORS, and buffered/response-streaming invoke modes
+- **Six IAM Policy Attachment Methods**: `policy_json(s)`, `policy`/`policies` (ARNs), `policy_statements`, and `assume_role_policy_statements` for the trust policy
+- **Provisioned & Reserved Concurrency**: Pre-warmed execution environments for latency-sensitive workloads and hard caps on concurrent executions
+- **Code Signing & Encryption**: Code signing configuration, KMS-encrypted environment variables, and KMS-encrypted CloudWatch Logs/S3 artifacts
+- **Newer Lambda Capabilities**: SnapStart, tenant isolation mode, Managed Instances capacity provider, Durable Functions (execution timeout/retention)
+- **Controlled Deployments via Submodules**: `alias` submodule for weighted/blue-green routing, `deploy` submodule for AWS CodeDeploy-orchestrated rollouts with auto-rollback
+- **Container Image Builds**: `docker-build` submodule builds and pushes images to ECR (including buildx/multi-stage builds) ready for `package_type = "Image"`
+- **Conditional Creation**: Every resource group (function, layer, role, package, policies) can be toggled independently for composable architectures
 
 ## Main Use Cases
 
 1. **REST API Backends**: Implement serverless API endpoints with Function URLs or API Gateway integration
 2. **Event-Driven Processing**: Process events from S3, DynamoDB, Kinesis, SQS, SNS, or EventBridge
 3. **Scheduled Tasks**: Run cron jobs and scheduled automation using EventBridge rules
-4. **Real-Time Stream Processing**: Process streaming data from Kinesis or DynamoDB Streams
+4. **Real-Time Stream Processing**: Process streaming data from Kinesis, DynamoDB Streams, or MSK
 5. **File Processing**: Automatically process uploaded files from S3 with image resizing, transcoding, or ETL
 6. **Microservices Architecture**: Build distributed applications with Lambda as microservice components
 7. **Webhook Handlers**: Receive and process webhooks from third-party services
-8. **Data Transformation**: Execute ETL jobs and data transformation pipelines
-9. **IoT Data Processing**: Process telemetry and sensor data from IoT devices
-10. **ChatOps and Automation**: Implement chatbots, Slack bots, and automation workflows
+8. **Container-Based Workloads**: Deploy larger or dependency-heavy functions as container images from ECR
+9. **Controlled Production Rollouts**: Canary/blue-green deployments via CodeDeploy with automatic alarm-based rollback
+10. **Edge Compute**: Run request/response manipulation logic at CloudFront edge locations with Lambda@Edge
 
-## Main Module: Lambda Function
+## Main Module: Lambda Function / Layer
 
 ### Description
 
-The main Lambda module provides complete functionality for creating and managing AWS Lambda functions with comprehensive build, package, and deployment capabilities. This module handles everything from dependency installation to production deployment, supporting multiple package sources (local builds, S3 storage, existing packages, container images) and advanced configurations including VPC networking, async invocation, event source mappings, and IAM policy management.
+The main module (root of the source) creates and manages an AWS Lambda Function or, when `create_layer = true`, a Lambda Layer, handling everything from source-code build/packaging to deployment. It supports all package sources (local build, existing local zip, existing S3 object, container image) and advanced configuration including VPC networking, EFS, async invocation, event source mappings, Function URLs, and IAM policy management.
 
 ### Key Features
 
-- Complete Lambda function lifecycle management from build to deployment
-- Automated dependency installation and package building
-- Support for all AWS Lambda runtimes and architectures
-- Flexible IAM policy attachment with multiple methods
+- Complete Lambda function/layer lifecycle management from build to deployment
+- Automated dependency installation and package building (local or Docker)
+- Support for all AWS Lambda runtimes and both x86_64/arm64 architectures
+- Flexible IAM policy attachment with six independent methods
 - VPC, EFS, and networking configuration
-- Event source mapping and trigger management
-- Comprehensive monitoring and logging integration
+- Event source mapping and trigger (`allowed_triggers`) management
+- CloudWatch Logs, X-Ray tracing, and Function URL support
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `function_name` | `string` | `""` | Unique name for Lambda function |
-| `handler` | `string` | `""` | Function entry point (e.g., index.handler) |
-| `runtime` | `string` | `""` | Lambda runtime (python3.12, nodejs20.x, etc.) |
-| `source_path` | `any` | `null` | Path to function source code or build configuration |
-| `create_function` | `bool` | `true` | Whether to create Lambda function |
+| `function_name` | `string` | `""` | Unique name for the Lambda function |
+| `handler` | `string` | `""` | Function entry point (e.g., `index.handler`) |
+| `runtime` | `string` | `""` | Lambda runtime (e.g., `python3.12`, `nodejs20.x`) |
+| `source_path` | `any` | `null` | Path (or list of paths/build configs) to function source code |
+| `create` | `bool` | `true` | Master switch for all resources created by the module |
+| `create_function` | `bool` | `true` | Whether to create the Lambda Function |
+| `create_layer` | `bool` | `false` | Whether to create a Lambda Layer instead of/alongside a function |
 | `timeout` | `number` | `3` | Function timeout in seconds (max 900) |
-| `memory_size` | `number` | `128` | Memory allocated to function in MB |
-| `environment_variables` | `map(string)` | `{}` | Environment variables for function |
-| `layers` | `list(string)` | `null` | List of Lambda layer ARNs |
-| `vpc_subnet_ids` | `list(string)` | `null` | VPC subnet IDs for function |
-| `vpc_security_group_ids` | `list(string)` | `null` | Security group IDs for function in VPC |
-| `attach_policy_json` | `bool` | `false` | Whether to attach IAM policy JSON |
-| `policy_json` | `string` | `null` | IAM policy JSON document |
-| `attach_cloudwatch_logs_policy` | `bool` | `true` | Whether to attach CloudWatch Logs policy |
-| `cloudwatch_logs_retention_in_days` | `number` | `null` | CloudWatch log group retention period |
-| `create_package` | `bool` | `true` | Whether to create deployment package |
-| `store_on_s3` | `bool` | `false` | Store deployment package on S3 |
-| `s3_bucket` | `string` | `null` | S3 bucket for deployment package |
-| `publish` | `bool` | `false` | Whether to publish function version |
-| `reserved_concurrent_executions` | `number` | `-1` | Reserved concurrent executions (-1 = unreserved) |
-| `provisioned_concurrent_executions` | `number` | `-1` | Provisioned concurrent executions |
-| `create_function_url` | `bool` | `false` | Whether to create Lambda function URL |
-| `tracing_mode` | `string` | `null` | X-Ray tracing mode (Active or PassThrough) |
+| `memory_size` | `number` | `128` | Memory allocated to the function in MB (128–10,240) |
+| `architectures` | `list(string)` | `null` | `["x86_64"]` or `["arm64"]` |
+| `environment_variables` | `map(string)` | `{}` | Environment variables for the function |
+| `layers` | `list(string)` | `null` | List of Lambda Layer version ARNs (max 5) |
+| `vpc_subnet_ids` / `vpc_security_group_ids` | `list(string)` | `null` | VPC placement for the function |
+| `attach_policy_json` / `policy_json` | `bool` / `string` | `false` / `null` | Attach an inline IAM policy JSON document |
+| `attach_policy_statements` / `policy_statements` | `bool` / `any` | `false` / `{}` | Attach IAM policy generated from statement maps |
+| `attach_cloudwatch_logs_policy` | `bool` | `true` | Whether to attach the CloudWatch Logs policy |
+| `cloudwatch_logs_retention_in_days` | `number` | `null` | Log group retention period |
+| `create_package` | `bool` | `true` | Whether the module should build a deployment package |
+| `local_existing_package` | `string` | `null` | Path to an existing zip to deploy (skips build) |
+| `store_on_s3` / `s3_bucket` | `bool` / `string` | `false` / `null` | Store the built package in S3 instead of locally |
+| `package_type` | `string` | `"Zip"` | `"Zip"` or `"Image"` |
+| `image_uri` | `string` | `null` | ECR image URI when `package_type = "Image"` |
+| `publish` | `bool` | `false` | Whether to publish a new Lambda version on change |
+| `reserved_concurrent_executions` | `number` | `-1` | Reserved concurrency (`-1` = unreserved) |
+| `provisioned_concurrent_executions` | `number` | `-1` | Provisioned concurrency (`>=1` enables, `0` disables) |
+| `create_lambda_function_url` | `bool` | `false` | Whether to create a Lambda Function URL |
+| `authorization_type` / `cors` / `invoke_mode` | `string` / `any` / `string` | `"NONE"` / `{}` / `null` | Function URL auth, CORS, and invoke mode (`BUFFERED`/`RESPONSE_STREAM`) |
+| `tracing_mode` | `string` | `null` | X-Ray tracing mode (`Active` or `PassThrough`) |
+| `event_source_mapping` | `any` | `{}` | Map of event source mapping configurations (SQS, Kinesis, DynamoDB Streams, etc.) |
+| `allowed_triggers` | `map(any)` | `{}` | Map of Lambda permissions for invoking services/principals |
+| `dead_letter_target_arn` | `string` | `null` | SNS topic/SQS queue ARN for failed async invocations |
+| `snap_start` | `bool` | `false` | Enable SnapStart for supported runtimes |
+| `tenant_isolation_mode` | `bool` | `false` | Enable tenant isolation mode |
+| `durable_config_execution_timeout` / `durable_config_retention_period` | `number` | `null` | Durable Functions execution timeout and state retention |
+| `build_in_docker` | `bool` | `false` | Build dependencies inside a Docker container |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `lambda_function_arn` | ARN of the Lambda function |
+| `lambda_function_arn` / `lambda_function_arn_static` | ARN of the Lambda function (static form avoids cycles, e.g. with Step Functions) |
 | `lambda_function_name` | Name of the Lambda function |
-| `lambda_function_invoke_arn` | Invoke ARN of the Lambda function |
-| `lambda_function_qualified_arn` | ARN with version or alias |
+| `lambda_function_invoke_arn` / `lambda_function_qualified_invoke_arn` | Invoke ARN (unqualified/qualified) for API Gateway integration |
+| `lambda_function_qualified_arn` | ARN including the published version |
 | `lambda_function_version` | Latest published version |
-| `lambda_function_url` | Function URL if created |
-| `lambda_function_url_id` | Function URL ID if created |
-| `lambda_role_arn` | ARN of IAM role created for Lambda |
-| `lambda_role_name` | Name of IAM role created for Lambda |
-| `lambda_cloudwatch_log_group_arn` | ARN of CloudWatch log group |
-| `local_filename` | Path to local deployment package |
-| `s3_object_key` | S3 object key if stored on S3 |
+| `lambda_function_url` / `lambda_function_url_id` | Function URL and its generated ID, if created |
+| `lambda_role_arn` / `lambda_role_name` | IAM role created for the Lambda execution role |
+| `lambda_cloudwatch_log_group_arn` / `lambda_cloudwatch_log_group_name` | CloudWatch log group for the function |
+| `lambda_layer_arn` / `lambda_layer_layer_arn` | Layer ARN with/without version qualifier |
+| `local_filename` | Path to the local deployment package, if stored locally |
+| `s3_object` | Map of S3 object data for the deployment package, if stored on S3 |
 
 ### Usage Examples
 
@@ -131,7 +132,8 @@ The main Lambda module provides complete functionality for creating and managing
 
 ```hcl
 module "lambda_function" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "simple-lambda"
   description   = "Simple Lambda function example"
@@ -146,11 +148,12 @@ module "lambda_function" {
 }
 ```
 
-#### Example 2: Lambda with Dependencies and Custom Build
+#### Example 2: Lambda with Python Dependencies and Custom Patterns
 
 ```hcl
 module "lambda_with_dependencies" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "lambda-with-deps"
   description   = "Lambda function with Python dependencies"
@@ -161,9 +164,9 @@ module "lambda_with_dependencies" {
 
   source_path = [
     {
-      path = "${path.module}/src"
-      pip_requirements = true
-      patterns = [
+      path              = "${path.module}/src"
+      pip_requirements  = true
+      patterns          = [
         "!\\.terragrunt-source-version",
         "!.*/.*\\.txt",
       ]
@@ -171,11 +174,11 @@ module "lambda_with_dependencies" {
   ]
 
   environment_variables = {
-    LOG_LEVEL = "INFO"
+    LOG_LEVEL    = "INFO"
     API_ENDPOINT = "https://api.example.com"
   }
 
-  attach_cloudwatch_logs_policy = true
+  attach_cloudwatch_logs_policy     = true
   cloudwatch_logs_retention_in_days = 7
 
   tags = {
@@ -188,7 +191,8 @@ module "lambda_with_dependencies" {
 
 ```hcl
 module "lambda_vpc" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "vpc-lambda"
   description   = "Lambda function with VPC access"
@@ -222,14 +226,14 @@ module "lambda_vpc" {
   attach_policy_statements = true
   policy_statements = {
     s3_read = {
-      effect = "Allow"
-      actions = ["s3:GetObject"]
+      effect    = "Allow"
+      actions   = ["s3:GetObject"]
       resources = ["${module.s3_bucket.s3_bucket_arn}/*"]
     }
   }
 
   environment_variables = {
-    TABLE_NAME = module.dynamodb_table.dynamodb_table_id
+    TABLE_NAME  = module.dynamodb_table.dynamodb_table_id
     BUCKET_NAME = module.s3_bucket.s3_bucket_id
   }
 
@@ -242,12 +246,13 @@ module "lambda_vpc" {
 }
 ```
 
-#### Example 4: Lambda with S3 Package Storage and Layers
+#### Example 4: Lambda Layer plus Function Using It (Stored on S3)
 
 ```hcl
 # Create Lambda layer for dependencies
 module "lambda_layer" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   create_layer = true
   layer_name   = "python-dependencies"
@@ -263,7 +268,8 @@ module "lambda_layer" {
 
 # Lambda function using the layer
 module "lambda_with_layer" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "lambda-with-layer"
   handler       = "app.handler"
@@ -284,11 +290,12 @@ module "lambda_with_layer" {
 }
 ```
 
-#### Example 5: Lambda with Event Source Mapping
+#### Example 5: Lambda with DynamoDB Streams Event Source Mapping and DLQ
 
 ```hcl
 module "lambda_stream_processor" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "stream-processor"
   handler       = "index.handler"
@@ -316,15 +323,15 @@ module "lambda_stream_processor" {
   # Event source mapping
   event_source_mapping = {
     dynamodb = {
-      event_source_arn  = aws_dynamodb_table.main.stream_arn
-      starting_position = "LATEST"
-      batch_size        = 100
+      event_source_arn                   = aws_dynamodb_table.main.stream_arn
+      starting_position                  = "LATEST"
+      batch_size                         = 100
       maximum_batching_window_in_seconds = 10
     }
   }
 
   # Dead letter queue for failures
-  dead_letter_target_arn = aws_sqs_queue.dlq.arn
+  dead_letter_target_arn   = aws_sqs_queue.dlq.arn
   attach_dead_letter_policy = true
 
   tags = {
@@ -337,7 +344,8 @@ module "lambda_stream_processor" {
 
 ```hcl
 module "lambda_api" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "api-lambda"
   handler       = "api.handler"
@@ -347,19 +355,18 @@ module "lambda_api" {
   source_path = "${path.module}/src/api"
 
   # Create Function URL
-  create_function_url = true
+  create_lambda_function_url = true
+  authorization_type         = "NONE"
 
-  function_url_config = {
-    authorization_type = "NONE"
-
-    cors = {
-      allow_origins     = ["https://example.com"]
-      allow_methods     = ["GET", "POST"]
-      allow_headers     = ["content-type", "x-api-key"]
-      expose_headers    = ["x-request-id"]
-      max_age          = 3600
-    }
+  cors = {
+    allow_origins  = ["https://example.com"]
+    allow_methods  = ["GET", "POST"]
+    allow_headers  = ["content-type", "x-api-key"]
+    expose_headers = ["x-request-id"]
+    max_age        = 3600
   }
+
+  invoke_mode = "RESPONSE_STREAM"
 
   environment_variables = {
     API_VERSION = "v1"
@@ -376,18 +383,44 @@ output "lambda_api_url" {
 }
 ```
 
-#### Example 7: Container Image Lambda
+#### Example 7: Container Image Lambda (built via docker-build submodule)
 
 ```hcl
+data "aws_ecr_authorization_token" "token" {}
+
+provider "docker" {
+  registry_auth {
+    address  = "${data.aws_caller_identity.current.account_id}.dkr.ecr.${data.aws_region.current.name}.amazonaws.com"
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
+  }
+}
+
+module "docker_image" {
+  source  = "terraform-aws-modules/lambda/aws//modules/docker-build"
+  version = "~> 8.0"
+
+  create_ecr_repo = true
+  ecr_repo        = "my-lambda-repo"
+
+  use_image_tag = true
+  image_tag     = "1.0"
+
+  source_path = "${path.module}/src/container-lambda"
+  build_args = {
+    FOO = "bar"
+  }
+}
+
 module "lambda_container" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
-  function_name = "container-lambda"
-  description   = "Lambda function from container image"
-
+  function_name  = "container-lambda"
+  description    = "Lambda function from container image"
   create_package = false
 
-  image_uri    = "${aws_ecr_repository.lambda.repository_url}:latest"
+  image_uri    = module.docker_image.image_uri
   package_type = "Image"
 
   timeout     = 60
@@ -396,19 +429,6 @@ module "lambda_container" {
   environment_variables = {
     ENVIRONMENT = "production"
   }
-
-  # IAM policies
-  attach_policy_json = true
-  policy_json = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Action = ["s3:*"]
-        Resource = "*"
-      }
-    ]
-  })
 
   tags = {
     Deployment = "container"
@@ -419,8 +439,9 @@ module "lambda_container" {
 #### Example 8: Lambda with Provisioned Concurrency and Alias
 
 ```hcl
-module "lambda_production" {
-  source = "terraform-aws-modules/lambda/aws"
+module "lambda_function" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "production-lambda"
   handler       = "index.handler"
@@ -428,18 +449,8 @@ module "lambda_production" {
 
   source_path = "${path.module}/src/production"
 
-  # Publish versions
+  # Publish an immutable version on every change
   publish = true
-
-  # Create alias
-  create_lambda_alias = true
-  lambda_alias = {
-    name = "production"
-    description = "Production alias"
-
-    # Provisioned concurrency for consistent performance
-    provisioned_concurrent_executions = 5
-  }
 
   # Reserved concurrency to limit scaling
   reserved_concurrent_executions = 100
@@ -451,14 +462,29 @@ module "lambda_production" {
   tracing_mode = "Active"
 
   environment_variables = {
-    ENV = "production"
+    ENV       = "production"
     LOG_LEVEL = "INFO"
   }
 
   tags = {
-    Environment = "production"
-    CriticalityLevel = "high"
+    Environment       = "production"
+    CriticalityLevel  = "high"
   }
+}
+
+module "lambda_alias" {
+  source  = "terraform-aws-modules/lambda/aws//modules/alias"
+  version = "~> 8.0"
+
+  name             = "production"
+  function_name    = module.lambda_function.lambda_function_name
+  function_version = module.lambda_function.lambda_function_version
+}
+
+resource "aws_lambda_provisioned_concurrency_config" "production" {
+  function_name                     = module.lambda_function.lambda_function_name
+  qualifier                         = module.lambda_alias.lambda_alias_name
+  provisioned_concurrent_executions = 5
 }
 ```
 
@@ -466,7 +492,8 @@ module "lambda_production" {
 
 ```hcl
 module "lambda_scheduled" {
-  source = "terraform-aws-modules/lambda/aws"
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
 
   function_name = "scheduled-task"
   description   = "Runs daily cleanup tasks"
@@ -475,11 +502,9 @@ module "lambda_scheduled" {
 
   source_path = "${path.module}/src/cleanup"
 
-  timeout     = 900  # 15 minutes
+  timeout     = 900 # 15 minutes
   memory_size = 512
 
-  # EventBridge rule for scheduling
-  create_current_version_allowed_triggers = false
   allowed_triggers = {
     daily_cleanup = {
       principal  = "events.amazonaws.com"
@@ -499,7 +524,7 @@ module "lambda_scheduled" {
 resource "aws_cloudwatch_event_rule" "daily_cleanup" {
   name                = "daily-cleanup"
   description         = "Trigger cleanup Lambda daily"
-  schedule_expression = "cron(0 2 * * ? *)"  # 2 AM UTC daily
+  schedule_expression = "cron(0 2 * * ? *)" # 2 AM UTC daily
 }
 
 resource "aws_cloudwatch_event_target" "lambda" {
@@ -513,20 +538,23 @@ resource "aws_cloudwatch_event_target" "lambda" {
 
 ### 1. alias
 
-- **Purpose**: Manages Lambda function aliases with weighted traffic routing for blue/green deployments
+- **Purpose**: Manages a Lambda function alias with weighted traffic routing, async event configuration, and event source mapping/permissions scoped to the alias
 - **Source**: `terraform-aws-modules/lambda/aws//modules/alias`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest/submodules/alias
-- **Key Features**: Static and dynamic alias management, weighted traffic shifting, async event configuration, version-specific permissions, auto-refresh for external deployments
-- **Use Cases**: Blue/green deployments, canary releases, CodeDeploy integration, version pinning
+- **Key Features**: Static and auto-refreshing aliases, weighted traffic shifting for canary releases, "use existing alias" mode for external tooling (e.g., CodeDeploy), per-alias async event config and permissions
+- **Use Cases**: Blue/green deployments, canary releases, CodeDeploy integration, environment-specific version pinning
 
 #### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | `string` | - | Name of the Lambda alias |
-| `function_name` | `string` | - | Name of the Lambda function |
-| `function_version` | `string` | `""` | Version to point alias to |
-| `refresh_alias` | `bool` | `true` | Auto-refresh alias to latest version |
+| `name` | `string` | `""` | Name of the Lambda alias |
+| `function_name` | `string` | `""` | Name of the Lambda function |
+| `function_version` | `string` | `""` | Version the alias points to (`$LATEST` or a number) |
+| `refresh_alias` | `bool` | `true` | Auto-refresh alias to the latest function version |
+| `use_existing_alias` | `bool` | `false` | Manage an existing alias instead of creating one |
+| `routing_additional_version_weights` | `map(number)` | `{}` | Weighted traffic split across additional versions |
+| `allowed_triggers` | `map(any)` | `{}` | Lambda permissions scoped to this alias |
 
 #### Main Outputs
 
@@ -534,13 +562,15 @@ resource "aws_cloudwatch_event_target" "lambda" {
 |--------|-------------|
 | `lambda_alias_arn` | ARN of the Lambda alias |
 | `lambda_alias_name` | Name of the Lambda alias |
-| `lambda_alias_invoke_arn` | Invoke ARN for API Gateway |
+| `lambda_alias_invoke_arn` | Invoke ARN for API Gateway integration |
+| `lambda_alias_function_version` | Function version the alias currently uses |
 
 #### Usage Example
 
 ```hcl
 module "lambda_alias" {
-  source = "terraform-aws-modules/lambda/aws//modules/alias"
+  source  = "terraform-aws-modules/lambda/aws//modules/alias"
+  version = "~> 8.0"
 
   name             = "production"
   function_name    = module.lambda_function.lambda_function_name
@@ -548,7 +578,7 @@ module "lambda_alias" {
 
   # Weighted traffic routing for canary
   routing_additional_version_weights = {
-    "2" = 0.1  # 10% to version 2
+    "2" = 0.1 # 10% to version 2
   }
 
   allowed_triggers = {
@@ -562,54 +592,124 @@ module "lambda_alias" {
 
 ### 2. deploy
 
-- **Purpose**: AWS CodeDeploy integration for orchestrated Lambda deployments with rollback capabilities
+- **Purpose**: Creates AWS CodeDeploy application/deployment group resources (or reuses existing ones) and orchestrates a Lambda alias deployment, optionally waiting for completion
 - **Source**: `terraform-aws-modules/lambda/aws//modules/deploy`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest/submodules/deploy
-- **Key Features**: CodeDeploy application and deployment group creation, canary and rolling deployments, automatic rollback on CloudWatch alarms, lifecycle hook integration
-- **Use Cases**: Production deployments requiring gradual rollouts, automated rollback on failures, traffic shifting with monitoring
+- **Key Features**: CodeDeploy app/deployment group creation, generates and optionally saves the AppSpec deploy script, runs `aws deploy create-deployment`, automatic rollback on CloudWatch alarms, before/after traffic-shift hook support, SNS deployment-event triggers
+- **Use Cases**: Production deployments requiring gradual/canary rollouts, automated rollback on failure, traffic shifting with alarm-based monitoring
 
 #### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `alias_name` | `string` | - | Lambda alias name for deployment |
-| `function_name` | `string` | - | Lambda function name |
-| `target_version` | `string` | - | Target Lambda version |
-| `deployment_config_name` | `string` | `"CodeDeployDefault.LambdaAllAtOnce"` | Deployment configuration |
-| `create_app` | `bool` | `true` | Create CodeDeploy application |
-| `alarm_names` | `list(string)` | `[]` | CloudWatch alarms for auto-rollback |
+| `alias_name` | `string` | `""` | Lambda alias name to deploy through |
+| `function_name` | `string` | `""` | Lambda function name |
+| `current_version` / `target_version` | `string` | `""` | Current and target Lambda versions (not `$LATEST`) |
+| `deployment_config_name` | `string` | `"CodeDeployDefault.LambdaAllAtOnce"` | CodeDeploy deployment configuration (e.g., canary/linear presets) |
+| `create_app` / `use_existing_app` | `bool` | `false` / `false` | Create a new or reuse an existing CodeDeploy application |
+| `create_deployment_group` / `use_existing_deployment_group` | `bool` | `false` / `false` | Create a new or reuse an existing deployment group |
+| `run_deployment` / `wait_deployment_completion` | `bool` | `false` / `false` | Trigger the deployment and optionally block until it completes |
+| `alarms` / `alarm_enabled` | `list(string)` / `bool` | `[]` / `false` | CloudWatch alarms for auto-rollback and whether alarm monitoring is active |
+| `auto_rollback_events` | `list(string)` | `["DEPLOYMENT_STOP_ON_ALARM"]` | Events that trigger an automatic rollback |
+| `before_allow_traffic_hook_arn` / `after_allow_traffic_hook_arn` | `string` | `""` | Lambda hook functions run before/after traffic shift |
 
 #### Main Outputs
 
 | Output | Description |
 |--------|-------------|
 | `codedeploy_app_name` | CodeDeploy application name |
-| `codedeploy_deployment_group_name` | Deployment group name |
-| `deploy_script` | Deployment execution script |
+| `codedeploy_deployment_group_name` / `codedeploy_deployment_group_id` | Deployment group name/ID |
+| `deploy_script` | Path to the generated deployment script |
+| `appspec_content` | AppSpec document as JSON |
 
 #### Usage Example
 
 ```hcl
 module "lambda_deploy" {
-  source = "terraform-aws-modules/lambda/aws//modules/deploy"
+  source  = "terraform-aws-modules/lambda/aws//modules/deploy"
+  version = "~> 8.0"
 
   alias_name     = module.lambda_alias.lambda_alias_name
   function_name  = module.lambda_function.lambda_function_name
   target_version = module.lambda_function.lambda_function_version
 
+  create_app               = true
+  app_name                 = "my-awesome-app"
+  create_deployment_group  = true
+  deployment_group_name    = "production"
+
+  create_deployment          = true
+  run_deployment              = true
+  wait_deployment_completion  = true
+
   # Canary deployment: 10% traffic for 5 minutes
   deployment_config_name = "CodeDeployDefault.LambdaCanary10Percent5Minutes"
 
   # Auto-rollback on alarm
-  alarm_names = [
+  alarm_enabled = true
+  alarms = [
     aws_cloudwatch_metric_alarm.lambda_errors.alarm_name
   ]
+}
+```
 
-  triggers = {
-    redeployment = sha256(jsonencode([
-      module.lambda_function.lambda_function_version
-    ]))
+### 3. docker-build
+
+- **Purpose**: Builds a Docker image from a `Dockerfile`, optionally creates an ECR repository, and pushes the image so it can be referenced by `image_uri` in the main module
+- **Source**: `terraform-aws-modules/lambda/aws//modules/docker-build`
+- **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest/submodules/docker-build
+- **Key Features**: Optional ECR repository creation with lifecycle policy, buildx/multi-stage build support, build args and cache-from sources, SAM CLI metadata generation for local testing
+- **Use Cases**: Container-image Lambda deployments, CI/CD pipelines that build and publish Lambda container images alongside infrastructure
+
+#### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `source_path` | `string` | `null` | Path to the folder containing the Dockerfile/build context |
+| `docker_file_path` | `string` | `"Dockerfile"` | Path to the Dockerfile within `source_path` |
+| `create_ecr_repo` | `bool` | `false` | Whether to create a new ECR repository |
+| `ecr_repo` | `string` | `null` | Name of the ECR repository to use or create |
+| `ecr_address` | `string` | `null` | Cross-account ECR registry address (requires `create_ecr_repo = false`) |
+| `image_tag` | `string` | `null` | Image tag; defaults to a timestamp if unset |
+| `use_image_tag` | `bool` | `true` | Use a tag in the image URI vs. resolving to the latest digest |
+| `build_args` | `map(string)` | `{}` | Docker build arguments |
+| `platform` | `string` | `null` | Target architecture platform for the build |
+
+#### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `image_uri` | ECR image URI to pass to the main module's `image_uri` variable |
+| `image_id` | ID of the built Docker image |
+
+#### Usage Example
+
+```hcl
+module "docker_image" {
+  source  = "terraform-aws-modules/lambda/aws//modules/docker-build"
+  version = "~> 8.0"
+
+  create_ecr_repo = true
+  ecr_repo        = "my-cool-ecr-repo"
+
+  use_image_tag = true
+  image_tag     = "1.0"
+
+  source_path = "context"
+  build_args = {
+    FOO = "bar"
   }
+}
+
+module "lambda_function" {
+  source  = "terraform-aws-modules/lambda/aws"
+  version = "~> 8.0"
+
+  function_name  = "my-lambda1"
+  create_package = false
+
+  image_uri    = module.docker_image.image_uri
+  package_type = "Image"
 }
 ```
 
@@ -620,125 +720,85 @@ module "lambda_deploy" {
 1. **Separate Handler from Business Logic**: Keep the Lambda handler thin and separate business logic for easier testing and reusability.
 2. **Initialize Outside Handler**: Initialize SDK clients, database connections, and global variables outside the handler function to reuse them across invocations.
 3. **Write Idempotent Code**: Design functions to produce the same result when invoked multiple times with the same input to handle retries safely.
-4. **Use Environment Variables**: Configure application settings using environment variables rather than hard-coding values.
-5. **Implement Graceful Error Handling**: Catch and handle exceptions appropriately; use structured logging for debugging.
-6. **Keep Deployment Packages Small**: Minimize package size by excluding unnecessary files and dependencies to reduce cold start times.
-7. **Use Layers for Shared Code**: Extract common dependencies and utilities into Lambda layers to reduce duplication and deployment package size.
-8. **Implement Timeout and Retry Logic**: Design functions to handle timeouts gracefully and implement retry logic for external service calls.
+4. **Use Environment Variables**: Configure application settings using `environment_variables` rather than hard-coding values.
+5. **Keep Deployment Packages Small**: Minimize package size by excluding unnecessary files and dependencies (`patterns`) to reduce cold start times.
+6. **Use Layers for Shared Code**: Extract common dependencies and utilities into Lambda layers (`create_layer = true`) to reduce duplication and package size.
+7. **Set `hash_extra` for Reused Source Paths**: When multiple module calls share the same `source_path`, set distinct `hash_extra` values to avoid corrupted concurrent zip writes.
 
 ### Performance Optimization
 
-1. **Right-Size Memory Configuration**: Test different memory settings; higher memory also provides more CPU, which may reduce execution time and cost.
-2. **Enable SnapStart for Java**: Use Lambda SnapStart to reduce cold start latency for Java functions.
-3. **Use Provisioned Concurrency**: Configure provisioned concurrency for functions requiring consistent sub-second response times.
-4. **Cache Static Assets in /tmp**: Utilize the /tmp directory (up to 10GB with configuration) to cache files across invocations.
-5. **Minimize Cold Starts**: Keep packages small, limit the number of layers, and avoid unnecessary initialization code.
-6. **Choose Appropriate Architecture**: Consider ARM64 (Graviton2) for better price-performance ratio on supported workloads.
-7. **Optimize Dependencies**: Import only required libraries and modules; avoid importing entire SDKs when only specific clients are needed.
-8. **Implement Connection Pooling**: Reuse database connections and HTTP clients across invocations to reduce connection overhead.
+1. **Right-Size Memory Configuration**: Test different `memory_size` settings; higher memory also provides more CPU, which may reduce execution time and cost.
+2. **Enable SnapStart**: Set `snap_start = true` to reduce cold start latency for supported runtimes (e.g., Java).
+3. **Use Provisioned Concurrency**: Configure `provisioned_concurrent_executions` (directly, or via the `alias`/`aws_lambda_provisioned_concurrency_config`) for functions requiring consistent sub-second response times.
+4. **Minimize Cold Starts**: Keep packages small, limit the number of layers, and avoid unnecessary initialization code.
+5. **Choose ARM64 Where Possible**: Set `architectures = ["arm64"]` for better price-performance on supported workloads.
+6. **Build in Docker for Native Dependencies**: Use `build_in_docker = true` with a runtime-matched `docker_image` when packages require compiled/native dependencies.
 
 ### Security and Compliance
 
-1. **Apply Least Privilege IAM Policies**: Grant only the minimum permissions required for function execution; avoid wildcards in policies.
-2. **Use IAM Roles, Not Access Keys**: Lambda automatically provides temporary credentials through execution roles; never hard-code access keys.
-3. **Enable Code Signing**: Implement code signing to ensure only trusted code runs in your Lambda functions.
-4. **Encrypt Environment Variables**: Use AWS KMS to encrypt sensitive configuration data in environment variables.
+1. **Apply Least Privilege IAM Policies**: Grant only the minimum permissions required for function execution via `policy_statements`; avoid wildcards.
+2. **Use IAM Roles, Not Access Keys**: Lambda automatically provides temporary credentials through the execution role; never hard-code access keys.
+3. **Enable Code Signing**: Set `code_signing_config_arn` to ensure only trusted code runs in your Lambda functions.
+4. **Encrypt Sensitive Data**: Use `kms_key_arn` to encrypt environment variables, and `cloudwatch_logs_kms_key_id`/`s3_kms_key_id` to encrypt logs and stored artifacts.
 5. **Use VPC with Private Subnets**: Place Lambda functions accessing private resources in VPC private subnets, not public subnets.
-6. **Implement Security Scanning**: Use AWS Security Hub and Amazon GuardDuty to monitor Lambda security posture.
-7. **Enable X-Ray Tracing**: Use AWS X-Ray for security analysis and performance troubleshooting in production.
-8. **Rotate Secrets Regularly**: Use AWS Secrets Manager or Parameter Store for sensitive credentials and implement rotation.
-9. **Validate Input Data**: Always validate and sanitize input data to prevent injection attacks and unexpected behavior.
-10. **Use Function URLs with Authorization**: When using Function URLs, implement IAM authorization or API Gateway for authentication.
+6. **Consider Tenant Isolation Mode**: Enable `tenant_isolation_mode` for workloads processing data from multiple tenants that require stronger execution-environment isolation.
+7. **Validate Input Data**: Always validate and sanitize input data to prevent injection attacks and unexpected behavior.
+8. **Secure Function URLs**: When using `create_lambda_function_url`, prefer `authorization_type = "AWS_IAM"` over `"NONE"` unless the endpoint is intentionally public.
 
 ### Deployment and CI/CD
 
-1. **Version Control Everything**: Store all Lambda code, dependencies, and infrastructure configuration in version control.
-2. **Use Terraform Workspaces or Environments**: Separate development, staging, and production environments with distinct state files.
-3. **Implement Blue/Green Deployments**: Use Lambda aliases and traffic shifting for zero-downtime deployments.
-4. **Pin Module Versions**: Use specific module versions in production (e.g., `version = "~> 7.0"`) to prevent unexpected changes.
-5. **Test Locally First**: Use tools like AWS SAM CLI or LocalStack to test Lambda functions locally before deployment.
-6. **Publish Versions**: Set `publish = true` to create immutable versions for rollback capability.
-7. **Use Build Automation**: Automate dependency installation and package building in CI/CD pipelines.
-8. **Implement Canary Deployments**: Use weighted alias routing to gradually shift traffic to new versions.
-9. **Tag Resources Consistently**: Apply tags for environment, application, cost center, and owner to all Lambda resources.
-10. **Store Packages on S3**: Use S3 storage for deployment packages larger than 50MB or for centralized package management.
+1. **Pin Module Versions**: Use specific module versions in production (e.g., `version = "~> 8.0"`) to prevent unexpected changes.
+2. **Publish Versions**: Set `publish = true` to create immutable versions for rollback capability.
+3. **Use the `alias` Submodule for Environments**: Point distinct aliases (e.g., `production`, `staging`) at specific function versions for controlled promotion.
+4. **Implement Canary Deployments**: Use the `deploy` submodule with a `CodeDeployDefault.LambdaCanary*`/`LambdaLinear*` config and `alarm_enabled = true` for automated rollback.
+5. **Separate Code from Infrastructure When Needed**: Set `ignore_source_code_hash = true` with `create_package = false` when code deployment is managed by a separate CI/CD pipeline (e.g., `aws lambda update-function-code`).
+6. **Store Packages on S3**: Use `store_on_s3 = true` for deployment packages larger than 50MB or for centralized package management.
+7. **Tag Resources Consistently**: Apply tags for environment, application, cost center, and owner to all Lambda resources.
 
 ### Monitoring and Observability
 
-1. **Enable CloudWatch Logs**: Ensure CloudWatch Logs integration is enabled with appropriate retention periods.
-2. **Use Structured Logging**: Implement structured logging (JSON format) for easier parsing and analysis in CloudWatch Insights.
-3. **Set Up CloudWatch Alarms**: Create alarms for errors, throttles, duration, and concurrent executions.
-4. **Monitor Cold Starts**: Track initialization duration to identify performance issues.
-5. **Implement Custom Metrics**: Use CloudWatch embedded metric format to publish custom business and performance metrics.
-6. **Use AWS X-Ray**: Enable X-Ray tracing to visualize service maps and identify bottlenecks in distributed applications.
-7. **Configure Dead Letter Queues**: Set up DLQs to capture failed async invocations for analysis and reprocessing.
-8. **Track Cost Metrics**: Use AWS Cost Anomaly Detection and tag-based cost allocation to monitor Lambda spending.
-9. **Implement Health Checks**: Create synthetic monitors to continuously test function availability and performance.
-10. **Review CloudWatch Insights**: Regularly analyze logs using CloudWatch Insights to identify patterns and issues.
+1. **Enable CloudWatch Logs**: Ensure `attach_cloudwatch_logs_policy = true` with an appropriate `cloudwatch_logs_retention_in_days`.
+2. **Use Structured Logging**: Set `logging_log_format = "JSON"` for easier parsing and analysis in CloudWatch Logs Insights.
+3. **Configure Advanced Log Controls**: Tune `logging_application_log_level` and `logging_system_log_level` independently for verbosity control.
+4. **Set Up CloudWatch Alarms**: Create alarms for errors, throttles, duration, and concurrent executions, and wire them into the `deploy` submodule for auto-rollback.
+5. **Use AWS X-Ray**: Set `tracing_mode = "Active"` to visualize service maps and identify bottlenecks in distributed applications.
+6. **Configure Dead Letter Queues**: Set `dead_letter_target_arn` and `attach_dead_letter_policy = true` to capture failed async invocations for analysis and reprocessing.
 
 ### Cost Optimization
 
-1. **Optimize Memory and Timeout**: Right-size memory allocation and set appropriate timeouts to avoid over-provisioning.
-2. **Use ARM64 Architecture**: Switch to ARM64 (Graviton2) for up to 34% better price-performance on compatible workloads.
-3. **Minimize Execution Duration**: Optimize code to reduce execution time; Lambda charges per millisecond.
-4. **Delete Unused Functions**: Regularly audit and remove unused Lambda functions and versions.
-5. **Set Appropriate Log Retention**: Configure CloudWatch log retention to balance observability needs with storage costs.
-6. **Use Reserved Concurrency Wisely**: Set reserved concurrency to prevent unexpected scaling and runaway costs.
-7. **Batch Process When Possible**: Process multiple records per invocation when using stream processing to reduce invocation count.
-8. **Review Provisioned Concurrency**: Only use provisioned concurrency for functions with strict latency requirements; it incurs continuous charges.
-9. **Optimize Package Size**: Smaller packages reduce storage costs and improve cold start performance.
-10. **Monitor Free Tier Usage**: AWS provides 1M free requests and 400,000 GB-seconds per month; optimize to stay within free tier when possible.
-
-### Operational Excellence
-
-1. **Document Function Purpose**: Maintain clear descriptions for all functions, including purpose, triggers, and dependencies.
-2. **Implement Retry Logic**: Configure retry attempts and backoff strategies for async invocations and stream processing.
-3. **Use EventBridge for Scheduling**: Prefer EventBridge rules over CloudWatch Events for scheduled Lambda invocations.
-4. **Configure Concurrency Limits**: Set reserved concurrency to protect downstream systems from overload.
-5. **Test at Scale**: Load test Lambda functions to understand scaling behavior and downstream system limits.
-6. **Plan for Quotas**: Be aware of AWS Lambda service quotas (concurrent executions, deployment package size, etc.).
-7. **Implement Circuit Breakers**: Add circuit breaker patterns when calling external services to prevent cascading failures.
-8. **Use SQS for Buffering**: Place SQS queues between event sources and Lambda for better control over processing rates.
-9. **Monitor Upstream Services**: Track event source behavior to anticipate Lambda scaling requirements.
-10. **Maintain Runbooks**: Document common operational procedures, troubleshooting steps, and rollback procedures.
+1. **Optimize Memory and Timeout**: Right-size `memory_size` and `timeout` to avoid over-provisioning.
+2. **Use ARM64 Architecture**: Switch to `arm64` for better price-performance on compatible workloads.
+3. **Use Reserved Concurrency Wisely**: Set `reserved_concurrent_executions` to prevent unexpected scaling and runaway costs.
+4. **Review Provisioned Concurrency**: Only use provisioned concurrency for functions with strict latency requirements; it incurs continuous charges.
+5. **Set Appropriate Log Retention**: Configure `cloudwatch_logs_retention_in_days` to balance observability needs with storage costs.
+6. **Consider Managed Instances**: For steady, predictable high-throughput workloads, evaluate `managed_instances_capacity_provider_arn` against standard on-demand Lambda pricing.
 
 ### VPC and Networking
 
-1. **Use Hyperplane ENIs**: Modern Lambda VPC integration uses Hyperplane ENIs for fast scaling without ENI limits.
-2. **Place in Private Subnets**: Deploy VPC-enabled Lambda functions in private subnets, never public subnets.
-3. **Use VPC Endpoints**: Configure VPC endpoints for AWS services (S3, DynamoDB, etc.) to avoid NAT Gateway costs.
-4. **Configure NAT Gateway**: Ensure NAT Gateway or NAT Instance is available for Lambda to access internet resources.
-5. **Security Group Best Practices**: Use security groups to control outbound access; Lambda doesn't accept inbound connections.
-6. **Consider Multi-AZ**: Deploy Lambda with subnets in multiple availability zones for resilience.
-7. **Monitor VPC Flow Logs**: Enable VPC Flow Logs to monitor Lambda network traffic patterns.
-8. **Plan IP Addresses**: Ensure VPC subnets have sufficient IP addresses for Lambda scaling.
+1. **Place in Private Subnets**: Deploy VPC-enabled Lambda functions (`vpc_subnet_ids`) in private subnets, never public subnets.
+2. **Use VPC Endpoints**: Configure VPC endpoints for AWS services (S3, DynamoDB, etc.) to avoid NAT Gateway costs and reduce latency.
+3. **Attach the Network Policy**: Set `attach_network_policy = true` so the execution role can create/manage ENIs.
+4. **Plan Security Group Cleanup on Destroy**: Use `replace_security_groups_on_destroy` and `replacement_security_group_ids` to avoid orphaned ENIs when tearing down VPC-attached functions.
 
 ### Event-Driven Architecture
 
-1. **Use Async Invocation for Non-Critical Paths**: Invoke Lambda asynchronously when immediate response isn't required.
-2. **Configure DLQs for Reliability**: Always configure dead letter queues for async invocations and stream processing.
-3. **Implement Idempotency Tokens**: Use idempotency tokens to prevent duplicate processing of events.
-4. **Batch Processing Configuration**: Tune batch size and batching window for optimal throughput in stream processing.
-5. **Handle Partial Batch Failures**: Implement proper error handling for partial batch failures in stream processing.
-6. **Use EventBridge for Routing**: Leverage EventBridge for complex event routing and filtering logic.
-7. **Implement Fan-Out Patterns**: Use SNS topics to fan out events to multiple Lambda functions.
-8. **Monitor Event Age**: Track event age to identify processing delays and backlogs.
+1. **Configure DLQs for Reliability**: Always configure dead letter queues for async invocations and stream processing.
+2. **Tune Batch Settings**: Set `batch_size` and `maximum_batching_window_in_seconds` in `event_source_mapping` for optimal throughput.
+3. **Handle Partial Batch Failures**: Implement proper error handling (`ReportBatchItemFailures`) for partial batch failures in stream/queue processing.
+4. **Control Trigger Scope**: Use `create_current_version_allowed_triggers` and `create_unqualified_alias_allowed_triggers` to manage which versions/aliases receive invoke permissions.
 
 ## Additional Resources
 
 - **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-lambda
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-lambda/tree/master/examples
+- **CHANGELOG**: https://github.com/terraform-aws-modules/terraform-aws-lambda/blob/master/CHANGELOG.md
 - **AWS Lambda Documentation**: https://docs.aws.amazon.com/lambda/latest/dg/welcome.html
 - **Lambda Best Practices**: https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html
 - **Lambda Runtimes**: https://docs.aws.amazon.com/lambda/latest/dg/lambda-runtimes.html
-- **Lambda Layers**: https://docs.aws.amazon.com/lambda/latest/dg/configuration-layers.html
 - **Lambda Concurrency**: https://docs.aws.amazon.com/lambda/latest/dg/lambda-concurrency.html
 - **Lambda Pricing**: https://aws.amazon.com/lambda/pricing/
-- **AWS Serverless Application Model (SAM)**: https://docs.aws.amazon.com/serverless-application-model/
-- **Lambda Performance Optimization**: https://docs.aws.amazon.com/lambda/latest/dg/best-practices.html#function-code
 - **Lambda Security Best Practices**: https://docs.aws.amazon.com/lambda/latest/dg/lambda-security.html
-- **Lambda Monitoring**: https://docs.aws.amazon.com/lambda/latest/dg/lambda-monitoring.html
 - **Lambda in VPC**: https://docs.aws.amazon.com/lambda/latest/dg/configuration-vpc.html
 - **Serverless.tf Framework**: https://serverless.tf/
 
@@ -746,21 +806,20 @@ module "lambda_deploy" {
 
 When using this module in automated workflows:
 
-1. **Choose Appropriate Runtime**: Select the most recent runtime version supported by AWS; older runtimes may be deprecated
-2. **Build Dependencies Correctly**: Use `pip_requirements = true` for Python or appropriate build configuration for other runtimes
-3. **Right-Size Resources**: Start with 512MB memory and adjust based on CloudWatch metrics; higher memory provides more CPU
-4. **Use Layers for Large Dependencies**: Extract large dependencies (>10MB) into Lambda layers to reduce deployment package size
-5. **Enable CloudWatch Logs**: Always set `attach_cloudwatch_logs_policy = true` and configure appropriate retention periods
-6. **Apply Least Privilege IAM**: Use specific IAM policies; avoid `attach_policy = true` with overly permissive policies
-7. **Configure VPC Carefully**: Only use VPC when accessing private resources; VPC adds latency to cold starts
-8. **Set Appropriate Timeouts**: Configure timeout based on expected execution duration; default 3 seconds is often too short
-9. **Use Environment Variables**: Store configuration in environment variables, not hard-coded in function code
-10. **Publish Versions**: Set `publish = true` for production functions to enable versioning and rollback capability
-11. **Store Large Packages on S3**: Use `store_on_s3 = true` for packages larger than 50MB or for centralized management
-12. **Tag Consistently**: Include Environment, Application, Owner, and CostCenter tags on all Lambda resources
-13. **Monitor Cold Starts**: Track initialization duration; optimize by reducing package size and dependencies
-14. **Implement DLQs**: Configure dead letter queues for async invocations to capture and analyze failures
-15. **Test Before Production**: Validate Lambda functions in development/staging environments before production deployment
-16. **Use Provisioned Concurrency Sparingly**: Only enable for latency-sensitive functions; it incurs continuous costs
-17. **Consider ARM64**: Use ARM64 architecture for better price-performance when runtime and dependencies support it
-18. **Implement Proper Error Handling**: Catch exceptions and log errors with context for easier debugging
+1. **Choose Appropriate Runtime**: Select the most recent runtime version supported by AWS; older runtimes may be deprecated.
+2. **Build Dependencies Correctly**: Use `pip_requirements = true` (or `poetry_install = true`) for Python, `npm_requirements = true` for Node.js, or `commands` for custom builds.
+3. **Right-Size Resources**: Start with 512MB memory and adjust based on CloudWatch metrics; higher memory also provides more CPU.
+4. **Use Layers for Large Dependencies**: Extract large dependencies (>10MB) into Lambda layers to reduce deployment package size.
+5. **Enable CloudWatch Logs**: Always set `attach_cloudwatch_logs_policy = true` and configure appropriate retention (`cloudwatch_logs_retention_in_days`).
+6. **Apply Least Privilege IAM**: Use `policy_statements`/`policy_json`; avoid `attach_policy = true` with overly permissive managed policies.
+7. **Configure VPC Carefully**: Only use VPC when accessing private resources; VPC adds latency to cold starts unless traffic stays within AWS's Hyperplane ENIs.
+8. **Set Appropriate Timeouts**: Configure `timeout` based on expected execution duration; the default of 3 seconds is often too short.
+9. **Publish Versions for Production**: Set `publish = true` for production functions to enable versioning, aliasing, and rollback.
+10. **Store Large Packages on S3**: Use `store_on_s3 = true` for packages larger than 50MB or for centralized management.
+11. **Use the Correct Function URL Variables**: Function URL configuration is top-level (`create_lambda_function_url`, `authorization_type`, `cors`, `invoke_mode`) — there is no `function_url_config` object in current versions.
+12. **Use `image_uri` for Container Deployments**: Set `create_package = false` and `package_type = "Image"`; build the image with the `docker-build` submodule if Terraform should own the build.
+13. **Tag Consistently**: Include `Environment`, `Application`, `Owner`, and cost-center tags on all Lambda resources via the `tags` variable.
+14. **Implement DLQs**: Configure `dead_letter_target_arn` and `attach_dead_letter_policy = true` for async invocations to capture and analyze failures.
+15. **Use Provisioned Concurrency Sparingly**: Only enable for latency-sensitive functions; it incurs continuous costs even when idle.
+16. **Consider ARM64**: Use `architectures = ["arm64"]` for better price-performance when the runtime and dependencies support it.
+17. **Pin the Module Version**: Always set an explicit `version` constraint (e.g., `~> 8.0`) — this module evolves frequently and has had breaking changes across major versions (e.g., v8.0.0 raised minimum provider/Terraform requirements).

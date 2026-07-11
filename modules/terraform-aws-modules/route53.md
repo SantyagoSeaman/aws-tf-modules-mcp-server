@@ -6,144 +6,170 @@
 - **Source**: `terraform-aws-modules/route53/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-route53
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest
-- **Latest Version**: 6.4.0
-- **Purpose**: Terraform module that creates and manages AWS Route53 resources including hosted zones, DNS records, resolver endpoints, and firewall rules
+- **Latest Version**: 6.5.0
+- **Purpose**: Terraform module that creates and manages AWS Route53 hosted zones, DNS records, DNSSEC signing, delegation sets, resolver endpoints, and resolver firewall rule groups
 - **Service**: AWS Route 53 (Domain Name System)
 - **Category**: Networking, DNS Management, Security
-- **Keywords**: route53, dns, hosted-zone, domain, records, routing-policy, geolocation, failover, latency-routing, alias-records, private-zone, dnssec, resolver-endpoint, resolver-firewall, hybrid-dns
-- **Use For**: Multi-region application routing, domain name management, hybrid cloud DNS resolution, DNS-based failover and disaster recovery, geolocation-based content delivery, weighted traffic distribution, private internal DNS for VPCs, cross-account DNS management, DNS security and filtering, microservices service discovery, blue-green deployments, canary releases
+- **Keywords**: route53, dns, hosted-zone, dns-records, routing-policy, alias-record, private-zone, dnssec, cross-account, resolver-endpoint, resolver-firewall, hybrid-dns, delegation-set, failover, geolocation
+- **Use For**: multi-region traffic routing, DNS-based failover and disaster recovery, hybrid cloud DNS resolution, private internal DNS for VPCs, cross-account DNS management, DNS security/domain filtering, weighted/canary traffic shifting, geolocation and latency-based content delivery, DNSSEC-signed public zones, service discovery for microservices
 
 ## Description
 
-The Terraform AWS Route53 module provides comprehensive infrastructure-as-code capabilities for managing AWS Route53 DNS services. It enables creation and management of both public and private hosted zones, DNS records with advanced routing policies, DNSSEC configurations, and Route53 Resolver components. The module supports complex DNS architectures including hybrid cloud scenarios where on-premises networks need to resolve AWS resources and vice versa.
+The Terraform AWS Route53 module provisions AWS Route53 hosted zones (public or private) together with their DNS records, and optionally enables DNSSEC signing backed by a dedicated KMS key. It supports every major record type (A, AAAA, CNAME, MX, TXT, SRV, PTR, NS, CAA) and all Route53 routing policies — simple, weighted, latency-based, failover, geolocation, geoproximity, multivalue-answer, and CIDR-based — expressed through a single `records` map. Alias records to AWS services (S3 website endpoints, CloudFront, ALB/NLB, API Gateway, another record in the same zone) are supported natively.
 
-This module simplifies DNS management by abstracting the complexity of Route53 configurations while providing flexibility for advanced use cases. It supports all major DNS record types (A, AAAA, CNAME, MX, TXT, SRV, PTR, NS, CAA) and advanced routing policies including geolocation, weighted, failover, latency-based, multivalue, geoproximity, and CIDR-based routing. The module also handles VPC associations for private zones, enabling secure internal DNS resolution within AWS networks.
+For private zones, the module manages VPC associations, including the cross-account pattern where `aws_route53_vpc_association_authorization` is created by the zone-owning account while the actual `aws_route53_zone_association` is applied separately by the VPC-owning account. An `ignore_vpc` flag lets a zone's VPC associations be managed entirely outside Terraform (e.g. via `aws_route53_zone_association` resources) without producing disruptive diffs — switching this flag requires a `terraform state mv`/`moved` block between two zone resources because Terraform does not support conditional `lifecycle` blocks. The module can also look up an existing zone (`create_zone = false`) instead of creating one, and optionally enables Route 53 Accelerated Recovery (60-minute RTO for DNS management if us-east-1 is unavailable) on public zones.
 
-The module includes three specialized submodules for managing delegation sets (reusable name server collections), resolver endpoints (for hybrid DNS resolution between AWS and on-premises networks), and resolver firewall rule groups (for DNS-based security filtering). These components work together to provide enterprise-grade DNS infrastructure with support for cross-account sharing, DNSSEC for enhanced security, and flexible traffic management capabilities.
+Three independent submodules extend the root module: `delegation-sets` for reusable name-server collections shared across multiple zones, `resolver-endpoint` for hybrid DNS resolution (inbound/outbound) between AWS and on-premises networks with an auto-managed security group, and `resolver-firewall-rule-group` for DNS-level allow/block/alert filtering with optional cross-account sharing via AWS RAM. Together these cover public/private DNS, secure DNS (DNSSEC), hybrid connectivity, and DNS security in one module family.
 
 ## Key Features
 
-- **Public Hosted Zones**: Create and manage publicly accessible DNS zones for internet-facing domains
-- **Private Hosted Zones**: Set up internal DNS zones associated with specific VPCs for private resource resolution
-- **Advanced Routing Policies**: Support for geolocation, weighted, failover, latency-based, multivalue, geoproximity, and CIDR-based routing
-- **DNSSEC Support**: Enable DNS Security Extensions with KMS key management for enhanced DNS security
-- **Alias Records**: Native support for AWS service aliases (CloudFront, ELB, S3, API Gateway)
-- **Cross-Account Zone Association**: Authorize and associate hosted zones across different AWS accounts
-- **VPC Associations**: Flexible VPC association management for private hosted zones
-- **Delegation Sets**: Reusable name server collections for consistent DNS delegation across multiple zones
-- **Resolver Endpoints**: Inbound and outbound DNS resolution for hybrid cloud architectures
-- **Resolver Firewall**: DNS-level security filtering with customizable allow, block, and override rules
-- **Multiple Record Types**: Full support for A, AAAA, CNAME, MX, TXT, SRV, PTR, NS, SOA, CAA records
-- **Health Checks**: Integrate Route53 health checks with routing policies for automated failover
-- **DNS Query Logging**: Enable query logging for auditing and troubleshooting
-- **Resource Access Manager (RAM) Integration**: Share resolver firewall rules across accounts and organizations
-- **Dual-Stack Support**: IPv4, IPv6, and dual-stack configurations for resolver endpoints
-- **DNS Protocols**: Support for Do53 (DNS over port 53), DoH (DNS over HTTPS), and DoH-FIPS
-- **Flexible Tagging**: Comprehensive tag management for cost allocation and resource organization
-- **Customizable Timeouts**: Configure timeouts for create, update, and delete operations
-- **Security Group Management**: Automated security group creation for resolver endpoints with customizable rules
+- **Public & Private Hosted Zones**: Create new zones or look up existing ones (`create_zone = false`) for internet-facing or VPC-internal DNS
+- **All Routing Policies**: Weighted, latency, failover, geolocation, geoproximity (region or lat/long with bias), multivalue-answer, and CIDR-collection routing via one `records` map
+- **Alias Records**: Native aliasing to AWS services (S3, CloudFront, ELB/ALB/NLB, API Gateway) and same-zone self-references, with `evaluate_target_health`
+- **DNSSEC with Managed KMS Key**: `enable_dnssec` provisions `aws_route53_key_signing_key` + `aws_route53_hosted_zone_dnssec`, optionally creating a dedicated KMS key (module `terraform-aws-modules/kms/aws`) or accepting an existing `dnssec_kms_key_arn`; key name is configurable via `dnssec_key_signing_key_name`
+- **Route 53 Accelerated Recovery**: `enable_accelerated_recovery` gives public zones a 60-minute RTO if `us-east-1` is unavailable
+- **Cross-Account VPC Association**: `vpc_association_authorizations` creates authorizations for external accounts/VPCs; `ignore_vpc` decouples zone VPC state from externally-managed associations
+- **Delegation Sets Submodule**: Reusable, stable name-server sets assignable to multiple public zones via `delegation_set_id`
+- **Resolver Endpoint Submodule**: Inbound/outbound Route53 Resolver endpoints, IPv4/IPv6/dual-stack, Do53/DoH/DoH-FIPS protocols, auto-created security group with port-53 TCP/UDP rules, and resolver rules + VPC associations
+- **Resolver Firewall Submodule**: DNS firewall rule groups with ALLOW/BLOCK/ALERT actions, NODATA/NXDOMAIN/OVERRIDE block responses, domain lists, and RAM sharing across accounts
+- **Flexible Timeouts & Tagging**: Per-record and per-zone `timeouts` blocks; consistent `tags` propagation across all resources
 
 ## Main Use Cases
 
-1. **Multi-Region Application Routing**: Distribute traffic across multiple regions using latency-based or geolocation routing policies
-2. **DNS-Based Failover**: Implement automatic failover to backup resources using health checks and failover routing
-3. **Hybrid Cloud DNS Resolution**: Enable seamless DNS resolution between AWS and on-premises data centers using resolver endpoints
-4. **Microservices Service Discovery**: Provide internal DNS for service-to-service communication in containerized environments
-5. **Traffic Distribution and Load Balancing**: Use weighted routing policies for gradual rollouts, canary deployments, or A/B testing
-6. **DNS Security and Filtering**: Block malicious domains and enforce DNS-based security policies using resolver firewall
-7. **Private VPC DNS Management**: Create isolated internal DNS namespaces for private resources within VPCs
-8. **Cross-Account DNS Management**: Centralize DNS management while sharing zones and resolver rules across multiple AWS accounts
-9. **Geolocation-Based Content Delivery**: Route users to region-specific endpoints based on geographic location
-10. **DNSSEC-Enabled Secure DNS**: Implement cryptographically signed DNS responses to prevent DNS spoofing and cache poisoning
-11. **CIDR-Based Routing**: Route traffic based on client IP CIDR ranges for network-specific endpoints
+1. **Multi-Region Application Routing**: Distribute traffic using latency-based or geolocation routing policies
+2. **DNS-Based Failover**: Automatic failover to backup resources using health checks and PRIMARY/SECONDARY failover routing
+3. **Hybrid Cloud DNS Resolution**: Resolve DNS between AWS VPCs and on-premises networks via inbound/outbound resolver endpoints
+4. **Private VPC DNS**: Internal namespaces for service-to-service resolution within one or more VPCs
+5. **Cross-Account DNS Management**: Centralize zones/resolver rules in a hub account and authorize associations from spoke accounts
+6. **Canary/Blue-Green Deployments**: Shift traffic gradually with weighted routing policies
+7. **DNS Security & Filtering**: Block malicious or unauthorized domains, alert on suspicious queries, using resolver firewall rule groups
+8. **DNSSEC-Signed Public Zones**: Protect public domains against spoofing/cache poisoning with signed DNSKEY/DS records
+9. **Domain Portfolio Management**: Keep consistent name servers across many zones using delegation sets
+10. **Disaster Recovery for DNS Management**: Enable Accelerated Recovery so record changes keep working during a `us-east-1` outage
 
 ## Submodules
 
 ### 1. delegation-sets
 
-- **Purpose**: Creates AWS Route53 delegation sets for reusable name server collections across multiple hosted zones
+- **Purpose**: Creates reusable AWS Route53 delegation sets (name-server collections) assignable to multiple hosted zones
 - **Source**: `terraform-aws-modules/route53/aws//modules/delegation-sets`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest/submodules/delegation-sets
-- **Key Features**: Reusable name servers, reference name assignment, tag support, delegation set ID and name server outputs
-- **Use Cases**: Consistent DNS delegation across domains, simplified multi-domain management, domain registrar configuration, DNS migration strategies
+- **Key Features**: Reusable name servers, optional reference names, tag support
+- **Use Cases**: Consistent DNS delegation across a domain portfolio, simplified registrar configuration, DNS migration
 
 ### 2. resolver-endpoint
 
-- **Purpose**: Creates Route53 Resolver endpoints for hybrid DNS resolution between AWS and on-premises networks
+- **Purpose**: Creates a Route53 Resolver endpoint (inbound or outbound) plus its security group for hybrid DNS resolution
 - **Source**: `terraform-aws-modules/route53/aws//modules/resolver-endpoint`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest/submodules/resolver-endpoint
-- **Key Features**: Inbound/outbound endpoints, dual-stack support, Do53/DoH/DoH-FIPS protocols, automated security group creation, resolver rules
-- **Use Cases**: Hybrid cloud DNS resolution, on-premises to AWS DNS queries, AWS to on-premises DNS forwarding, multi-cloud DNS integration
+- **Key Features**: Inbound/outbound endpoints, IPv4/IPv6/dual-stack, Do53/DoH/DoH-FIPS protocols, auto-managed security group, resolver rules + associations
+- **Use Cases**: On-premises-to-AWS DNS queries, AWS-to-on-premises forwarding, multi-VPC/multi-cloud DNS integration
 
 ### 3. resolver-firewall-rule-group
 
-- **Purpose**: Creates Route53 Resolver firewall rule groups for DNS-based security filtering and domain blocking
+- **Purpose**: Creates a Route53 Resolver firewall rule group with domain lists and rules for DNS-level security filtering
 - **Source**: `terraform-aws-modules/route53/aws//modules/resolver-firewall-rule-group`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest/submodules/resolver-firewall-rule-group
-- **Key Features**: Block/allow/override rules, domain lists, cross-account sharing via RAM, priority-based rule evaluation
-- **Use Cases**: Malicious domain blocking, DNS exfiltration prevention, compliance-driven DNS filtering, parental controls
+- **Key Features**: ALLOW/BLOCK/ALERT rules, NODATA/NXDOMAIN/OVERRIDE block responses, priority-based evaluation, cross-account sharing via RAM
+- **Use Cases**: Malicious-domain blocking, DNS exfiltration prevention, compliance-driven DNS filtering
 
 ## Root Module: Hosted Zones and Records
 
 ### Description
 
-The root module creates and manages AWS Route53 hosted zones (public or private) and DNS records. It provides comprehensive support for creating DNS records with various routing policies, DNSSEC configuration, cross-account VPC associations, and integration with AWS services via alias records.
+The root module creates (or looks up) an AWS Route53 hosted zone and manages its DNS records, VPC associations, and DNSSEC configuration.
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | `string` | - | Hosted zone domain name (required when creating zone) |
-| `create_zone` | `bool` | `true` | Whether to create new zone or lookup existing |
-| `comment` | `string` | `null` | Zone description (defaults to "Managed by Terraform") |
-| `vpc` | `map(object)` | `null` | VPC associations for private hosted zones |
-| `records` | `map(object)` | `{}` | DNS records configuration with routing policies |
+| `name` | `string` | `""` | Hosted zone domain name |
+| `create_zone` | `bool` | `true` | Create a new zone; set `false` to look up an existing zone (with `private_zone`/`vpc_id`) |
+| `comment` | `string` | `null` | Zone comment (defaults to "Managed by Terraform") |
+| `records` | `map(object)` | `{}` | DNS records keyed by name/subdomain, each with type, ttl/records or alias, and an optional routing policy block |
+| `vpc` | `map(object({vpc_id, vpc_region}))` | `null` | VPC(s) to associate for a private hosted zone; conflicts with `delegation_set_id` |
+| `vpc_association_authorizations` | `map(object({vpc_id, vpc_region}))` | `null` | Cross-account VPC association authorizations to create |
+| `ignore_vpc` | `bool` | `false` | Ignore VPC changes post-creation so externally managed associations don't cause diffs (destructive to toggle — requires a `moved`/`state mv`) |
+| `delegation_set_id` | `string` | `null` | Reusable delegation set ID for a public zone; conflicts with `vpc` |
 | `enable_dnssec` | `bool` | `false` | Enable DNSSEC signing for the zone |
-| `delegation_set_id` | `string` | `null` | Reusable delegation set ID (public zones only) |
-| `ignore_vpc` | `bool` | `false` | Ignore VPC changes post-creation (important for cross-account) |
-| `force_destroy` | `bool` | `null` | Delete all records when destroying the zone |
-| `tags` | `map(string)` | `{}` | Resource tags for the zone |
+| `create_dnssec_kms_key` | `bool` | `true` | Create a dedicated KMS key for DNSSEC signing (via `terraform-aws-modules/kms/aws`) |
+| `dnssec_kms_key_arn` | `string` | `null` | Existing KMS key ARN to use for DNSSEC; required when `create_dnssec_kms_key = false` |
+| `dnssec_key_signing_key_name` | `string` | `null` | Name of the KSK; defaults to the zone name (useful for importing/adopting an existing KSK) |
+| `enable_accelerated_recovery` | `bool` | `null` | Enable Route 53 Accelerated Recovery (60-min RTO) for public zones |
+| `force_destroy` | `bool` | `null` | Delete all records (including externally managed ones) when destroying the zone |
+| `timeouts` | `object` | `null` | Create/update/delete timeouts for the zone |
+| `tags` | `map(string)` | `{}` | Tags applied to all created resources |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `id` | Hosted zone identifier |
-| `arn` | Zone Amazon Resource Name |
-| `name_servers` | Authoritative nameservers for the zone |
+| `id` | Hosted zone ID |
+| `arn` | Zone ARN |
+| `name_servers` | Authoritative name servers for the zone |
+| `primary_name_server` | The name server that created the SOA record |
 | `records` | Map of created DNS records |
-| `dnssec_signing_key_id` | DNSSEC signing key identifier |
-| `dnssec_signing_key_ds_record` | DS record for parent zone delegation |
-| `dnssec_kms_key_arn` | KMS key ARN used for DNSSEC signing |
+| `dnssec_signing_key_ds_record` | DS record to register with the parent zone/registrar |
+| `dnssec_signing_key_dnskey_record` | DNSKEY record |
+| `dnssec_kms_key_arn` | ARN of the KMS key used for DNSSEC signing |
 
 ### Usage Examples
 
-#### Example 1: Public Hosted Zone with DNS Records
+#### Example 1: Public Hosted Zone with Routing Policies
 
 ```hcl
-module "public_zone" {
+module "zone" {
   source  = "terraform-aws-modules/route53/aws"
-  version = "~> 6.4"
+  version = "~> 6.5"
 
-  name = "example.com"
+  name    = "example.com"
+  comment = "Public zone for example.com"
 
   records = {
-    "www" = {
-      type    = "A"
-      ttl     = 3600
-      records = ["192.168.1.1"]
-    }
-    "" = {
-      type    = "MX"
-      ttl     = 3600
-      records = ["10 mail.example.com"]
-    }
-    "api" = {
+    s3 = {
+      name = "s3-bucket.example.com"
       type = "A"
       alias = {
-        name                   = "my-alb-123456.us-east-1.elb.amazonaws.com"
-        zone_id                = "Z35SXDOTRQ7X7K"
-        evaluate_target_health = true
+        name    = "s3-website-eu-west-1.amazonaws.com"
+        zone_id = "Z1BKCTXD74EZPE"
+      }
+    }
+    mail = {
+      full_name = "example.com"
+      type      = "MX"
+      ttl       = 3600
+      records   = ["10 mail.example.com"]
+    }
+    blue = {
+      name           = "app"
+      type           = "CNAME"
+      ttl            = 5
+      records        = ["blue.example.com."]
+      set_identifier = "blue"
+      weighted_routing_policy = {
+        weight = 90
+      }
+    }
+    green = {
+      name           = "app"
+      type           = "CNAME"
+      ttl            = 5
+      records        = ["green.example.com."]
+      set_identifier = "green"
+      weighted_routing_policy = {
+        weight = 10
+      }
+    }
+    failover-primary = {
+      type            = "A"
+      set_identifier  = "failover-primary"
+      health_check_id = "d641c34c-a992-4edd-8a63-c540a4b18d0a"
+      alias = {
+        name    = "d3778kt32cqdww.cloudfront.net"
+        zone_id = "EF3T6981F7M1"
+      }
+      failover_routing_policy = {
+        type = "PRIMARY"
       }
     }
   }
@@ -154,29 +180,40 @@ module "public_zone" {
 }
 ```
 
-#### Example 2: Private Hosted Zone with VPC Association
+#### Example 2: Private Hosted Zone with Cross-Account VPC Association
 
 ```hcl
-module "private_zone" {
+module "zone" {
   source  = "terraform-aws-modules/route53/aws"
-  version = "~> 6.4"
+  version = "~> 6.5"
 
-  name = "internal.example.com"
+  name    = "internal.example.com"
+  comment = "Private zone for internal.example.com"
 
+  # Ignore VPC changes after creation to avoid disruptive diffs from
+  # externally applied aws_route53_zone_association resources
+  ignore_vpc = true
   vpc = {
-    vpc_id = "vpc-0123456789abcdef0"
+    default = {
+      vpc_id     = "vpc-0123456789abcdef0"
+      vpc_region = "eu-west-1"
+    }
+  }
+
+  # Authorize other accounts'/regions' VPCs to associate with this zone;
+  # the association itself must be created in the VPC-owning account
+  vpc_association_authorizations = {
+    external_account = {
+      vpc_id     = "vpc-0987654321fedcba"
+      vpc_region = "eu-west-1"
+    }
   }
 
   records = {
-    "db" = {
+    db = {
       type    = "A"
       ttl     = 300
       records = ["10.0.1.100"]
-    }
-    "cache" = {
-      type    = "CNAME"
-      ttl     = 300
-      records = ["elasticache.internal.example.com"]
     }
   }
 
@@ -187,18 +224,20 @@ module "private_zone" {
 }
 ```
 
-#### Example 3: DNSSEC-Enabled Zone
+#### Example 3: DNSSEC-Enabled Zone with Accelerated Recovery
 
 ```hcl
-module "dnssec_zone" {
+module "zone" {
   source  = "terraform-aws-modules/route53/aws"
-  version = "~> 6.4"
+  version = "~> 6.5"
 
-  name          = "secure.example.com"
-  enable_dnssec = true
+  name    = "secure.example.com"
+
+  enable_dnssec               = true
+  enable_accelerated_recovery = true
 
   records = {
-    "www" = {
+    www = {
       type    = "A"
       ttl     = 3600
       records = ["192.168.1.1"]
@@ -210,38 +249,41 @@ module "dnssec_zone" {
     Security    = "dnssec-enabled"
   }
 }
+
+# Publish the DS record with the domain registrar / parent zone
+output "ds_record" {
+  value = module.zone.dnssec_signing_key_ds_record
+}
 ```
 
 ## Submodule 1: delegation-sets
 
 ### Description
 
-The delegation-sets submodule creates and manages AWS Route53 delegation sets, which are collections of authoritative name servers that can be reused across multiple hosted zones. Delegation sets ensure consistent name server assignments when managing multiple domains, simplifying DNS configuration at domain registrars and providing a stable DNS infrastructure for domain migrations or multi-domain architectures.
+Creates AWS Route53 delegation sets — reusable collections of four authoritative name servers — that can be assigned to multiple public hosted zones via the root module's `delegation_set_id` input, keeping name servers stable across zone re-creation or multi-domain setups.
 
 ### Key Features
 
-- Reusable name server collections for multiple hosted zones
-- Optional reference names for easier identification and management
-- Support for custom tagging for resource organization
-- Outputs delegation set IDs and associated name servers
-- Enables consistent DNS delegation across domain portfolios
-- Simplifies domain registrar configuration with stable name servers
+- Reusable name-server collections for multiple hosted zones
+- Optional reference names for identification
+- Tag support
+- Outputs delegation set IDs and their name servers
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls whether delegation set resources should be created |
-| `delegation_sets` | `map(object)` | `{}` | Map of delegation set configurations with optional reference names |
-| `tags` | `map(string)` | `{}` | Map of tags to assign to delegation set resources |
+| `create` | `bool` | `true` | Whether to create the delegation set resources |
+| `delegation_sets` | `map(object({reference_name}))` | `{}` | Map of delegation sets to create, keyed by a logical name |
+| `tags` | `map(string)` | `{}` | Tags applied to delegation set resources |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `route53_delegation_set_id` | Unique identifier for the created delegation set |
-| `route53_delegation_set_name_servers` | List of authoritative name servers in the delegation set |
-| `route53_delegation_set_reference_name` | Reference name assigned to the delegation set |
+| `route53_delegation_set_id` | Map of delegation set IDs |
+| `route53_delegation_set_name_servers` | Map of name servers per delegation set |
+| `route53_delegation_set_reference_name` | Map of reference names per delegation set |
 
 ### Usage Example
 
@@ -250,25 +292,25 @@ module "delegation_sets" {
   source = "terraform-aws-modules/route53/aws//modules/delegation-sets"
 
   delegation_sets = {
-    "production_domains" = {
-      reference_name = "prod-dns"
-    }
-    "staging_domains" = {
-      reference_name = "staging-dns"
+    myapp1 = {
+      reference_name = "myapp1"
     }
   }
 
   tags = {
     Environment = "production"
-    Project     = "dns-infrastructure"
-    ManagedBy   = "terraform"
   }
 }
 
-# Output the name servers for domain registrar configuration
-output "prod_name_servers" {
-  description = "Name servers for production domain delegation"
-  value       = module.delegation_sets.route53_delegation_set_name_servers["production_domains"]
+module "zone" {
+  source = "terraform-aws-modules/route53/aws"
+
+  name              = "myapp1.com"
+  delegation_set_id = module.delegation_sets.route53_delegation_set_id["myapp1"]
+
+  tags = {
+    Environment = "production"
+  }
 }
 ```
 
@@ -276,51 +318,48 @@ output "prod_name_servers" {
 
 ### Description
 
-The resolver-endpoint submodule creates AWS Route53 Resolver endpoints that enable hybrid DNS resolution between AWS VPCs and on-premises networks. It supports both inbound endpoints (allowing on-premises systems to resolve AWS-hosted DNS names) and outbound endpoints (allowing AWS resources to resolve on-premises DNS names). The submodule includes automated security group creation with customizable ingress and egress rules, and supports modern DNS protocols including DNS over HTTPS (DoH).
+Creates a Route53 Resolver endpoint (inbound or outbound) along with a security group scoped to DNS traffic (TCP/UDP port 53), and optionally resolver rules with VPC associations for outbound forwarding to on-premises or other networks.
 
 ### Key Features
 
-- Inbound and outbound resolver endpoint creation
-- IPv4, IPv6, and dual-stack support
-- DNS over port 53 (Do53), DNS over HTTPS (DoH), and DoH-FIPS protocols
-- Automated security group creation with customizable rules
-- Multiple IP address configuration per endpoint
-- Integration with resolver rules for outbound query forwarding
-- VPC subnet association management
-- Comprehensive tagging support
+- Inbound and outbound resolver endpoints
+- IPv4, IPv6, and dual-stack (`type`) with Do53, DoH, and DoH-FIPS (`protocols`)
+- Auto-created security group with granular ingress/egress rule maps, or bring-your-own via `security_group_ids`
+- Resolver rules (`FORWARD`/`SYSTEM`) with target IPs and VPC associations, created via the `rules` map
+- Multiple subnet/IP addresses per endpoint (`ip_address` list)
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls whether resolver endpoint resources should be created |
-| `direction` | `string` | `""` | Direction of DNS queries (INBOUND or OUTBOUND) |
-| `type` | `string` | `"IPV4"` | IP address type (IPV4, IPV6, or DUALSTACK) |
-| `protocols` | `list(string)` | `["Do53"]` | List of DNS protocols (Do53, DoH, DoH-FIPS) |
-| `ip_address` | `map(object)` | `{}` | Map of subnet IDs and optional IP addresses for endpoint network interfaces |
-| `security_group_ingress_rules` | `map(object)` | `{}` | Security group ingress rules for inbound traffic |
-| `security_group_egress_rules` | `map(object)` | `{}` | Security group egress rules for outbound traffic |
-| `vpc_id` | `string` | `""` | VPC ID where the resolver endpoint will be created |
-| `name` | `string` | `""` | Name identifier for the resolver endpoint |
-| `rules` | `map(object)` | `{}` | Resolver rules with domain forwarding and VPC associations |
+| `direction` | `string` | `"INBOUND"` | `INBOUND` or `OUTBOUND` |
+| `type` | `string` | `null` | `IPV4`, `IPV6`, or `DUALSTACK` |
+| `protocols` | `list(string)` | `[]` | DNS protocols: `Do53`, `DoH`, `DoH-FIPS` |
+| `ip_address` | `list(object({subnet_id, ip, ipv6}))` | `[]` | Subnets (and optional static IPs) the endpoint uses |
+| `vpc_id` | `string` | `null` | VPC ID for the auto-created security group |
+| `create_security_group` | `bool` | `true` | Whether to create the security group |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Port-53 TCP/UDP rules added to the created security group |
+| `security_group_ids` | `list(string)` | `[]` | Existing security group IDs to use instead of creating one |
+| `rules` | `map(object({domain_name, rule_type, target_ip, vpc_id, ...}))` | `{}` | Resolver rules and their VPC associations (outbound only) |
+| `name` | `string` | `null` | Endpoint name |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `arn` | Amazon Resource Name (ARN) of the resolver endpoint |
-| `id` | Unique identifier of the resolver endpoint |
-| `ip_addresses` | List of IP addresses assigned to the resolver endpoint |
-| `security_group_id` | ID of the security group created for the resolver endpoint |
-| `host_vpc_id` | VPC ID where the resolver endpoint is deployed |
-| `rules` | Created resolver rules |
+| `arn` | Resolver endpoint ARN |
+| `id` | Resolver endpoint ID |
+| `ip_addresses` | IP addresses assigned to the endpoint |
+| `host_vpc_id` | VPC ID hosting the endpoint |
+| `security_group_id` / `security_group_ids` | Security group(s) protecting the endpoint |
+| `rules` | Resolver rules created |
 
 ### Usage Examples
 
 #### Example 1: Inbound Resolver Endpoint
 
 ```hcl
-module "inbound_resolver" {
+module "resolver_endpoint" {
   source = "terraform-aws-modules/route53/aws//modules/resolver-endpoint"
 
   name      = "inbound-resolver"
@@ -329,21 +368,13 @@ module "inbound_resolver" {
   protocols = ["Do53", "DoH"]
 
   vpc_id = "vpc-0123456789abcdef0"
-
-  ip_address = {
-    subnet_1 = {
-      subnet_id = "subnet-0123456789abcdef0"
-    }
-    subnet_2 = {
-      subnet_id = "subnet-0123456789abcdef1"
-    }
-  }
+  ip_address = [
+    { subnet_id = "subnet-0123456789abcdef0" },
+    { subnet_id = "subnet-0123456789abcdef1" },
+  ]
 
   security_group_ingress_rules = {
-    allow_dns_from_onprem = {
-      from_port   = 53
-      to_port     = 53
-      ip_protocol = "udp"
+    from_onprem = {
       cidr_ipv4   = "10.0.0.0/8"
       description = "Allow DNS queries from on-premises network"
     }
@@ -356,10 +387,10 @@ module "inbound_resolver" {
 }
 ```
 
-#### Example 2: Outbound Resolver Endpoint
+#### Example 2: Outbound Resolver Endpoint with Forwarding Rule
 
 ```hcl
-module "outbound_resolver" {
+module "resolver_endpoint" {
   source = "terraform-aws-modules/route53/aws//modules/resolver-endpoint"
 
   name      = "outbound-resolver"
@@ -368,23 +399,24 @@ module "outbound_resolver" {
   protocols = ["Do53"]
 
   vpc_id = "vpc-0123456789abcdef0"
+  ip_address = [
+    { subnet_id = "subnet-0123456789abcdef0" },
+    { subnet_id = "subnet-0123456789abcdef1" },
+  ]
 
-  ip_address = {
-    subnet_1 = {
-      subnet_id = "subnet-0123456789abcdef0"
-    }
-    subnet_2 = {
-      subnet_id = "subnet-0123456789abcdef1"
+  security_group_egress_rules = {
+    to_onprem = {
+      cidr_ipv4   = "10.0.0.0/8"
+      description = "Allow DNS queries to on-premises DNS servers"
     }
   }
 
-  security_group_egress_rules = {
-    allow_dns_to_onprem = {
-      from_port   = 53
-      to_port     = 53
-      ip_protocol = "udp"
-      cidr_ipv4   = "10.0.0.0/8"
-      description = "Allow DNS queries to on-premises DNS servers"
+  rules = {
+    forward_onprem = {
+      domain_name = "onprem.example.com."
+      rule_type   = "FORWARD"
+      target_ip   = [{ ip = "10.1.2.3" }]
+      vpc_id      = "vpc-0123456789abcdef0"
     }
   }
 
@@ -399,52 +431,35 @@ module "outbound_resolver" {
 
 ### Description
 
-The resolver-firewall-rule-group submodule creates and manages Route53 Resolver firewall rule groups that provide DNS-level security filtering. It enables organizations to block, allow, or override DNS responses for specific domains, protecting against malicious domains, data exfiltration, and enforcing compliance policies. The submodule supports cross-account sharing via AWS Resource Access Manager (RAM), allowing centralized DNS security policies across multiple accounts and organizational units.
+Creates a Route53 Resolver firewall rule group with its domain lists and rules, providing DNS-level security filtering (block, allow, or alert on domain queries). Rule groups can be shared with other AWS accounts or across an organization via AWS Resource Access Manager (RAM).
 
 ### Key Features
 
-- DNS domain allow, block, and override rules
-- Customizable domain lists for flexible rule management
-- Priority-based rule evaluation
-- Cross-account and cross-organization sharing via AWS RAM
-- NODATA, NXDOMAIN, and OVERRIDE block response types
-- Custom DNS override responses
-- Comprehensive tagging for policy organization
-- Integration with VPC resolver associations
+- `ALLOW`, `BLOCK`, and `ALERT` rule actions with priority-based evaluation
+- `NODATA`, `NXDOMAIN`, and `OVERRIDE` (with custom DNS record) block responses
+- Domain lists created inline per rule (`domains`), or reference an existing/managed `firewall_domain_list_id`
+- Cross-account and cross-organization sharing via `ram_resource_associations`
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Controls whether firewall rule group resources should be created |
-| `name` | `string` | `""` | Name identifier for the firewall rule group |
-| `rules` | `map(object)` | `{}` | Map of firewall rule configurations including action, priority, and domains |
-| `ram_resource_associations` | `map(object)` | `{}` | Configuration for sharing rule groups via AWS RAM |
-| `region` | `string` | `null` | Deployment region (defaults to provider region) |
-| `tags` | `map(string)` | `{}` | Map of tags to assign to firewall resources |
-
-**Rules Object Structure**:
-- `name`: Rule name
-- `priority`: Rule evaluation priority (100-9900)
-- `action`: Action to take (ALLOW, BLOCK, ALERT, OVERRIDE)
-- `block_response`: Response type for BLOCK action (NODATA, NXDOMAIN, OVERRIDE)
-- `block_override_domain`: Custom domain for OVERRIDE block response
-- `block_override_ttl`: TTL for OVERRIDE response
-- `domains`: List of domain names or domain list IDs
+| `name` | `string` | `""` | Firewall rule group name |
+| `rules` | `map(object({action, priority, domains, block_response, ...}))` | `{}` | Rules and their domain lists, keyed by a logical name |
+| `ram_resource_associations` | `map(object({resource_share_arn}))` | `{}` | RAM resource shares to associate the rule group with |
+| `tags` | `map(string)` | `{}` | Tags applied to created resources |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `arn` | Amazon Resource Name (ARN) of the firewall rule group |
-| `id` | Unique identifier of the firewall rule group |
-| `domain_lists` | Map of created resolver firewall domain lists |
-| `rules` | Map of created resolver firewall rules |
-| `share_status` | Sharing status of the rule group when shared via RAM |
+| `id` | Firewall rule group ID |
+| `arn` | Firewall rule group ARN |
+| `domain_lists` | Map of created domain lists |
+| `rules` | Map of created firewall rules |
+| `share_status` | `NOT_SHARED`, `SHARED_BY_ME`, or `SHARED_WITH_ME` |
 
-### Usage Examples
-
-#### Example 1: Basic Firewall Rule Group
+### Usage Example
 
 ```hcl
 module "dns_firewall" {
@@ -455,77 +470,38 @@ module "dns_firewall" {
   rules = {
     block_malicious = {
       name           = "block-malicious-domains"
-      priority       = 100
+      priority       = 110
       action         = "BLOCK"
       block_response = "NXDOMAIN"
-      domains = [
-        "malicious-site.com.",
-        "phishing-domain.net.",
-        "cryptominer.org."
-      ]
+      domains        = ["malicious-site.com.", "phishing-domain.net."]
+    }
+
+    block_override = {
+      priority                = 120
+      action                  = "BLOCK"
+      block_response          = "OVERRIDE"
+      block_override_dns_type = "CNAME"
+      block_override_domain   = "blocked.example.com"
+      block_override_ttl      = 60
+      domains                 = ["file-sharing-site.com."]
     }
 
     allow_corporate = {
-      name     = "allow-corporate-domains"
-      priority = 200
+      priority = 130
       action   = "ALLOW"
-      domains = [
-        "corporate.example.com.",
-        "*.internal.example.com."
-      ]
-    }
-
-    alert_suspicious = {
-      name     = "alert-suspicious-domains"
-      priority = 300
-      action   = "ALERT"
-      domains = [
-        "suspicious-domain.com."
-      ]
-    }
-  }
-
-  tags = {
-    Environment = "production"
-    SecurityLevel = "high"
-    ManagedBy = "security-team"
-  }
-}
-```
-
-#### Example 2: Firewall with Cross-Account Sharing
-
-```hcl
-module "shared_dns_firewall" {
-  source = "terraform-aws-modules/route53/aws//modules/resolver-firewall-rule-group"
-
-  name = "organization-dns-firewall"
-
-  rules = {
-    block_data_exfiltration = {
-      name           = "block-data-exfiltration"
-      priority       = 110
-      action         = "BLOCK"
-      block_response = "OVERRIDE"
-      block_override_domain = "blocked.example.com."
-      block_override_ttl = 60
-      domains = [
-        "file-sharing-site.com.",
-        "paste-bin.com.",
-        "anonymous-upload.net."
-      ]
+      domains  = ["corporate.example.com.", "*.internal.example.com."]
     }
   }
 
   ram_resource_associations = {
-    share_with_organization = {
+    share_with_org = {
       resource_share_arn = "arn:aws:ram:us-east-1:123456789012:resource-share/example-share"
     }
   }
 
   tags = {
-    Environment = "organization-wide"
-    SecurityPolicy = "dns-filtering"
+    Environment   = "production"
+    SecurityLevel = "high"
   }
 }
 ```
@@ -534,75 +510,46 @@ module "shared_dns_firewall" {
 
 ### Hosted Zone Management
 
-1. **Use Private Zones for Internal Resources**: Create private hosted zones for internal application DNS to prevent exposure of internal resource names to the public internet
-2. **Enable DNSSEC for Public Zones**: Implement DNSSEC with KMS key management for public zones to protect against DNS spoofing and cache poisoning attacks
-3. **Separate Zones by Environment**: Maintain separate hosted zones for production, staging, and development environments to prevent configuration errors
-4. **Use Delegation Sets for Multi-Domain Management**: When managing multiple domains, use delegation sets to maintain consistent name server assignments across zones
-5. **Document Zone Purpose**: Use descriptive names and comprehensive tags to document the purpose and ownership of each hosted zone
+1. **Use private zones for internal resources**: Keep internal application DNS in private hosted zones so internal resource names are never exposed publicly.
+2. **Separate zones by environment**: Maintain distinct zones (or delegated subdomains) for production, staging, and development to prevent cross-environment record collisions.
+3. **Use delegation sets for multi-domain portfolios**: Assign a shared `delegation_set_id` when many public zones must keep consistent, stable name servers at the registrar.
+4. **Prefer `create_zone = false` for existing zones**: When a zone already exists outside Terraform (e.g., root domain owned by another team), look it up instead of re-creating it to avoid ownership conflicts.
+5. **Enable `force_destroy` only where deletion is expected**: Set it explicitly so zone teardown in ephemeral environments does not fail on leftover records, but avoid it on production zones.
 
 ### DNS Record Configuration
 
-1. **Use Alias Records for AWS Resources**: Prefer Route53 alias records over CNAME records when pointing to AWS services (ELB, CloudFront, S3) for better performance and no additional cost
-2. **Set Appropriate TTL Values**: Use shorter TTLs (60-300 seconds) for records that may change frequently, and longer TTLs (3600+ seconds) for stable records to reduce query costs
-3. **Implement Health Checks for Critical Records**: Attach Route53 health checks to critical DNS records to enable automatic failover and improve availability
-4. **Avoid Wildcard Records in Production**: Use specific record names instead of wildcards (*) in production to maintain better control and security
-5. **Use Routing Policies for Traffic Management**: Leverage weighted, latency-based, or geolocation routing policies instead of simple DNS round-robin for better traffic distribution
+1. **Prefer alias records for AWS targets**: Use `alias` instead of CNAME for AWS resources (S3, CloudFront, ELB) — no extra query charge and works at the zone apex.
+2. **Set TTLs to match change frequency**: Use short TTLs (60-300s) for records that may fail over or change often, longer TTLs (3600s+) for stable records to reduce resolver load.
+3. **Attach health checks for automated failover**: Pair `failover_routing_policy` or `latency_routing_policy` with `health_check_id` so unhealthy targets are automatically removed from rotation.
+4. **Use `set_identifier` consistently**: Every record participating in a routing policy (weighted, failover, latency, geolocation, geoproximity, multivalue, CIDR) needs a unique `set_identifier` within its record set.
+5. **Avoid unmanaged wildcard records in production**: Prefer explicit record names for auditability; use routing policies rather than round-robin lists for controlled traffic shifting.
+
+### DNSSEC
+
+1. **Enable DNSSEC only on zones you fully control**: Enabling and later disabling DNSSEC on a live zone can cause temporary resolution failures if the parent-zone DS record isn't updated in sync.
+2. **Publish the DS record promptly**: After `enable_dnssec = true`, retrieve `dnssec_signing_key_ds_record` and register it with the domain registrar/parent zone without delay.
+3. **Reuse an existing KSK name when adopting DNSSEC**: Set `dnssec_key_signing_key_name` to match an already-published key name to avoid an unnecessary key rollover.
+4. **Bring your own KMS key for centralized key management**: Set `create_dnssec_kms_key = false` and supply `dnssec_kms_key_arn` when KMS keys are managed by a separate security/platform team.
 
 ### Resolver Endpoint Configuration
 
-1. **Deploy Endpoints in Multiple Subnets**: Create resolver endpoints in at least two subnets across different availability zones for high availability
-2. **Use Static IP Addresses for On-Premises Integration**: Specify static IP addresses for resolver endpoints when configuring on-premises DNS forwarders for consistency
-3. **Restrict Security Group Rules**: Limit security group rules to only allow DNS traffic (port 53 UDP/TCP) from trusted networks, not 0.0.0.0/0
-4. **Enable DoH for Enhanced Security**: Use DNS over HTTPS (DoH) protocol when supported by clients to encrypt DNS queries in transit
-5. **Monitor Resolver Query Metrics**: Enable CloudWatch metrics and logging for resolver endpoints to track query volume, latency, and failures
+1. **Deploy across at least two subnets/AZs**: Provide two or more entries in `ip_address` for high availability of the resolver endpoint.
+2. **Restrict security group rules to DNS traffic and trusted CIDRs**: Never allow `0.0.0.0/0`; scope ingress/egress rules to the specific on-premises or peer VPC CIDR ranges.
+3. **Use DoH where clients support it**: Prefer `DoH`/`DoH-FIPS` protocols for encrypted DNS in transit when the resolver clients support it.
+4. **Keep outbound resolver rules scoped**: Use specific `domain_name` values per `FORWARD` rule instead of overly broad forwarding to limit blast radius of misconfiguration.
 
 ### DNS Firewall Configuration
 
-1. **Implement Layered Security Rules**: Use a combination of BLOCK, ALLOW, and ALERT rules with appropriate priorities to create defense-in-depth DNS security
-2. **Start with Alert Mode**: Initially deploy firewall rules in ALERT mode to understand DNS query patterns before enforcing BLOCK actions
-3. **Maintain Centralized Domain Lists**: Create reusable domain lists for common security categories (malware, phishing, data exfiltration) and share via RAM
-4. **Use OVERRIDE for Monitoring**: Configure OVERRIDE block responses to redirect blocked queries to a logging endpoint for security analysis
-5. **Regular Rule Updates**: Regularly update domain lists with newly discovered threats from threat intelligence feeds and security advisories
+1. **Start new rule groups in `ALERT` mode**: Validate real DNS query patterns against a rule group before switching key rules to `BLOCK`, to avoid breaking legitimate traffic.
+2. **Order rules by priority deliberately**: Lower `priority` values are evaluated first; put explicit `ALLOW` rules ahead of broader `BLOCK` rules when exceptions are required.
+3. **Use `OVERRIDE` for monitored redirection**: Redirect blocked queries to a logging/sinkhole domain via `block_override_domain` instead of silent `NODATA` when investigating threats.
+4. **Share centrally via RAM**: Manage one authoritative rule group per organization/account boundary and distribute it with `ram_resource_associations` rather than duplicating rules per account.
 
 ### Cross-Account and Hybrid DNS
 
-1. **Use VPC Authorization for Private Zone Sharing**: When sharing private zones across accounts, always use explicit VPC authorization instead of making zones public
-2. **Implement Conditional Forwarding Rules**: Create resolver rules to forward specific domain queries to appropriate DNS servers (AWS or on-premises)
-3. **Centralize DNS Management**: Use a hub-and-spoke model with a central DNS account managing shared zones and resolver rules distributed via RAM
-4. **Document Domain Ownership**: Maintain clear documentation of which teams or accounts own specific DNS domains and zones
-5. **Test Cross-Account Access**: Always test DNS resolution from target accounts/VPCs after configuring cross-account associations
-
-### Security and Compliance
-
-1. **Enable Query Logging**: Enable Route53 query logging to CloudWatch Logs or S3 for security auditing and troubleshooting
-2. **Use IAM Policies for Access Control**: Implement least-privilege IAM policies for Route53 operations, restricting who can modify critical zones
-3. **Encrypt Sensitive DNS Data**: Use DNSSEC for public zones and VPC-level encryption for private zones to protect DNS data integrity
-4. **Regular Security Audits**: Periodically review DNS records, resolver rules, and firewall configurations for unauthorized changes or misconfigurations
-5. **Implement Resource Tags**: Apply consistent tagging to all Route53 resources for cost allocation, compliance tracking, and automated governance
-
-### Performance and Cost Optimization
-
-1. **Use Geo-Proximity Routing for Global Applications**: Implement geoproximity routing with bias values to optimize latency for global user bases
-2. **Optimize Health Check Frequency**: Balance health check frequency with cost by using appropriate intervals based on application criticality
-3. **Monitor Query Metrics**: Use CloudWatch metrics to track query counts and identify opportunities for TTL optimization or caching improvements
-4. **Consolidate Zones Where Possible**: Reduce the number of hosted zones by using subdomains within existing zones to minimize costs
-5. **Use Resolver Endpoints Efficiently**: Share resolver endpoints across multiple VPCs using VPC associations instead of creating redundant endpoints
-
-### Operational Excellence
-
-1. **Implement Infrastructure as Code**: Always use Terraform to manage Route53 resources for version control, peer review, and disaster recovery
-2. **Use Module Variables for Flexibility**: Parameterize zone names, VPC IDs, and other environment-specific values using Terraform variables
-3. **Test DNS Changes in Non-Production**: Validate all DNS changes in staging environments before applying to production zones
-4. **Monitor Resolver Health**: Set up CloudWatch alarms for resolver endpoint availability, query failure rates, and latency thresholds
-5. **Document DNS Architecture**: Maintain architecture diagrams showing DNS hierarchy, resolver flows, and cross-account relationships
-
-### High Availability and Disaster Recovery
-
-1. **Implement Multi-Region Failover**: Use Route53 health checks with failover routing to automatically route traffic away from failed regions
-2. **Backup DNS Configurations**: Export zone files or maintain Terraform state in version control for disaster recovery scenarios
-3. **Use Calculated Health Checks**: Combine multiple health checks using calculated health checks for more sophisticated failover logic
-4. **Test Failover Procedures**: Regularly test DNS failover by simulating endpoint failures to validate configuration
-5. **Maintain Secondary DNS Providers**: For critical public domains, consider maintaining secondary DNS providers outside AWS for resilience
+1. **Split authorization and association across accounts correctly**: Create `vpc_association_authorizations` in the module (zone-owning account); create the actual `aws_route53_zone_association` resource in the VPC-owning account's Terraform config — this module intentionally does not manage that resource.
+2. **Use `ignore_vpc` when associations are managed outside this module's state**: Set it to avoid Terraform trying to revert VPC associations created by `aws_route53_zone_association` elsewhere; remember that toggling this value requires a `moved` block/`state mv` between `aws_route53_zone.this` and `aws_route53_zone.ignore_vpc`.
+3. **Centralize DNS with a hub-and-spoke model**: Manage shared zones and resolver rules in a central DNS/network account and distribute access via authorizations and RAM shares.
 
 ## Additional Resources
 
@@ -614,26 +561,21 @@ module "shared_dns_firewall" {
 - **Route53 Resolver Documentation**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver.html
 - **DNSSEC in Route53**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-configuring-dnssec.html
 - **Route53 Resolver DNS Firewall**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/resolver-dns-firewall.html
-- **Route53 Health Checks**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html
-- **Route53 Traffic Policies**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/traffic-policies.html
+- **Route53 Health Checks and Failover**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/dns-failover.html
+- **Route53 Accelerated Recovery**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/accelerated-recovery.html
 - **Route53 Pricing**: https://aws.amazon.com/route53/pricing/
-- **AWS Well-Architected - Reliability**: https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/welcome.html
-- **Hybrid Cloud DNS Architecture**: https://aws.amazon.com/blogs/networking-and-content-delivery/hybrid-cloud-dns-solutions-for-amazon-vpc/
-- **Route53 Best Practices**: https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/best-practices.html
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Start with Zone Structure**: Begin by creating hosted zones before adding records; private zones require VPC associations
-2. **Use Conditional Logic**: Leverage the `create` variable to conditionally create resources based on environment or feature flags
-3. **Implement Staged Deployments**: For record changes, consider using weighted routing policies to gradually shift traffic
-4. **Validate DNS Propagation**: After creating or updating records, implement wait conditions or checks for DNS propagation before proceeding
-5. **Secure Resolver Endpoints**: Always specify restrictive security group rules for resolver endpoints, never use 0.0.0.0/0 for ingress
-6. **Test Firewall Rules**: Deploy DNS firewall rules in ALERT mode first, monitor for false positives, then switch to BLOCK
-7. **Handle Cross-Account Dependencies**: When sharing zones or resolver rules across accounts, ensure RAM resource shares are created first
-8. **Monitor Health Check Status**: For failover configurations, verify health check status before declaring deployment successful
-9. **Use Terraform State Locking**: Implement state locking to prevent concurrent modifications to DNS resources
-10. **Document Domain Delegation**: When creating delegation sets, output name servers for configuration at domain registrars
-11. **Implement Proper Tagging**: Apply consistent tags for cost allocation, environment identification, and automated governance
-12. **Validate Routing Policies**: When using complex routing policies (geolocation, weighted), verify expected behavior through testing
+1. **Create zones before records**: The `records` map is applied against the zone created (or looked up) in the same module call; private zones require at least one `vpc` entry unless `ignore_vpc` associations are managed externally.
+2. **Every routing-policy record needs `set_identifier`**: Omitting it when using `weighted_routing_policy`, `failover_routing_policy`, `latency_routing_policy`, `geolocation_routing_policy`, `geoproximity_routing_policy`, `multivalue_answer_routing_policy`, or `cidr_routing_policy` will fail to apply.
+3. **Don't mix `vpc` and `delegation_set_id`**: They are mutually exclusive — delegation sets only apply to public zones.
+4. **Cross-account VPC association is two-step**: Generate the authorization here (`vpc_association_authorizations`), then create `aws_route53_zone_association` in the VPC-owning account's own configuration — this module never creates that resource itself.
+5. **Treat `ignore_vpc` changes as state-migration events**: Never flip this flag without also emitting the corresponding `moved` block or running `terraform state mv`, or Terraform will plan to destroy and recreate the zone.
+6. **DNSSEC changes are sensitive**: After setting `enable_dnssec = true`, surface `dnssec_signing_key_ds_record` to the caller so it can be published at the registrar; do not disable DNSSEC on a live zone without first removing the DS record upstream.
+7. **Restrict resolver endpoint security groups by default**: Never generate `security_group_ingress_rules`/`security_group_egress_rules` with `0.0.0.0/0`; scope to explicit CIDRs for hybrid DNS traffic.
+8. **Roll out DNS firewall rules safely**: Default new `resolver-firewall-rule-group` rules to `action = "ALERT"` before switching to `BLOCK` in generated configurations, unless the user explicitly requests immediate blocking.
+9. **Pin a version constraint**: Always include `version = "~> 6.5"` (or the current major) in generated `module` blocks to avoid unintended upgrades.
+10. **Tag consistently**: Propagate a common `tags` map across the root module and any submodules used together (e.g., `resolver-endpoint` + `resolver-firewall-rule-group`) for cost allocation and ownership tracking.

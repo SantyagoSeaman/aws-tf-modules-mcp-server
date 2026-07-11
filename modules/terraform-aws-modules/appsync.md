@@ -6,128 +6,129 @@
 - **Source**: `terraform-aws-modules/appsync/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appsync
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appsync/aws/latest
-- **Latest Version**: 4.1.0
-- **Purpose**: Terraform module that creates AWS AppSync GraphQL API resources with flexible datasources, resolvers, and authentication configurations
+- **Latest Version**: 4.1.0 (released 2026-01-08)
+- **Purpose**: Terraform module that creates an AWS AppSync GraphQL API together with its datasources, resolvers, pipeline functions, caching, custom domain, and supporting IAM roles
 - **Service**: AWS AppSync (Managed GraphQL Service)
 - **Category**: Serverless, API Management, Application Integration
-- **Keywords**: appsync, graphql, api, serverless, resolver, datasource, lambda, dynamodb, cognito, iam, api-key, subscription, real-time, caching, custom-domain, x-ray, vtl, javascript, pipeline-resolver
-- **Use For**: Building GraphQL APIs for mobile and web applications, creating real-time data synchronization systems, implementing serverless backend APIs, aggregating multiple data sources through unified GraphQL interface, developing collaborative applications with subscriptions, migrating REST APIs to GraphQL, building microservices API gateways, implementing event-driven architectures with GraphQL mutations, creating multi-tenant SaaS platforms, developing IoT device management interfaces
+- **Keywords**: appsync, graphql, api, serverless, resolver, pipeline-resolver, datasource, lambda, dynamodb, cognito, oidc, iam, api-key, real-time-subscriptions, caching, custom-domain, javascript-resolver, vtl
+- **Use For**: building GraphQL APIs for mobile and web applications, real-time data synchronization and subscriptions, aggregating multiple data sources (Lambda, DynamoDB, RDS, HTTP, EventBridge) behind one GraphQL endpoint, serverless backend APIs, GraphQL gateway in front of microservices, event-driven mutations into EventBridge, REST-to-GraphQL migration, multi-tenant SaaS APIs with Cognito-based tenant isolation, private/internal GraphQL APIs, IoT device management APIs
 
 ## Description
 
-The AWS AppSync Terraform module provides a comprehensive solution for creating and managing AWS AppSync GraphQL APIs with extensive configuration options for datasources, resolvers, and authentication. AppSync is a fully managed service that makes it easy to develop GraphQL APIs by handling the heavy lifting of securely connecting to data sources like AWS DynamoDB, Lambda, OpenSearch, RDS Aurora, HTTP endpoints, and Amazon EventBridge. The module abstracts the complexity of configuring GraphQL schemas, field resolvers, pipeline resolvers, and multiple authentication providers into a declarative Terraform interface.
+The AWS AppSync module provisions a fully configured GraphQL API on top of Amazon AppSync, a managed service that removes the operational burden of building and scaling a GraphQL backend. In a single module call it creates the `aws_appsync_graphql_api` resource plus every dependent resource commonly needed around it: datasources (Lambda, DynamoDB, OpenSearch/Elasticsearch, EventBridge, RDS Data API, HTTP, or local `NONE`), unit and pipeline resolvers, reusable pipeline functions, API keys, an ElastiCache-backed response cache, a custom domain association, and the IAM service roles each datasource needs to be invoked by AppSync.
 
-This module supports all major AppSync features including API Key, IAM, Amazon Cognito User Pools, OpenID Connect (OIDC), and AWS Lambda authorizers for flexible authentication and authorization. It enables advanced capabilities such as real-time data synchronization through GraphQL subscriptions over WebSockets, response caching with Amazon ElastiCache, AWS X-Ray distributed tracing, custom domain names with SSL certificates, and field-level logging for comprehensive observability. The module supports both VTL (Velocity Template Language) and JavaScript resolvers, allowing developers to transform and manipulate data between GraphQL operations and datasources.
+The module supports every AppSync authentication mode — API Key, AWS IAM, Amazon Cognito User Pools, OpenID Connect, and AWS Lambda authorizers — including up to four additional authentication providers alongside the primary one, which is the common pattern for public read access combined with authenticated writes. Resolvers can be written as classic VTL request/response mapping templates or as modern JavaScript (`APPSYNC_JS`) resolvers, and can be chained into `PIPELINE` resolvers that invoke one or more `aws_appsync_function` resources in sequence. IAM roles for each datasource type are created automatically with sensible least-privilege default policies (overridable per datasource or globally per type), and a role for pushing field/request logs to CloudWatch is created when logging is enabled.
 
-The module follows AWS best practices for serverless architectures and integrates seamlessly with the broader serverless.tf framework, making it ideal for building modern, scalable, event-driven applications. It provides fine-grained control over resolver configurations, caching behavior, authorization rules, and monitoring settings while maintaining a clean, maintainable Terraform codebase. The module handles IAM role creation for CloudWatch logging, supports merged APIs for federation scenarios, and allows for private API configurations within VPCs.
+Because `datasources` and `resolvers` are expressed as maps keyed by name, the module scales cleanly from a minimal single-resolver API to a large schema with dozens of datasources, pipeline functions, and fine-grained resolver-level caching — all through plain Terraform variables rather than hand-written resource blocks. It is part of the [serverless.tf](https://serverless.tf) framework and ships a `wrappers/` directory for Terragrunt-style `for_each` usage, but otherwise has no separate submodules.
 
 ## Key Features
 
-- **Multiple Authentication Providers**: Support for API Key, AWS IAM, Amazon Cognito User Pools, OpenID Connect (OIDC), and Lambda authorizers
-- **Diverse Datasource Types**: Integration with HTTP endpoints, AWS Lambda, DynamoDB, Elasticsearch, OpenSearch, Amazon EventBridge, and RDS Aurora
-- **GraphQL Schema Management**: Declarative schema definition with support for queries, mutations, subscriptions, and custom types
-- **Field Resolvers**: Configure direct field resolvers with VTL or JavaScript mapping templates
-- **Pipeline Resolvers**: Support for multi-step pipeline resolvers with functions for complex data transformation workflows
-- **Real-time Subscriptions**: WebSocket-based GraphQL subscriptions for real-time data updates
-- **Response Caching**: ElastiCache integration for API-level and resolver-level caching with configurable TTL
-- **Custom Domain Names**: Route53 and ACM integration for custom domain configurations with SSL/TLS certificates
-- **Authentication Types**: Granular per-resolver authentication configuration and authorization rules
-- **AWS X-Ray Tracing**: Distributed tracing integration for performance monitoring and debugging
-- **CloudWatch Logging**: Field-level and request-level logging with customizable log retention and IAM roles
-- **JavaScript Resolvers**: Modern JavaScript runtime support for resolver logic (APPSYNC_JS)
-- **VTL Resolvers**: Traditional Velocity Template Language support for request/response mapping
-- **Enhanced Metrics**: CloudWatch metrics for API performance, error rates, and latency monitoring
-- **Private APIs**: VPC-based private GraphQL APIs for internal applications
-- **Merged APIs**: Support for federated GraphQL schemas and merged API configurations
-- **IAM Role Management**: Automatic creation and configuration of service roles for logging and datasource access
-- **Conflict Resolution**: Built-in conflict detection and resolution for offline/online data sync scenarios
-- **API Keys**: Automated API key generation with configurable expiration and rotation
+- **All AppSync Authentication Modes**: API Key, AWS IAM, Amazon Cognito User Pools, OpenID Connect, and AWS Lambda authorizers, plus up to 4 additional authentication providers on the same API
+- **Broad Datasource Support**: HTTP, AWS Lambda, Amazon DynamoDB, Amazon OpenSearch Service, Elasticsearch (legacy), Amazon EventBridge, RDS/Aurora via the Data API, and local (`NONE`) datasources
+- **Automatic IAM Role Creation**: Per-datasource service roles with type-specific default policies (`*_allowed_actions` variables); bring your own role via `service_role_arn` or disable creation with `create_service_role = false`
+- **Unit & Pipeline Resolvers**: Direct field resolvers or multi-step pipeline resolvers composed of reusable `functions`
+- **VTL and JavaScript Runtimes**: Classic Velocity Template Language mapping templates or `APPSYNC_JS` resolver/function code
+- **Direct Lambda Integration**: Built-in default request/response VTL templates (`direct_lambda = true`) to skip writing mapping templates for simple Lambda resolvers
+- **Response Caching**: Full-request or per-resolver ElastiCache-backed caching with configurable TTL and at-rest/in-transit encryption
+- **Custom Domain Names**: `aws_appsync_domain_name` + association with an ACM certificate; outputs the AppSync-provided domain and Route 53 hosted zone ID for you to wire into your own DNS records
+- **Conflict Resolution**: Optimistic concurrency (`sync_config`) on pipeline functions with `AUTOMERGE`, `OPTIMISTIC_CONCURRENCY`, or Lambda-based conflict handlers
+- **Enhanced Metrics**: Per-datasource, per-resolver, and per-operation CloudWatch metrics via `enhanced_metrics_config`
+- **CloudWatch Logging & X-Ray**: Field-level/request-level logging with an auto-created logs IAM role, and X-Ray tracing toggle
+- **Query Guardrails**: `query_depth_limit`, `resolver_count_limit`, and `introspection_config` to harden public APIs
+- **GLOBAL/PRIVATE Visibility**: Native AppSync API visibility control (private APIs still require a VPC interface endpoint set up outside this module)
+- **Conditional Creation**: Single `create_graphql_api` flag to disable every resource in the module (useful for `count`-free conditional modules)
+- **Per-resource Region Override**: `region` variable applied to every resource for multi-region provider setups
 
 ## Main Use Cases
 
-1. **Mobile Backend APIs**: Build serverless GraphQL backends for iOS, Android, and React Native mobile applications with offline sync
-2. **Real-time Collaboration**: Create collaborative editing tools, chat applications, and live dashboards with GraphQL subscriptions
-3. **Multi-datasource Aggregation**: Unify data access across DynamoDB, RDS, Lambda functions, and HTTP APIs through single GraphQL endpoint
-4. **Microservices API Gateway**: Implement GraphQL gateway pattern for microservices with resolver-level routing to different services
-5. **Event-driven Architectures**: Trigger business workflows and event processing using AppSync mutations connected to EventBridge
-6. **IoT Device Management**: Build device management interfaces with real-time status updates and command execution via GraphQL
-7. **Content Management Systems**: Develop headless CMS platforms with flexible GraphQL queries for content retrieval and management
-8. **Multi-tenant SaaS Platforms**: Implement tenant isolation using Cognito authentication and resolver-level authorization rules
-9. **REST to GraphQL Migration**: Wrap existing REST APIs with GraphQL interface using HTTP datasources and custom resolvers
-10. **Real-time Analytics Dashboards**: Stream metrics and events to web dashboards using subscriptions connected to DynamoDB Streams or EventBridge
+1. **Mobile & Web Backend APIs**: Serverless GraphQL backend for iOS, Android, and web apps with offline sync
+2. **Real-time Collaboration**: Chat, live dashboards, and collaborative editing via GraphQL subscriptions
+3. **Multi-datasource Aggregation**: Unify DynamoDB, RDS, Lambda, and HTTP APIs behind one GraphQL endpoint
+4. **Microservices GraphQL Gateway**: Route fields to different backend services through per-field resolvers
+5. **Event-driven Architectures**: Trigger workflows by writing AppSync mutations into an EventBridge datasource
+6. **IoT Device Management**: Device status/command APIs with real-time subscription updates
+7. **Headless CMS**: Flexible content queries backed by DynamoDB or HTTP datasources
+8. **Multi-tenant SaaS Platforms**: Tenant isolation via Cognito User Pools and resolver-level authorization
+9. **REST-to-GraphQL Migration**: Wrap existing REST APIs with HTTP datasources and custom resolvers
+10. **Private/Internal APIs**: `PRIVATE` visibility GraphQL APIs restricted to a VPC for internal tooling
 
 ## Submodules
 
-This module does not have separate submodules. All functionality is contained in the root module. A `wrappers/` directory exists for use with Terragrunt patterns.
+This module has **no separate submodules** — all resources are created from the root module. A `wrappers/` directory is included for Terragrunt-style patterns that need to manage multiple instances with `for_each`/`create` semantics.
 
 ## Main Input Variables
 
+Note: `name` and `schema` default to `""` (not marked `required` by terraform-docs), but the API is non-functional without them — treat them as required in practice.
+
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | `string` | required | Name of the GraphQL API |
-| `schema` | `string` | required | GraphQL schema definition in SDL format |
-| `create_graphql_api` | `bool` | `true` | Whether to create the GraphQL API |
-| `authentication_type` | `string` | `"API_KEY"` | Primary authentication type: API_KEY, AWS_IAM, OPENID_CONNECT, AMAZON_COGNITO_USER_POOLS, AWS_LAMBDA |
-| `visibility` | `string` | `null` | API visibility: GLOBAL or PRIVATE |
-| `api_keys` | `map(string)` | `{}` | Map of API keys to create |
-| `additional_authentication_provider` | `any` | `{}` | Additional authentication providers |
-| `datasources` | `any` | `{}` | Map of data source configurations |
-| `resolvers` | `any` | `{}` | Map of resolver definitions |
-| `functions` | `any` | `{}` | Map of AppSync function definitions for pipeline resolvers |
-| `logging_enabled` | `bool` | `false` | Enable CloudWatch logging |
-| `log_field_log_level` | `string` | `null` | Log level: ALL, ERROR, or NONE |
-| `xray_enabled` | `bool` | `false` | Enable X-Ray tracing |
-| `caching_enabled` | `bool` | `false` | Enable ElastiCache caching |
-| `caching_behavior` | `string` | `"FULL_REQUEST_CACHING"` | FULL_REQUEST_CACHING or PER_RESOLVER_CACHING |
-| `cache_type` | `string` | `"SMALL"` | Cache instance size: SMALL, MEDIUM, LARGE, XLARGE, etc. |
+| `name` | `string` | `""` | Name of the GraphQL API — set this |
+| `schema` | `string` | `""` | GraphQL SDL schema definition (e.g. `file("schema.graphql")`) — set this |
+| `create_graphql_api` | `bool` | `true` | Set `false` to disable every resource in the module |
+| `authentication_type` | `string` | `"API_KEY"` | Primary auth type: `API_KEY`, `AWS_IAM`, `OPENID_CONNECT`, `AMAZON_COGNITO_USER_POOLS`, `AWS_LAMBDA` |
+| `additional_authentication_provider` | `any` | `{}` | Map of extra auth providers (max 4) with their own OIDC/Cognito/Lambda config |
+| `visibility` | `string` | `null` | `GLOBAL` or `PRIVATE` |
+| `api_keys` | `map(string)` | `{}` | Map of API key description → expiry date (or `null` for the default 7-day expiry) |
+| `user_pool_config`, `openid_connect_config`, `lambda_authorizer_config` | `map(string)` | `{}` | Config for the corresponding primary auth type |
+| `datasources` | `any` | `{}` | Map of datasource name → config object (`type` + type-specific attributes, optional `service_role_arn`/`create_service_role`/`policy_actions`) |
+| `resolvers` | `any` | `{}` | Map keyed `"Type.field"` → resolver config (`data_source`, `direct_lambda`, `request_template`/`response_template`, `runtime`, `code`, `functions`, `caching_keys`, `max_batch_size`) |
+| `functions` | `any` | `{}` | Map of pipeline function name → config (`data_source`, `runtime`, `code` or VTL templates, `sync_config`) |
+| `direct_lambda_request_template` / `direct_lambda_response_template` | `string` | built-in VTL | Default templates used when a resolver sets `direct_lambda = true` |
+| `logging_enabled` | `bool` | `false` | Enable CloudWatch logging on the API |
+| `create_logs_role` | `bool` | `true` | Auto-create the IAM role for CloudWatch logs (else supply `log_cloudwatch_logs_role_arn`) |
+| `log_field_log_level` | `string` | `null` | `ALL`, `ERROR`, or `NONE` |
+| `xray_enabled` | `bool` | `false` | Enable AWS X-Ray tracing |
+| `enhanced_metrics_config` | `map(string)` | `{}` | `data_source_level_metrics_behavior`, `operation_level_metrics_config`, `resolver_level_metrics_behavior` |
+| `caching_enabled` | `bool` | `false` | Create an ElastiCache-backed API cache |
+| `caching_behavior` | `string` | `"FULL_REQUEST_CACHING"` | `FULL_REQUEST_CACHING` or `PER_RESOLVER_CACHING` |
+| `cache_type` | `string` | `"SMALL"` | Cache instance size (`SMALL` … `LARGE2X`, etc.) |
 | `cache_ttl` | `number` | `1` | Cache TTL in seconds |
-| `cache_at_rest_encryption_enabled` | `bool` | `false` | Enable cache encryption at rest |
-| `cache_transit_encryption_enabled` | `bool` | `false` | Enable cache encryption in transit |
+| `resolver_caching_ttl` | `number` | `60` | Default per-resolver caching TTL when a resolver sets `caching_keys` without its own `caching_ttl` |
+| `cache_at_rest_encryption_enabled` / `cache_transit_encryption_enabled` | `bool` | `false` | Cache encryption toggles |
 | `domain_name` | `string` | `""` | Custom domain name for the API |
-| `domain_name_association_enabled` | `bool` | `false` | Enable domain name association |
-| `certificate_arn` | `string` | `""` | ACM certificate ARN for custom domain |
-| `query_depth_limit` | `number` | `null` | Maximum query depth allowed |
-| `resolver_count_limit` | `number` | `null` | Maximum resolvers per request |
-| `introspection_config` | `string` | `null` | Enable/disable schema introspection (ENABLED/DISABLED) |
-| `user_pool_config` | `map(string)` | `{}` | Amazon Cognito User Pool configuration |
-| `lambda_authorizer_config` | `map(string)` | `{}` | Lambda authorizer configuration |
-| `openid_connect_config` | `map(string)` | `{}` | OpenID Connect configuration |
-| `tags` | `map(string)` | `{}` | Tags to apply to all resources |
+| `domain_name_association_enabled` | `bool` | `false` | Create the domain name + association resources |
+| `certificate_arn` | `string` | `""` | ACM certificate ARN for the custom domain (must be in `us-east-1` for edge use) |
+| `query_depth_limit` / `resolver_count_limit` | `number` | `null` | Per-request query depth / resolver count guardrails |
+| `introspection_config` | `string` | `null` | `ENABLED`/`DISABLED` |
+| `dynamodb_allowed_actions`, `lambda_allowed_actions`, `eventbridge_allowed_actions`, `elasticsearch_allowed_actions`, `opensearchservice_allowed_actions`, `relational_database_allowed_actions`, `secrets_manager_allowed_actions` | `list(string)` | service-specific defaults | Default IAM actions granted to each auto-created datasource service role; override globally here or per-datasource with `policy_actions` |
+| `iam_permissions_boundary` | `string` | `null` | Permissions boundary ARN applied to every IAM role the module creates |
+| `region` | `string` | `null` | Override the provider region per-resource |
+| `tags` | `map(string)` | `{}` | Tags applied to all resources (roles, cache, domain, etc.) |
+| `graphql_api_tags` | `map(string)` | `{}` | Extra tags applied only to the GraphQL API resource |
 
 ## Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `appsync_graphql_api_id` | GraphQL API identifier |
+| `appsync_graphql_api_id` | GraphQL API ID |
 | `appsync_graphql_api_arn` | GraphQL API ARN |
-| `appsync_graphql_api_uris` | Map of URIs (includes GraphQL endpoint) |
-| `appsync_graphql_api_fqdns` | Fully qualified domain names |
-| `appsync_datasource_arn` | Map of data source ARNs by key |
-| `appsync_resolver_arn` | Map of resolver ARNs by key |
-| `appsync_function_arn` | Map of function ARNs by key |
-| `appsync_function_id` | Map of function IDs by key |
-| `appsync_api_key_id` | Map of API key IDs |
-| `appsync_api_key_key` | Map of API key values (sensitive) |
-| `appsync_domain_id` | Custom domain name ID |
-| `appsync_domain_name` | AppSync-provided domain name |
-| `appsync_domain_hosted_zone_id` | Route 53 hosted zone ID for domain |
+| `appsync_graphql_api_uris` | Map of URIs (includes the `GRAPHQL` and `REALTIME` endpoints) |
+| `appsync_graphql_api_fqdns` | Map of FQDNs extracted from the URIs (no protocol/path) |
+| `appsync_datasource_arn` | Map of datasource ARNs, keyed by datasource name |
+| `appsync_resolver_arn` | Map of resolver ARNs, keyed by `"Type.field"` |
+| `appsync_function_arn` / `appsync_function_id` / `appsync_function_function_id` | Function ARNs, Terraform resource IDs, and AppSync `function_id`s (the value used inside `resolvers[*].functions`) |
+| `appsync_api_key_id` | Map of API key IDs (`ApiId:Key` format) |
+| `appsync_api_key_key` | Map of API key values (**sensitive**) |
+| `appsync_domain_id` | Custom domain name resource ID |
+| `appsync_domain_name` | AppSync-provided domain name — point your own DNS `CNAME`/alias at this |
+| `appsync_domain_hosted_zone_id` | Route 53 hosted zone ID associated with the AppSync domain |
 
 ## Supported Data Source Types
 
-| Type | Description |
-|------|-------------|
-| `AWS_LAMBDA` | AWS Lambda function integration |
-| `AMAZON_DYNAMODB` | DynamoDB table integration |
-| `AMAZON_ELASTICSEARCH` | Elasticsearch domain (legacy) |
-| `AMAZON_OPENSEARCH_SERVICE` | OpenSearch Service domain |
-| `AMAZON_EVENTBRIDGE` | EventBridge event bus |
-| `RELATIONAL_DATABASE` | RDS/Aurora via Data API |
-| `HTTP` | External HTTP endpoints |
-| `NONE` | Local resolvers (no external data source) |
+| Type | Required config | Notes |
+|------|------------------|-------|
+| `AWS_LAMBDA` | `function_arn` | Use `direct_lambda = true` on the resolver to skip templates |
+| `AMAZON_DYNAMODB` | `table_name`, `region` | Optional `use_caller_credentials` |
+| `AMAZON_OPENSEARCH_SERVICE` | `endpoint`, `region` | Successor to the legacy Elasticsearch type |
+| `AMAZON_ELASTICSEARCH` | `endpoint`, `region` | Legacy; prefer OpenSearch Service |
+| `AMAZON_EVENTBRIDGE` | `event_bus_arn` | For event-driven mutations |
+| `RELATIONAL_DATABASE` | `cluster_arn`, `secret_arn`, `database_name`, `schema` | RDS/Aurora via the Data API |
+| `HTTP` | `endpoint` | External REST/HTTP APIs |
+| `NONE` | — | Local resolver, no external call (e.g. pipeline "passthrough" steps) |
 
 ## Usage Examples
 
-### Basic GraphQL API with Lambda Data Source
+### Basic GraphQL API with a Lambda Data Source
 
 ```hcl
 module "appsync" {
@@ -138,7 +139,7 @@ module "appsync" {
   schema = file("schema.graphql")
 
   api_keys = {
-    default = null  # Expires in 7 days
+    default = null # expires in 7 days
   }
 
   datasources = {
@@ -161,7 +162,7 @@ module "appsync" {
 }
 ```
 
-### Production API with Multiple Auth Providers and Caching
+### Multi-auth Production API with Caching, Pipeline Resolvers, and Observability
 
 ```hcl
 module "appsync" {
@@ -172,10 +173,10 @@ module "appsync" {
   schema = file("schema.graphql")
 
   # Primary authentication
-  authentication_type = "OPENID_CONNECT"
-  openid_connect_config = {
-    issuer    = "https://auth.example.com"
-    client_id = "your-client-id"
+  authentication_type = "AMAZON_COGNITO_USER_POOLS"
+  user_pool_config = {
+    default_action = "ALLOW"
+    user_pool_id   = aws_cognito_user_pool.this.id
   }
 
   # Additional authentication providers
@@ -183,33 +184,12 @@ module "appsync" {
     iam = {
       authentication_type = "AWS_IAM"
     }
-    cognito = {
-      authentication_type = "AMAZON_COGNITO_USER_POOLS"
-      user_pool_config = {
-        user_pool_id = aws_cognito_user_pool.this.id
-      }
+    api_key = {
+      authentication_type = "API_KEY"
     }
   }
 
-  # Caching configuration
-  caching_enabled                    = true
-  caching_behavior                   = "PER_RESOLVER_CACHING"
-  cache_type                         = "SMALL"
-  cache_ttl                          = 60
-  cache_at_rest_encryption_enabled   = true
-  cache_transit_encryption_enabled   = true
-
-  # Observability
-  logging_enabled     = true
-  log_field_log_level = "ERROR"
-  xray_enabled        = true
-
-  # Security limits
-  query_depth_limit    = 10
-  resolver_count_limit = 100
-  introspection_config = "DISABLED"
-
-  # Data sources
+  # Datasources
   datasources = {
     dynamodb_posts = {
       type       = "AMAZON_DYNAMODB"
@@ -220,13 +200,20 @@ module "appsync" {
       type         = "AWS_LAMBDA"
       function_arn = aws_lambda_function.users.arn
     }
-    http_external = {
-      type     = "HTTP"
-      endpoint = "https://api.example.com"
+    none = {
+      type = "NONE"
     }
   }
 
-  # Resolvers
+  # Pipeline function + pipeline resolver (JavaScript runtime)
+  functions = {
+    validateInput = {
+      data_source = "none"
+      runtime     = { name = "APPSYNC_JS" }
+      code        = file("functions/validate-input.js")
+    }
+  }
+
   resolvers = {
     "Query.getPost" = {
       data_source       = "dynamodb_posts"
@@ -238,7 +225,38 @@ module "appsync" {
       data_source   = "lambda_users"
       direct_lambda = true
     }
+    "Mutation.createPost" = {
+      kind    = "PIPELINE"
+      type    = "Mutation"
+      field   = "createPost"
+      runtime = { name = "APPSYNC_JS" }
+      code    = file("resolvers/create-post.js")
+      functions = ["validateInput"]
+    }
   }
+
+  # Caching
+  caching_enabled                  = true
+  caching_behavior                 = "PER_RESOLVER_CACHING"
+  cache_type                       = "SMALL"
+  cache_ttl                        = 60
+  cache_at_rest_encryption_enabled = true
+  cache_transit_encryption_enabled = true
+
+  # Observability
+  logging_enabled     = true
+  log_field_log_level = "ERROR"
+  xray_enabled        = true
+  enhanced_metrics_config = {
+    data_source_level_metrics_behavior = "PER_DATA_SOURCE_METRICS"
+    operation_level_metrics_config     = "ENABLED"
+    resolver_level_metrics_behavior    = "FULL_REQUEST_RESOLVER_METRICS"
+  }
+
+  # Guardrails
+  query_depth_limit    = 10
+  resolver_count_limit = 100
+  introspection_config = "DISABLED"
 
   tags = {
     Environment = "production"
@@ -247,7 +265,7 @@ module "appsync" {
 }
 ```
 
-### API with Custom Domain
+### Custom Domain Name
 
 ```hcl
 module "appsync" {
@@ -257,15 +275,13 @@ module "appsync" {
   name   = "custom-domain-api"
   schema = file("schema.graphql")
 
-  authentication_type = "API_KEY"
   api_keys = {
     default = null
   }
 
-  # Custom domain configuration
   domain_name                     = "graphql.example.com"
   domain_name_association_enabled = true
-  certificate_arn                 = aws_acm_certificate.graphql.arn
+  certificate_arn                 = aws_acm_certificate_validation.graphql.certificate_arn
 
   datasources = {
     none = {
@@ -281,125 +297,77 @@ module "appsync" {
     }
   }
 }
+
+# Point your own DNS at the AppSync-provided domain
+resource "aws_route53_record" "graphql" {
+  zone_id = data.aws_route53_zone.this.zone_id
+  name    = "graphql.example.com"
+  type    = "CNAME"
+  ttl     = 300
+  records = [module.appsync.appsync_domain_name]
+}
 ```
 
 ## Best Practices
 
-### API Design and Schema Management
+### Schema & Resolver Design
+1. **Schema-first**: Author the SDL schema (`schema.graphql`) before wiring resolvers, and keep it under version control alongside the Terraform code.
+2. **Prefer JavaScript over VTL for new resolvers**: `APPSYNC_JS` resolvers/functions are easier to test and debug than VTL mapping templates; reserve VTL for simple, stable mappings.
+3. **Use `direct_lambda = true`** for straightforward Lambda-backed fields instead of hand-writing pass-through VTL request/response templates.
+4. **Use pipeline resolvers** (`kind = "PIPELINE"` + `functions`) only when a field genuinely needs multiple sequential steps (auth checks, validation, multiple datasource calls); prefer `UNIT` resolvers otherwise.
+5. **Cursor-based pagination**: For list fields, implement Relay-style cursor pagination to avoid large unbounded scans on DynamoDB/RDS datasources.
 
-1. **Schema-First Design**: Define comprehensive GraphQL schemas before implementation, including input types, output types, and clear documentation
-2. **Modular Schema Structure**: Break large schemas into logical domains and use schema stitching or merged APIs for federation
-3. **Versioning Strategy**: Use field deprecation and schema evolution rather than breaking changes; maintain backward compatibility
-4. **Input Validation**: Implement strict input type definitions with required fields and use custom scalars for specialized data types
-5. **Error Handling**: Design consistent error responses with typed error objects and use GraphQL union types for expected errors
-6. **Pagination Patterns**: Implement cursor-based pagination (Relay-style) for list queries to handle large result sets efficiently
-7. **Rate Limiting**: Consider implementing custom rate limiting logic in resolvers for public APIs beyond AWS throttling limits
-8. **Query Complexity Analysis**: Monitor and limit query depth and complexity to prevent resource exhaustion from malicious queries
+### Authentication & Authorization
+1. **Match auth type to access pattern**: `API_KEY` for prototyping/public read, `AMAZON_COGNITO_USER_POOLS` for end-user apps, `AWS_IAM` for service-to-service, `OPENID_CONNECT`/Lambda authorizer for external IdP/custom logic.
+2. **Combine primary + `additional_authentication_provider`** rather than building separate APIs when you need e.g. public API-key reads plus authenticated Cognito writes.
+3. **Rotate and scope API keys**: Set explicit expirations in `api_keys` (avoid relying on the default 7-day expiry silently rolling) and avoid using API keys for write/mutation-heavy production traffic.
+4. **Field-level authorization**: Enforce fine-grained access in resolver/function code (Lambda authorizer context, `$ctx.identity`) rather than relying solely on API-level auth.
 
-### Authentication and Authorization
+### IAM & Data Source Access
+1. **Use the module's per-type `*_allowed_actions` variables** to tighten default datasource IAM policies instead of granting broad service access; override per datasource with `policy_actions` when a specific datasource needs less (or more).
+2. **Bring your own role when needed**: Set `service_role_arn` and `create_service_role = false` on a datasource to reuse an existing, already-audited IAM role.
+3. **Apply `iam_permissions_boundary`** in accounts where a permissions boundary is mandated for all roles created by automation.
+4. **Static ARNs for datasources**: Prefer literal/data-sourced ARNs over dynamic references from freshly-created Lambda/DynamoDB resources in the same apply when possible — the module's docs note that same-apply dynamic references to `function_arn`/`table_name` can cause ordering issues; create datasource-backing resources first or use `-target` when renaming datasource keys.
 
-1. **Multi-auth Configuration**: Use appropriate authentication type per use case (API Key for public read, Cognito for user-specific data, IAM for service-to-service)
-2. **Least Privilege Access**: Configure fine-grained IAM policies for datasource access with minimum required permissions
-3. **API Key Rotation**: Implement regular API key rotation policies and use short expiration periods for sensitive applications
-4. **Cognito Integration**: Leverage Cognito User Pools for user management with MFA, password policies, and account recovery workflows
-5. **OIDC for SSO**: Use OpenID Connect authentication for enterprise SSO integration with external identity providers
-6. **Lambda Authorizers**: Implement custom authorization logic in Lambda for complex business rules and external authorization systems
-7. **Field-level Authorization**: Use resolver-level authentication settings and mapping template authorization checks for fine-grained access control
-8. **Token Validation**: Ensure proper JWT token validation and refresh token handling in client applications
+### Caching & Performance
+1. **Enable caching for read-heavy, slowly-changing fields**: Use `PER_RESOLVER_CACHING` with explicit `caching_keys` per resolver rather than `FULL_REQUEST_CACHING` for APIs with a mix of cacheable and per-user data.
+2. **Tune `cache_ttl`/`resolver_caching_ttl`** to balance freshness against datasource load; both cache encryption flags should be `true` for anything handling sensitive data.
+3. **Batch Lambda resolvers**: Set `max_batch_size` on Lambda-backed resolvers/functions to reduce per-item invocation overhead (AppSync's built-in DataLoader-style batching).
 
-### Resolver Configuration and Performance
-
-1. **Batching Strategy**: Use AWS Lambda datasources with batching to reduce function invocations and improve performance
-2. **Caching Configuration**: Enable caching for frequently accessed, slowly-changing data with appropriate TTL values (300-3600 seconds)
-3. **Resolver Type Selection**: Use unit resolvers for simple operations and pipeline resolvers for complex multi-step workflows
-4. **JavaScript vs VTL**: Prefer JavaScript resolvers for complex logic and maintainability; use VTL for simple transformations
-5. **Direct DynamoDB Access**: Use direct DynamoDB datasources with VTL templates for low-latency single-table operations
-6. **Lambda Optimization**: Keep Lambda functions small and focused; use Lambda layers for shared dependencies
-7. **Connection Pooling**: Configure RDS datasources with appropriate connection pooling and timeout settings
-8. **HTTP Datasource Timeouts**: Set realistic timeout values for HTTP datasources and implement retry logic in resolvers
-9. **Parallel Execution**: Leverage GraphQL's parallel field resolution by avoiding unnecessary dependencies between resolvers
-10. **Request/Response Mapping**: Minimize data transformation in VTL/JavaScript; perform heavy computation in datasource layers
-
-### Monitoring and Observability
-
-1. **CloudWatch Logging**: Enable field-level logging for development and request-level logging for production to balance observability with cost
-2. **X-Ray Tracing**: Enable AWS X-Ray for distributed tracing to identify performance bottlenecks across datasources
-3. **Custom Metrics**: Publish custom CloudWatch metrics from Lambda resolvers for business-specific monitoring
-4. **Alarm Configuration**: Create CloudWatch alarms for 4xx/5xx error rates, latency percentiles (p50, p95, p99), and throttling events
-5. **Log Retention**: Set appropriate CloudWatch log retention periods (7-30 days for production) to manage costs
-6. **Performance Baselines**: Establish resolver latency baselines and monitor for degradation over time
-7. **Error Tracking**: Implement structured error logging with correlation IDs for request tracing across distributed systems
-8. **Dashboard Creation**: Build CloudWatch dashboards showing API health, resolver performance, cache hit rates, and error distributions
-
-### Security Best Practices
-
-1. **Encryption in Transit**: Ensure all datasource connections use TLS/SSL; configure custom domain names with ACM certificates
-2. **Encryption at Rest**: Enable encryption for all datasources (DynamoDB, RDS, OpenSearch) and use KMS customer-managed keys
-3. **VPC Integration**: Deploy private AppSync APIs within VPCs for internal applications and sensitive workloads
-4. **WAF Integration**: Use AWS WAF to protect public GraphQL APIs from common web exploits and DDoS attacks
-5. **Secrets Management**: Store database credentials, API keys, and tokens in AWS Secrets Manager; access from Lambda resolvers
-6. **CORS Configuration**: Configure appropriate CORS policies to restrict API access to authorized domains
-7. **Query Depth Limiting**: Implement query complexity analysis and depth limiting to prevent resource exhaustion attacks
-8. **Data Masking**: Implement field-level data masking in resolvers for sensitive information (PII, PHI)
-9. **Audit Logging**: Enable CloudTrail logging for all AppSync API management operations and configuration changes
-10. **DDoS Protection**: Use AWS Shield Standard (included) and consider Shield Advanced for critical public APIs
-
-### Cost Optimization
-
-1. **Caching Strategy**: Implement aggressive caching for read-heavy workloads to reduce query and datasource costs
-2. **Query Optimization**: Design efficient queries that request only required fields; avoid over-fetching data
-3. **Batching Requests**: Use GraphQL query batching to combine multiple operations into single requests
-4. **Lambda Provisioned Concurrency**: Use provisioned concurrency only for Lambda resolvers with strict latency requirements
-5. **DynamoDB On-Demand**: Consider DynamoDB on-demand billing for variable workloads instead of provisioned capacity
-6. **HTTP Datasource Preference**: Use HTTP datasources for external APIs to avoid Lambda invocation costs when possible
-7. **Log Filtering**: Implement selective field-level logging to reduce CloudWatch costs while maintaining observability
-8. **API Key vs Cognito**: Use API keys for public read-only access to avoid Cognito MAU charges
-9. **Cache TTL Tuning**: Balance cache hit rates with data freshness requirements to maximize caching benefits
-10. **Reserved Capacity**: For predictable workloads, consider reserved capacity for DynamoDB and RDS datasources
-
-### High Availability and Disaster Recovery
-
-1. **Multi-region Strategy**: Deploy AppSync APIs in multiple regions with Route53 health checks for global applications
-2. **Datasource Redundancy**: Use multi-AZ RDS deployments and DynamoDB global tables for datasource resilience
-3. **Fallback Resolvers**: Implement graceful degradation in resolvers when datasources are unavailable
-4. **Circuit Breaker Pattern**: Use circuit breakers in Lambda resolvers to prevent cascading failures
-5. **Backup Strategy**: Implement regular backups for DynamoDB tables and RDS databases used as datasources
-6. **Subscription Resilience**: Design subscription clients with automatic reconnection logic for WebSocket failures
-7. **Schema Version Control**: Store GraphQL schemas in version control (Git) and implement IaC deployment workflows
-8. **Testing Strategy**: Implement comprehensive integration tests for resolvers and end-to-end API tests
-9. **Rollback Plan**: Maintain ability to quickly roll back schema changes and resolver updates
-10. **Health Checks**: Implement health check queries for monitoring and automated recovery workflows
+### Observability & Security
+1. **Enable `logging_enabled` + `xray_enabled` during development**; move `log_field_log_level` to `ERROR` and rely on `enhanced_metrics_config` in production to control CloudWatch cost.
+2. **Set `query_depth_limit`, `resolver_count_limit`, and `introspection_config = "DISABLED"`** on any public production API to reduce the blast radius of malicious or malformed queries.
+3. **Front public GraphQL endpoints with AWS WAF** (attached to the AppSync API ARN) for rate limiting and common web-exploit protection — this is configured outside the module via `aws_wafv2_web_acl_association`.
+4. **Use `PRIVATE` visibility** for internal-only APIs, paired with a VPC interface endpoint for `appsync-api`, instead of exposing an internal API publicly and relying on auth alone.
 
 ## Additional Resources
 
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appsync
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appsync/aws/latest
-- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-appsync/tree/master/examples
-- **AWS AppSync Documentation**: https://docs.aws.amazon.com/appsync/latest/devguide/welcome.html
+- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-appsync/tree/master/examples/complete
+- **CHANGELOG**: https://github.com/terraform-aws-modules/terraform-aws-appsync/blob/master/CHANGELOG.md
+- **AWS AppSync Developer Guide**: https://docs.aws.amazon.com/appsync/latest/devguide/welcome.html
 - **GraphQL Schema Design**: https://docs.aws.amazon.com/appsync/latest/devguide/designing-a-graphql-api.html
-- **AppSync Resolver Tutorial**: https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference.html
-- **JavaScript Resolvers**: https://docs.aws.amazon.com/appsync/latest/devguide/resolver-reference-js.html
+- **Resolver Mapping Template Reference (VTL)**: https://docs.aws.amazon.com/appsync/latest/devguide/resolver-mapping-template-reference.html
+- **JavaScript Resolver Reference**: https://docs.aws.amazon.com/appsync/latest/devguide/resolver-reference-js.html
 - **Real-time Subscriptions**: https://docs.aws.amazon.com/appsync/latest/devguide/aws-appsync-real-time-data.html
-- **AppSync Security**: https://docs.aws.amazon.com/appsync/latest/devguide/security.html
-- **AppSync Pricing**: https://aws.amazon.com/appsync/pricing/
-- **GraphQL Best Practices**: https://graphql.org/learn/best-practices/
-- **Amplify AppSync Integration**: https://docs.amplify.aws/lib/graphqlapi/getting-started/q/platform/js/
 - **AppSync Caching**: https://docs.aws.amazon.com/appsync/latest/devguide/enabling-caching.html
+- **AppSync Security**: https://docs.aws.amazon.com/appsync/latest/devguide/security.html
 - **AppSync Monitoring**: https://docs.aws.amazon.com/appsync/latest/devguide/monitoring.html
+- **AppSync Pricing**: https://aws.amazon.com/appsync/pricing/
+- **serverless.tf framework**: https://serverless.tf
 
 ## Notes for AI Agents
 
-When using this module in automated workflows:
+When generating Terraform code with this module:
 
-1. **Schema Validation**: Always validate GraphQL schemas before deployment using GraphQL validation tools
-2. **Authentication Strategy**: Choose authentication type based on use case (API Key for prototyping, Cognito for production user apps, IAM for service-to-service)
-3. **Datasource Selection**: Select datasources based on access patterns (DynamoDB for key-value, RDS for relational, Lambda for custom logic, HTTP for external APIs)
-4. **Resolver Complexity**: Start with simple unit resolvers and evolve to pipeline resolvers only when needed for multi-step operations
-5. **Enable Monitoring**: Always enable CloudWatch logging and X-Ray tracing during development; adjust for production costs
-6. **Caching Configuration**: Implement caching for read-heavy APIs with TTLs appropriate to data freshness requirements
-7. **Security First**: Use least privilege IAM roles, encrypt datasources at rest, and implement field-level authorization
-8. **Testing Approach**: Write integration tests for all resolvers and test subscription behavior with WebSocket clients
-9. **Cost Awareness**: Monitor query/mutation costs and implement query complexity limits for public APIs
-10. **Version Management**: Use Terraform workspaces or separate modules for dev/staging/production environments
-11. **Schema Evolution**: Plan for schema evolution with field deprecation rather than breaking changes
-12. **Custom Domains**: Configure custom domains with ACM certificates for production APIs for better branding and security
+1. **Provider/Terraform floor is recent**: v4.x requires Terraform `>= 1.5.7` and AWS provider `>= 6.28` — check the target codebase's provider constraint before pinning `~> 4.1`; older provider pins will conflict.
+2. **`name` and `schema` have empty-string defaults** but are effectively required — always set both explicitly.
+3. **Datasource keys are referenced by name in `resolvers`/`functions`**: keep `datasources`, `functions`, and `resolvers` map keys consistent; renaming a datasource key requires a two-step `-target` apply (see module README) to avoid resolver breakage.
+4. **Resolver map keys use `"Type.field"` syntax** (e.g. `"Query.getPost"`, `"Mutation.createPost"`) — the module derives `type`/`field` from the key unless overridden.
+5. **`direct_lambda = true`** is the fastest path for simple Lambda resolvers; only write custom VTL/JS when you need request shaping.
+6. **Use `APPSYNC_JS` runtime for new code**; `code = file(...)` is required when `runtime.name == "APPSYNC_JS"`.
+7. **Default to least privilege**: override `*_allowed_actions` or per-datasource `policy_actions` rather than accepting broad defaults for production datasources.
+8. **This module does not manage Route 53 records**: `appsync_domain_name` output must be wired into a `aws_route53_record`/alias by the caller.
+9. **`create_graphql_api = false`** is the idiomatic way to conditionally disable the whole module (Terraform `count` on a `module` block with `for_each`-style sources is otherwise unavailable in older Terraform).
+10. **Merged APIs / VPC-hosted private networking are not built by this module**: `visibility = "PRIVATE"` only sets the AppSync API attribute — the VPC interface endpoint must be created separately.

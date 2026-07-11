@@ -102,3 +102,6 @@ temp/
 .claude/
 CLAUDE.md
 /.serena/
+
+# Internal maintenance docs (not part of the published package)
+modules/UPDATE_PROMPTS.md

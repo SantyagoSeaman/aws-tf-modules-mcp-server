@@ -6,70 +6,68 @@
 - **Source**: `terraform-aws-modules/managed-service-prometheus/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-prometheus/aws/latest
-- **Latest Version**: 4.3.1
-- **Purpose**: Terraform module that creates and manages AWS Managed Service for Prometheus (AMP) workspaces, alert managers, and rule groups for serverless Prometheus-compatible monitoring
-- **Service**: AWS Managed Service for Prometheus (Amazon Managed Prometheus)
+- **Latest Version**: 4.3.1 (requires Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Purpose**: Terraform module that creates and manages AWS Managed Service for Prometheus (AMP) workspaces, workspace configuration (retention/cardinality limits), Alert Manager definitions, rule group namespaces, and resource policies
+- **Service**: AWS Managed Service for Prometheus (Amazon Managed Prometheus / AMP)
 - **Category**: Monitoring, Observability, Container Management
-- **Keywords**: prometheus, amp, monitoring, observability, metrics, kubernetes, eks, alertmanager, recording-rules, alerting-rules, rule-groups, workspace, promql, kms-encryption, high-availability
-- **Use For**: Kubernetes cluster monitoring, container workload observability, EKS metrics collection, microservices performance monitoring, multi-cluster metric aggregation, application performance monitoring, alerting and notification systems, recording rule automation, long-term metrics retention
+- **Keywords**: prometheus, amp, monitoring, observability, metrics, kubernetes, eks, alertmanager, recording-rules, alerting-rules, rule-groups, workspace, promql, kms-encryption, cardinality-limits, resource-policy
+- **Use For**: Kubernetes/EKS cluster monitoring, container workload observability, microservices metric aggregation, application performance monitoring, alerting and notification routing, recording rule automation, long-term metrics retention, cross-account/Grafana metric sharing
 
 ## Description
 
-This Terraform module provides comprehensive management of AWS Managed Service for Prometheus (AMP) resources including workspaces, Alert Manager configurations, and rule group namespaces. The module simplifies the creation and configuration of serverless, Prometheus-compatible monitoring infrastructure for containerized applications and Kubernetes environments. It supports workspace creation with custom aliases, CloudWatch logging integration, KMS encryption for data at rest, configurable metric retention periods, per-label-set cardinality limits, and resource policies for cross-account access control.
+This Terraform module manages AWS Managed Service for Prometheus (AMP) resources: workspaces, workspace configuration (metric retention and per-label-set cardinality limits), Alert Manager definitions, rule group namespaces (recording/alerting rules), CloudWatch log groups, and IAM resource policies. It is a single flat module with no submodules — every resource type is toggled through boolean `create_*` flags and optional input objects, and the same module block can either provision a brand-new workspace or attach rules/alerts to an existing one via `workspace_id`.
 
-AWS Managed Service for Prometheus is a fully managed, serverless monitoring service that provides automatic scaling for metric ingestion, storage, and querying of Prometheus metrics at scale. It eliminates the operational burden of managing Prometheus servers while maintaining full compatibility with the standard Prometheus data model and PromQL query language. The service is designed for container environments, particularly Amazon EKS and self-managed Kubernetes clusters, offering high availability through Multi-AZ deployments and secure integration with AWS security services.
+AWS Managed Service for Prometheus is a fully managed, serverless, Multi-AZ, Prometheus-compatible monitoring backend for metrics ingestion (via `remote_write`, typically from a Prometheus agent, the OpenTelemetry Collector/ADOT, or the EKS add-on), storage, and PromQL querying at scale — commonly paired with Amazon Managed Grafana or self-hosted Grafana (SigV4-authenticated) for visualization. It removes the operational burden of running and scaling Prometheus servers while remaining fully compatible with the Prometheus data model, PromQL, and the Alertmanager configuration format.
 
-The module enables teams to quickly establish production-grade Prometheus monitoring infrastructure with minimal configuration, supporting multiple rule group namespaces for organizing recording and alerting rules, customizable Alert Manager definitions for notification routing, and optional CloudWatch logging for workspace activity monitoring. Version 4.x introduced resource policies for fine-grained access control and per-label-set limits to prevent cardinality explosions.
+The module encodes several AWS-side defaults that matter for correct usage: it creates a workspace, an Alert Manager definition (with a built-in no-op default config), and a resource policy (granting the caller's own account full access plus read-only access for Amazon Managed Grafana) unless explicitly disabled. Retention/cardinality limits and the resource policy are only provisioned alongside a **newly created** workspace (`create_workspace = true`); they cannot be attached to an externally supplied `workspace_id`. See "Common Pitfalls" below for the exact conditions.
 
 ## Key Features
 
-- **Workspace Creation**: Automated creation of AMP workspaces with custom aliases for organization
-- **Existing Workspace Integration**: Option to use existing workspaces by providing workspace ID
-- **Alert Manager Configuration**: Declarative Alert Manager definitions for notification routing and receiver configuration
-- **Rule Group Namespaces**: Support for multiple rule group namespaces containing recording and alerting rules
-- **CloudWatch Logging**: Optional integration with CloudWatch Logs with automatic log group creation
-- **KMS Encryption**: Support for customer-managed KMS keys for both workspace and log group encryption
-- **Metric Retention**: Configurable retention period for stored metrics (up to 1095 days)
-- **Cardinality Limits**: Per-label-set metric limits to prevent cardinality explosions and control costs
-- **Resource Policies**: IAM resource policies for cross-account access and Grafana integration
-- **Automatic Scaling**: Serverless architecture that automatically scales based on metric ingestion and query load
-- **PromQL Compatibility**: Full support for standard Prometheus Query Language (PromQL)
-- **Multi-AZ High Availability**: Built-in high availability with Multi-AZ deployments
-- **Tagging Support**: Comprehensive resource tagging for organization and cost allocation
-- **Conditional Creation**: Control resource creation with boolean flags
+- **Workspace Creation**: Automated creation of AMP workspaces with a custom `alias`, or reuse of an existing workspace via `workspace_id` + `create_workspace = false`
+- **Workspace Configuration**: Configurable metric `retention_period_in_days` and per-label-set cardinality limits (`limits_per_label_set`) to bound active series and control cost — provisioned via a separate `aws_prometheus_workspace_configuration` resource
+- **Alert Manager Definition**: Declarative Alertmanager YAML config for routing/receivers (SNS, etc.); created by default with a minimal no-op config even if not overridden
+- **Rule Group Namespaces**: Any number of namespaces (`rule_group_namespaces`) holding Prometheus recording and alerting rule groups, addable to new or existing workspaces
+- **Resource Policy**: IAM resource policy for the workspace; when enabled without custom statements, defaults to full read/write for the caller's own account and read-only for the Amazon Managed Grafana service principal
+- **CloudWatch Logging**: Optional log group creation/attachment for workspace request logging, with configurable name, name-prefix mode, log class (`STANDARD`/`INFREQUENT_ACCESS`), retention, and KMS key
+- **KMS Encryption**: Customer-managed KMS key support for both workspace data at rest (`kms_key_arn`) and CloudWatch log group encryption (`cloudwatch_log_group_kms_key_id`)
+- **Region Override**: Per-module-call `region` variable to target a region other than the provider default (multi-region root modules)
+- **Conditional Creation**: Every resource type is gated by its own `create_*` boolean flag, plus a top-level `create` kill switch
 
 ## Main Use Cases
 
-1. **Kubernetes Cluster Monitoring**: Collect and analyze metrics from Amazon EKS or self-managed Kubernetes clusters
+1. **Kubernetes/EKS Cluster Monitoring**: Ingest and query metrics scraped from EKS or self-managed Kubernetes clusters
 2. **Container Workload Observability**: Monitor containerized application performance and resource utilization
 3. **Microservices Monitoring**: Track metrics across distributed microservices architectures
-4. **Multi-Cluster Aggregation**: Centralize metrics from multiple Kubernetes clusters in different regions
-5. **Application Performance Monitoring**: Monitor application-level metrics using Prometheus exporters
-6. **Infrastructure Metrics Storage**: Long-term storage and analysis of infrastructure and system metrics
-7. **Alerting and Notification**: Configure automated alerting based on metric thresholds and conditions
-8. **Recording Rule Automation**: Precompute aggregations and expensive queries for improved query performance
-9. **Cross-Account Monitoring**: Share metrics across AWS accounts using resource policies
+4. **Multi-Cluster Aggregation**: Centralize metrics from multiple clusters/regions into one or more workspaces
+5. **Alerting and Notification**: Route metric-based alerts to SNS and other Alertmanager receivers
+6. **Recording Rule Automation**: Precompute expensive PromQL aggregations for faster dashboards and cheaper queries
+7. **Long-Term Metrics Retention**: Retain infrastructure/application metrics beyond typical scrape-target lifetimes
+8. **Cross-Account / Grafana Access**: Share a workspace with other accounts or Amazon Managed Grafana via resource policy
 
 ## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Determines whether resources will be created |
-| `tags` | `map(string)` | `{}` | Map of tags to add to all resources |
-| `create_workspace` | `bool` | `true` | Create a new workspace or use existing |
-| `workspace_id` | `string` | `""` | ID of existing workspace (when `create_workspace = false`) |
+| `create` | `bool` | `true` | Top-level switch; when `false`, no resources are created |
+| `region` | `string` | `null` | AWS region for this module's resources; defaults to the provider's region |
+| `tags` | `map(string)` | `{}` | Tags applied to workspace and log group resources |
+| `create_workspace` | `bool` | `true` | Create a new workspace, or attach to an existing one via `workspace_id` |
+| `workspace_id` | `string` | `""` | ID of an existing workspace (required when `create_workspace = false`) |
 | `workspace_alias` | `string` | `null` | Alias for the Prometheus workspace |
-| `logging_configuration` | `object` | `null` | Logging configuration with `create_log_group` and `log_group_arn` |
-| `kms_key_arn` | `string` | `null` | ARN of KMS key for workspace encryption at rest |
-| `retention_period_in_days` | `number` | `null` | Number of days to retain metric data |
-| `limits_per_label_set` | `list(object)` | `null` | Cardinality limits per label set with `max_series` |
-| `create_resource_policy` | `bool` | `true` | Whether to create resource policy for cross-account access |
-| `resource_policy_statements` | `map(object)` | `null` | IAM policy statements for workspace access control |
-| `cloudwatch_log_group_retention_in_days` | `number` | `30` | Days to retain CloudWatch logs |
-| `cloudwatch_log_group_kms_key_id` | `string` | `null` | KMS Key for log group encryption |
-| `create_alert_manager` | `bool` | `true` | Create Alert Manager definition |
-| `alert_manager_definition` | `string` | Default config | Alert Manager configuration in YAML format |
-| `rule_group_namespaces` | `map(object)` | `null` | Map of rule group namespace definitions with `name` and `data` |
+| `kms_key_arn` | `string` | `null` | KMS key ARN for workspace encryption at rest |
+| `logging_configuration` | `object` | `null` | `{ create_log_group, log_group_arn }`; attaches CloudWatch logging to the workspace |
+| `retention_period_in_days` | `number` | `null` | Metric retention; only takes effect when `limits_per_label_set` is also non-null |
+| `limits_per_label_set` | `list(object)` | `null` | Per-label-set cardinality limits (`label_set`, `limits.max_series`); non-null (even `[]`) is required to create the workspace configuration resource |
+| `create_resource_policy` | `bool` | `true` | Create an IAM resource policy for the workspace (new workspaces only) |
+| `resource_policy_statements` | `map(object)` | `null` | Custom IAM statements; overrides the module's default statements |
+| `cloudwatch_log_group_name` | `string` | `null` | Custom log group name; defaults to `/aws/prometheus/<workspace_alias>` |
+| `cloudwatch_log_group_use_name_prefix` | `bool` | `false` | Use `cloudwatch_log_group_name` as a name prefix instead of exact name |
+| `cloudwatch_log_group_class` | `string` | `null` | `STANDARD` or `INFREQUENT_ACCESS` |
+| `cloudwatch_log_group_retention_in_days` | `number` | `30` | Days to retain CloudWatch logs (`0` = indefinite) |
+| `cloudwatch_log_group_kms_key_id` | `string` | `null` | KMS key ARN for log group encryption |
+| `create_alert_manager` | `bool` | `true` | Create an Alert Manager definition |
+| `alert_manager_definition` | `string` | minimal no-op config | Alertmanager configuration in YAML |
+| `rule_group_namespaces` | `map(object)` | `null` | Map of `{ name, data }` rule group namespace definitions |
 
 ## Main Outputs
 
@@ -77,7 +75,7 @@ The module enables teams to quickly establish production-grade Prometheus monito
 |--------|-------------|
 | `workspace_arn` | Amazon Resource Name (ARN) of the workspace |
 | `workspace_id` | Identifier of the workspace |
-| `workspace_prometheus_endpoint` | Prometheus endpoint available for this workspace |
+| `workspace_prometheus_endpoint` | Prometheus remote-write/query endpoint for this workspace |
 
 ## Usage Examples
 
@@ -107,10 +105,10 @@ module "prometheus" {
 
   workspace_alias = "production-metrics"
 
-  # Automatic log group creation
+  # Must be set explicitly - the workspace does NOT get a logging_configuration
+  # block unless this object is provided (see Common Pitfalls)
   logging_configuration = {
     create_log_group = true
-    log_group_arn    = null
   }
 
   cloudwatch_log_group_retention_in_days = 14
@@ -122,7 +120,7 @@ module "prometheus" {
 }
 ```
 
-### Example 3: Complete Configuration with Retention and Cardinality Limits
+### Example 3: Retention and Cardinality Limits
 
 ```hcl
 module "prometheus" {
@@ -131,10 +129,10 @@ module "prometheus" {
 
   workspace_alias = "eks-monitoring"
 
-  # Metric retention
+  # retention_period_in_days is silently ignored unless limits_per_label_set
+  # is also set (non-null) - both belong to the same workspace_configuration resource
   retention_period_in_days = 60
 
-  # Cardinality limits per environment
   limits_per_label_set = [
     {
       label_set = { environment = "dev" }
@@ -146,10 +144,8 @@ module "prometheus" {
     }
   ]
 
-  # CloudWatch logging
   logging_configuration = {
     create_log_group = true
-    log_group_arn    = null
   }
 
   tags = {
@@ -159,7 +155,7 @@ module "prometheus" {
 }
 ```
 
-### Example 4: Configuration with Alert Manager and Rule Groups
+### Example 4: Alert Manager and Rule Groups
 
 ```hcl
 module "prometheus" {
@@ -168,8 +164,7 @@ module "prometheus" {
 
   workspace_alias = "eks-monitoring"
 
-  # Alert Manager configuration
-  create_alert_manager = true
+  create_alert_manager     = true
   alert_manager_definition = <<-EOT
   alertmanager_config: |
     route:
@@ -191,7 +186,6 @@ module "prometheus" {
           - topic_arn: 'arn:aws:sns:us-east-1:123456789012:prometheus-critical'
   EOT
 
-  # Rule group namespaces
   rule_group_namespaces = {
     recording_rules = {
       name = "eks-recording-rules"
@@ -232,7 +226,7 @@ module "prometheus" {
 }
 ```
 
-### Example 5: Cross-Account Access with Resource Policy
+### Example 5: Cross-Account / Grafana Resource Policy
 
 ```hcl
 module "prometheus" {
@@ -241,7 +235,7 @@ module "prometheus" {
 
   workspace_alias = "shared-metrics"
 
-  # Resource policy for cross-account access
+  # Overrides the module's default statements (own-account RW + Grafana RO)
   create_resource_policy = true
   resource_policy_statements = {
     read_access = {
@@ -268,7 +262,7 @@ module "prometheus" {
 }
 ```
 
-### Example 6: Using Existing Workspace
+### Example 6: Adding Rules to an Existing Workspace
 
 ```hcl
 module "prometheus_rules" {
@@ -278,7 +272,9 @@ module "prometheus_rules" {
   create_workspace = false
   workspace_id     = "ws-12345678-1234-1234-1234-123456789012"
 
-  # Add rule groups to existing workspace
+  # Only alert_manager_definition and rule_group_namespaces can target an
+  # existing workspace - retention/limits, resource policy, and CloudWatch
+  # logging require create_workspace = true (see Common Pitfalls)
   rule_group_namespaces = {
     custom_metrics = {
       name = "application-metrics"
@@ -299,7 +295,7 @@ module "prometheus_rules" {
 }
 ```
 
-### Example 7: KMS Encrypted Workspace
+### Example 7: KMS-Encrypted Workspace
 
 ```hcl
 resource "aws_kms_key" "prometheus" {
@@ -314,10 +310,8 @@ module "prometheus" {
   workspace_alias = "encrypted-metrics"
   kms_key_arn     = aws_kms_key.prometheus.arn
 
-  # Encrypted CloudWatch logs
   logging_configuration = {
     create_log_group = true
-    log_group_arn    = null
   }
   cloudwatch_log_group_kms_key_id = aws_kms_key.prometheus.arn
 
@@ -330,50 +324,55 @@ module "prometheus" {
 
 ## Best Practices
 
+### Common Pitfalls & Non-Obvious Behavior
+
+1. **Retention Requires Cardinality Limits to Be Set**: `retention_period_in_days` is applied by the `aws_prometheus_workspace_configuration` resource, which is only created when `limits_per_label_set` is non-null. Setting `retention_period_in_days` alone (without `limits_per_label_set`) is silently ignored — pass `limits_per_label_set = []` if you want custom retention without cardinality limits.
+2. **Logging Must Be Explicitly Attached**: Leaving `logging_configuration` at its default (`null`) still creates a standalone CloudWatch log group, but it is **not** attached to the workspace, because the workspace's `logging_configuration` block only renders when the variable is explicitly set. Always pass `logging_configuration = { create_log_group = true }` (or an existing `log_group_arn`) to actually enable workspace request logging.
+3. **Existing Workspaces Get Fewer Resources**: When `create_workspace = false` (attaching to an existing `workspace_id`), only the Alert Manager definition and rule group namespaces can be managed by this module call. Workspace configuration (retention/limits), the resource policy, and the CloudWatch log group are all gated on `create_workspace = true` and are skipped for externally supplied workspaces.
+4. **A Resource Policy Is Created by Default**: `create_resource_policy` defaults to `true`. Without `resource_policy_statements`, the module attaches a default policy granting the caller's own account full read/write (`aps:RemoteWrite`, `QueryMetrics`, `GetSeries`, `GetLabels`, `GetMetricMetadata`) plus read-only access for the Amazon Managed Grafana service principal. Set `create_resource_policy = false` if no resource policy should exist at all.
+5. **Alert Manager Is Always Created**: `create_alert_manager` defaults to `true` with a built-in minimal (no-op) Alertmanager config, so a bare-bones module call still creates a working-but-unrouted Alert Manager definition. Override `alert_manager_definition` to add real receivers.
+
 ### Security and Access Control
 
-1. **Enable KMS Encryption**: Use customer-managed KMS keys for encrypting metrics at rest to maintain control over encryption keys and meet compliance requirements.
-2. **Implement IAM Least Privilege**: Grant IAM principals only the minimum required permissions for remote write, query, and management operations.
-3. **Use VPC Endpoints**: Deploy VPC endpoints for AMP to keep metric traffic within AWS network.
-4. **Configure Resource Policies**: Use `resource_policy_statements` for fine-grained cross-account access control.
-5. **Encrypt CloudWatch Logs**: Set `cloudwatch_log_group_kms_key_id` to encrypt workspace logs.
+1. **Enable KMS Encryption**: Use customer-managed KMS keys (`kms_key_arn`) for encrypting metrics at rest to maintain control over key policies and meet compliance requirements.
+2. **Scope Resource Policy Statements**: Replace the default full-access statement with least-privilege `resource_policy_statements` scoped to specific principals and actions (e.g., `aps:QueryMetrics` only for read-only consumers).
+3. **Encrypt CloudWatch Logs**: Set `cloudwatch_log_group_kms_key_id` to encrypt workspace request logs.
+4. **Use VPC Endpoints**: Deploy interface VPC endpoints for AMP so remote-write/query traffic stays within the AWS network.
 
 ### Configuration and Management
 
-1. **Use Descriptive Workspace Aliases**: Apply meaningful aliases indicating environment, purpose, and team ownership.
-2. **Organize Rule Groups Logically**: Separate recording rules and alerting rules into different namespaces.
-3. **Tag Comprehensively**: Apply consistent tags including Environment, Application, Team, and CostCenter.
-4. **Version Control Configurations**: Store Alert Manager definitions and rule group configurations in version control.
-5. **Pin Module Version**: Use version constraints like `version = "~> 4.3"` for stability.
+1. **Use Descriptive Workspace Aliases**: Apply meaningful `workspace_alias` values indicating environment, purpose, and team ownership.
+2. **Organize Rule Groups Logically**: Separate recording rules and alerting rules into different `rule_group_namespaces` entries.
+3. **Version Control Rule/Alert Configurations**: Store Alert Manager definitions and rule group YAML in version control alongside the Terraform code.
+4. **Pin the Module Version**: Use a version constraint like `version = "~> 4.3"` for stability; note that v4.0.0 bumped the minimum Terraform version to `1.5.7` and AWS provider to `6.0` (breaking change).
 
 ### Performance and Cost Optimization
 
-1. **Set Appropriate Retention**: Configure `retention_period_in_days` based on actual needs; longer retention increases costs.
-2. **Configure Cardinality Limits**: Use `limits_per_label_set` to prevent cardinality explosions and control costs.
-3. **Design Efficient Recording Rules**: Precompute expensive queries to improve dashboard performance and reduce query costs.
-4. **Monitor Ingestion Volume**: Track metric ingestion rate and active series count to identify cost drivers.
+1. **Set Appropriate Retention**: Configure `retention_period_in_days` (paired with `limits_per_label_set`) based on actual query needs; longer retention increases cost.
+2. **Configure Cardinality Limits**: Use `limits_per_label_set` per environment/team to prevent cardinality explosions from driving up ingestion cost.
+3. **Design Efficient Recording Rules**: Precompute expensive PromQL aggregations to speed up dashboards and reduce ad-hoc query cost.
+4. **Use Infrequent-Access Log Class**: For rarely queried logs, set `cloudwatch_log_group_class = "INFREQUENT_ACCESS"` to reduce CloudWatch cost.
 
 ### Alerting Best Practices
 
-1. **Configure Alert Grouping**: Use `group_by` in Alert Manager to reduce notification noise.
-2. **Implement Severity Levels**: Use severity labels (critical, warning, info) to route alerts appropriately.
-3. **Test Alert Rules**: Validate PromQL expressions and Alert Manager configurations before production deployment.
-4. **Document Alert Runbooks**: Include clear annotations explaining conditions and remediation steps.
+1. **Configure Alert Grouping**: Use `group_by` in the Alert Manager config to reduce notification noise.
+2. **Implement Severity Routing**: Use severity labels (critical, warning, info) with distinct receivers/routes.
+3. **Test Alert Rules Before Deploy**: Validate PromQL expressions and Alertmanager YAML (`amtool check-config`) before applying.
 
 ### Operational Excellence
 
-1. **Enable CloudWatch Logging**: Configure logging for audit trails and troubleshooting.
-2. **Use Infrastructure as Code**: Manage all AMP resources through Terraform for consistency.
-3. **Regular Rule Review**: Periodically review alerting and recording rules for relevance.
-4. **Leverage Multi-AZ**: Take advantage of built-in Multi-AZ deployment for high availability.
+1. **Enable CloudWatch Logging**: Explicitly set `logging_configuration` for audit trails and remote-write troubleshooting.
+2. **Manage Everything as Code**: Keep workspace, rules, and Alert Manager config under Terraform to avoid console drift.
+3. **Tag Comprehensively**: Apply consistent `Environment`, `Application`, and `Team` tags for cost allocation.
 
 ## Additional Resources
 
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-prometheus/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus/tree/master/examples
+- **CHANGELOG**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus/blob/master/CHANGELOG.md
 - **AWS Managed Prometheus Documentation**: https://docs.aws.amazon.com/prometheus/latest/userguide/what-is-Amazon-Managed-Service-Prometheus.html
-- **Alert Manager Configuration**: https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-alertmanager.html
+- **Alert Manager Configuration**: https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-alert-manager.html
 - **Recording and Alerting Rules**: https://docs.aws.amazon.com/prometheus/latest/userguide/AMP-rules.html
 - **AMP Pricing**: https://aws.amazon.com/prometheus/pricing/
 - **PromQL Documentation**: https://prometheus.io/docs/prometheus/latest/querying/basics/
@@ -382,15 +381,12 @@ module "prometheus" {
 
 When using this module in automated workflows:
 
-1. **Use Descriptive Aliases**: Always provide meaningful `workspace_alias` values for easy identification
-2. **Enable Encryption**: Specify `kms_key_arn` for production workspaces to encrypt metrics at rest
-3. **Configure Logging**: Set up CloudWatch logging with `logging_configuration` for audit and troubleshooting
-4. **Set Cardinality Limits**: Use `limits_per_label_set` to prevent runaway costs from high-cardinality metrics
-5. **Configure Retention**: Set `retention_period_in_days` based on compliance and cost requirements
-6. **Tag Resources**: Apply comprehensive tags including Environment, Application, Team, and Owner
-7. **Organize Rule Groups**: Use separate rule group namespaces for recording rules and alerting rules
-8. **Test Configurations**: Validate PromQL expressions and Alert Manager YAML before deployment
-9. **Pin Version**: Use `version = "~> 4.3"` to avoid unexpected breaking changes
-10. **Cross-Account Access**: Use `resource_policy_statements` for sharing metrics across accounts
-11. **Grafana Integration**: Resource policies support automatic IAM permissions for Grafana service principals
-12. **No Submodules**: This is a standalone module without nested submodules
+1. **Pin Version**: Use `version = "~> 4.3"`; v4.0.0 raised the minimum Terraform to `1.5.7` and AWS provider to `6.0` — a breaking change for older configurations.
+2. **Set Retention Correctly**: To apply `retention_period_in_days`, always also pass `limits_per_label_set` (use `[]` if no cardinality limits are needed) — otherwise retention is silently ignored.
+3. **Attach Logging Explicitly**: Set `logging_configuration = { create_log_group = true }` (or a `log_group_arn`) whenever workspace request logging is required; the default `null` does not attach logging to the workspace even though it still creates an orphaned log group.
+4. **Know What Existing Workspaces Support**: With `create_workspace = false`, only `alert_manager_definition` and `rule_group_namespaces` apply — do not expect `retention_period_in_days`, `limits_per_label_set`, `logging_configuration`, or resource policies to take effect.
+5. **Review the Default Resource Policy**: `create_resource_policy = true` (the default) grants the caller's account full read/write plus Grafana read-only automatically; set `resource_policy_statements` or `create_resource_policy = false` when that default is not desired.
+6. **Enable Encryption for Production**: Specify `kms_key_arn` for workspace encryption and `cloudwatch_log_group_kms_key_id` for log encryption.
+7. **Override the Alert Manager Default**: The built-in `alert_manager_definition` is a no-op receiver; supply real receivers (SNS topic ARNs, etc.) for production alerting.
+8. **Tag Resources**: Apply comprehensive tags including Environment, Application, and Team.
+9. **No Submodules**: This is a standalone flat module with no nested submodules.

@@ -7,89 +7,95 @@
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-grafana/aws/latest
 - **Latest Version**: 2.3.1
-- **Purpose**: Terraform module that creates and manages AWS Managed Service for Grafana (AMG) workspaces and related resources
+- **Purpose**: Terraform module that creates and configures an AWS Managed Grafana (AMG) workspace together with its IAM role, security group, SAML configuration, API keys, service accounts, role associations, and license association
 - **Service**: AWS Managed Grafana (Amazon Managed Service for Grafana)
-- **Category**: Monitoring, Observability, Analytics
-- **Keywords**: grafana, amg, grafana-workspace, monitoring, observability, dashboard, visualization, cloudwatch, prometheus, x-ray, aws-sso, saml, api-key, service-account, vpc-configuration, data-source
-- **Use For**: centralized metrics visualization, multi-source dashboard creation, CloudWatch metrics analysis, Prometheus data visualization, distributed tracing with X-Ray, enterprise observability platforms, team collaboration dashboards, IoT data monitoring, log analytics visualization, application performance monitoring, infrastructure monitoring, business intelligence dashboards
+- **Category**: Monitoring, Observability
+- **Keywords**: grafana, amg, workspace, dashboard, visualization, cloudwatch, prometheus, x-ray, sso, saml, iam-role, security-group, vpc, api-key, service-account, license
+- **Use For**: centralized metrics/logs/traces dashboards, multi-source observability platforms, EKS and infrastructure monitoring, SSO/SAML-authenticated Grafana access, private VPC-connected Grafana deployments, CI/CD dashboard automation via service accounts, organization-wide cross-account monitoring, compliance and SOC dashboards
 
 ## Description
 
-The AWS Managed Service for Grafana Terraform module provides a comprehensive solution for deploying and managing fully managed Grafana workspaces in AWS. Amazon Managed Grafana is a fully managed service that allows you to query, correlate, and visualize operational metrics, logs, and traces from multiple data sources without the operational overhead of managing Grafana servers. The module handles all aspects of workspace configuration including authentication providers, data source integrations, network access controls, IAM role management, and license management.
+This Terraform module provisions and configures an Amazon Managed Grafana (AMG) workspace, a fully managed, auto-scaling Grafana service that removes the operational burden of installing, patching, and scaling Grafana servers. Beyond the `aws_grafana_workspace` resource itself, the module can optionally create the IAM role and policy the workspace assumes to reach AWS data sources, a dedicated security group for VPC-based connectivity, SAML identity-provider configuration, API keys, service accounts and their tokens, AWS SSO role associations, and an Enterprise or Enterprise-free-trial license association. It can also attach configuration to an existing workspace (`create_workspace = false`) rather than creating a new one.
 
-This module simplifies the deployment of Grafana workspaces by providing declarative configuration for critical features such as AWS SSO and SAML authentication, VPC integration, security group management, and API key provisioning. It supports both service-managed and customer-managed permission models, allowing organizations to choose the appropriate level of control for their security requirements. The module also handles workspace service accounts and tokens, enabling programmatic access for automation and CI/CD workflows.
+AMG lets teams query, correlate, and visualize metrics, logs, and traces from CloudWatch, Amazon Managed Service for Prometheus, X-Ray, Amazon OpenSearch Service, Redshift, Athena, IoT SiteWise, and Timestream, as well as self-managed and third-party data sources, from a single workspace. The module supports both `SERVICE_MANAGED` permissions, where AWS automatically creates and attaches the IAM policies required for the selected data sources, and `CUSTOMER_MANAGED` permissions for teams that bring their own IAM role. Authentication can be delegated to AWS SSO (IAM Identity Center), SAML 2.0, or both, with role assignment handled through `role_associations` (AWS SSO users/groups) or SAML assertion-to-role mapping.
 
-The module integrates seamlessly with AWS native data sources including CloudWatch, Managed Service for Prometheus, X-Ray, OpenSearch Service, IoT SiteWise, and Timestream, while also supporting open-source and third-party data sources. It provides comprehensive IAM role and policy management, automatically creating and configuring the necessary permissions for Grafana to access your AWS resources. With built-in support for enterprise licensing, network access controls, and security best practices, this module enables organizations to quickly deploy production-ready Grafana environments that meet corporate governance and compliance requirements.
+The module is a single, flat module with no submodules; every resource group it manages -- workspace, IAM role, security group, SAML configuration, API keys, service accounts, and license -- is toggled independently through `create_*` boolean flags, allowing partial adoption (for example, bringing your own IAM role while letting the module manage API keys). For data sources that live inside a VPC, `vpc_configuration` attaches the workspace to specified subnets and security groups, while `network_access_control` restricts workspace network access to specific IP prefix lists or VPC endpoints. For AWS Organizations-wide deployments, `stack_set_name` and `organizational_units` let AMG provision the cross-account IAM roles it needs via CloudFormation StackSets.
 
 ## Key Features
 
-- **Workspace Management**: Complete lifecycle management of AWS Managed Grafana workspaces with customizable names, descriptions, and Grafana versions
-- **Authentication Providers**: Support for AWS SSO (IAM Identity Center) and SAML 2.0 authentication with detailed configuration options
-- **Data Source Integration**: Native support for CloudWatch, Prometheus, X-Ray, OpenSearch, Timestream, IoT SiteWise, and third-party data sources
-- **Permission Models**: Flexible permission management with service-managed (single account and organization) and customer-managed options
-- **IAM Role Management**: Automatic creation and configuration of IAM roles with customizable policies, paths, and permission boundaries
-- **Network Access Control**: Configurable network access restrictions with support for IP ranges and VPN/Direct Connect integration
-- **VPC Configuration**: Private subnet integration with custom security group rules for secure workspace deployment
-- **Security Group Management**: Automated security group creation with customizable ingress and egress rules
-- **API Key Management**: Support for creating multiple workspace API keys with different permission levels (viewer, editor, admin)
-- **Service Accounts**: Workspace service account and token management for programmatic access and automation
-- **SAML Configuration**: Comprehensive SAML 2.0 configuration with support for assertion attributes, role mapping, and allowed organizations
-- **License Management**: Support for ENTERPRISE, ENTERPRISE_FREE_TRIAL license types with automatic association
-- **Notification Destinations**: Configuration for SNS notifications and other alert destinations
-- **Account Access Control**: Support for CURRENT_ACCOUNT, ORGANIZATION, and cross-account access patterns
-- **Tagging Support**: Comprehensive tagging for workspaces, IAM roles, security groups, and related resources
-- **Workspace Versioning**: Ability to specify and manage specific Grafana versions
-- **CloudWatch Integration**: Built-in CloudWatch metrics and logging for workspace monitoring
-- **Multi-Region Support**: Deploy workspaces across multiple AWS regions for disaster recovery and compliance
-- **Role Association**: Configure Grafana user and group role assignments for fine-grained access control
-- **Session Configuration**: Customizable IAM role session duration for security and user experience balance
+- **Workspace Lifecycle**: Create a new AMG workspace or layer configuration onto an existing one via `workspace_id`
+- **Multi-Source Data Integration**: Native support for `CLOUDWATCH`, `PROMETHEUS`, `XRAY`, `AMAZON_OPENSEARCH_SERVICE`, `ATHENA`, `REDSHIFT`, `SITEWISE`, and `TIMESTREAM` data sources
+- **Dual Authentication**: AWS SSO (IAM Identity Center) and SAML 2.0, usable individually or together
+- **SAML Configuration**: Full assertion mapping (email, login, name, org, role, groups) with admin/editor role-value mapping and either metadata URL or inline XML
+- **AWS SSO Role Associations**: Assign SSO users and groups to `ADMIN`, `EDITOR`, or `VIEWER` roles via `role_associations`
+- **Flexible Permission Models**: `SERVICE_MANAGED` (auto-created IAM policies) or `CUSTOMER_MANAGED` (bring your own IAM role)
+- **IAM Role Management**: Optional workspace IAM role with custom path, permissions boundary, session duration, and extra policy attachments
+- **Organization-Wide Access**: `stack_set_name` and `organizational_units` provision cross-account IAM roles via CloudFormation StackSets for `ORGANIZATION` account access
+- **VPC Connectivity**: `vpc_configuration` attaches the workspace to private subnets/security groups to reach VPC-only data sources
+- **Network Access Control**: Restrict workspace access to specific IP prefix lists or VPC endpoints
+- **Security Group Management**: Auto-created security group with customizable ingress/egress rules
+- **API Keys and Service Accounts**: Provision role-scoped API keys or service accounts with tokens for automation and CI/CD
+- **Enterprise Licensing**: Associate `ENTERPRISE` or `ENTERPRISE_FREE_TRIAL` licenses using a Grafana Labs `grafana_token`
+- **Alerting Permissions**: `enable_alerts` grants the IAM permissions Grafana-managed alerting needs to reach data sources
+- **Notification Destinations**: Configure SNS as an alert notification destination
+- **Unified Alerting / Plugin Configuration**: JSON-encoded `configuration` block to enable unified alerting or restrict plugin administration
+- **Conditional Resource Creation**: Every resource group (workspace, IAM role, security group, SAML config, license) is independently toggled with `create_*` flags
+- **Comprehensive Tagging**: Independent tag maps for the workspace, IAM role, and security group
 
 ## Main Use Cases
 
-1. **Centralized Metrics Visualization**: Create unified dashboards aggregating metrics from CloudWatch, Prometheus, and custom data sources
-2. **Multi-Account Observability**: Deploy organization-wide Grafana workspaces with cross-account data source access
-3. **Application Performance Monitoring**: Visualize application traces from X-Ray, metrics from CloudWatch, and logs from OpenSearch
-4. **Infrastructure Monitoring**: Monitor AWS infrastructure across multiple services with real-time dashboards
-5. **IoT Data Visualization**: Create dashboards for IoT SiteWise industrial data and time-series analytics
-6. **Team Collaboration Platforms**: Deploy shared Grafana workspaces with SSO authentication for engineering teams
-7. **Security Operations Centers**: Build SOC dashboards aggregating security metrics, GuardDuty findings, and CloudTrail logs
-8. **Business Intelligence**: Visualize business metrics from Timestream and other data sources for executive reporting
-9. **DevOps Automation**: Provision API keys and service accounts for CI/CD pipelines and infrastructure automation
-10. **Compliance Monitoring**: Create compliance dashboards with audit trails, network access controls, and SAML authentication
+1. **Centralized Observability Dashboards**: Unify CloudWatch, Prometheus, X-Ray, and OpenSearch data in one workspace
+2. **EKS/Kubernetes Monitoring**: Visualize cluster and workload metrics from Amazon Managed Service for Prometheus
+3. **Application Performance Monitoring**: Correlate traces (X-Ray), metrics (CloudWatch), and logs (OpenSearch) per request
+4. **Organization-Wide Monitoring**: Deploy one workspace with `ORGANIZATION` access type and StackSet-provisioned roles across member accounts
+5. **Private/VPC-Isolated Deployments**: Reach self-managed data sources in private subnets via `vpc_configuration`
+6. **SSO/SAML-Governed Access**: Enforce enterprise identity provider authentication with role-based dashboard permissions
+7. **CI/CD and Automation Dashboards**: Provision service accounts/tokens for pipelines to publish or query dashboards programmatically
+8. **Compliance and Security Operations Dashboards**: Aggregate security telemetry with restricted network access controls
+9. **Cross-Account Shared Monitoring**: Use `CUSTOMER_MANAGED` permissions with pre-built cross-account IAM roles for shared platforms
 
 ## Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Determines whether resources will be created |
-| `create_workspace` | `bool` | `true` | Determines whether to create Grafana workspace |
-| `name` | `string` | `null` | Name of the Grafana workspace |
-| `description` | `string` | `null` | Description of the Grafana workspace |
-| `account_access_type` | `string` | `"CURRENT_ACCOUNT"` | Type of account access (CURRENT_ACCOUNT, ORGANIZATION) |
-| `authentication_providers` | `list(string)` | `["AWS_SSO"]` | List of authentication providers (AWS_SSO, SAML) |
-| `permission_type` | `string` | `"SERVICE_MANAGED"` | Permission type (SERVICE_MANAGED, CUSTOMER_MANAGED) |
-| `data_sources` | `list(string)` | `[]` | List of data sources (CLOUDWATCH, PROMETHEUS, XRAY, ATHENA, OPENSEARCH_SERVICE, REDSHIFT, SITEWISE, TIMESTREAM) |
-| `notification_destinations` | `list(string)` | `[]` | List of notification destinations (SNS) |
-| `grafana_version` | `string` | `null` | Version of Grafana to support |
-| `network_access_control` | `any` | `{}` | Network access control configuration |
-| `vpc_configuration` | `any` | `{}` | VPC configuration for the workspace |
-| `create_iam_role` | `bool` | `true` | Whether to create IAM role for workspace |
-| `iam_role_name` | `string` | `null` | Name to use for IAM role |
-| `iam_role_arn` | `string` | `null` | Existing IAM role ARN (required if create_iam_role = false) |
-| `iam_role_policy_arns` | `list(string)` | `[]` | ARNs of IAM policies to attach to workspace role |
-| `enable_alerts` | `bool` | `false` | Enable alerting permissions for workspace IAM role |
-| `create_security_group` | `bool` | `true` | Whether to create security group for workspace |
-| `security_group_rules` | `any` | `{}` | Security group rules to add |
-| `workspace_api_keys` | `any` | `{}` | Map of workspace API keys to create |
-| `workspace_service_accounts` | `any` | `{}` | Map of workspace service accounts to create |
-| `workspace_service_account_tokens` | `any` | `{}` | Map of workspace service account tokens to create |
-| `associate_license` | `bool` | `true` | Whether to associate a license with workspace |
-| `license_type` | `string` | `"ENTERPRISE"` | Type of license (ENTERPRISE, ENTERPRISE_FREE_TRIAL) |
-| `saml_idp_metadata_url` | `string` | `null` | SAML identity provider metadata URL |
-| `saml_admin_role_values` | `list(string)` | `[]` | SAML assertion values for admin role |
-| `saml_editor_role_values` | `list(string)` | `[]` | SAML assertion values for editor role |
-| `configuration` | `string` | `null` | JSON-encoded workspace configuration (unified alerting, plugins) |
-| `tags` | `map(string)` | `{}` | Map of tags to assign to resources |
+| `create_workspace` | `bool` | `true` | Whether to create a workspace or use an existing one |
+| `workspace_id` | `string` | `""` | ID of existing workspace when `create_workspace = false` |
+| `name` | `string` | `null` | Grafana workspace name |
+| `description` | `string` | `null` | Workspace description |
+| `account_access_type` | `string` | `"CURRENT_ACCOUNT"` | `CURRENT_ACCOUNT` or `ORGANIZATION` |
+| `authentication_providers` | `list(string)` | `["AWS_SSO"]` | `AWS_SSO`, `SAML`, or both |
+| `permission_type` | `string` | `"SERVICE_MANAGED"` | `SERVICE_MANAGED` or `CUSTOMER_MANAGED` |
+| `data_sources` | `list(string)` | `[]` | `AMAZON_OPENSEARCH_SERVICE`, `ATHENA`, `CLOUDWATCH`, `PROMETHEUS`, `REDSHIFT`, `SITEWISE`, `TIMESTREAM`, `XRAY` |
+| `notification_destinations` | `list(string)` | `[]` | Notification destinations; only `SNS` is supported |
+| `grafana_version` | `string` | `null` | Grafana version to run in the workspace |
+| `configuration` | `string` | `null` | JSON-encoded workspace config (unified alerting, plugins) |
+| `vpc_configuration` | `any` | `{}` | `subnet_ids` / `security_group_ids` for private data source access |
+| `network_access_control` | `any` | `{}` | `prefix_list_ids` / `vpce_ids` to restrict workspace network access |
+| `stack_set_name` | `string` | `null` | CloudFormation StackSet name that provisions cross-account IAM roles |
+| `organizational_units` | `list(string)` | `[]` | AWS Organizations OUs authorized to use data sources |
+| `create_iam_role` | `bool` | `true` | Whether to create the workspace IAM role |
+| `iam_role_arn` | `string` | `null` | Existing IAM role ARN (required if `create_iam_role = false`) |
+| `iam_role_name` | `string` | `null` | Name for the workspace IAM role |
+| `iam_role_path` | `string` | `null` | IAM role path |
+| `iam_role_policy_arns` | `list(string)` | `[]` | Additional IAM policy ARNs to attach to the workspace role |
+| `iam_role_permissions_boundary` | `string` | `null` | Permissions boundary ARN for the IAM role |
+| `iam_role_max_session_duration` | `number` | `null` | Max session duration (seconds) for the IAM role |
+| `enable_alerts` | `bool` | `false` | Grant IAM permissions required for Grafana-managed alerting |
+| `create_security_group` | `bool` | `true` | Whether to create a security group for the workspace |
+| `security_group_rules` | `any` | `{}` | Ingress/egress rules to add to the created security group |
+| `workspace_api_keys` | `any` | `{}` | Map of API keys to create (`VIEWER`/`EDITOR`/`ADMIN`) |
+| `workspace_service_accounts` | `any` | `{}` | Map of service accounts to create |
+| `workspace_service_account_tokens` | `any` | `{}` | Map of tokens to create for service accounts |
+| `create_saml_configuration` | `bool` | `true` | Whether to create the SAML configuration resource |
+| `saml_idp_metadata_url` | `string` | `null` | SAML IdP metadata URL (mutually exclusive with `saml_idp_metadata_xml`) |
+| `saml_admin_role_values` / `saml_editor_role_values` | `list(string)` | `[]` | SAML assertion values mapped to Admin/Editor roles |
+| `saml_allowed_organizations` | `list(string)` | `[]` | SAML organizations allowed to authenticate |
+| `role_associations` | `any` | `{}` | Map of role -> `user_ids`/`group_ids` for AWS SSO role assignment |
+| `associate_license` | `bool` | `true` | Whether to associate a Grafana Enterprise license |
+| `license_type` | `string` | `"ENTERPRISE"` | `ENTERPRISE` or `ENTERPRISE_FREE_TRIAL` |
+| `grafana_token` | `string` | `null` | Grafana Labs token required for `ENTERPRISE` license association |
+| `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
 ## Main Outputs
 
@@ -99,17 +105,16 @@ The module integrates seamlessly with AWS native data sources including CloudWat
 | `workspace_arn` | The Amazon Resource Name (ARN) of the Grafana workspace |
 | `workspace_endpoint` | The endpoint of the Grafana workspace |
 | `workspace_grafana_version` | The version of Grafana running on the workspace |
-| `workspace_api_keys` | The workspace API keys created including their attributes |
-| `workspace_service_accounts` | The workspace service accounts created including their attributes |
-| `workspace_service_account_tokens` | The workspace service account tokens created including their attributes |
-| `workspace_iam_role_name` | IAM role name of the Grafana workspace |
-| `workspace_iam_role_arn` | IAM role ARN of the Grafana workspace |
+| `workspace_api_keys` | The workspace API keys created, including their attributes |
+| `workspace_service_accounts` | The workspace service accounts created, including their attributes |
+| `workspace_service_account_tokens` | The workspace service account tokens created, including their attributes |
+| `workspace_iam_role_name` / `workspace_iam_role_arn` | Name and ARN of the workspace IAM role |
 | `workspace_iam_role_unique_id` | Stable and unique string identifying the IAM role |
-| `workspace_iam_role_policy_arn` | IAM Policy ARN of the Grafana workspace IAM role |
-| `security_group_id` | ID of the security group |
-| `security_group_arn` | Amazon Resource Name (ARN) of the security group |
+| `workspace_iam_role_policy_arn` / `workspace_iam_role_policy_name` / `workspace_iam_role_policy_id` | Identifiers of the IAM policy attached to the workspace role |
+| `security_group_id` / `security_group_arn` | ID and ARN of the security group created for the workspace |
 | `saml_configuration_status` | Status of the SAML configuration |
-| `license_expiration` | Expiration date of the enterprise license |
+| `license_expiration` | Expiration date of the `ENTERPRISE` license |
+| `license_free_trial_expiration` | Expiration date of the `ENTERPRISE_FREE_TRIAL` license |
 
 ## Usage Examples
 
@@ -121,32 +126,33 @@ module "grafana" {
   version = "~> 2.3"
 
   name              = "my-grafana"
-  associate_license = false  # Set to true for Enterprise features
+  associate_license = false  # Skip Enterprise licensing for the free tier
 
   tags = { Environment = "dev" }
 }
 ```
 
-### Example 1: Basic Workspace with AWS SSO
+### Example 1: AWS SSO Workspace with Role Associations
 
 ```hcl
-module "grafana_basic" {
+module "grafana" {
   source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.3"
 
   name                     = "team-grafana"
-  description              = "Grafana workspace for engineering team"
+  description              = "Grafana workspace for the platform team"
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
   permission_type          = "SERVICE_MANAGED"
 
-  data_sources = [
-    "CLOUDWATCH",
-    "PROMETHEUS",
-    "XRAY"
-  ]
+  data_sources               = ["CLOUDWATCH", "PROMETHEUS", "XRAY"]
+  notification_destinations  = ["SNS"]
 
-  notification_destinations = ["SNS"]
+  # Assign AWS SSO users/groups to Grafana roles
+  role_associations = {
+    ADMIN  = { group_ids = ["1111111111-abcdefgh-1234-5678-abcd-999999999999"] }
+    EDITOR = { user_ids  = ["2222222222-abcdefgh-1234-5678-abcd-999999999999"] }
+  }
 
   tags = {
     Environment = "production"
@@ -155,502 +161,210 @@ module "grafana_basic" {
 }
 ```
 
-### Example 2: Workspace with VPC Configuration
+### Example 2: Private VPC Workspace with Network Access Control
 
 ```hcl
-module "grafana_vpc" {
+module "grafana" {
   source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.3"
 
   name                     = "secure-grafana"
-  description              = "Grafana workspace in private VPC"
   account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["AWS_SSO"]
   permission_type          = "SERVICE_MANAGED"
+  data_sources             = ["CLOUDWATCH", "PROMETHEUS"]
 
-  data_sources = ["CLOUDWATCH", "PROMETHEUS"]
-
-  # VPC configuration for private deployment
+  # Reach data sources living in private subnets
   vpc_configuration = {
-    subnet_ids         = ["subnet-abc123", "subnet-def456"]
-    security_group_ids = [aws_security_group.grafana.id]
+    subnet_ids = module.vpc.private_subnets
   }
 
-  # Custom security group rules
-  create_security_group = true
   security_group_rules = {
-    ingress_https = {
-      type        = "ingress"
-      from_port   = 443
-      to_port     = 443
+    egress_prometheus = {
+      description = "Allow egress to self-managed Prometheus"
+      from_port   = 9090
+      to_port     = 9090
       protocol    = "tcp"
-      cidr_blocks = ["10.0.0.0/8"]
-      description = "HTTPS from corporate network"
-    }
-    egress_all = {
-      type        = "egress"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
-      description = "Allow all outbound"
+      cidr_blocks = module.vpc.private_subnets_cidr_blocks
     }
   }
 
-  tags = {
-    Environment = "production"
-    Compliance  = "required"
+  # Restrict console/API access to the corporate network
+  network_access_control = {
+    prefix_list_ids = [aws_ec2_managed_prefix_list.corporate.id]
   }
+
+  tags = { Environment = "production" }
 }
 ```
 
-### Example 3: Workspace with API Keys and Service Accounts
+### Example 3: SAML-Authenticated Workspace
 
 ```hcl
-module "grafana_automation" {
-  source  = "terraform-aws-modules/managed-service-grafana/aws"
-  version = "~> 2.3"
-
-  name                     = "automation-grafana"
-  description              = "Grafana workspace with API keys for automation"
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
-
-  data_sources = ["CLOUDWATCH", "PROMETHEUS", "XRAY"]
-
-  # Create API keys for different access levels
-  workspace_api_keys = {
-    viewer = {
-      key_name = "viewer-key"
-      key_role = "VIEWER"
-      seconds_to_live = 2592000  # 30 days
-    }
-    editor = {
-      key_name = "editor-key"
-      key_role = "EDITOR"
-      seconds_to_live = 2592000
-    }
-    admin = {
-      key_name = "admin-key"
-      key_role = "ADMIN"
-      seconds_to_live = 604800  # 7 days
-    }
-  }
-
-  # Create service accounts for CI/CD
-  workspace_service_accounts = {
-    cicd = {
-      name         = "cicd-service-account"
-      grafana_role = "EDITOR"
-      tokens = {
-        main = {
-          name = "cicd-token"
-          seconds_to_live = 2592000
-        }
-      }
-    }
-  }
-
-  tags = {
-    Environment = "production"
-    Purpose     = "automation"
-  }
-}
-```
-
-### Example 4: Organization-Wide Workspace
-
-```hcl
-module "grafana_organization" {
-  source  = "terraform-aws-modules/managed-service-grafana/aws"
-  version = "~> 2.3"
-
-  name                     = "org-wide-grafana"
-  description              = "Organization-wide Grafana workspace"
-  account_access_type      = "ORGANIZATION"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
-
-  data_sources = [
-    "CLOUDWATCH",
-    "PROMETHEUS",
-    "XRAY",
-    "OPENSEARCH_SERVICE",
-    "TIMESTREAM"
-  ]
-
-  notification_destinations = ["SNS"]
-
-  # Custom IAM role configuration
-  create_iam_role = true
-  iam_role_name   = "GrafanaOrganizationRole"
-  iam_role_path   = "/grafana/"
-
-  iam_role_policy_arns = [
-    "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
-  ]
-
-  tags = {
-    Environment  = "production"
-    Organization = "enabled"
-    CostCenter   = "platform"
-  }
-}
-```
-
-### Example 5: SAML-Authenticated Workspace
-
-```hcl
-module "grafana_saml" {
+module "grafana" {
   source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.3"
 
   name                     = "saml-grafana"
-  description              = "Grafana workspace with SAML authentication"
-  account_access_type      = "CURRENT_ACCOUNT"
   authentication_providers = ["SAML"]
   permission_type          = "SERVICE_MANAGED"
+  data_sources             = ["CLOUDWATCH", "PROMETHEUS"]
 
-  data_sources = ["CLOUDWATCH", "PROMETHEUS"]
-
-  # SAML configuration
   saml_idp_metadata_url      = "https://idp.example.com/metadata"
   saml_admin_role_values     = ["admin"]
   saml_editor_role_values    = ["editor"]
-  saml_email_assertion       = "email"
-  saml_login_assertion       = "username"
+  saml_email_assertion       = "mail"
+  saml_login_assertion       = "mail"
   saml_name_assertion        = "displayName"
   saml_role_assertion        = "role"
-  saml_org_assertion         = "organization"
-  saml_login_validity_duration = 1440  # 24 hours
+  saml_org_assertion         = "org"
+  saml_allowed_organizations = ["example-corp"]
 
-  tags = {
-    Environment    = "production"
-    Authentication = "saml"
-  }
+  tags = { Authentication = "saml" }
 }
 ```
 
-### Example 6: Customer-Managed Permissions
+### Example 4: API Keys and Service Accounts for Automation
 
 ```hcl
-# Create custom IAM role separately
-resource "aws_iam_role" "grafana_custom" {
-  name = "CustomGrafanaRole"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Effect = "Allow"
-        Principal = {
-          Service = "grafana.amazonaws.com"
-        }
-        Action = "sts:AssumeRole"
-      }
-    ]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "grafana_cloudwatch" {
-  role       = aws_iam_role.grafana_custom.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess"
-}
-
-module "grafana_custom_permissions" {
+module "grafana" {
   source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.3"
 
-  name                     = "custom-perm-grafana"
-  description              = "Grafana workspace with customer-managed permissions"
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "CUSTOMER_MANAGED"
+  name         = "automation-grafana"
+  data_sources = ["CLOUDWATCH", "PROMETHEUS", "XRAY"]
 
-  data_sources = ["CLOUDWATCH"]
-
-  # Use existing IAM role
-  create_iam_role = false
-  iam_role_arn    = aws_iam_role.grafana_custom.arn
-
-  tags = {
-    Environment = "production"
-    Permissions = "customer-managed"
+  # Short-lived, role-scoped API keys
+  workspace_api_keys = {
+    viewer = { key_name = "viewer-key", key_role = "VIEWER", seconds_to_live = 2592000 }
+    admin  = { key_name = "admin-key", key_role = "ADMIN", seconds_to_live = 604800 }
   }
+
+  # Preferred over API keys for CI/CD pipelines
+  workspace_service_accounts = {
+    cicd = { name = "cicd-service-account", grafana_role = "EDITOR" }
+  }
+
+  workspace_service_account_tokens = {
+    cicd = { service_account_key = "cicd", name = "cicd-token", seconds_to_live = 2592000 }
+  }
+
+  tags = { Purpose = "automation" }
 }
 ```
 
-### Example 7: Workspace with Network Access Control
+### Example 5: Organization-Wide, Production Workspace
 
 ```hcl
-module "grafana_restricted" {
+module "grafana" {
   source  = "terraform-aws-modules/managed-service-grafana/aws"
   version = "~> 2.3"
 
-  name                     = "restricted-grafana"
-  description              = "Grafana workspace with IP restrictions"
-  account_access_type      = "CURRENT_ACCOUNT"
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
+  name                 = "prod-observability"
+  grafana_version      = "10.4"
+  account_access_type  = "ORGANIZATION"
+  stack_set_name       = "prod-observability" # Provisions cross-account IAM roles
+  organizational_units = ["ou-abcd-12345678"]
 
-  data_sources = ["CLOUDWATCH", "PROMETHEUS"]
+  authentication_providers  = ["AWS_SSO"]
+  permission_type           = "SERVICE_MANAGED"
+  data_sources               = ["CLOUDWATCH", "PROMETHEUS", "XRAY", "AMAZON_OPENSEARCH_SERVICE", "TIMESTREAM"]
+  notification_destinations  = ["SNS"]
 
-  # Restrict access to specific IP ranges
-  network_access_control = {
-    prefix_list_ids = [aws_ec2_managed_prefix_list.corporate.id]
-    vpce_ids        = [aws_vpc_endpoint.grafana.id]
-  }
-
-  tags = {
-    Environment = "production"
-    Security    = "restricted"
-  }
-}
-
-resource "aws_ec2_managed_prefix_list" "corporate" {
-  name           = "corporate-ip-ranges"
-  address_family = "IPv4"
-  max_entries    = 10
-
-  entry {
-    cidr        = "203.0.113.0/24"
-    description = "Office network"
-  }
-}
-```
-
-### Example 8: Complete Production Setup
-
-```hcl
-module "grafana_production" {
-  source  = "terraform-aws-modules/managed-service-grafana/aws"
-  version = "~> 2.3"
-
-  name                = "prod-observability"
-  description         = "Production observability platform with Grafana"
-  grafana_version     = "10.4"
-  account_access_type = "CURRENT_ACCOUNT"
-
-  authentication_providers = ["AWS_SSO"]
-  permission_type          = "SERVICE_MANAGED"
-
-  # Enable unified alerting
+  # Enable unified alerting, disable plugin self-service
   configuration = jsonencode({
     unifiedAlerting = { enabled = true }
-    plugins = { pluginAdminEnabled = false }
+    plugins         = { pluginAdminEnabled = false }
   })
 
-  # All supported data sources
-  data_sources = [
-    "CLOUDWATCH",
-    "PROMETHEUS",
-    "XRAY",
-    "ATHENA",
-    "OPENSEARCH_SERVICE",
-    "REDSHIFT",
-    "SITEWISE",
-    "TIMESTREAM"
-  ]
-
-  notification_destinations = ["SNS"]
-
-  # VPC configuration for security
-  vpc_configuration = {
-    subnet_ids         = module.vpc.private_subnets
-    security_group_ids = [aws_security_group.grafana.id]
-  }
-
-  # IAM role with custom policies
-  create_iam_role = true
-  iam_role_name   = "ProductionGrafanaRole"
-  iam_role_path   = "/observability/"
-
+  create_iam_role                = true
+  iam_role_name                  = "ProductionGrafanaRole"
+  iam_role_path                  = "/observability/"
+  iam_role_max_session_duration  = 43200 # 12 hours
   iam_role_policy_arns = [
     "arn:aws:iam::aws:policy/CloudWatchReadOnlyAccess",
     "arn:aws:iam::aws:policy/AmazonPrometheusQueryAccess",
-    "arn:aws:iam::aws:policy/AWSXRayReadOnlyAccess"
+    "arn:aws:iam::aws:policy/AWSXRayReadOnlyAccess",
   ]
 
-  iam_role_max_session_duration = 43200  # 12 hours
-
-  # API keys for different teams
-  workspace_api_keys = {
-    platform_team = {
-      key_name        = "platform-admin"
-      key_role        = "ADMIN"
-      seconds_to_live = 2592000
-    }
-    dev_team = {
-      key_name        = "dev-editor"
-      key_role        = "EDITOR"
-      seconds_to_live = 2592000
-    }
-    readonly = {
-      key_name        = "readonly-viewer"
-      key_role        = "VIEWER"
-      seconds_to_live = 7776000  # 90 days
-    }
-  }
-
-  # Service accounts for automation
-  workspace_service_accounts = {
-    terraform = {
-      name         = "terraform-automation"
-      grafana_role = "ADMIN"
-      tokens = {
-        main = {
-          name            = "terraform-token"
-          seconds_to_live = 2592000
-        }
-      }
-    }
-  }
-
-  # Enterprise license
   associate_license = true
   license_type      = "ENTERPRISE"
+  grafana_token     = var.grafana_labs_token
 
   tags = {
     Environment = "production"
     ManagedBy   = "terraform"
-    CostCenter  = "platform"
-    Compliance  = "required"
   }
 }
 ```
 
 ## Best Practices
 
-### Workspace Configuration
-
-1. **Use Descriptive Names**: Give workspaces clear, descriptive names that reflect their purpose and environment (e.g., "prod-observability", "dev-team-metrics")
-2. **Specify Grafana Version**: Pin to specific Grafana versions in production to ensure consistent behavior and controlled upgrades
-3. **Enable Required Data Sources Only**: Configure only the data sources your teams actually use to minimize IAM permissions and reduce attack surface
-4. **Set Appropriate Notification Destinations**: Configure SNS topics for alerting to ensure critical alerts reach the right teams
-5. **Use Organization Account Type for Multi-Account**: When monitoring across AWS accounts, use ORGANIZATION account access type with proper delegation
-6. **Document Workspace Purpose**: Provide clear descriptions explaining the workspace's intended use, data sources, and responsible teams
-
 ### Authentication and Access Control
 
-1. **Prefer AWS SSO Over SAML**: Use AWS SSO (IAM Identity Center) for simpler setup and better AWS integration unless you have specific SAML requirements
-2. **Implement SAML for Enterprise SSO**: Configure SAML authentication for organizations with existing identity providers (Okta, Azure AD, etc.)
-3. **Use Service-Managed Permissions by Default**: Start with SERVICE_MANAGED permission type for simpler setup; switch to CUSTOMER_MANAGED only when you need fine-grained control
-4. **Configure SAML Role Mapping**: Map SAML assertion attributes to Grafana roles (Admin, Editor, Viewer) based on your IdP group membership
-5. **Set Reasonable Session Durations**: Balance security and user experience with IAM role session durations (4-12 hours typically)
-6. **Restrict Allowed Organizations**: When using SAML, limit allowed_organizations to specific business units or teams that should have access
-7. **Audit Authentication Events**: Enable CloudTrail logging for all authentication events to workspace for security monitoring
+1. **Prefer AWS SSO Over SAML**: Use AWS SSO (IAM Identity Center) unless you already have an external IdP requiring SAML federation.
+2. **Map SAML Roles Explicitly**: Configure `saml_admin_role_values` / `saml_editor_role_values` and restrict `saml_allowed_organizations` to trusted realms; unmapped users default to Viewer.
+3. **Assign Roles via `role_associations`**: Manage AWS SSO user/group-to-role mapping in Terraform instead of the console for auditability.
+4. **Start Service-Managed**: Use `permission_type = "SERVICE_MANAGED"` by default; switch to `CUSTOMER_MANAGED` only when you need a pre-existing or cross-account IAM role.
 
 ### IAM and Permissions
 
-1. **Use Least Privilege IAM Policies**: Grant only the minimum permissions needed for your configured data sources (e.g., ReadOnly policies where possible)
-2. **Separate Roles by Environment**: Create distinct IAM roles for dev, staging, and production workspaces with appropriate permission scopes
-3. **Set IAM Role Paths**: Use iam_role_path to organize Grafana roles (e.g., "/grafana/" or "/observability/") for better IAM organization
-4. **Attach Managed Policies**: Prefer AWS managed policies (CloudWatchReadOnlyAccess, etc.) over inline policies for easier maintenance
-5. **Use Permission Boundaries**: Apply permission boundaries to IAM roles in delegated environments to prevent privilege escalation
-6. **Cross-Account Access Pattern**: For multi-account architectures, use customer-managed permissions with cross-account IAM role trust relationships
-7. **Rotate Service Account Tokens**: Set reasonable seconds_to_live for service account tokens (30 days) and rotate them regularly
-8. **Monitor IAM Role Usage**: Enable CloudWatch metrics and CloudTrail logging for IAM role assumption by Grafana workspaces
+1. **Grant Least Privilege**: Attach only the IAM permissions needed for the configured `data_sources`, preferring AWS managed read-only policies (`CloudWatchReadOnlyAccess`, `AWSXRayReadOnlyAccess`, `AmazonPrometheusQueryAccess`).
+2. **Use Permissions Boundaries**: Set `iam_role_permissions_boundary` in delegated or multi-team accounts to cap privilege escalation.
+3. **Provision Org-Wide Access Deliberately**: Use `stack_set_name` with `organizational_units` only when the workspace genuinely needs `ORGANIZATION`-wide access; it provisions IAM roles into every member account via CloudFormation StackSets.
+4. **Bound Session Duration**: Keep `iam_role_max_session_duration` aligned with your organization's session policy (typically 1-12 hours).
 
 ### Network Security
 
-1. **Deploy in Private Subnets**: Use VPC configuration to deploy Grafana endpoints in private subnets for enhanced security
-2. **Implement Network Access Controls**: Use network_access_control with prefix lists to restrict workspace access to corporate IP ranges or VPN
-3. **Use VPC Endpoints**: Configure VPC endpoints (vpce_ids) for private connectivity without internet gateway traversal
-4. **Custom Security Groups**: Create tailored security group rules limiting ingress to specific ports and sources
-5. **Enable HTTPS Only**: Ensure all workspace endpoints use HTTPS; AWS Managed Grafana enforces this by default
-6. **Restrict Egress Traffic**: Configure security group egress rules to allow only necessary outbound connections to data sources
-7. **Use Transit Gateway**: For multi-VPC architectures, connect through AWS Transit Gateway for centralized network management
+1. **Span Multiple AZs**: Set `vpc_configuration.subnet_ids` across at least two availability zones when reaching VPC-only data sources.
+2. **Restrict Network Access**: Use `network_access_control` with `prefix_list_ids`/`vpce_ids` to limit workspace access to corporate networks or VPC endpoints; once any list is set, all other traffic is denied.
+3. **Scope Security Group Egress**: Limit `security_group_rules` to the specific ports/CIDRs of the data sources being queried rather than allowing all outbound traffic.
 
 ### API Keys and Service Accounts
 
-1. **Create Role-Based API Keys**: Provision separate API keys for different access levels (VIEWER, EDITOR, ADMIN) based on use cases
-2. **Set Short Expiration for Admin Keys**: Limit admin API key lifetime to 7 days; use longer periods (30-90 days) for read-only keys
-3. **Use Service Accounts for Automation**: Prefer service accounts over API keys for CI/CD pipelines and infrastructure automation
-4. **Rotate Keys Regularly**: Implement a process to rotate API keys and service account tokens every 30-90 days
-5. **Store Keys Securely**: Store API keys and tokens in AWS Secrets Manager or Parameter Store, never in code repositories
-6. **Monitor Key Usage**: Track API key and service account usage through CloudWatch logs to detect anomalies
-7. **Limit Token Scope**: Create multiple service accounts with narrow scopes rather than one with broad permissions
-8. **Name Keys Descriptively**: Use clear naming conventions for API keys and service accounts indicating their purpose and owner
+1. **Prefer Service Accounts**: Use `workspace_service_accounts` + `workspace_service_account_tokens` over `workspace_api_keys` for CI/CD and automation; AWS/Grafana favor service accounts going forward.
+2. **Scope and Expire Tokens**: Set the minimum required `key_role`/`grafana_role` and a short `seconds_to_live`, especially for `ADMIN`-level access.
+3. **Capture Secrets Immediately**: API keys and tokens are only available in the Terraform output at creation time; move them into Secrets Manager during apply since they cannot be retrieved later.
 
-### License Management
+### Licensing
 
-1. **Start with Free Trial**: Use ENTERPRISE_FREE_TRIAL for testing before committing to paid licenses
-2. **Monitor License Expiration**: Set up CloudWatch alarms to alert before license expiration dates
-3. **Plan for Active Users**: ENTERPRISE licenses charge per active user; monitor workspace usage to forecast costs
-4. **Associate Licenses Explicitly**: Set associate_license = true and specify license_type to avoid unexpected charges
-5. **Review License Type**: Understand the difference between free tier and ENTERPRISE features to choose appropriately
+1. **Trial Before Committing**: Use `license_type = "ENTERPRISE_FREE_TRIAL"` to evaluate Enterprise plugins/data sources before purchasing.
+2. **Supply the Grafana Labs Token**: Set `grafana_token` (from your Grafana Labs account) when associating an `ENTERPRISE` license.
+3. **Monitor Expiration**: Track the `license_expiration` / `license_free_trial_expiration` outputs to avoid unplanned loss of Enterprise features.
 
-### Monitoring and Observability
+### Operational Excellence
 
-1. **Enable CloudWatch Logs**: Configure CloudWatch Logs groups for workspace audit logs and authentication events
-2. **Set Up CloudWatch Alarms**: Create alarms for workspace errors, authentication failures, and API throttling
-3. **Monitor Workspace Health**: Track workspace_grafana_version and endpoint availability through automated health checks
-4. **Track API Usage**: Monitor API key usage patterns and set alerts for unusual activity
-5. **Log SAML Authentication**: Enable detailed logging for SAML authentication attempts and failures for security auditing
-6. **Dashboard Performance Monitoring**: Use CloudWatch metrics to track dashboard query performance and identify slow data sources
-
-### Cost Optimization
-
-1. **Right-Size Active Users**: ENTERPRISE pricing is per active user; remove inactive users promptly to reduce costs
-2. **Use Free Tier When Sufficient**: Evaluate if the free tier meets your needs before upgrading to ENTERPRISE
-3. **Consolidate Workspaces**: Use fewer, shared workspaces with proper RBAC rather than many single-purpose workspaces
-4. **Monitor Data Transfer Costs**: Track data transfer between Grafana and data sources, especially cross-region queries
-5. **Clean Up Unused API Keys**: Regularly audit and delete unused API keys and service accounts
-6. **Optimize Query Frequency**: Configure dashboard refresh rates appropriately; avoid overly aggressive polling of data sources
-7. **Use CloudWatch Contributor Insights**: Identify top API key users and data source query patterns to optimize usage
-
-### High Availability and Disaster Recovery
-
-1. **Deploy Across Multiple AZs**: Use subnet_ids spanning multiple availability zones for VPC-deployed workspaces
-2. **Export Dashboards Regularly**: Use Terraform or API automation to backup Grafana dashboard configurations
-3. **Document Data Source Configurations**: Maintain infrastructure-as-code for all data source connections and credentials
-4. **Plan for Region Failure**: For critical workspaces, maintain parallel deployments in different regions
-5. **Test Recovery Procedures**: Periodically test workspace recreation from Terraform state and dashboard backups
-6. **Version Control Dashboards**: Store Grafana dashboard JSON in version control systems alongside Terraform code
-
-### Tagging and Governance
-
-1. **Implement Consistent Tagging**: Apply tags for Environment, CostCenter, Team, ManagedBy across all resources
-2. **Use AWS Organizations Tags**: Leverage tag policies in AWS Organizations to enforce tagging standards
-3. **Tag for Cost Allocation**: Include cost allocation tags to track Grafana expenses by team or project
-4. **Automate Tag Compliance**: Use AWS Config rules to detect and alert on untagged or improperly tagged resources
-5. **Document Tag Schema**: Maintain documentation of required and optional tags for Grafana resources
+1. **Pin Versions**: Pin both the module version (`version = "~> 2.3"`) and `grafana_version` to avoid unplanned upgrades.
+2. **Tag Consistently**: Apply consistent tags (Environment, Team, CostCenter) across the workspace, IAM role, and security group for cost allocation and governance.
+3. **Manage Dashboards Separately**: This module manages the workspace, not dashboard content; store dashboard JSON in version control and provision it via the Grafana API/provider.
+4. **Enable Unified Alerting Deliberately**: Understand that the `configuration` block's `unifiedAlerting` setting changes alert evaluation across all data sources in the workspace.
 
 ## Additional Resources
 
-- **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana
+- **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-grafana/aws/latest
-- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana/tree/master/examples
+- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana/tree/main/examples
 - **AWS Managed Grafana Documentation**: https://docs.aws.amazon.com/grafana/latest/userguide/what-is-Amazon-Managed-Service-Grafana.html
-- **AWS Managed Grafana User Guide**: https://docs.aws.amazon.com/grafana/latest/userguide/
-- **Grafana Documentation**: https://grafana.com/docs/grafana/latest/
 - **AWS Managed Grafana Permissions**: https://docs.aws.amazon.com/grafana/latest/userguide/AMG-manage-permissions.html
 - **AWS Managed Grafana Data Sources**: https://docs.aws.amazon.com/grafana/latest/userguide/AMG-data-sources.html
 - **AWS Managed Grafana Authentication**: https://docs.aws.amazon.com/grafana/latest/userguide/authentication-in-AMG.html
 - **AWS Managed Grafana API Reference**: https://docs.aws.amazon.com/grafana/latest/APIReference/Welcome.html
 - **AWS Managed Grafana Pricing**: https://aws.amazon.com/grafana/pricing/
-- **Grafana Best Practices**: https://grafana.com/docs/grafana/latest/best-practices/
-- **AWS Managed Grafana Workshop**: https://catalog.workshops.aws/observability/en-US/aws-managed-oss/amp-amg
-- **CloudWatch Data Source Plugin**: https://grafana.com/grafana/plugins/cloudwatch/
-- **Prometheus Data Source Plugin**: https://grafana.com/docs/grafana/latest/datasources/prometheus/
+- **Grafana Documentation**: https://grafana.com/docs/grafana/latest/
 
 ## Notes for AI Agents
 
 When using this module in automated workflows:
 
-1. **Authentication First**: Ensure AWS SSO or SAML identity provider is configured before creating workspaces with those authentication types
-2. **Data Source Permissions**: Verify IAM role has appropriate permissions for all specified data sources before workspace becomes operational
-3. **VPC Prerequisites**: When using vpc_configuration, ensure subnets exist and have proper routing/security groups configured
-4. **License Costs**: ENTERPRISE licenses incur costs; use ENTERPRISE_FREE_TRIAL for testing and development environments
-5. **API Key Lifetime**: Plan for API key rotation; keys expire after seconds_to_live and require recreation through Terraform
-6. **SAML Metadata**: Ensure idp_metadata_url is accessible from AWS endpoints; test SAML configuration before production deployment
-7. **Network Access Timing**: Network access controls take effect immediately; coordinate changes with user teams to avoid disruption
-8. **Service Account Tokens**: Tokens are generated once; capture outputs during apply and store securely in secrets manager
-9. **Organization Scope**: ORGANIZATION account access requires management or delegated administrator account; validate account role
-10. **Security Group Dependencies**: If using create_security_group = false, ensure security_group_ids are provided in vpc_configuration
-11. **Cross-Account Patterns**: For customer-managed permissions with cross-account access, configure trust relationships before workspace creation
-12. **Workspace Updates**: Changing authentication_providers or account_access_type requires workspace recreation; plan for downtime
-13. **Version Pinning**: Specify grafana_version in production to prevent unexpected upgrades during workspace updates
-14. **Tagging Strategy**: Apply consistent tags across workspace, IAM roles, and security groups for unified cost tracking and compliance
-15. **Monitoring Setup**: Configure CloudWatch alarms and log groups immediately after workspace creation to avoid gaps in observability
+1. **No Submodules**: This is a standalone, flat module; every resource group is controlled through top-level `create_*` flags rather than nested submodules.
+2. **Data Source Enum**: The correct value for the OpenSearch data source is `AMAZON_OPENSEARCH_SERVICE`, not `OPENSEARCH_SERVICE`; invalid enum values fail plan/apply.
+3. **Authentication First**: Ensure the AWS SSO instance or SAML identity provider is configured before creating a workspace with that `authentication_providers` value.
+4. **IAM Role Prerequisites**: Verify the workspace IAM role (created or existing via `iam_role_arn`) has permissions for every entry in `data_sources` before the workspace becomes fully operational.
+5. **VPC Prerequisites**: When setting `vpc_configuration`, ensure the subnets and any referenced security groups already exist and have correct routing.
+6. **Organization Access Caveats**: `account_access_type = "ORGANIZATION"` requires a management or delegated administrator account and typically pairs with `stack_set_name`/`organizational_units`.
+7. **`role_associations` Gotcha**: This feature has known upstream AWS SDK/provider limitations around idempotency and drift; test carefully and check the module's example (which comments it out with linked provider issues) before relying on it in production.
+8. **Service Account Tokens Are One-Time**: `workspace_service_account_tokens` values are generated once; capture them from Terraform state/output during apply and store them securely.
+9. **License Costs**: `ENTERPRISE` licenses incur per-active-user charges; use `ENTERPRISE_FREE_TRIAL` for testing and non-production environments, and supply `grafana_token` only when required.
+10. **Disruptive Updates**: Changing `authentication_providers` or `account_access_type` typically forces workspace recreation or re-authentication; plan for user-facing downtime.
+11. **Security Group Dependency**: If `create_security_group = false`, supply existing `security_group_ids` inside `vpc_configuration`.
+12. **Version Pinning**: Specify `grafana_version` in production to prevent unexpected Grafana version upgrades during workspace updates.

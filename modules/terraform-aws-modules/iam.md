@@ -6,117 +6,117 @@
 - **Source**: `terraform-aws-modules/iam/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-iam
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest
-- **Latest Version**: 6.4.0
+- **Latest Version**: 6.6.1
 - **Terraform Version**: >= 1.5.7
 - **AWS Provider Version**: >= 6.28
-- **Purpose**: Creates and manages AWS IAM resources including users, groups, roles, policies, and OIDC providers with support for EKS IRSA and federated identity
+- **Purpose**: Creates and manages AWS IAM resources — account settings, users, groups, roles with flexible trust policies, custom/read-only policies, OIDC providers, and EKS IRSA roles — through 8 focused, independently-usable submodules
 - **Service**: AWS IAM (Identity and Access Management)
 - **Category**: Security, Identity Management, Access Control
-- **Keywords**: iam, users, groups, roles, policies, oidc, saml, irsa, eks-service-accounts, github-actions, mfa, password-policy, cross-account, federated-identity, least-privilege, temporary-credentials
-- **Use For**: Managing AWS user authentication and authorization, implementing role-based access control, setting up federated identity access, configuring GitHub Actions OIDC authentication, managing EKS service account permissions (IRSA), enforcing password policies, creating cross-account access roles, implementing least-privilege security
+- **Keywords**: iam, identity, access-management, iam-role, iam-user, iam-group, iam-policy, trust-policy, oidc, saml, irsa, eks-service-accounts, github-actions-oidc, password-policy, permissions-boundary, cross-account-access, least-privilege
+- **Use For**: federated/OIDC and SAML identity access, GitHub Actions and Bitbucket CI/CD keyless authentication, EKS workload identity (IRSA), cross-account role assumption, IAM user/group administration, account password policy enforcement, least-privilege custom policy creation, read-only audit roles, permissions-boundary-scoped delegated administration
 
 ## Description
 
-This Terraform module provides a comprehensive solution for managing AWS Identity and Access Management (IAM) resources through 8 specialized submodules. Each submodule focuses on a specific IAM resource type: account settings, users, groups, roles, policies, read-only policies, OIDC providers, and EKS service account roles (IRSA).
+This module is a collection of 8 independent, single-purpose Terraform submodules for managing AWS IAM resources — there is no root module to call directly; each resource type (account settings, users, groups, roles, policies, OIDC providers, IRSA roles) is provisioned via its own submodule path. This design lets consumers pull in only the pieces they need and compose them together (e.g. an OIDC provider plus multiple roles that trust it).
 
-The module addresses common IAM challenges by providing pre-configured patterns for federated identity access (GitHub Actions, Bitbucket, SAML 2.0), cross-account role assumption, and EKS IRSA with 20+ pre-built AWS service policies. It handles secure credential management through PGP encryption and supports modern authentication methods alongside traditional IAM user management.
+As of major version 6.0 (the current major line), the module consolidated several previously separate role submodules (`iam-assumable-role`, `iam-assumable-role-with-oidc`, `iam-assumable-role-with-saml`, `iam-github-oidc-role`, etc.) into a single, more flexible `iam-role` submodule. Trust policies are now expressed through a generic `trust_policy_permissions` map of IAM policy statements rather than dedicated variables like the old `trusted_role_arns`/`trusted_role_services`; convenience toggles (`enable_github_oidc`, `enable_bitbucket_oidc`, `enable_saml`, `enable_oidc`) remain for common federation patterns. Policy attachment across role/group/user submodules is unified under a single `policies` map of `{name = arn}` pairs, and most submodules now support inline policies via `create_inline_policy`/`inline_policy_permissions`.
 
-Key features include account-level password policies, MFA enforcement at the group level, permissions boundaries for delegated administration, and automatic read-only policy generation. The IRSA submodule includes pre-configured policies for Cert-Manager, Cluster Autoscaler, External DNS, Load Balancer Controller, EBS/EFS/FSx CSI drivers, Karpenter, Velero, and more.
+The `iam-role-for-service-accounts` submodule (IRSA) ships pre-built, regularly-updated IAM policies for common EKS controllers and CSI drivers (Load Balancer Controller, EBS/EFS/FSx CSI, External DNS, Cert-Manager, External Secrets, VPC CNI, Cluster Autoscaler, Velero, and more), toggled with `attach_<service>_policy` booleans, avoiding hand-written least-privilege JSON for well-known add-ons. AWS now recommends EKS Pod Identity over IRSA for new workloads (a separate `terraform-aws-eks-pod-identity` module exists for that), and Karpenter's controller IAM role has moved to the `karpenter` submodule of `terraform-aws-eks`.
 
 ## Key Features
 
-- **Eight Specialized Submodules**: iam-account, iam-user, iam-group, iam-role, iam-policy, iam-read-only-policy, iam-oidc-provider, iam-role-for-service-accounts
-- **Account-Level Configuration**: Account alias and organization-wide password policies with complexity, expiration, and reuse prevention
-- **IAM User Management**: Login profiles, access keys, SSH keys with PGP-encrypted credential outputs
-- **Group-Based Access Control**: Policy attachment, MFA enforcement, self-management permissions for credentials
-- **Federated Identity**: GitHub OIDC, GitHub Enterprise Server, Bitbucket Pipelines, SAML 2.0 providers
-- **IRSA for EKS**: IAM roles for Kubernetes service accounts with 20+ pre-built AWS service policies
-- **Pre-Built Controller Policies**: Cert-Manager, Cluster Autoscaler, External DNS, Load Balancer Controller, EBS/EFS/FSx CSI drivers, VPC CNI, Karpenter, Velero, Gateway API Controller
-- **Custom Policy Creation**: JSON policy documents with path configuration and tagging
-- **Auto-Generated Read-Only Policies**: Service-specific read access with console and CloudWatch support
-- **Security Features**: Permissions boundaries, MFA enforcement, PGP encryption, cross-account external IDs
-- **Multi-Cluster IRSA**: Single role assumable from multiple EKS clusters with namespace isolation
+- **Eight Independent Submodules**: iam-account, iam-user, iam-group, iam-role, iam-policy, iam-read-only-policy, iam-oidc-provider, iam-role-for-service-accounts — no root module, use only what you need
+- **Unified Trust Policy Engine**: `trust_policy_permissions` accepts arbitrary IAM policy statements (actions, principals, conditions) for any custom trust relationship, replacing older single-purpose variables
+- **Built-in Federation Shortcuts**: One-flag trust policies for GitHub Actions OIDC, GitHub Enterprise Server, Bitbucket Pipelines OIDC, generic OIDC, and SAML 2.0
+- **IRSA for EKS**: 17 pre-built, regularly-updated AWS service policies for common EKS controllers and CSI drivers via `attach_*_policy` flags
+- **Unified Policy Attachment**: `policies` map (`{name = arn}`) for attaching managed or custom policies consistently across role/group/user submodules
+- **Inline Policy Support**: `create_inline_policy` + `inline_policy_permissions` (or source/override policy documents) available on role, user, and IRSA submodules
+- **Auto-Generated Read-Only Policies**: Service-specific read access addressing gaps and over-permissiveness in AWS managed read-only policies
+- **Account-Level Security Baseline**: Password complexity, expiration, reuse prevention, and account alias configuration
+- **Group-Based Access Control**: MFA enforcement and self-service credential management permissions at the group level
+- **PGP-Encrypted Credentials**: IAM user login passwords and access keys can be PGP-encrypted before being written to state
+- **Multi-Cluster IRSA**: A single IAM role assumable from multiple EKS clusters/namespaces via the `oidc_providers` map
+- **Permissions Boundaries**: Supported on role, user, and IRSA submodules for delegated administration guardrails
 
 ## Main Use Cases
 
 1. **Federated Identity Access**: Configure OIDC or SAML providers for enterprise SSO integration
-2. **GitHub Actions CI/CD Authentication**: Set up secure, keyless authentication for GitHub workflows
-3. **EKS Workload Identity**: Implement IRSA for Kubernetes pods to access AWS services securely
-4. **Cross-Account Role Management**: Create and manage roles for multi-account AWS organizations
-5. **User and Group Administration**: Organize IAM users into groups with appropriate permission boundaries
-6. **Service Account Automation**: Configure IAM roles for AWS services and applications
+2. **GitHub Actions / Bitbucket CI/CD Authentication**: Keyless, short-lived credential authentication for CI/CD pipelines
+3. **EKS Workload Identity**: Implement IRSA (or migrate to EKS Pod Identity) for pods to access AWS services securely
+4. **Cross-Account Role Management**: Create roles trusted by other AWS accounts, users, or services via custom trust statements
+5. **User and Group Administration**: Organize IAM users into groups with MFA enforcement and scoped permissions
+6. **Service Account Automation**: Configure IAM roles for AWS services, EC2 instance profiles, and applications
 7. **Password Policy Enforcement**: Implement organization-wide password security standards
-8. **Least-Privilege Policy Creation**: Generate and attach minimal permission policies using custom definitions
-9. **Temporary Credential Management**: Enable assume-role patterns for short-lived credentials
-10. **Security Audit and Compliance**: Track IAM resource creation and configuration through infrastructure as code
+8. **Least-Privilege Policy Creation**: Generate and attach minimal, custom, or auto-generated read-only permission policies
+9. **Temporary Credential Management**: Enable assume-role and federation patterns instead of long-lived access keys
+10. **Security Audit and Compliance**: Track and version-control IAM resource configuration through infrastructure as code
 
 ## Submodules
 
 ### 1. iam-account
-- **Purpose**: Configure account alias and password policy (one per AWS account)
+- **Purpose**: Configure account alias and password policy (instantiate once per AWS account)
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-account`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-account
 - **Key Features**: Account alias, password complexity/length/expiration, reuse prevention, hard expiry option
 - **Use Cases**: Organizational security baseline, password standards enforcement
 
 ### 2. iam-user
-- **Purpose**: Create IAM users with login profiles, access keys, SSH keys, and inline policies
+- **Purpose**: Create an IAM user with login profile, access key, SSH key, and inline/managed policies
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-user`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-user
-- **Key Features**: PGP-encrypted credentials, access key generation, SSH key upload, inline policy support, permissions boundary
-- **Use Cases**: Human user accounts, API credentials, CodeCommit SSH access
+- **Key Features**: PGP-encrypted credential outputs, SES SMTP password derivation, SSH key upload, inline policy support, permissions boundary
+- **Use Cases**: Human user accounts, service API credentials, CodeCommit SSH access
 
 ### 3. iam-group
-- **Purpose**: Create IAM groups with users and attached policies
+- **Purpose**: Create an IAM group with users and attached policies
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-group`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-group
-- **Key Features**: User membership, policy attachment, MFA enforcement, self-management permissions
+- **Key Features**: User membership, managed/custom policy attachment, MFA enforcement, credential self-management permissions
 - **Use Cases**: Role-based access control, team permissions, delegated credential management
 
 ### 4. iam-role
-- **Purpose**: Create IAM roles with configurable trust policies for multiple authentication methods
+- **Purpose**: Create a single IAM role with a fully customizable trust policy and optional instance profile
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-role`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role
-- **Key Features**: GitHub OIDC, GitHub Enterprise Server, SAML 2.0, user assumption, instance profiles, permissions boundary
+- **Key Features**: Generic `trust_policy_permissions` statements, GitHub/Bitbucket/generic OIDC, SAML 2.0, inline policies, EC2 instance profiles
 - **Use Cases**: GitHub Actions CI/CD, cross-account access, federated SSO, EC2 instance roles
 
 ### 5. iam-policy
-- **Purpose**: Create custom IAM policies from JSON documents
+- **Purpose**: Create a custom IAM policy from a JSON document
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-policy`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-policy
-- **Key Features**: JSON policy definition, path configuration, name prefix support, tagging
+- **Key Features**: JSON policy definition, name or name_prefix, path configuration, tagging
 - **Use Cases**: Custom permissions, least-privilege policies, reusable policy definitions
 
 ### 6. iam-read-only-policy
-- **Purpose**: Auto-generate read-only policies for specified AWS services
+- **Purpose**: Auto-generate a read-only policy scoped to specified AWS services
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-read-only-policy`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-read-only-policy
-- **Key Features**: Service-specific read access, CloudWatch logs query, web console access, STS actions
+- **Key Features**: Service-specific read access, CloudWatch Logs Insights querying, web console browsing support, predefined STS actions
 - **Use Cases**: Audit roles, monitoring access, read-only developer access
 
 ### 7. iam-oidc-provider
-- **Purpose**: Create OIDC providers for external identity federation (one per URL per account)
+- **Purpose**: Create an OIDC provider for external identity federation (one per URL per account)
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-oidc-provider`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-oidc-provider
-- **Key Features**: GitHub Actions (default), GitHub Enterprise Server, Bitbucket Pipelines, custom providers
+- **Key Features**: GitHub Actions default URL, Bitbucket Pipelines, GitHub Enterprise Server, custom providers, automatic TLS thumbprint retrieval
 - **Use Cases**: CI/CD authentication, external identity federation
 
 ### 8. iam-role-for-service-accounts (IRSA)
-- **Purpose**: Create IAM roles for EKS service accounts with 20+ pre-built AWS service policies
+- **Purpose**: Create an IAM role for EKS service accounts with pre-built policies for common controllers/CSI drivers
 - **Source**: `terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts`
 - **Documentation**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest/submodules/iam-role-for-service-accounts
-- **Key Features**: Multi-cluster support, namespace isolation, pre-built policies for controllers and CSI drivers
-- **Supported Services**: Cert-Manager, Cluster Autoscaler, External DNS, Load Balancer Controller, EBS/EFS/FSx CSI, VPC CNI, Karpenter, Velero, External Secrets, Gateway API Controller, CloudWatch Observability, Managed Prometheus
+- **Key Features**: Multi-cluster/namespace `oidc_providers` map, 17 pre-built controller/CSI policies, custom policy and inline policy support
+- **Supported Services**: Cert-Manager, Cluster Autoscaler, EBS/EFS/FSx Lustre/FSx OpenZFS/Mountpoint S3 CSI, External DNS, External Secrets, Load Balancer Controller (+ TargetGroupBinding-only variant), Node Termination Handler, VPC CNI, Velero, AWS Gateway API Controller, Amazon Managed Service for Prometheus, CloudWatch Observability
+- **Note**: Karpenter's controller role now lives in the `karpenter` submodule of `terraform-aws-eks`, not here. AWS recommends EKS Pod Identity (`terraform-aws-eks-pod-identity`) over IRSA for new deployments
 - **Use Cases**: Kubernetes pod AWS access, EKS controller authentication, multi-cluster service accounts
 
 ## Submodule 1: iam-account
 
 ### Description
-
-Configures account-level IAM settings including the AWS account alias and password policy. Instantiate once per AWS account to establish baseline security standards for user authentication.
+Configures account-level IAM settings — the AWS account alias and password policy. Instantiate once per AWS account to establish baseline security standards for user authentication.
 
 ### Key Features
-
 - Custom AWS account alias for account identification
 - Password complexity rules (uppercase, lowercase, numbers, symbols)
 - Password expiration with configurable maximum age
@@ -127,23 +127,23 @@ Configures account-level IAM settings including the AWS account alias and passwo
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `account_alias` | `string` | `""` | AWS IAM account alias |
-| `create_account_password_policy` | `bool` | `true` | Whether to create password policy |
+| `account_alias` | `string` | n/a (required) | AWS IAM account alias for this account |
+| `create_account_password_policy` | `bool` | `true` | Whether to create the password policy |
 | `max_password_age` | `number` | `0` | Days until password expires (0 = never) |
 | `minimum_password_length` | `number` | `8` | Minimum password length |
-| `require_uppercase_characters` | `bool` | `true` | Require uppercase |
-| `require_lowercase_characters` | `bool` | `true` | Require lowercase |
+| `require_uppercase_characters` | `bool` | `true` | Require uppercase characters |
+| `require_lowercase_characters` | `bool` | `true` | Require lowercase characters |
 | `require_numbers` | `bool` | `true` | Require numbers |
 | `require_symbols` | `bool` | `true` | Require symbols |
 | `password_reuse_prevention` | `number` | `null` | Number of previous passwords to block |
 | `hard_expiry` | `bool` | `false` | Force admin reset after expiration |
+| `allow_users_to_change_password` | `bool` | `true` | Whether users can change their own password |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `caller_identity_account_id` | AWS account ID |
-| `iam_account_password_policy_expire_passwords` | Whether passwords expire |
+| `iam_account_password_policy_expire_passwords` | Whether passwords expire (`true` if `max_password_age` > 0) |
 
 ### Usage Example
 
@@ -156,7 +156,7 @@ module "iam_account" {
 
   # Strong password policy
   max_password_age               = 90
-  minimum_password_length        = 14
+  minimum_password_length        = 24
   require_uppercase_characters   = true
   require_lowercase_characters   = true
   require_numbers                = true
@@ -166,21 +166,20 @@ module "iam_account" {
 }
 ```
 
-**Note**: If account alias already exists (from Console/Organizations), import the resource before applying.
+**Note**: If an account alias already exists (from the Console or AWS Organizations), applying will fail with an "already exists" error. Import the resource first: `terraform import "module.iam_account.aws_iam_account_alias.this[0]" this`.
 
 ## Submodule 2: iam-user
 
 ### Description
-
-Creates individual IAM users with login profiles, access keys, SSH keys for CodeCommit, and inline policies. Includes PGP encryption support for secure credential distribution.
+Creates an individual IAM user with a login profile, access key, SSH public key (for CodeCommit), and inline/managed policies. Supports PGP encryption for secure credential distribution and can derive an SES SMTP password from the access key secret.
 
 ### Key Features
-
 - Console login profiles with encrypted passwords
 - Access keys for programmatic access (API/CLI)
+- SES SMTP password derived from the access key (Sigv4 conversion)
 - SSH public keys for CodeCommit
-- PGP encryption for credential outputs
-- Inline policy support
+- PGP encryption for all credential outputs
+- Inline and managed policy attachment
 - Permissions boundary support
 
 ### Main Input Variables
@@ -192,22 +191,24 @@ Creates individual IAM users with login profiles, access keys, SSH keys for Code
 | `create_access_key` | `bool` | `true` | Create access key |
 | `create_ssh_key` | `bool` | `false` | Upload SSH public key |
 | `create_inline_policy` | `bool` | `false` | Create inline policy |
-| `pgp_key` | `string` | `null` | PGP key (keybase:username or base64) |
+| `inline_policy_permissions` | `map(object)` | `null` | Inline policy statements (actions, resources, effect, principals, conditions) |
+| `pgp_key` | `string` | `null` | PGP key (`keybase:username` or base64-encoded) |
 | `password_reset_required` | `bool` | `true` | Require password reset on first login |
-| `force_destroy` | `bool` | `false` | Destroy even with non-Terraform resources |
+| `force_destroy` | `bool` | `false` | Destroy even with non-Terraform-managed keys/profile |
 | `permissions_boundary` | `string` | `null` | Permissions boundary policy ARN |
-| `policies` | `map` | `{}` | Map of policies to attach |
+| `policies` | `map(string)` | `{}` | Policies to attach, `{name = arn}` |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
-| `iam_user_name` | IAM user name |
-| `iam_user_arn` | User ARN |
-| `iam_access_key_id` | Access key ID |
-| `iam_access_key_encrypted_secret` | Encrypted access key secret |
-| `login_profile_encrypted_password` | Encrypted console password |
-| `iam_user_ssh_key_ssh_public_key_id` | SSH public key ID |
+| `name` | IAM user name |
+| `arn` | User ARN |
+| `access_key_id` | Access key ID |
+| `access_key_encrypted_secret` | PGP-encrypted access key secret (base64) |
+| `access_key_encrypted_ses_smtp_password_v4` | PGP-encrypted SES SMTP password |
+| `login_profile_encrypted_password` | PGP-encrypted console password (base64) |
+| `ssh_key_public_key_id` | SSH public key ID |
 
 ### Usage Example
 
@@ -228,6 +229,10 @@ module "iam_user" {
   create_ssh_key = true
   ssh_public_key = file("~/.ssh/id_rsa.pub")
 
+  policies = {
+    ReadOnly = "arn:aws:iam::aws:policy/ReadOnlyAccess"
+  }
+
   tags = {
     Team = "engineering"
   }
@@ -240,32 +245,30 @@ output "user_password" {
 }
 ```
 
-**Security Note**: Always use PGP encryption to prevent plaintext credentials in Terraform state.
+**Security Note**: Always set `pgp_key` to prevent plaintext credentials from being written to Terraform state.
 
 ## Submodule 3: iam-group
 
 ### Description
-
-Creates IAM groups for organizing users and managing permissions at scale. Supports managed policies, custom inline policies, MFA enforcement, and self-management capabilities.
+Creates an IAM group for organizing users and managing permissions at scale. Supports managed policy attachment, custom inline-style permission statements, MFA enforcement, and self-management capabilities.
 
 ### Key Features
-
-- User membership management
+- User membership management (optionally across a different AWS account)
 - AWS managed and custom policy attachment
-- MFA enforcement at group level
+- MFA enforcement at the group level
 - Self-management permissions for credentials/MFA
-- Cross-account user membership support
+- Custom permission statements merged into the group's generated policy
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `name` | `string` | `""` | Group name |
-| `users` | `list(string)` | `[]` | IAM users to add |
-| `users_account_id` | `string` | `null` | Alternate AWS account for users |
-| `create_policy` | `bool` | `true` | Create IAM policy for group |
-| `permissions` | `map(object)` | `{}` | Custom inline policy statements |
-| `policies` | `map(string)` | `{}` | Managed policy ARNs to attach |
+| `users` | `list(string)` | `[]` | IAM users to add to the group |
+| `users_account_id` | `string` | `null` | Alternate AWS account ID where the users reside |
+| `create_policy` | `bool` | `true` | Create an IAM policy for the group |
+| `permissions` | `map(object)` | `null` | Custom policy statements (actions, resources, effect, principals, conditions) |
+| `policies` | `map(string)` | `{}` | Managed/custom policy ARNs to attach, `{name = arn}` |
 | `enable_self_management_permissions` | `bool` | `true` | Allow credential/MFA self-management |
 | `enable_mfa_enforcement` | `bool` | `true` | Require MFA for actions |
 
@@ -275,8 +278,8 @@ Creates IAM groups for organizing users and managing permissions at scale. Suppo
 |--------|-------------|
 | `arn` | Group ARN |
 | `name` | Group name |
-| `users` | List of users in group |
-| `policy_arn` | Attached policy ARN |
+| `users` | List of users in the group |
+| `policy_arn` | Attached (generated) policy ARN |
 
 ### Usage Example
 
@@ -301,7 +304,7 @@ module "developers_group" {
     S3Access = "arn:aws:iam::aws:policy/AmazonS3FullAccess"
   }
 
-  # Custom permissions
+  # Custom permissions merged into the group policy
   permissions = {
     AssumeDevRole = {
       actions   = ["sts:AssumeRole"]
@@ -316,34 +319,37 @@ module "developers_group" {
 ## Submodule 4: iam-role
 
 ### Description
-
-Creates IAM roles with configurable trust policies supporting GitHub OIDC, GitHub Enterprise Server, SAML 2.0, user assumption, and cross-account access. Includes instance profile creation option.
+Creates a single IAM role with a fully customizable trust policy and an optional EC2 instance profile. Since v6.0, dedicated trust variables (`trusted_role_arns`, `trusted_role_services`, `custom_role_trust_policy`, etc.) have been replaced by a generic `trust_policy_permissions` map of IAM policy statements, alongside convenience toggles for common federation patterns (GitHub OIDC, Bitbucket OIDC, generic OIDC, SAML 2.0).
 
 ### Key Features
-
-- GitHub Actions OIDC (token.actions.githubusercontent.com)
-- GitHub Enterprise Server with custom OIDC URLs
-- SAML 2.0 federation (Okta, OneLogin, etc.)
-- User assumption with optional external ID
+- `trust_policy_permissions`: arbitrary trust statements (principals, actions, conditions) for any custom trust relationship, including cross-account access
+- GitHub Actions OIDC (`enable_github_oidc`) and GitHub Enterprise Server support
+- Bitbucket Pipelines OIDC (`enable_bitbucket_oidc`)
+- Generic OIDC trust (`enable_oidc` + `oidc_provider_urls`/`oidc_subjects`/`oidc_audiences`) for any provider
+- SAML 2.0 federation (`enable_saml`, e.g. Okta, OneLogin)
+- Inline policy support (`create_inline_policy` + `inline_policy_permissions`)
 - EC2 instance profile creation
 - Permissions boundary support
-- Inline policy support
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `name` | `string` | `null` | Role name |
-| `enable_github_oidc` | `bool` | `false` | Enable GitHub OIDC trust |
-| `oidc_wildcard_subjects` | `list(string)` | `[]` | GitHub repos with wildcards (e.g., "org/repo:*") |
+| `use_name_prefix` | `bool` | `true` | Use `name` as a prefix (adds a random suffix) rather than an exact name |
+| `trust_policy_permissions` | `map(object)` | `null` | Custom trust policy statements (actions, principals, conditions) |
+| `trust_policy_conditions` | `list(object)` | `[]` | Additional conditions applied to all enabled trust statements |
+| `enable_github_oidc` | `bool` | `false` | Enable GitHub Actions OIDC trust |
+| `oidc_wildcard_subjects` | `list(string)` | `[]` | GitHub repo/branch subjects with wildcards (e.g. `"org/repo:*"`) |
+| `enable_bitbucket_oidc` | `bool` | `false` | Enable Bitbucket Pipelines OIDC trust |
+| `enable_oidc` | `bool` | `false` | Enable a generic OIDC provider trust |
 | `enable_saml` | `bool` | `false` | Enable SAML provider trust |
 | `saml_provider_ids` | `list(string)` | `[]` | SAML provider ARNs |
-| `trusted_role_arns` | `list(string)` | `[]` | ARNs allowed to assume role |
-| `policies` | `map(string)` | `{}` | Policy ARNs to attach {'name' = 'arn'} |
-| `create_instance_profile` | `bool` | `false` | Create EC2 instance profile |
-| `create_inline_policy` | `bool` | `false` | Create inline policy |
+| `policies` | `map(string)` | `{}` | Policy ARNs to attach, `{name = arn}` |
+| `create_instance_profile` | `bool` | `false` | Create an EC2 instance profile |
+| `create_inline_policy` | `bool` | `false` | Create an inline policy |
 | `permissions_boundary` | `string` | `null` | Permissions boundary ARN |
-| `max_session_duration` | `number` | `3600` | Session duration (seconds, 1-12 hours) |
+| `max_session_duration` | `number` | `null` | Session duration in seconds (1–12 hours; AWS default 3600 if unset) |
 
 ### Main Outputs
 
@@ -403,7 +409,7 @@ module "saml_admin_role" {
 }
 ```
 
-#### Cross-Account Access Role
+#### Cross-Account / User Assume Role (custom trust policy)
 
 ```hcl
 module "cross_account_role" {
@@ -412,10 +418,28 @@ module "cross_account_role" {
 
   name = "cross-account-auditor"
 
-  trusted_role_arns = [
-    "arn:aws:iam::111111111111:root",
-    "arn:aws:iam::222222222222:role/auditor"
-  ]
+  trust_policy_permissions = {
+    TrustRoleAndServiceToAssume = {
+      actions = [
+        "sts:AssumeRole",
+        "sts:TagSession",
+      ]
+      principals = [
+        {
+          type = "AWS"
+          identifiers = [
+            "arn:aws:iam::111111111111:root",
+            "arn:aws:iam::222222222222:role/auditor",
+          ]
+        }
+      ]
+      condition = [{
+        test     = "StringEquals"
+        variable = "sts:ExternalId"
+        values   = ["some-secret-id"]
+      }]
+    }
+  }
 
   policies = {
     ReadOnly = "arn:aws:iam::aws:policy/ReadOnlyAccess"
@@ -424,16 +448,16 @@ module "cross_account_role" {
 }
 ```
 
+**Gotcha**: `use_name_prefix` defaults to `true`, so `name = "cross-account-auditor"` produces a role named `cross-account-auditor-<random-suffix>`. Set `use_name_prefix = false` for an exact name.
+
 ## Submodule 5: iam-policy
 
 ### Description
-
-Creates custom IAM policies from JSON documents. Essential for implementing least-privilege access patterns and creating reusable permission sets.
+Creates a custom IAM policy from a JSON document. Essential for implementing least-privilege access patterns and reusable permission sets shared across roles, users, and groups.
 
 ### Key Features
-
 - JSON policy document support
-- Name or name_prefix options
+- `name` or `name_prefix` (mutually exclusive)
 - Configurable policy path
 - Resource tagging
 
@@ -441,12 +465,12 @@ Creates custom IAM policies from JSON documents. Essential for implementing leas
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Whether to create policy |
-| `name` | `string` | `null` | Policy name (conflicts with name_prefix) |
-| `name_prefix` | `string` | `null` | Name prefix for auto-generated name |
+| `create` | `bool` | `true` | Whether to create the policy |
+| `name` | `string` | `null` | Policy name (conflicts with `name_prefix`) |
+| `name_prefix` | `string` | `null` | Name prefix for an auto-generated name |
 | `description` | `string` | `null` | Policy description |
-| `path` | `string` | `"/"` | IAM hierarchy path |
-| `policy` | `string` | required | JSON policy document |
+| `path` | `string` | `null` | IAM hierarchy path |
+| `policy` | `string` | `""` | JSON policy document (required in practice) |
 | `tags` | `map(string)` | `{}` | Resource tags |
 
 ### Main Outputs
@@ -488,44 +512,51 @@ module "s3_readonly_policy" {
 }
 
 # Attach to a role
-resource "aws_iam_role_policy_attachment" "attach" {
-  role       = aws_iam_role.app_role.name
-  policy_arn = module.s3_readonly_policy.arn
+module "app_role" {
+  source  = "terraform-aws-modules/iam/aws//modules/iam-role"
+  version = "~> 6.0"
+
+  name = "app-role"
+
+  policies = {
+    S3ReadOnly = module.s3_readonly_policy.arn
+  }
 }
 ```
 
 ## Submodule 6: iam-read-only-policy
 
 ### Description
-
-Auto-generates read-only IAM policies for specified AWS services. Addresses limitations in AWS managed read-only policies by enabling granular, service-specific permissions.
+Auto-generates a read-only IAM policy scoped to a specified list of AWS services. Addresses gaps and over-permissiveness in AWS managed read-only policies (`ReadOnlyAccess`, `ViewOnlyAccess`) by enabling granular, service-specific `Get`/`List`/`Describe`/`View` permissions.
 
 ### Key Features
-
 - Service-specific read-only access (specify IAM service prefixes)
-- CloudWatch logs query support
-- Web console browsing support
+- CloudWatch Logs Insights query support
+- Web console browsing support (resource-groups, tag, health, ce)
 - Predefined STS actions (caller identity, session token)
+- Can generate the policy JSON without creating the policy resource (`create_policy = false`)
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | `string` | required | Policy name |
-| `allowed_services` | `list(string)` | required | AWS service prefixes for read access |
-| `allow_cloudwatch_logs_query` | `bool` | `true` | Enable CloudWatch log querying |
-| `allow_predefined_sts_actions` | `bool` | `true` | Allow caller identity/session token |
-| `allow_web_console_services` | `bool` | `true` | Enable console browsing |
-| `web_console_services` | `list(string)` | `["resource-groups", "tag", "health", "ce"]` | Console services |
-| `use_name_prefix` | `bool` | `true` | Use name as prefix |
-| `path` | `string` | `"/"` | IAM hierarchy path |
+| `name` | `string` | `null` | Policy name |
+| `allowed_services` | `list(string)` | `[]` | AWS service IAM prefixes to grant read access for (required in practice) |
+| `allow_cloudwatch_logs_query` | `bool` | `true` | Enable CloudWatch Logs querying |
+| `allow_predefined_sts_actions` | `bool` | `true` | Allow caller identity/session token actions |
+| `allow_web_console_services` | `bool` | `true` | Enable console browsing services |
+| `create_policy` | `bool` | `true` | Whether to create the policy resource (vs. JSON only) |
+| `use_name_prefix` | `bool` | `true` | Use `name` as a prefix |
+| `path` | `string` | `null` | IAM hierarchy path |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
 | `arn` | Policy ARN |
-| `policy_json` | Policy as JSON |
+| `name` | Policy name |
+| `policy` | Policy document |
+| `policy_json` | Policy document as JSON |
 
 ### Usage Example
 
@@ -552,7 +583,12 @@ module "audit_role" {
 
   name = "audit-role"
 
-  trusted_role_arns = ["arn:aws:iam::123456789012:root"]
+  trust_policy_permissions = {
+    TrustAccountRoot = {
+      actions    = ["sts:AssumeRole"]
+      principals = [{ type = "AWS", identifiers = ["arn:aws:iam::123456789012:root"] }]
+    }
+  }
 
   policies = {
     ReadOnly = module.audit_readonly_policy.arn
@@ -563,24 +599,21 @@ module "audit_role" {
 ## Submodule 7: iam-oidc-provider
 
 ### Description
-
-Creates OpenID Connect (OIDC) providers for external identity federation. Enables keyless authentication for CI/CD pipelines. **Note**: AWS limits one OIDC provider per unique URL per account.
+Creates an OpenID Connect (OIDC) provider for external identity federation, enabling keyless authentication for CI/CD pipelines. **AWS limits one OIDC provider per unique URL per account** — provision once per account/URL and trust it from multiple roles.
 
 ### Key Features
-
-- Pre-configured defaults for GitHub Actions
-- GitHub Enterprise Server support
+- Pre-configured default for GitHub Actions
 - Bitbucket Pipelines support
-- Custom OIDC provider URLs
+- GitHub Enterprise Server / custom OIDC provider URLs
 - Automatic TLS certificate thumbprint retrieval
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `create` | `bool` | `true` | Whether to create provider |
+| `create` | `bool` | `true` | Whether to create the provider |
 | `url` | `string` | `"https://token.actions.githubusercontent.com"` | OIDC provider URL |
-| `client_id_list` | `list(string)` | `[]` | Audience identifiers |
+| `client_id_list` | `list(string)` | `[]` | Audience identifiers (defaults to STS service if empty) |
 | `tags` | `map(string)` | `{}` | Resource tags |
 
 ### Main Outputs
@@ -588,7 +621,7 @@ Creates OpenID Connect (OIDC) providers for external identity federation. Enable
 | Output | Description |
 |--------|-------------|
 | `arn` | Provider ARN |
-| `url` | Identity provider URL (matches `iss` claim) |
+| `url` | Identity provider URL (matches the `iss` claim) |
 
 ### Usage Examples
 
@@ -603,7 +636,7 @@ module "github_oidc_provider" {
   tags = { Purpose = "GitHub Actions" }
 }
 
-# Create role that trusts this provider
+# Create a role that trusts this provider
 module "github_actions_role" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role"
   version = "~> 6.0"
@@ -627,66 +660,53 @@ module "bitbucket_oidc_provider" {
 
   url = "https://api.bitbucket.org/2.0/workspaces/my-workspace/pipelines-config/identity/oidc"
 
-  client_id_list = ["ari:cloud:bitbucket::workspace/my-workspace-uuid"]
-
   tags = { Purpose = "Bitbucket Pipelines" }
-}
-```
-
-#### GitHub Enterprise Server
-
-```hcl
-module "ghe_oidc_provider" {
-  source  = "terraform-aws-modules/iam/aws//modules/iam-oidc-provider"
-  version = "~> 6.0"
-
-  url            = "https://github.mycompany.com/_services/token"
-  client_id_list = ["https://github.mycompany.com/my-org"]
 }
 ```
 
 ## Submodule 8: iam-role-for-service-accounts (IRSA)
 
 ### Description
+Creates an IAM role for Amazon EKS service accounts (the IRSA pattern) with pre-built policies for common EKS controllers and CSI drivers. Enables Kubernetes pods to access AWS services using temporary, automatically-rotated credentials without embedded access keys.
 
-Creates IAM roles for Amazon EKS service accounts (IRSA pattern) with 20+ pre-built AWS service policies. Enables Kubernetes pods to access AWS services using temporary credentials without embedded access keys.
-
-**Note**: AWS recommends migrating to EKS Pod Identity (separate module available) for new deployments.
+**AWS now recommends EKS Pod Identity over IRSA for new deployments** (see `terraform-aws-eks-pod-identity`). Karpenter's controller IAM role now lives in the `karpenter` submodule of `terraform-aws-eks`, not in this submodule.
 
 ### Key Features
-
-- Multi-cluster OIDC provider support
-- Namespace-scoped service account permissions
-- 20+ pre-built controller and CSI driver policies
-- Custom policy attachment
-- Service-specific ARN restrictions for least-privilege
+- Multi-cluster/multi-namespace OIDC trust via the `oidc_providers` map
+- 17 pre-built controller/CSI driver policies, each toggled with an `attach_*_policy` flag
+- Custom policy and inline policy attachment for application-specific permissions
+- Service-specific ARN scoping (hosted zones, buckets, KMS keys, etc.) for least privilege
 
 ### Supported AWS Services (Pre-Built Policies)
 
 | Category | Services |
 |----------|----------|
-| **Autoscaling** | Cluster Autoscaler, Karpenter, Node Termination Handler |
+| **Autoscaling** | Cluster Autoscaler, Node Termination Handler |
 | **Storage** | EBS CSI, EFS CSI, FSx Lustre CSI, FSx OpenZFS CSI, Mountpoint S3 CSI |
-| **Networking** | External DNS, VPC CNI, Load Balancer Controller, Gateway API Controller |
+| **Networking** | External DNS, VPC CNI, Load Balancer Controller (+ TargetGroupBinding-only), AWS Gateway API Controller |
 | **Secrets** | External Secrets (Secrets Manager, SSM Parameter Store) |
 | **Certificates** | Cert-Manager |
-| **Monitoring** | CloudWatch Observability, Managed Prometheus |
+| **Monitoring** | CloudWatch Observability, Amazon Managed Service for Prometheus |
 | **Backup** | Velero |
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `name` | `string` | `null` | IAM role name |
-| `oidc_providers` | `map(object)` | `{}` | Map with `provider_arn` and `namespace_service_accounts` |
-| `attach_[service]_policy` | `bool` | `false` | Enable pre-built policy for service |
+| `name` | `string` | `""` | IAM role name |
+| `use_name_prefix` | `bool` | `true` | Use `name`/`policy_name` as a prefix |
+| `oidc_providers` | `map(object)` | `{}` | Map with `provider_arn` and `namespace_service_accounts` per entry |
+| `attach_<service>_policy` | `bool` | `false` | Enable a pre-built policy for a given service (e.g. `attach_load_balancer_controller_policy`) |
 | `cert_manager_hosted_zone_arns` | `list(string)` | `[]` | Route53 zones for cert management |
-| `ebs_csi_kms_cmk_arns` | `list(string)` | `[]` | KMS keys for encrypted EBS |
+| `ebs_csi_kms_cmk_arns` | `list(string)` | `[]` | KMS keys for encrypted EBS volumes |
 | `external_dns_hosted_zone_arns` | `list(string)` | `[]` | Route53 zones for External DNS |
-| `external_secrets_secrets_manager_arns` | `list(string)` | `[]` | Secrets Manager ARNs |
+| `external_secrets_secrets_manager_arns` | `list(string)` | `[]` | Secrets Manager ARNs for External Secrets |
+| `mountpoint_s3_csi_bucket_arns` | `list(string)` | `[]` | S3 bucket ARNs (required if `attach_mountpoint_s3_csi_policy = true`) |
 | `velero_s3_bucket_arns` | `list(string)` | `[]` | S3 buckets for Velero backup |
-| `cluster_autoscaler_cluster_names` | `list(string)` | `[]` | EKS cluster names for autoscaler |
-| `policies` | `map(string)` | `{}` | Custom policy ARNs to attach |
+| `cluster_autoscaler_cluster_names` | `list(string)` | `[]` | EKS cluster names to scope autoscaler permissions to |
+| `policies` | `map(string)` | `{}` | Custom policy ARNs to attach, `{name = arn}` |
+| `create_inline_policy` | `bool` | `false` | Create an inline policy for application-specific permissions |
+| `permissions_boundary` | `string` | `null` | Permissions boundary ARN |
 
 ### Main Outputs
 
@@ -694,7 +714,7 @@ Creates IAM roles for Amazon EKS service accounts (IRSA pattern) with 20+ pre-bu
 |--------|-------------|
 | `arn` | IAM role ARN |
 | `name` | IAM role name |
-| `iam_policy_arn` | AWS-assigned policy ARN |
+| `iam_policy_arn` | ARN of the generated policy attached to the role |
 
 ### Usage Examples
 
@@ -751,24 +771,26 @@ module "external_dns_irsa" {
 }
 ```
 
-#### Cluster Autoscaler
+#### VPC CNI (IPv4)
 
 ```hcl
-module "cluster_autoscaler_irsa" {
+module "vpc_cni_irsa" {
   source  = "terraform-aws-modules/iam/aws//modules/iam-role-for-service-accounts"
   version = "~> 6.0"
 
-  name = "cluster-autoscaler"
+  name = "vpc-cni"
 
-  attach_cluster_autoscaler_policy = true
-  cluster_autoscaler_cluster_names = ["my-eks-cluster"]
+  attach_vpc_cni_policy = true
+  vpc_cni_enable_ipv4   = true
 
   oidc_providers = {
-    main = {
-      provider_arn               = data.aws_eks_cluster.cluster.identity[0].oidc[0].issuer
-      namespace_service_accounts = ["kube-system:cluster-autoscaler"]
+    this = {
+      provider_arn               = module.eks.oidc_provider_arn
+      namespace_service_accounts = ["kube-system:aws-node"]
     }
   }
+
+  tags = { Application = "VPC CNI" }
 }
 ```
 
@@ -810,36 +832,36 @@ module "app_irsa" {
 
 ### Security
 
-1. **Use Temporary Credentials**: Prefer OIDC, SAML, or assume-role patterns over long-lived access keys
-2. **PGP Encrypt User Credentials**: Always use `pgp_key` when creating IAM users to prevent plaintext in state
-3. **Enable MFA Enforcement**: Use `enable_mfa_enforcement` in groups for privileged access
-4. **Implement Password Policies**: Minimum 14 characters, complexity requirements, 90-day expiration, prevent last 5 reuse
-5. **Use IRSA for EKS**: Never embed credentials in pods; use iam-role-for-service-accounts
-6. **Use OIDC for CI/CD**: GitHub Actions, Bitbucket - eliminates long-lived secrets
+1. **Use Temporary Credentials**: Prefer OIDC, SAML, or assume-role patterns over long-lived IAM user access keys
+2. **PGP-Encrypt User Credentials**: Always set `pgp_key` when creating IAM users to prevent plaintext secrets in state
+3. **Enable MFA Enforcement**: Use `enable_mfa_enforcement` on groups for privileged access
+4. **Implement Strong Password Policies**: Minimum 14+ characters, full complexity, 90-day expiration, block reuse of the last 5 passwords
+5. **Use IRSA or Pod Identity for EKS**: Never embed AWS credentials in pods
+6. **Use OIDC for CI/CD**: GitHub Actions, Bitbucket — eliminates long-lived secrets in pipelines
 
 ### Permission Management
 
-1. **Apply Least Privilege**: Start minimal, add incrementally; use IAM Access Analyzer
-2. **Use Permissions Boundaries**: Set maximum permissions for delegated IAM administration
-3. **Scope OIDC Trust**: Use specific repo/branch (e.g., `org/repo:ref:refs/heads/main`) not broad wildcards
-4. **Namespace-Scope IRSA**: Always specify namespace in `namespace_service_accounts`
-5. **Use Pre-Built Controller Policies**: Use `attach_*_policy` flags for standard EKS controllers
-6. **One IRSA Role per Application**: Don't share roles across workloads
+1. **Apply Least Privilege**: Start minimal, add incrementally; validate with IAM Access Analyzer
+2. **Use Permissions Boundaries**: Cap the maximum permissions grantable via delegated IAM administration
+3. **Scope OIDC Trust Narrowly**: Use specific repo/branch subjects (e.g. `org/repo:ref:refs/heads/main`), not broad wildcards
+4. **Namespace-Scope IRSA**: Always specify the namespace in `namespace_service_accounts` (`namespace:sa-name`)
+5. **Use Pre-Built Controller Policies**: Prefer `attach_*_policy` flags over hand-written JSON for standard EKS add-ons
+6. **One IRSA/Pod Identity Role per Application**: Don't share roles across unrelated workloads
 
 ### Configuration
 
 1. **Pin Module Versions**: Use `version = "~> 6.0"` in production
-2. **Set Account Alias**: Configure via iam-account for easier identification
-3. **Import Existing Resources**: Check for existing IAM resources before creating new ones
-4. **One OIDC Provider per URL**: AWS limits one per unique URL per account; reuse for multiple roles
-5. **Enable Self-Management**: Allow users to manage own credentials/MFA via groups
-6. **Tag Consistently**: Include Environment, Application, Team tags on all resources
+2. **Understand `use_name_prefix`**: Defaults to `true` on `iam-role`, `iam-read-only-policy`, and `iam-role-for-service-accounts` — the created resource name gets a random suffix unless set to `false`
+3. **Set the Account Alias**: Configure via `iam-account` for easier account identification
+4. **Import Pre-Existing Resources**: Check for existing account alias/IAM resources before creating new ones
+5. **One OIDC Provider per URL**: AWS limits one per unique URL per account; reuse the same provider across multiple roles
+6. **Tag Consistently**: Include `Environment`, `Application`, `Team` tags on all resources
 
 ### Operational
 
-1. **Review `terraform plan`**: IAM changes can break production access
+1. **Review `terraform plan` Carefully**: IAM changes can break production access
 2. **Enable CloudTrail**: Log all IAM actions for auditing
-3. **Test in Non-Prod First**: Especially for trust policies and OIDC configurations
+3. **Test Trust Policy Changes in Non-Prod First**: Especially for OIDC/SAML trust conditions
 4. **Regular Permission Audits**: Use IAM Access Analyzer to identify unused permissions
 
 ## Additional Resources
@@ -847,23 +869,26 @@ module "app_irsa" {
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-iam
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-iam/tree/master/examples
+- **v5.x → v6.x Upgrade Guide**: https://github.com/terraform-aws-modules/terraform-aws-iam/blob/master/docs/UPGRADE-6.0.md
 - **AWS IAM Best Practices**: https://docs.aws.amazon.com/IAM/latest/UserGuide/best-practices.html
 - **IAM Access Analyzer**: https://docs.aws.amazon.com/IAM/latest/UserGuide/what-is-access-analyzer.html
 - **IRSA Documentation**: https://docs.aws.amazon.com/eks/latest/userguide/iam-roles-for-service-accounts.html
-- **EKS Pod Identity** (IRSA alternative): https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html
+- **EKS Pod Identity (IRSA alternative)**: https://docs.aws.amazon.com/eks/latest/userguide/pod-identities.html
 - **GitHub Actions OIDC**: https://docs.github.com/en/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-amazon-web-services
 
 ## Notes for AI Agents
 
 When generating Terraform code with this module:
 
-1. **Always pin version**: Use `version = "~> 6.0"` in module blocks
-2. **Prefer roles over users**: Use OIDC/SAML/IRSA instead of creating IAM users with access keys
-3. **PGP for user credentials**: If creating users, always set `pgp_key` to prevent plaintext secrets in state
-4. **Scope OIDC trust narrowly**: Use specific repo/branch patterns like `org/repo:ref:refs/heads/main`
-5. **One OIDC provider per URL**: Reuse existing providers; don't create duplicates
-6. **Namespace-scope IRSA**: Always include namespace in `namespace_service_accounts` format `namespace:sa-name`
-7. **Use pre-built controller policies**: Prefer `attach_load_balancer_controller_policy = true` over custom policies
-8. **Tag all resources**: Include at minimum `tags = { ManagedBy = "terraform" }`
-9. **Import before create**: Check if IAM resources exist before creating new ones
-10. **EKS Pod Identity**: For new EKS deployments, consider Pod Identity over IRSA
+1. **Always pin version**: Use `version = "~> 6.0"` in module blocks (current line is 6.x; v5.x and earlier used entirely different submodule names/variables — do not mix the two)
+2. **`iam-role` has no `trusted_role_arns`**: Cross-account/user trust is expressed via `trust_policy_permissions` statements with `principals`, not a flat ARN list (this changed in v6.0)
+3. **Prefer roles over users**: Use OIDC/SAML/IRSA instead of creating IAM users with long-lived access keys
+4. **PGP for user credentials**: If creating users, always set `pgp_key` to prevent plaintext secrets in state
+5. **Scope OIDC trust narrowly**: Use specific repo/branch patterns like `org/repo:ref:refs/heads/main`
+6. **One OIDC provider per URL**: Reuse existing providers; don't create duplicates for the same URL
+7. **Namespace-scope IRSA**: Always include the namespace in `namespace_service_accounts`, format `namespace:sa-name`
+8. **Use pre-built controller policies**: Prefer `attach_load_balancer_controller_policy = true` etc. over custom-written policy JSON for standard EKS add-ons
+9. **Watch `use_name_prefix`**: Defaults to `true` on `iam-role`, `iam-read-only-policy`, and `iam-role-for-service-accounts` — set it to `false` if the exact resource name matters (e.g. it's referenced elsewhere by literal name)
+10. **Tag all resources**: Include at minimum `tags = { ManagedBy = "terraform" }`
+11. **Import before create**: Check if IAM resources (especially the account alias) already exist before creating new ones
+12. **Karpenter and EKS Pod Identity**: Do not use this module's `iam-role-for-service-accounts` for Karpenter (use the `karpenter` submodule of `terraform-aws-eks`); for new EKS workloads generally, prefer EKS Pod Identity (`terraform-aws-eks-pod-identity`) over IRSA

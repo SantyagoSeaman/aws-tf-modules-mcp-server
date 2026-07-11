@@ -2,128 +2,112 @@
 
 ## Module Information
 
-- **Module Name**: terraform-aws-vpc
+- **Module Name**: `vpc`
 - **Source**: `terraform-aws-modules/vpc/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpc
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest
-- **Latest Version**: 6.6.0
-- **Purpose**: Terraform module that creates and manages AWS VPC resources including subnets, route tables, NAT gateways, internet gateways, and network configurations
+- **Latest Version**: 6.6.1
+- **Compatibility**: Terraform >= 1.0, AWS provider >= 6.28 (root module and `vpc-endpoints` submodule); the `flow-log` submodule requires Terraform >= 1.5.7. Since v6.0.0 the module requires AWS provider v6.x — pin `~> 6.0` when generating configs.
+- **Purpose**: Terraform module that creates and configures an AWS VPC and all its supporting networking resources (subnets, route tables, gateways, NACLs, DHCP options, VPN/customer gateways, IPAM CIDR allocation, VPC Block Public Access)
 - **Service**: AWS VPC (Virtual Private Cloud)
-- **Category**: Networking, Infrastructure, Network Security
-- **Keywords**: vpc, networking, subnets, nat-gateway, internet-gateway, route-table, network-acl, ipv6, cidr, availability-zone, vpn-gateway, transit-gateway, vpc-endpoints, flow-logs, ipam, database-subnet, private-subnet, public-subnet
-- **Use For**: Multi-tier application hosting, microservices networking, hybrid cloud connectivity, isolated development environments, secure database hosting, high-availability web applications, container orchestration networking, disaster recovery infrastructure, regulatory compliance networking, multi-region architectures, hub-and-spoke network topologies, zero-trust network architectures
+- **Category**: Networking, Infrastructure
+- **Keywords**: vpc, subnet, nat-gateway, internet-gateway, route-table, network-acl, ipv6, cidr, availability-zone, vpc-endpoints, flow-logs, ipam, vpn-gateway, transit-gateway, private-subnet, public-subnet, database-subnet
+- **Use For**: multi-tier application hosting, microservices networking, hybrid cloud connectivity via VPN/Direct Connect, isolated database/cache/analytics subnet hosting, container orchestration networking (EKS/ECS), high-availability multi-AZ architectures, regulatory-compliance network segmentation (PCI-DSS, HIPAA), hub-and-spoke topologies with Transit Gateway, zero-trust networking with private subnets and VPC endpoints, IPAM-managed enterprise IP address space, dual-stack IPv4/IPv6 workloads, AWS Outposts hybrid infrastructure
 
 ## Description
 
-This Terraform module provides comprehensive management of AWS Virtual Private Cloud (VPC) resources, enabling the creation of logically isolated virtual networks within AWS. It handles the complete lifecycle of VPC infrastructure including network topology design, subnet configuration across multiple availability zones, routing table management, internet connectivity through NAT and internet gateways, and advanced networking features like IPv6 support, VPC endpoints, and flow logs. The module abstracts the complexity of AWS networking while providing extensive customization options for enterprise-grade network architectures.
+This module provisions an AWS VPC (`aws_vpc.this`) and the full set of supporting networking resources needed to run production workloads: subnets distributed across availability zones (public, private, database, ElastiCache, Redshift, intra, and Outpost), route tables and associations, an Internet Gateway, NAT Gateways (with Elastic IP reuse support), an egress-only Internet Gateway for IPv6, network ACLs per subnet tier, DHCP option sets, VPN/customer gateways, and RDS/ElastiCache/Redshift subnet groups. It also manages the account's Default VPC when opted in, and can create or import Elastic IPs for NAT.
 
-The module addresses common VPC design challenges by offering pre-configured patterns for various subnet types (public, private, database, ElastiCache, Redshift, intra, and outpost subnets) with automatic CIDR block calculation and distribution across availability zones. It supports multiple NAT gateway deployment strategies including single NAT gateway for cost optimization, one NAT gateway per availability zone for high availability, and one NAT gateway per subnet for maximum fault tolerance. The module also handles DNS configuration, DHCP options, and network access control lists (NACLs) for granular traffic control.
+The module removes the boilerplate of hand-wiring dozens of interdependent networking resources while remaining highly configurable: three NAT Gateway deployment strategies (single, one-per-subnet, one-per-AZ), automatic or IPAM-driven CIDR allocation for IPv4 and IPv6 (including IPv6-only and dual-stack subnets), secondary CIDR blocks for VPC expansion, per-subnet-type NACL and route-table customization, and AWS VPC Block Public Access controls (with per-exclusion overrides) to prevent accidental internet exposure at the VPC level.
 
-Key architectural capabilities include AWS IP Address Manager (IPAM) integration for centralized IP management, secondary CIDR block support for VPC expansion, VPC endpoints for private AWS service access, customer and VPN gateway configuration for hybrid connectivity, and comprehensive tagging strategies for resource organization. The module includes dedicated submodules for VPC endpoints and flow logs, enabling modular composition of network features while maintaining centralized state management and consistent configuration patterns.
-
-**Important**: VPC Flow Logs configuration in the root module is deprecated as of v6.x and will be removed in v7.0.0. Use the `flow-log` submodule for new implementations.
+**VPC Flow Logs in the root module are deprecated** (`enable_flow_log` and related `flow_log_*`/`vpc_flow_log_*` variables) and will be removed in a future major version; use the dedicated `flow-log` submodule instead for all new flow log configurations. The module ships two submodules — `vpc-endpoints` for AWS PrivateLink/Gateway endpoint connectivity and `flow-log` for VPC/subnet/ENI/Transit Gateway traffic logging — which compose with the root module via its outputs (`vpc_id`, `private_subnets`, `private_route_table_ids`, etc.).
 
 ## Key Features
 
-- **Two Specialized Submodules**: Modular architecture with vpc-endpoints and flow-log submodules
-- **Flexible Subnet Configuration**: Support for public, private, database, ElastiCache, Redshift, intra, and outpost subnet types
-- **Multi-AZ Deployment**: Automatic subnet distribution across multiple availability zones for high availability
-- **NAT Gateway Strategies**: Three deployment modes - single NAT, one per AZ, or one per subnet
-- **Internet Gateway Management**: Automatic internet gateway creation and route table association
-- **IPv4 and IPv6 Support**: Dual-stack networking with configurable IPv6 CIDR blocks and prefixes
-- **IPAM Integration**: AWS IP Address Manager support for centralized IP address allocation
-- **Secondary CIDR Blocks**: Extend VPC IP space with additional CIDR blocks
-- **VPC Endpoints**: Private connectivity to AWS services without internet gateway traversal
-- **VPN Gateway Support**: Customer gateway and VPN gateway configuration for hybrid cloud connectivity
-- **Transit Gateway Integration**: Support for transit gateway attachments and routing
-- **VPC Flow Logs**: Network traffic logging to CloudWatch Logs, S3, or Kinesis Data Firehose (use flow-log submodule)
-- **VPC Block Public Access**: Support for AWS VPC-level public access blocking for enhanced security
-- **Network ACLs**: Configurable network access control lists for subnet-level security
-- **Route Table Management**: Separate route tables for each subnet type with customizable routes
-- **DHCP Options**: Custom DHCP option sets for DNS and domain configuration
-- **DNS Support**: Configurable DNS hostnames and DNS resolution settings
-- **Default VPC Management**: Ability to manage and customize default VPC settings
-- **Database Subnet Groups**: Automatic creation of RDS subnet groups from database subnets
-- **ElastiCache Subnet Groups**: Automatic creation of ElastiCache subnet groups
-- **Redshift Subnet Groups**: Automatic creation of Redshift subnet groups
-- **Outpost Support**: Subnet configuration for AWS Outposts infrastructure
-- **Public IP Assignment**: Configurable automatic public IP assignment for public subnets
-- **Comprehensive Tagging**: Support for resource tags with tag merging and inheritance
-- **Conditional Creation**: Create or skip VPC creation based on variables
-- **Customer-Managed Prefix Lists**: Support for prefix lists in route tables
-- **VPC Peering**: Integration support for VPC peering connections
+- **Multi-Tier Subnet Types**: Public, private, database, ElastiCache, Redshift, intra (no internet route), and Outpost subnets, each independently configurable
+- **Multi-AZ Distribution**: Subnets and NAT Gateways spread automatically across the AZs passed via `azs`
+- **Three NAT Gateway Strategies**: Single shared gateway, one per subnet (default), or one per availability zone; supports reusing existing Elastic IPs via `reuse_nat_ips`/`external_nat_ip_ids`
+- **IPv4 and IPv6 Dual-Stack**: `enable_ipv6`, per-subnet IPv6 prefixes, IPv6-only subnets, egress-only Internet Gateway, and DNS64 support
+- **IPAM Integration**: VPC and subnet CIDRs can be allocated from an AWS IP Address Manager pool (`ipv4_ipam_pool_id`/`ipv6_ipam_pool_id`)
+- **Secondary CIDR Blocks**: Extend the VPC's IP space post-creation via `secondary_cidr_blocks`
+- **VPC Block Public Access**: Native AWS VPC-level public access blocking with per-resource exclusions (`vpc_block_public_access_options`, `vpc_block_public_access_exclusions`)
+- **Per-Subnet-Tier Network ACLs**: Dedicated NACL and inbound/outbound rule sets for each subnet type, or shared default NACL management
+- **Route Table Flexibility**: Shared or per-subnet route tables (`create_multiple_public_route_tables`, `create_multiple_intra_route_tables`), custom NAT/IGW routes
+- **VPN & Customer Gateways**: `enable_vpn_gateway`, `customer_gateways` map, and route-table VGW propagation for hybrid connectivity
+- **Managed Subnet Groups**: Auto-creates RDS (`create_database_subnet_group`), ElastiCache, and Redshift subnet groups from the corresponding subnet lists
+- **Default VPC / Default Resources Management**: Optionally adopt and manage the account's Default VPC, default security group, default route table, and default NACL
+- **Multi-Region Provider Support**: `region` input allows targeting a non-default provider region per module call
+- **Conditional Creation**: `create_vpc = false` skips all resource creation while keeping the module composable
+- **Comprehensive Tagging**: Global `tags` plus per-resource-type tag maps (`vpc_tags`, `*_subnet_tags`, `*_route_table_tags`, etc.), including per-AZ subnet tags
 
 ## Main Use Cases
 
-1. **Multi-Tier Web Applications**: Host web, application, and database tiers in separate subnets
-2. **Microservices Architecture**: Provide network isolation and service-to-service communication
-3. **Hybrid Cloud Connectivity**: Connect on-premises data centers with AWS via VPN or Direct Connect
-4. **Secure Database Hosting**: Isolate databases in private subnets without direct internet access
-5. **Development and Testing Environments**: Create isolated network environments per environment or team
-6. **High Availability Deployments**: Distribute resources across multiple availability zones
-7. **Container Orchestration**: Network infrastructure for ECS, EKS, or Kubernetes clusters
-8. **Regulatory Compliance**: Implement network segmentation for compliance requirements (PCI-DSS, HIPAA)
-9. **Hub-and-Spoke Topologies**: Central VPC for shared services with spoke VPCs for applications
-10. **Zero-Trust Networking**: Implement micro-segmentation with private subnets and VPC endpoints
+1. **Multi-Tier Web Applications**: Separate public, application, and database subnet tiers with independent routing
+2. **Microservices/Container Networking**: Provide the VPC and subnets consumed by EKS, ECS, or Kubernetes cluster modules
+3. **Hybrid Cloud Connectivity**: Connect on-premises networks via VPN Gateway, Customer Gateway, or Transit Gateway attachment
+4. **Secure Data Tier Isolation**: Host RDS, ElastiCache, and Redshift in dedicated subnets with their own route tables and NACLs
+5. **Serverless/Lambda Networking**: Use intra subnets (no NAT/internet route) for functions that only need internal or VPC-endpoint access
+6. **High-Availability Deployments**: Distribute resources and NAT Gateways across 3+ availability zones
+7. **Regulatory Compliance**: Implement network segmentation and flow-log auditing for PCI-DSS/HIPAA workloads
+8. **Hub-and-Spoke / Transit Architectures**: Attach the VPC to `terraform-aws-modules/transit-gateway` for centralized routing
+9. **IPAM-Managed Enterprise Networks**: Derive VPC/subnet CIDRs from centrally managed IPAM pools instead of hardcoded ranges
+10. **Dual-Stack or IPv6-Only Workloads**: Enable IPv6 alongside or instead of IPv4 for modern networking requirements
 
 ## Submodules
 
 ### 1. vpc-endpoints
-- **Purpose**: Create VPC endpoints for private connectivity to AWS services
+- **Purpose**: Create VPC Interface (PrivateLink) and Gateway endpoints for private connectivity to AWS services
 - **Source**: `terraform-aws-modules/vpc/aws//modules/vpc-endpoints`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/vpc-endpoints
-- **Key Features**: Interface and gateway endpoints, security group configuration, subnet association, tagging support
-- **Use Cases**: Private S3 access, DynamoDB connectivity, SSM access without internet gateway, compliance requirements
+- **Key Features**: Interface and Gateway endpoint support, optional shared security group creation, per-endpoint subnet/security-group overrides, endpoint policy documents
+- **Use Cases**: Private S3/DynamoDB access without NAT, SSM/EC2 message endpoints for Session Manager, cost reduction by bypassing NAT Gateway traffic
 
-### 2. flow-log (Recommended)
-- **Purpose**: Create VPC flow logs for network traffic monitoring and analysis
+### 2. flow-log (Recommended for all new flow log configurations)
+- **Purpose**: Create a standalone AWS Flow Log for a VPC, subnet, ENI, or Transit Gateway attachment
 - **Source**: `terraform-aws-modules/vpc/aws//modules/flow-log`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest/submodules/flow-log
-- **Key Features**: CloudWatch Logs integration, S3 logging, Kinesis Firehose support, custom log formats
-- **Use Cases**: Security monitoring, troubleshooting connectivity issues, network analysis, compliance auditing
-- **Note**: This is the recommended approach for flow logs. Root module flow log variables are deprecated.
+- **Key Features**: CloudWatch Logs, S3, or Kinesis Data Firehose destinations; auto-created IAM role and CloudWatch log group; custom log format and aggregation interval; Transit Gateway flow logs
+- **Use Cases**: Security monitoring and threat detection, connectivity troubleshooting, compliance auditing, cost-optimized S3 log archival
+- **Note**: Requires Terraform >= 1.5.7 (higher than the root module's >= 1.0). Root-module flow log variables (`enable_flow_log`, `flow_log_*`) are deprecated — use this submodule instead.
 
 ## Submodule 1: vpc-endpoints
 
 ### Description
 
-The vpc-endpoints submodule creates VPC endpoints that enable private connectivity to AWS services without requiring an internet gateway, NAT device, VPN connection, or AWS Direct Connect. It supports both interface endpoints (powered by AWS PrivateLink) and gateway endpoints, allowing resources in private subnets to securely access AWS services while keeping traffic within the AWS network. The submodule handles security group creation, subnet associations, and endpoint policies for fine-grained access control.
+Creates `aws_vpc_endpoint` resources (Interface, backed by AWS PrivateLink, or Gateway) that let resources in private subnets reach AWS services without an Internet Gateway, NAT device, VPN, or Direct Connect. It can optionally create a shared security group applied to all Interface endpoints, or accept externally managed security group/subnet IDs per endpoint.
 
 ### Key Features
 
-- Support for interface endpoints (AWS PrivateLink) and gateway endpoints
-- Automatic security group creation with customizable rules
-- Configurable subnet associations for interface endpoints
-- Route table associations for gateway endpoints
-- Endpoint policy support for access control
-- Private DNS enablement for interface endpoints
-- Comprehensive tagging for all endpoint resources
-- Flexible endpoint configuration with per-service customization
+- Supports both Interface (PrivateLink) and Gateway endpoint types in a single `endpoints` map
+- Optional shared security group (`create_security_group`) with custom `security_group_rules`
+- Per-endpoint overrides for `subnet_ids`, `security_group_ids`, `private_dns_enabled`, and `policy`
+- Gateway endpoints associate directly with `route_table_ids`
+- Full tagging support per endpoint and on the shared security group
 
 ### Main Input Variables
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `vpc_id` | `string` | `""` | VPC ID where endpoints will be created |
-| `endpoints` | `map(object)` | `{}` | Map of endpoint definitions with service, type, and configuration |
-| `security_group_ids` | `list(string)` | `[]` | Default security group IDs to associate with endpoints |
-| `subnet_ids` | `list(string)` | `[]` | Default subnet IDs for interface endpoints |
+| `vpc_id` | `string` | `null` | VPC ID where endpoints will be created |
+| `endpoints` | `any` | `{}` | Map of endpoint definitions (service, service_type, subnet_ids, security_group_ids, policy, tags, etc.) |
+| `create_security_group` | `bool` | `false` | Whether to create a shared security group for Interface endpoints |
+| `security_group_ids` | `list(string)` | `[]` | Default security group IDs to attach to endpoints that don't specify their own |
+| `security_group_rules` | `any` | `{}` | Rules to add to the created security group |
+| `subnet_ids` | `list(string)` | `[]` | Default subnet IDs for Interface endpoints that don't specify their own |
 | `create` | `bool` | `true` | Whether to create VPC endpoint resources |
-| `tags` | `map(string)` | `{}` | Tags to apply to all endpoint resources |
-| `timeouts` | `map(string)` | `{}` | Timeout configuration for endpoint operations |
+| `tags` | `map(string)` | `{}` | Tags applied to all endpoint resources |
 
 ### Main Outputs
 
 | Output | Description |
 |--------|-------------|
 | `endpoints` | Map of created VPC endpoint resources with all attributes |
-| `security_group_id` | ID of the security group created for VPC endpoints |
+| `security_group_id` | ID of the security group created for VPC endpoints (if `create_security_group = true`) |
 | `security_group_arn` | ARN of the security group created for VPC endpoints |
 
 ### Usage Example
 
 ```hcl
-# Create VPC
 module "vpc" {
   source = "terraform-aws-modules/vpc/aws"
 
@@ -135,26 +119,28 @@ module "vpc" {
   public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
 
   enable_nat_gateway = true
-  enable_dns_hostnames = true
-  enable_dns_support   = true
 
   tags = {
     Environment = "production"
   }
 }
 
-# Create VPC Endpoints
 module "vpc_endpoints" {
   source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
 
   vpc_id = module.vpc.vpc_id
 
-  # Default security group and subnets for interface endpoints
-  security_group_ids = [aws_security_group.vpc_endpoints.id]
-  subnet_ids         = module.vpc.private_subnets
+  create_security_group      = true
+  security_group_name_prefix = "vpc-endpoints-"
+  security_group_rules = {
+    ingress_https = {
+      description = "HTTPS from VPC"
+      cidr_blocks = [module.vpc.vpc_cidr_block]
+    }
+  }
 
   endpoints = {
-    # S3 Gateway Endpoint
+    # S3 Gateway Endpoint (free)
     s3 = {
       service         = "s3"
       service_type    = "Gateway"
@@ -162,664 +148,18 @@ module "vpc_endpoints" {
         module.vpc.private_route_table_ids,
         module.vpc.public_route_table_ids
       ])
-      tags = {
-        Name = "s3-gateway-endpoint"
-      }
+      tags = { Name = "s3-gateway-endpoint" }
     }
 
-    # DynamoDB Gateway Endpoint
+    # DynamoDB Gateway Endpoint (free)
     dynamodb = {
       service         = "dynamodb"
       service_type    = "Gateway"
       route_table_ids = module.vpc.private_route_table_ids
-      tags = {
-        Name = "dynamodb-gateway-endpoint"
-      }
+      tags            = { Name = "dynamodb-gateway-endpoint" }
     }
 
-    # EC2 Interface Endpoint
-    ec2 = {
-      service             = "ec2"
-      private_dns_enabled = true
-      tags = {
-        Name = "ec2-interface-endpoint"
-      }
-    }
-
-    # SSM Interface Endpoint
-    ssm = {
-      service             = "ssm"
-      private_dns_enabled = true
-      subnet_ids          = module.vpc.private_subnets
-      tags = {
-        Name = "ssm-interface-endpoint"
-      }
-    }
-
-    # ECR API Interface Endpoint
-    ecr_api = {
-      service             = "ecr.api"
-      private_dns_enabled = true
-      tags = {
-        Name = "ecr-api-endpoint"
-      }
-    }
-
-    # ECR DKR Interface Endpoint
-    ecr_dkr = {
-      service             = "ecr.dkr"
-      private_dns_enabled = true
-      tags = {
-        Name = "ecr-dkr-endpoint"
-      }
-    }
-
-    # Custom endpoint with policy
-    custom_s3 = {
-      service         = "s3"
-      service_type    = "Interface"
-      private_dns_enabled = false
-      subnet_ids      = [module.vpc.private_subnets[0]]
-
-      # Custom endpoint policy
-      policy = jsonencode({
-        Version = "2012-10-17"
-        Statement = [
-          {
-            Effect = "Allow"
-            Principal = "*"
-            Action = [
-              "s3:GetObject",
-              "s3:PutObject"
-            ]
-            Resource = "arn:aws:s3:::my-bucket/*"
-          }
-        ]
-      })
-
-      tags = {
-        Name = "custom-s3-endpoint"
-      }
-    }
-  }
-
-  tags = {
-    Environment = "production"
-    ManagedBy   = "terraform"
-  }
-}
-
-# Security group for VPC endpoints
-resource "aws_security_group" "vpc_endpoints" {
-  name_prefix = "vpc-endpoints-"
-  description = "Security group for VPC endpoints"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    description = "HTTPS from VPC"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [module.vpc.vpc_cidr_block]
-  }
-
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  tags = {
-    Name = "vpc-endpoints-sg"
-  }
-}
-```
-
-## Submodule 2: flow-log (Recommended)
-
-### Description
-
-The flow-log submodule creates VPC flow logs that capture information about IP traffic going to and from network interfaces in a VPC, subnet, or elastic network interface. Flow logs help monitor network traffic patterns, troubleshoot connectivity issues, detect security threats, and ensure compliance with network security policies. The submodule supports publishing flow log data to CloudWatch Logs, Amazon S3, or Amazon Kinesis Data Firehose with customizable log formats and aggregation intervals.
-
-**Important**: This submodule is the recommended approach for implementing VPC flow logs. The root module's flow log variables are deprecated as of v6.x and will be removed in v7.0.0.
-
-### Key Features
-
-- Support for VPC, subnet, ENI, and transit gateway flow logs
-- Multiple log destinations: CloudWatch Logs, S3, Kinesis Data Firehose
-- Customizable log format with specific fields selection
-- Configurable traffic type filtering (ACCEPT, REJECT, or ALL)
-- IAM role automatic creation and management
-- CloudWatch log group creation with retention policies
-- Custom log aggregation intervals (60 or 600 seconds)
-- Partition-based S3 logging for cost optimization
-- Tagging support for flow log resources
-
-### Main Input Variables
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `vpc_id` | `string` | `null` | VPC ID to attach flow logs (required if not using subnet_id or eni_id) |
-| `subnet_id` | `string` | `null` | Subnet ID to attach flow logs |
-| `eni_id` | `string` | `null` | Elastic Network Interface ID to attach flow logs |
-| `log_destination_type` | `string` | `"cloud-watch-logs"` | Type of log destination (cloud-watch-logs, s3, kinesis-data-firehose) |
-| `log_destination` | `string` | `null` | ARN of the logging destination |
-| `traffic_type` | `string` | `"ALL"` | Type of traffic to capture (ACCEPT, REJECT, or ALL) |
-| `log_format` | `string` | `null` | Custom log format fields |
-| `max_aggregation_interval` | `number` | `600` | Maximum aggregation interval in seconds (60 or 600) |
-| `cloudwatch_log_group_name` | `string` | `null` | Name of CloudWatch log group |
-| `cloudwatch_log_group_retention_in_days` | `number` | `null` | Log retention period in days |
-
-### Main Outputs
-
-| Output | Description |
-|--------|-------------|
-| `flow_log_id` | ID of the VPC flow log |
-| `flow_log_arn` | ARN of the VPC flow log |
-| `cloudwatch_log_group_name` | Name of CloudWatch log group (if applicable) |
-| `cloudwatch_log_group_arn` | ARN of CloudWatch log group (if applicable) |
-| `iam_role_arn` | ARN of the IAM role created for flow logs |
-
-### Usage Examples
-
-#### Example 1: CloudWatch Logs Destination
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "production-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["us-east-1a", "us-east-1b"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
-
-  enable_nat_gateway = true
-}
-
-# VPC Flow Logs to CloudWatch
-module "vpc_flow_logs_cloudwatch" {
-  source = "terraform-aws-modules/vpc/aws//modules/flow-log"
-
-  vpc_id = module.vpc.vpc_id
-
-  # CloudWatch Logs destination
-  log_destination_type = "cloud-watch-logs"
-
-  # Custom log group name
-  cloudwatch_log_group_name = "/aws/vpc/production-vpc-flow-logs"
-
-  # Retention period
-  cloudwatch_log_group_retention_in_days = 30
-
-  # Capture all traffic
-  traffic_type = "ALL"
-
-  # 1-minute aggregation for faster visibility
-  max_aggregation_interval = 60
-
-  tags = {
-    Name        = "production-vpc-flow-logs"
-    Environment = "production"
-  }
-}
-```
-
-#### Example 2: S3 Destination with Custom Format
-
-```hcl
-# S3 bucket for flow logs
-resource "aws_s3_bucket" "flow_logs" {
-  bucket = "my-vpc-flow-logs"
-}
-
-resource "aws_s3_bucket_lifecycle_configuration" "flow_logs" {
-  bucket = aws_s3_bucket.flow_logs.id
-
-  rule {
-    id     = "delete-old-logs"
-    status = "Enabled"
-
-    transition {
-      days          = 30
-      storage_class = "GLACIER"
-    }
-
-    expiration {
-      days = 90
-    }
-  }
-}
-
-# VPC Flow Logs to S3
-module "vpc_flow_logs_s3" {
-  source = "terraform-aws-modules/vpc/aws//modules/flow-log"
-
-  vpc_id = module.vpc.vpc_id
-
-  # S3 destination
-  log_destination_type = "s3"
-  log_destination      = aws_s3_bucket.flow_logs.arn
-
-  # Custom log format with specific fields
-  log_format = "$${version} $${account-id} $${interface-id} $${srcaddr} $${dstaddr} $${srcport} $${dstport} $${protocol} $${packets} $${bytes} $${start} $${end} $${action} $${log-status}"
-
-  # Capture only rejected traffic for security monitoring
-  traffic_type = "REJECT"
-
-  tags = {
-    Name    = "vpc-flow-logs-security"
-    Purpose = "Security Monitoring"
-  }
-}
-```
-
-#### Example 3: Subnet-Specific Flow Logs
-
-```hcl
-# Flow logs for specific private subnet
-module "private_subnet_flow_logs" {
-  source = "terraform-aws-modules/vpc/aws//modules/flow-log"
-
-  subnet_id = module.vpc.private_subnets[0]
-
-  log_destination_type = "cloud-watch-logs"
-  cloudwatch_log_group_name = "/aws/vpc/private-subnet-flow-logs"
-  cloudwatch_log_group_retention_in_days = 7
-
-  # Only capture accepted traffic
-  traffic_type = "ACCEPT"
-
-  tags = {
-    Name   = "private-subnet-flow-logs"
-    Subnet = "private-a"
-  }
-}
-```
-
-## Main Module: VPC
-
-### Description
-
-The main VPC module provides comprehensive creation and configuration of AWS Virtual Private Cloud resources with complete control over network topology, routing, and connectivity. This module handles the entire VPC lifecycle including subnet creation across availability zones, NAT and internet gateway management, route table configuration, and network ACL setup.
-
-### Key Features
-
-- Complete VPC lifecycle management with CIDR configuration
-- Automatic subnet distribution across availability zones
-- Multiple subnet types (public, private, database, ElastiCache, Redshift, intra, outpost)
-- Flexible NAT gateway deployment strategies
-- Internet gateway and route table management
-- IPv4 and IPv6 dual-stack support
-- IPAM integration for IP address management
-- Secondary CIDR block support
-- VPN and customer gateway configuration
-- DHCP options customization
-- DNS hostname and resolution settings
-
-### Main Input Variables
-
-| Variable | Type | Default | Description |
-|----------|------|---------|-------------|
-| `name` | `string` | `""` | Name to be used on all resources as prefix |
-| `cidr` | `string` | `"10.0.0.0/16"` | CIDR block for the VPC |
-| `azs` | `list(string)` | `[]` | List of availability zones names or IDs |
-| `public_subnets` | `list(string)` | `[]` | List of public subnet CIDR blocks |
-| `private_subnets` | `list(string)` | `[]` | List of private subnet CIDR blocks |
-| `database_subnets` | `list(string)` | `[]` | List of database subnet CIDR blocks |
-| `elasticache_subnets` | `list(string)` | `[]` | List of ElastiCache subnet CIDR blocks |
-| `redshift_subnets` | `list(string)` | `[]` | List of Redshift subnet CIDR blocks |
-| `intra_subnets` | `list(string)` | `[]` | List of intra subnet CIDR blocks (no internet access) |
-| `enable_nat_gateway` | `bool` | `false` | Provision NAT gateways for private networks |
-| `single_nat_gateway` | `bool` | `false` | Use single NAT gateway for all private networks |
-| `one_nat_gateway_per_az` | `bool` | `false` | Create one NAT gateway per availability zone |
-| `enable_dns_hostnames` | `bool` | `true` | Enable DNS hostnames in the VPC |
-| `enable_dns_support` | `bool` | `true` | Enable DNS support in the VPC |
-| `enable_ipv6` | `bool` | `false` | Enable IPv6 support |
-| `ipv4_ipam_pool_id` | `string` | `null` | IPAM pool ID for IPv4 CIDR allocation |
-
-### Main Outputs
-
-| Output | Description |
-|--------|-------------|
-| `vpc_id` | ID of the VPC |
-| `vpc_arn` | ARN of the VPC |
-| `vpc_cidr_block` | CIDR block of the VPC |
-| `private_subnets` | List of IDs of private subnets |
-| `public_subnets` | List of IDs of public subnets |
-| `database_subnets` | List of IDs of database subnets |
-| `database_subnet_group` | ID of database subnet group |
-| `elasticache_subnets` | List of IDs of ElastiCache subnets |
-| `elasticache_subnet_group` | ID of ElastiCache subnet group |
-| `redshift_subnets` | List of IDs of Redshift subnets |
-| `redshift_subnet_group` | ID of Redshift subnet group |
-| `intra_subnets` | List of IDs of intra subnets |
-| `nat_ids` | List of allocation IDs of Elastic IPs for NAT gateways |
-| `nat_public_ips` | List of public Elastic IPs created for NAT gateways |
-| `natgw_ids` | List of NAT gateway IDs |
-| `igw_id` | ID of internet gateway |
-| `private_route_table_ids` | List of IDs of private route tables |
-| `public_route_table_ids` | List of IDs of public route tables |
-| `azs` | List of availability zones specified as argument |
-
-### Usage Examples
-
-#### Example 1: Simple VPC with Public and Private Subnets
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "simple-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-
-  enable_nat_gateway = true
-  enable_vpn_gateway = false
-
-  tags = {
-    Terraform   = "true"
-    Environment = "dev"
-  }
-}
-```
-
-#### Example 2: Complete VPC with All Subnet Types
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "complete-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs                 = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  private_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets      = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-  database_subnets    = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
-  elasticache_subnets = ["10.0.31.0/24", "10.0.32.0/24", "10.0.33.0/24"]
-  redshift_subnets    = ["10.0.41.0/24", "10.0.42.0/24", "10.0.43.0/24"]
-  intra_subnets       = ["10.0.51.0/24", "10.0.52.0/24", "10.0.53.0/24"]
-
-  # NAT Gateway - one per AZ for high availability
-  enable_nat_gateway     = true
-  single_nat_gateway     = false
-  one_nat_gateway_per_az = true
-
-  # DNS settings
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  # VPN Gateway
-  enable_vpn_gateway = true
-
-  # Database subnet group
-  create_database_subnet_group = true
-  database_subnet_group_name   = "complete-vpc-db"
-
-  # ElastiCache subnet group
-  create_elasticache_subnet_group = true
-  elasticache_subnet_group_name   = "complete-vpc-cache"
-
-  # Redshift subnet group
-  create_redshift_subnet_group = true
-  redshift_subnet_group_name   = "complete-vpc-redshift"
-
-  # Custom tags
-  tags = {
-    Owner       = "DevOps Team"
-    Environment = "production"
-    Terraform   = "true"
-  }
-
-  # VPC tags
-  vpc_tags = {
-    Name = "complete-vpc"
-  }
-
-  # Subnet tags
-  public_subnet_tags = {
-    Type = "Public"
-  }
-
-  private_subnet_tags = {
-    Type = "Private"
-  }
-
-  database_subnet_tags = {
-    Type = "Database"
-  }
-}
-```
-
-#### Example 3: IPv6 Dual-Stack VPC
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "ipv6-vpc"
-  cidr = "10.0.0.0/16"
-
-  # Enable IPv6
-  enable_ipv6 = true
-
-  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-
-  # IPv6 subnet prefixes (assigned automatically if not specified)
-  public_subnet_ipv6_prefixes  = [0, 1, 2]
-  private_subnet_ipv6_prefixes = [3, 4, 5]
-
-  # Enable IPv6 on creation
-  public_subnet_assign_ipv6_address_on_creation = true
-
-  # IPv6 egress-only internet gateway for private subnets
-  enable_ipv6_egress_only_internet_gateway = true
-
-  enable_nat_gateway = true
-  single_nat_gateway = true
-
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  tags = {
-    Name        = "ipv6-dual-stack-vpc"
-    IPv6Enabled = "true"
-  }
-}
-```
-
-#### Example 4: VPC with IPAM Integration
-
-```hcl
-# IPAM Pool (must be created separately)
-resource "aws_vpc_ipam_pool" "main" {
-  address_family = "ipv4"
-  ipam_scope_id  = aws_vpc_ipam.main.private_default_scope_id
-  locale         = "us-east-1"
-
-  allocation_default_netmask_length = 16
-  allocation_max_netmask_length     = 24
-  allocation_min_netmask_length     = 16
-}
-
-resource "aws_vpc_ipam_pool_cidr" "main" {
-  ipam_pool_id = aws_vpc_ipam_pool.main.id
-  cidr         = "10.0.0.0/8"
-}
-
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "ipam-vpc"
-
-  # Use IPAM for CIDR allocation
-  ipv4_ipam_pool_id   = aws_vpc_ipam_pool.main.id
-  ipv4_netmask_length = 16
-
-  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-
-  enable_nat_gateway = true
-  single_nat_gateway = true
-
-  tags = {
-    IPAM = "true"
-  }
-}
-```
-
-#### Example 5: VPC with Custom Network ACLs
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "custom-nacl-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs             = ["us-east-1a", "us-east-1b"]
-  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
-  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
-
-  enable_nat_gateway = true
-
-  # Manage default network ACL
-  manage_default_network_acl = true
-  default_network_acl_name   = "default-nacl"
-
-  default_network_acl_ingress = [
-    {
-      rule_no    = 100
-      protocol   = "tcp"
-      action     = "allow"
-      cidr_block = "0.0.0.0/0"
-      from_port  = 443
-      to_port    = 443
-    },
-    {
-      rule_no    = 110
-      protocol   = "tcp"
-      action     = "allow"
-      cidr_block = "0.0.0.0/0"
-      from_port  = 80
-      to_port    = 80
-    },
-    {
-      rule_no    = 120
-      protocol   = "tcp"
-      action     = "allow"
-      cidr_block = "10.0.0.0/16"
-      from_port  = 0
-      to_port    = 65535
-    }
-  ]
-
-  default_network_acl_egress = [
-    {
-      rule_no    = 100
-      protocol   = "-1"
-      action     = "allow"
-      cidr_block = "0.0.0.0/0"
-      from_port  = 0
-      to_port    = 0
-    }
-  ]
-
-  # Public subnet Network ACL
-  public_dedicated_network_acl = true
-  public_inbound_acl_rules = [
-    {
-      rule_number = 100
-      rule_action = "allow"
-      from_port   = 443
-      to_port     = 443
-      protocol    = "tcp"
-      cidr_block  = "0.0.0.0/0"
-    },
-    {
-      rule_number = 110
-      rule_action = "allow"
-      from_port   = 80
-      to_port     = 80
-      protocol    = "tcp"
-      cidr_block  = "0.0.0.0/0"
-    }
-  ]
-
-  public_outbound_acl_rules = [
-    {
-      rule_number = 100
-      rule_action = "allow"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_block  = "0.0.0.0/0"
-    }
-  ]
-
-  tags = {
-    Security = "Custom-NACL"
-  }
-}
-```
-
-#### Example 6: Multi-Tier Application VPC with VPC Endpoints
-
-```hcl
-module "vpc" {
-  source = "terraform-aws-modules/vpc/aws"
-
-  name = "multi-tier-app-vpc"
-  cidr = "10.0.0.0/16"
-
-  azs              = ["us-east-1a", "us-east-1b", "us-east-1c"]
-  private_subnets  = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
-  public_subnets   = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
-  database_subnets = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
-
-  enable_nat_gateway     = true
-  one_nat_gateway_per_az = true
-
-  enable_dns_hostnames = true
-  enable_dns_support   = true
-
-  create_database_subnet_group = true
-
-  tags = {
-    Application = "Multi-Tier-App"
-    Environment = "production"
-  }
-}
-
-# VPC Endpoints for private subnet access to AWS services
-module "vpc_endpoints" {
-  source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
-
-  vpc_id             = module.vpc.vpc_id
-  security_group_ids = [aws_security_group.vpc_endpoints.id]
-
-  endpoints = {
-    s3 = {
-      service         = "s3"
-      service_type    = "Gateway"
-      route_table_ids = module.vpc.private_route_table_ids
-      tags            = { Name = "s3-vpc-endpoint" }
-    }
-    dynamodb = {
-      service         = "dynamodb"
-      service_type    = "Gateway"
-      route_table_ids = module.vpc.private_route_table_ids
-      tags            = { Name = "dynamodb-vpc-endpoint" }
-    }
+    # SSM Interface Endpoints for Session Manager (no bastion needed)
     ssm = {
       service             = "ssm"
       private_dns_enabled = true
@@ -840,157 +180,466 @@ module "vpc_endpoints" {
 
   tags = {
     Environment = "production"
+    ManagedBy   = "terraform"
+  }
+}
+```
+
+## Submodule 2: flow-log (Recommended)
+
+### Description
+
+Creates an AWS `aws_flow_log` resource that captures IP traffic metadata for a VPC, subnet, ENI, or Transit Gateway (attachment). It supports CloudWatch Logs, S3, or Kinesis Data Firehose destinations and can create the CloudWatch log group and IAM delivery role automatically. This is the recommended way to configure flow logs; the root VPC module's flow-log variables are deprecated.
+
+### Key Features
+
+- Attach to a VPC, subnet, ENI, Transit Gateway, or Transit Gateway attachment (mutually exclusive targets)
+- Three log destinations: CloudWatch Logs (default), S3, Kinesis Data Firehose
+- Auto-creates IAM role and CloudWatch log group, or accepts an existing `iam_role_arn`/`log_destination`
+- Custom `log_format` field selection and `max_aggregation_interval` (60s or 600s; 60s required for Transit Gateway)
+- Optional cross-account log delivery via `deliver_cross_account_role`
+- S3 destination options: Parquet/plain-text format, Hive-compatible partitions, per-hour partitioning
+
+### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `vpc_id` | `string` | `null` | VPC ID to attach flow logs to (mutually exclusive with `subnet_id`/`eni_id`/`transit_gateway_id`) |
+| `subnet_id` | `string` | `null` | Subnet ID to attach flow logs to |
+| `eni_id` | `string` | `null` | Elastic Network Interface ID to attach flow logs to |
+| `transit_gateway_id` / `transit_gateway_attachment_id` | `string` | `null` | Transit Gateway (attachment) to attach flow logs to |
+| `name` | `string` | `""` | Name used across created resources (IAM role, log group prefix) |
+| `log_destination_type` | `string` | `"cloud-watch-logs"` | `cloud-watch-logs`, `s3`, or `kinesis-data-firehose` |
+| `log_destination` | `string` | `null` | ARN of the logging destination (required for `s3`) |
+| `traffic_type` | `string` | `"ALL"` | `ACCEPT`, `REJECT`, or `ALL` |
+| `log_format` | `string` | `null` | Custom ordered list of log fields |
+| `max_aggregation_interval` | `number` | `null` (AWS default `600`) | `60` or `600` seconds |
+| `create_iam_role` | `bool` | `true` | Whether to create the flow log delivery IAM role |
+| `create_cloudwatch_log_group` | `bool` | `true` | Whether to create a CloudWatch log group |
+| `cloudwatch_log_group_retention_in_days` | `number` | `90` | Log retention period (`0` = indefinite) |
+
+### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `id` | ID of the VPC flow log |
+| `arn` | ARN of the VPC flow log |
+| `cloudwatch_log_group_name` / `cloudwatch_log_group_arn` | CloudWatch log group created (if applicable) |
+| `iam_role_arn` / `iam_role_name` | IAM role created for log delivery |
+
+### Usage Examples
+
+#### Example 1: CloudWatch Logs Destination
+
+```hcl
+module "vpc" {
+  source = "terraform-aws-modules/vpc/aws"
+
+  name = "production-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
+
+  enable_nat_gateway = true
+}
+
+module "vpc_flow_log" {
+  source = "terraform-aws-modules/vpc/aws//modules/flow-log"
+
+  name   = "production-vpc-flow-log"
+  vpc_id = module.vpc.vpc_id
+
+  log_destination_type                   = "cloud-watch-logs"
+  cloudwatch_log_group_retention_in_days = 30
+  traffic_type                           = "ALL"
+  max_aggregation_interval               = 60
+
+  tags = {
+    Environment = "production"
+  }
+}
+```
+
+#### Example 2: S3 Destination for Cost-Effective Long-Term Storage
+
+```hcl
+resource "aws_s3_bucket" "flow_logs" {
+  bucket = "my-vpc-flow-logs"
+}
+
+module "vpc_flow_log_s3" {
+  source = "terraform-aws-modules/vpc/aws//modules/flow-log"
+
+  name   = "vpc-flow-log-security"
+  vpc_id = module.vpc.vpc_id
+
+  log_destination_type = "s3"
+  log_destination       = aws_s3_bucket.flow_logs.arn
+  traffic_type           = "REJECT" # only capture rejected traffic for security monitoring
+
+  tags = {
+    Purpose = "security-monitoring"
+  }
+}
+```
+
+## Main Module: VPC
+
+### Description
+
+The root module creates the VPC itself plus every supporting networking resource: subnets (across all six subnet tiers), Internet/NAT/egress-only gateways, route tables and associations, network ACLs, DHCP options, VPN/customer gateways, and RDS/ElastiCache/Redshift subnet groups. It is the entry point most consumers use directly, and its outputs are the composition surface for the `vpc-endpoints` and `flow-log` submodules and for other modules (EKS, RDS, ALB, etc.) that need subnet or route-table IDs.
+
+### Key Features
+
+- Full VPC lifecycle: `create_vpc` toggle, CIDR from literal value or IPAM pool, secondary CIDR blocks
+- Six independently configurable subnet tiers with per-tier NACL, route table, and tagging control
+- Three NAT Gateway strategies plus Elastic IP reuse for stable outbound IPs across VPC recreation
+- IPv4/IPv6 dual-stack with per-subnet IPv6 prefix assignment and DNS64/egress-only IGW support
+- VPC Block Public Access (`vpc_block_public_access_options`/`_exclusions`) for account/VPC-level public-exposure guardrails
+- Default VPC, default security group, default route table, and default NACL adoption/management flags
+
+### Main Input Variables
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | `""` | Name prefix applied to all resources |
+| `cidr` | `string` | `"10.0.0.0/16"` | IPv4 CIDR block for the VPC (or derive from IPAM via `ipv4_ipam_pool_id`) |
+| `azs` | `list(string)` | `[]` | Availability zone names/IDs to distribute subnets across |
+| `public_subnets` | `list(string)` | `[]` | Public subnet CIDR blocks |
+| `private_subnets` | `list(string)` | `[]` | Private subnet CIDR blocks |
+| `database_subnets` | `list(string)` | `[]` | Database subnet CIDR blocks |
+| `elasticache_subnets` | `list(string)` | `[]` | ElastiCache subnet CIDR blocks |
+| `redshift_subnets` | `list(string)` | `[]` | Redshift subnet CIDR blocks |
+| `intra_subnets` | `list(string)` | `[]` | Subnets with no NAT/internet route (e.g., internal Lambda) |
+| `enable_nat_gateway` | `bool` | `false` | Provision NAT Gateway(s) for private networks |
+| `single_nat_gateway` | `bool` | `false` | Use one shared NAT Gateway for all private networks |
+| `one_nat_gateway_per_az` | `bool` | `false` | One NAT Gateway per AZ (requires `azs` set and enough public subnets) |
+| `enable_vpn_gateway` | `bool` | `false` | Create and attach a VPN Gateway |
+| `enable_ipv6` | `bool` | `false` | Request an Amazon-provided /56 IPv6 CIDR for the VPC |
+| `ipv4_ipam_pool_id` / `ipv4_netmask_length` | `string` / `number` | `null` | Allocate the VPC CIDR from an IPAM pool |
+| `secondary_cidr_blocks` | `list(string)` | `[]` | Additional CIDR blocks to associate with the VPC |
+| `enable_dns_hostnames` / `enable_dns_support` | `bool` | `true` | DNS hostname/resolution support for the VPC |
+| `manage_default_security_group` / `manage_default_network_acl` / `manage_default_route_table` | `bool` | `true` | Adopt and manage the VPC's default resources |
+| `create_database_subnet_group` / `create_elasticache_subnet_group` / `create_redshift_subnet_group` | `bool` | `true` | Auto-create the corresponding subnet group |
+| `vpc_block_public_access_options` | `map(string)` | `{}` | Account/VPC-level public access blocking mode |
+| `vpc_block_public_access_exclusions` | `map(any)` | `{}` | Per-resource exclusions from block-public-access rules |
+| `map_public_ip_on_launch` | `bool` | `false` | Auto-assign public IPs to instances launched in public subnets |
+| `tags` | `map(string)` | `{}` | Tags applied to all resources (also see `vpc_tags`, `*_subnet_tags`, `*_route_table_tags`) |
+
+### Main Outputs
+
+| Output | Description |
+|--------|-------------|
+| `vpc_id` | ID of the VPC |
+| `vpc_arn` | ARN of the VPC |
+| `vpc_cidr_block` | Primary IPv4 CIDR block of the VPC |
+| `vpc_secondary_cidr_blocks` | List of secondary CIDR blocks associated with the VPC |
+| `azs` | Availability zones specified as input |
+| `private_subnets` / `public_subnets` / `database_subnets` / `elasticache_subnets` / `redshift_subnets` / `intra_subnets` / `outpost_subnets` | Subnet IDs per tier |
+| `private_subnet_arns` / `public_subnet_arns` / etc. | Subnet ARNs per tier |
+| `database_subnet_group` / `elasticache_subnet_group` / `redshift_subnet_group` | Subnet group IDs |
+| `nat_ids` / `nat_public_ips` / `natgw_ids` | NAT Gateway Elastic IP allocation IDs, public IPs, and gateway IDs |
+| `igw_id` / `egress_only_internet_gateway_id` | Internet Gateway and IPv6 egress-only gateway IDs |
+| `private_route_table_ids` / `public_route_table_ids` / `database_route_table_ids` | Route table IDs per tier |
+| `default_security_group_id` / `default_network_acl_id` / `default_route_table_id` | Default resource IDs (when managed) |
+| `vgw_id` / `cgw_ids` | VPN Gateway and Customer Gateway IDs |
+
+### Usage Examples
+
+#### Example 1: Simple VPC with Public and Private Subnets
+
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "simple-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  enable_nat_gateway = true
+
+  tags = {
+    Terraform   = "true"
+    Environment = "dev"
+  }
+}
+```
+
+#### Example 2: Complete VPC with All Subnet Types (Production)
+
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "complete-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs                 = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets     = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets      = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  database_subnets    = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
+  elasticache_subnets = ["10.0.31.0/24", "10.0.32.0/24", "10.0.33.0/24"]
+  intra_subnets       = ["10.0.51.0/24", "10.0.52.0/24", "10.0.53.0/24"]
+
+  # NAT Gateway - one per AZ for high availability
+  enable_nat_gateway     = true
+  single_nat_gateway     = false
+  one_nat_gateway_per_az = true
+
+  enable_dns_hostnames = true
+  enable_dns_support   = true
+
+  create_database_subnet_group   = true
+  create_elasticache_subnet_group = true
+
+  tags = {
+    Owner       = "DevOps Team"
+    Environment = "production"
+    Terraform   = "true"
+  }
+
+  vpc_tags = {
+    Name = "complete-vpc"
   }
 }
 
-resource "aws_security_group" "vpc_endpoints" {
-  name_prefix = "vpc-endpoints-"
-  vpc_id      = module.vpc.vpc_id
+# Flow logs and VPC endpoints are provisioned via the dedicated submodules,
+# see the flow-log and vpc-endpoints usage examples above.
+```
 
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = [module.vpc.vpc_cidr_block]
-  }
+#### Example 3: IPv6 Dual-Stack VPC
+
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "ipv6-vpc"
+  cidr = "10.0.0.0/16"
+
+  enable_ipv6 = true
+
+  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+
+  public_subnet_ipv6_prefixes  = [0, 1, 2]
+  private_subnet_ipv6_prefixes = [3, 4, 5]
+
+  public_subnet_assign_ipv6_address_on_creation = true
+  enable_ipv6_egress_only_internet_gateway      = true
+
+  enable_nat_gateway = true
+  single_nat_gateway = true
 
   tags = {
-    Name = "vpc-endpoints-sg"
+    Name = "ipv6-dual-stack-vpc"
   }
+}
+```
+
+#### Example 4: VPC CIDR from AWS IPAM
+
+```hcl
+data "aws_vpc_ipam_pool" "ipv4_example" {
+  filter {
+    name   = "description"
+    values = ["*mypool*"]
+  }
+  filter {
+    name   = "address-family"
+    values = ["ipv4"]
+  }
+}
+
+# CIDR must be known at plan time; preview it from the pool first
+data "aws_vpc_ipam_preview_next_cidr" "previewed_cidr" {
+  ipam_pool_id   = data.aws_vpc_ipam_pool.ipv4_example.id
+  netmask_length = 24
+}
+
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "ipam-vpc"
+
+  ipv4_ipam_pool_id = data.aws_vpc_ipam_pool.ipv4_example.id
+  cidr              = data.aws_vpc_ipam_preview_next_cidr.previewed_cidr.cidr
+
+  azs             = ["us-east-1a", "us-east-1b"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24"]
+  public_subnets  = ["10.0.101.0/24", "10.0.102.0/24"]
+
+  enable_nat_gateway = true
+  single_nat_gateway = true
+
+  tags = { IPAM = "true" }
+}
+```
+
+#### Example 5: VPC with VPC Block Public Access
+
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "locked-down-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs             = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+
+  # Block all bidirectional internet traffic at the VPC level by default
+  vpc_block_public_access_options = {
+    internet_gateway_block_mode = "block-bidirectional"
+  }
+
+  # Explicitly allow a specific resource to bypass the block
+  vpc_block_public_access_exclusions = {
+    exclude_vpc = {
+      exclude_vpc                     = true
+      internet_gateway_exclusion_mode = "allow-bidirectional"
+    }
+  }
+
+  tags = { Security = "block-public-access" }
+}
+```
+
+#### Example 6: Multi-Tier Application VPC with VPC Endpoints
+
+```hcl
+module "vpc" {
+  source  = "terraform-aws-modules/vpc/aws"
+  version = "~> 6.0"
+
+  name = "multi-tier-app-vpc"
+  cidr = "10.0.0.0/16"
+
+  azs               = ["us-east-1a", "us-east-1b", "us-east-1c"]
+  private_subnets   = ["10.0.1.0/24", "10.0.2.0/24", "10.0.3.0/24"]
+  public_subnets    = ["10.0.101.0/24", "10.0.102.0/24", "10.0.103.0/24"]
+  database_subnets  = ["10.0.21.0/24", "10.0.22.0/24", "10.0.23.0/24"]
+
+  enable_nat_gateway     = true
+  one_nat_gateway_per_az = true
+
+  create_database_subnet_group = true
+
+  tags = {
+    Application = "multi-tier-app"
+    Environment = "production"
+  }
+}
+
+module "vpc_endpoints" {
+  source = "terraform-aws-modules/vpc/aws//modules/vpc-endpoints"
+
+  vpc_id = module.vpc.vpc_id
+
+  create_security_group      = true
+  security_group_name_prefix = "vpc-endpoints-"
+  security_group_rules = {
+    ingress_https = {
+      description = "HTTPS from VPC"
+      cidr_blocks = [module.vpc.vpc_cidr_block]
+    }
+  }
+
+  endpoints = {
+    s3 = {
+      service         = "s3"
+      service_type    = "Gateway"
+      route_table_ids = module.vpc.private_route_table_ids
+      tags            = { Name = "s3-vpc-endpoint" }
+    }
+    ssm = {
+      service             = "ssm"
+      private_dns_enabled = true
+      subnet_ids          = module.vpc.private_subnets
+      tags                = { Name = "ssm-vpc-endpoint" }
+    }
+  }
+
+  tags = { Environment = "production" }
 }
 ```
 
 ## Best Practices
 
-### VPC Design and Architecture
-
-1. **Plan CIDR Blocks Carefully**: Choose CIDR blocks that won't overlap with on-premises networks, other VPCs, or future expansion needs. Use RFC 1918 address space (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16).
-2. **Use Multiple Availability Zones**: Distribute subnets across at least three availability zones for high availability and fault tolerance.
-3. **Reserve IP Space**: Leave room for growth by not allocating all available CIDR space initially. Consider using /16 for VPC and /24 for subnets.
-4. **Separate Subnet Tiers**: Use distinct subnet types (public, private, database) to implement defense in depth and network segmentation.
-5. **Use Intra Subnets for Management**: Deploy management tools, monitoring systems, or internal services in intra subnets with no internet access.
-6. **Plan for IPv6 Early**: If IPv6 support is needed, enable it during VPC creation to avoid migration complexity later.
-7. **Document Network Architecture**: Maintain clear documentation of CIDR allocations, subnet purposes, and routing designs.
-8. **Use Consistent Naming**: Apply consistent naming conventions across VPCs, subnets, and resources for easier management.
-
-### Subnet Configuration
-
-1. **Right-Size Subnets**: Allocate subnet sizes based on expected resource count. Common practice is /24 (251 usable IPs) for most subnets.
-2. **Distribute Evenly Across AZs**: Create equal numbers of each subnet type across all availability zones for balanced deployments.
-3. **Use Database Subnets**: Always place databases in dedicated database subnets, not general-purpose private subnets.
-4. **Enable Auto-Assign Public IP**: Set `map_public_ip_on_launch = true` only for public subnets where resources need direct internet access.
-5. **Tag Subnets for EKS/ECS**: Use proper tags for Kubernetes subnet discovery (kubernetes.io/role/elb, kubernetes.io/role/internal-elb).
-6. **Separate Cache Layers**: Use dedicated ElastiCache subnets for caching infrastructure to isolate from application tiers.
-7. **Plan for Secondary CIDRs**: If you need to expand VPC address space, use secondary CIDR blocks rather than recreating the VPC.
+### VPC Design and CIDR Planning
+1. **Plan CIDR blocks carefully**: Use RFC 1918 space (10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16) and ensure no overlap with on-premises networks, peered VPCs, or future expansion.
+2. **Reserve IP space for growth**: A `/16` VPC with `/24` subnets leaves room to add subnet tiers later; use `secondary_cidr_blocks` rather than recreating the VPC when you run out of space.
+3. **Spread across at least 3 AZs**: Set `azs` to three or more zones for production workloads to survive an AZ failure.
+4. **Separate subnet tiers by function**: Use distinct public/private/database/intra subnets to implement defense in depth, not a single flat private subnet.
+5. **Use intra subnets for internal-only workloads**: Lambda functions or internal services that only talk to VPC endpoints or internal resources belong in `intra_subnets` (no NAT route).
+6. **Enable IPv6 at creation time**: Adding IPv6 later is more disruptive than enabling `enable_ipv6` up front if dual-stack is a future requirement.
 
 ### NAT Gateway Configuration
+1. **Use one NAT Gateway per AZ in production**: `one_nat_gateway_per_az = true` avoids a single point of failure; requires `azs` to be set and enough public subnets.
+2. **Use a single NAT Gateway for dev/test**: `single_nat_gateway = true` minimizes cost in non-production environments.
+3. **Reuse Elastic IPs when IP stability matters**: Allocate `aws_eip` resources outside the module and pass them via `reuse_nat_ips`/`external_nat_ip_ids` so downstream firewall allow-lists survive VPC recreation.
+4. **Offload AWS service traffic to VPC endpoints**: S3 and DynamoDB Gateway endpoints are free and reduce NAT Gateway data-processing costs.
 
-1. **Use One NAT Gateway Per AZ**: Set `one_nat_gateway_per_az = true` for production environments to ensure high availability.
-2. **Single NAT for Development**: Use `single_nat_gateway = true` for development/test environments to reduce costs.
-3. **Monitor NAT Gateway Metrics**: Set CloudWatch alarms for NAT gateway packet drops, connection errors, and bandwidth limits.
-4. **Consider NAT Instances for Low Traffic**: For very low traffic environments, NAT instances may be more cost-effective than NAT gateways.
-5. **Place NAT in Public Subnets**: Ensure NAT gateways are deployed in public subnets with proper internet gateway routes.
-6. **Budget for NAT Costs**: NAT gateways have hourly charges plus data processing fees - monitor and optimize usage.
-7. **Use VPC Endpoints to Reduce NAT Traffic**: Implement VPC endpoints for AWS services to bypass NAT gateway and reduce costs.
-
-### Security and Access Control
-
-1. **Enable VPC Flow Logs**: Always enable flow logs for security monitoring, troubleshooting, and compliance auditing. Use the `flow-log` submodule (root module flow log variables are deprecated).
-2. **Use Network ACLs as Additional Layer**: Implement NACLs as stateless firewalls in addition to security groups for defense in depth.
-3. **Block Public Access by Default**: Set default NACL rules to deny all traffic, then explicitly allow required traffic.
-4. **Implement VPC Endpoints**: Use VPC endpoints (especially gateway endpoints for S3 and DynamoDB) to keep traffic within AWS network.
-5. **Enable DNS Hostnames**: Set `enable_dns_hostnames = true` and `enable_dns_support = true` for proper DNS resolution.
-6. **Use Private Subnets for Applications**: Deploy application servers in private subnets and use load balancers or bastion hosts for access.
-7. **Restrict NACL Rules**: Create specific NACL rules rather than allowing all traffic. Use rule numbers strategically for future insertions.
-8. **Enable GuardDuty VPC Integration**: Use Amazon GuardDuty with VPC flow logs for threat detection and security monitoring.
-
-### High Availability and Resilience
-
-1. **Deploy Across Multiple AZs**: Use at least three availability zones for critical workloads to survive AZ failures.
-2. **Use Route 53 Health Checks**: Implement health checks and failover routing for critical endpoints.
-3. **Enable Transit Gateway**: For multi-VPC architectures, use Transit Gateway instead of VPC peering for simplified management.
-4. **Test Failover Scenarios**: Regularly test AZ failover and disaster recovery procedures to validate high availability.
-5. **Monitor Resource Limits**: Track VPC resource limits (subnets, route tables, endpoints) and request increases before hitting limits.
-6. **Use Elastic IPs Sparingly**: Allocate Elastic IPs only when static public IPs are absolutely required to avoid waste.
+### Security
+1. **Enable VPC Block Public Access for sensitive VPCs**: Use `vpc_block_public_access_options` with `block-bidirectional` and add narrow `vpc_block_public_access_exclusions` only where required.
+2. **Use the `flow-log` submodule, not root-module flow log variables**: The root module's `enable_flow_log`/`flow_log_*` variables are deprecated and slated for removal.
+3. **Layer Network ACLs with security groups**: NACLs are stateless and subnet-wide; use `*_dedicated_network_acl` and `*_inbound_acl_rules`/`*_outbound_acl_rules` for an additional, coarse-grained layer of defense.
+4. **Keep applications out of public subnets**: Deploy compute in private subnets and expose services via load balancers, not `map_public_ip_on_launch = true`.
+5. **Manage default VPC resources deliberately**: Set `manage_default_security_group`/`manage_default_network_acl` to lock down the implicit default resources rather than leaving them permissive.
 
 ### Cost Optimization
-
-1. **Right-Size NAT Gateways**: Use single NAT gateway for dev/test, one per AZ for production based on actual needs.
-2. **Use Gateway Endpoints**: S3 and DynamoDB gateway endpoints are free - use them instead of interface endpoints or NAT.
-3. **Monitor Data Transfer**: Track inter-AZ data transfer costs and optimize application architecture to minimize cross-AZ traffic.
-4. **Clean Up Unused Resources**: Remove unused NAT gateways, VPN connections, and endpoints to avoid unnecessary charges.
-5. **Use Interface Endpoints Strategically**: Interface endpoints cost $0.01/hour - only create them for services you actually use from private subnets.
-6. **Optimize VPC Peering**: Use VPC peering for direct connections between VPCs instead of routing through NAT gateways.
-7. **Review Flow Log Costs**: Flow logs to CloudWatch Logs can be expensive - use S3 destination for cost-effective long-term storage.
-
-### Operational Excellence
-
-1. **Use Terraform State Locking**: Store VPC Terraform state in S3 with DynamoDB locking to prevent concurrent modifications.
-2. **Tag Everything**: Apply comprehensive tags including Environment, Owner, CostCenter, Application for resource organization.
-3. **Version Pin the Module**: Use specific module versions (e.g., `version = "~> 5.0"`) in production to prevent unexpected changes.
-4. **Implement Change Control**: Use pull requests and peer review for all VPC infrastructure changes.
-5. **Monitor with CloudWatch**: Set up CloudWatch dashboards for VPC metrics, NAT gateway performance, and flow log analysis.
-6. **Use AWS Config**: Enable AWS Config rules to monitor VPC compliance with organizational policies.
-7. **Document Dependencies**: Clearly document which applications and services depend on each VPC resource.
-8. **Test in Non-Production First**: Always test VPC changes in development or staging environments before applying to production.
+1. **Right-size NAT Gateway count**: Single NAT for dev/test, one-per-AZ only where HA is required — NAT Gateways bill hourly plus per-GB data processing.
+2. **Prefer Gateway endpoints over Interface endpoints for S3/DynamoDB**: Gateway endpoints have no hourly charge; Interface endpoints bill per-hour per-AZ.
+3. **Route flow logs to S3 for long-term retention**: CloudWatch Logs storage costs more than S3 for high-volume, long-retention flow log data.
 
 ### Connectivity and Integration
+1. **Use Transit Gateway for multi-VPC/hub-and-spoke**: VPC peering is non-transitive; Transit Gateway centralizes routing for complex topologies (see `terraform-aws-modules/transit-gateway`).
+2. **Preview IPAM CIDRs before use**: Since the CIDR must be known at `terraform plan` time, use `aws_vpc_ipam_preview_next_cidr` to derive subnet CIDRs from an IPAM-allocated VPC CIDR.
+3. **Use VPC endpoints for AWS PrivateLink SaaS integrations**: Keep third-party SaaS traffic off the public internet where the provider supports PrivateLink.
 
-1. **Use VPN for Hybrid Cloud**: Implement VPN gateway and customer gateway for secure on-premises connectivity.
-2. **Consider Direct Connect**: For high-bandwidth or low-latency requirements, use AWS Direct Connect instead of VPN.
-3. **Enable Transit Gateway**: For hub-and-spoke or complex multi-VPC architectures, use Transit Gateway for centralized routing.
-4. **Use VPC Peering Carefully**: VPC peering is non-transitive - use Transit Gateway for transitive routing requirements.
-5. **Configure DHCP Options**: Set custom DHCP option sets for DNS servers, NTP servers, or domain names when needed.
-6. **Enable VPN Monitoring**: Monitor VPN tunnel status and set up CloudWatch alarms for tunnel failures.
-7. **Use PrivateLink**: Implement AWS PrivateLink for private connectivity to third-party SaaS applications.
-
-### Compliance and Governance
-
-1. **Enable VPC Flow Logs to S3**: Store flow logs in S3 with lifecycle policies for long-term compliance retention.
-2. **Implement Resource Tagging Policies**: Use AWS Organizations tag policies to enforce consistent tagging across VPCs.
-3. **Use Service Control Policies**: Implement SCPs to prevent unauthorized VPC modifications or public subnet creation.
-4. **Enable AWS CloudTrail**: Log all VPC API calls to CloudTrail for audit trails and compliance reporting.
-5. **Implement Network Segmentation**: Use separate VPCs or subnets for different compliance zones (PCI, HIPAA, etc.).
-6. **Regular Security Audits**: Conduct quarterly reviews of NACL rules, security groups, and routing tables.
-7. **Use AWS Security Hub**: Enable Security Hub to aggregate security findings and compliance checks across VPCs.
+### Operational Excellence
+1. **Pin the module version**: Use `version = "~> 6.0"` (or a tighter constraint) to avoid unexpected breaking changes — v6.0.0 raised the minimum AWS provider requirement to v6.x.
+2. **Tag comprehensively**: Combine the global `tags` map with resource-specific tag maps (`vpc_tags`, `*_subnet_tags`, `nat_gateway_tags`, etc.) for cost allocation and ownership tracking.
+3. **Store Terraform state remotely with locking**: Use S3 + DynamoDB (or equivalent) state backend given how many resources a single VPC apply touches.
+4. **Test destructive changes in non-production first**: NAT Gateway strategy or CIDR changes can force subnet/route-table replacement — validate in staging before applying to production.
 
 ## Additional Resources
 
 - **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpc
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest
 - **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-vpc/tree/master/examples
-- **AWS VPC Documentation**: https://docs.aws.amazon.com/vpc/latest/userguide/
+- **CHANGELOG**: https://github.com/terraform-aws-modules/terraform-aws-vpc/blob/master/CHANGELOG.md
 - **AWS VPC User Guide**: https://docs.aws.amazon.com/vpc/latest/userguide/what-is-amazon-vpc.html
-- **VPC Peering**: https://docs.aws.amazon.com/vpc/latest/peering/
-- **VPC Endpoints**: https://docs.aws.amazon.com/vpc/latest/privatelink/
+- **VPC Endpoints (PrivateLink)**: https://docs.aws.amazon.com/vpc/latest/privatelink/
 - **VPC Flow Logs**: https://docs.aws.amazon.com/vpc/latest/userguide/flow-logs.html
+- **VPC Block Public Access**: https://docs.aws.amazon.com/vpc/latest/userguide/security-vpc-bpa.html
 - **NAT Gateways**: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-nat-gateway.html
 - **AWS Transit Gateway**: https://docs.aws.amazon.com/vpc/latest/tgw/
-- **VPN Connections**: https://docs.aws.amazon.com/vpn/latest/s2svpn/
-- **AWS Direct Connect**: https://docs.aws.amazon.com/directconnect/latest/UserGuide/
+- **AWS IP Address Manager (IPAM)**: https://docs.aws.amazon.com/vpc/latest/ipam/
 - **VPC Security Best Practices**: https://docs.aws.amazon.com/vpc/latest/userguide/vpc-security-best-practices.html
-- **AWS Well-Architected Framework**: https://aws.amazon.com/architecture/well-architected/
-- **VPC Pricing**: https://aws.amazon.com/vpc/pricing/
 
 ## Notes for AI Agents
 
-When using this module in automated workflows:
+When generating Terraform using this module:
 
-1. **Plan CIDR Carefully**: Always validate CIDR blocks don't overlap with existing networks
-2. **Multi-AZ by Default**: Deploy across at least 3 availability zones for production
-3. **Use Private Subnets**: Place applications in private subnets, not public
-4. **Enable NAT Gateway**: Set one_nat_gateway_per_az = true for high availability
-5. **Enable DNS Settings**: Always enable DNS hostnames and DNS support
-6. **Tag Comprehensively**: Include Environment, Application, Owner, CostCenter tags
-7. **Use VPC Endpoints**: Implement S3 and DynamoDB gateway endpoints to reduce NAT costs
-8. **Enable Flow Logs**: Use `flow-log` submodule (root module flow log variables deprecated in v6.x)
-9. **Separate Database Subnets**: Use dedicated database subnets, not general private subnets
-10. **Version Pin Module**: Use specific module versions to prevent unexpected changes
-11. **Test AZ Failures**: Validate high availability by testing AZ failure scenarios
-12. **Monitor NAT Costs**: Track NAT gateway data processing fees and optimize with endpoints
-13. **Use Intra Subnets**: Deploy management tools in intra subnets for better isolation
-14. **Enable IPv6 Early**: If needed, enable IPv6 during initial VPC creation
-15. **Document Architecture**: Maintain clear documentation of network design and CIDR allocations
-16. **Use IPAM**: Leverage AWS IPAM for centralized IP address management at scale
-17. **Implement NACLs**: Add network ACLs as additional security layer beyond security groups
-18. **Regular Audits**: Conduct quarterly reviews of routing, NACLs, and security configurations
+1. **Pin the module version** (e.g., `version = "~> 6.0"`) and remember AWS provider `>= 6.28` is required as of v6.0.0.
+2. **Use the `flow-log` submodule for flow logs** — do not use the deprecated root-module `enable_flow_log`/`flow_log_*` variables in new code.
+3. **Deploy across at least 3 AZs** for production; pass `azs` explicitly when `one_nat_gateway_per_az = true`.
+4. **Default to `one_nat_gateway_per_az = true`** for production and `single_nat_gateway = true` for dev/test unless the user specifies otherwise.
+5. **Place applications in private subnets**, not public ones; use `database_subnets`/`elasticache_subnets`/`redshift_subnets` for the corresponding managed data stores instead of generic private subnets.
+6. **Always set `enable_dns_hostnames = true` and `enable_dns_support = true`** unless the user has a specific reason not to.
+7. **Add S3/DynamoDB Gateway endpoints by default** via the `vpc-endpoints` submodule when NAT Gateway is enabled, to reduce NAT data-processing costs.
+8. **Consider `vpc_block_public_access_options`** for any VPC that should not be internet-reachable, with narrow `vpc_block_public_access_exclusions` for exceptions.
+9. **Use IPAM (`ipv4_ipam_pool_id`) instead of literal CIDRs** when the user mentions centralized/enterprise IP address management; remember the CIDR must be previewable at plan time.
+10. **Tag every resource** with at minimum `Environment`, `Terraform = "true"`, and any org-specific ownership tags via the `tags` map.
+11. **Reference module outputs for composition** (`vpc_id`, `private_subnets`, `private_route_table_ids`, `vpc_cidr_block`) rather than hardcoding IDs when wiring in other modules (EKS, RDS, ALB, endpoints, flow logs).

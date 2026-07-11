@@ -9,248 +9,210 @@
 - **Latest Version**: 3.0.1
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.84
-- **Purpose**: Creates and manages AWS Global Accelerator resources with static anycast IPs, multi-region endpoints, and automatic failover
+- **Purpose**: Creates AWS Global Accelerator standard accelerators (listeners + multi-region endpoint groups) and, via a submodule, custom routing accelerators
 - **Service**: AWS Global Accelerator
 - **Category**: Networking, Performance, High Availability
-- **Keywords**: global-accelerator, anycast, static-ip, multi-region, failover, latency, alb, nlb, endpoint-group, health-check, traffic-distribution, client-affinity, flow-logs, custom-routing, udp, tcp
-- **Use For**: global application delivery, multi-region failover, latency reduction, gaming and real-time apps, blue-green deployments, API performance optimization, hybrid cloud connectivity, DDoS protection
+- **Keywords**: global-accelerator, anycast, static-ip, multi-region, failover, latency, load-balancer, endpoint-group, health-check, custom-routing, byoip, dual-stack, client-affinity, flow-logs, tcp-udp
+- **Use For**: global application delivery, multi-region active-active/active-passive failover, latency reduction for internet-facing apps, blue-green/canary traffic shifting, gaming and VoIP custom routing, API performance optimization, static-IP entry point for allowlisting/hybrid connectivity, DDoS-resilient edge entry point
 
 ## Description
 
-Terraform module that creates and manages AWS Global Accelerator resources for improving application performance and availability across global users. AWS Global Accelerator is a network service that provides static IP addresses as fixed entry points to applications and routes traffic over the AWS global network to optimize performance, reduce latency, and increase throughput. The service uses anycast routing from AWS edge locations to direct user traffic to the nearest healthy endpoint, continuously monitoring endpoint health and instantly rerouting traffic when failures are detected.
+This Terraform module creates and manages AWS Global Accelerator resources: an `aws_globalaccelerator_accelerator`, one or more `aws_globalaccelerator_listener` resources, and the `aws_globalaccelerator_endpoint_group` resources nested under each listener. Global Accelerator is a networking service that provides static anycast IP addresses as fixed entry points to an application, then routes client traffic over the AWS global network backbone to the closest healthy endpoint — reducing latency and jitter and providing near-instant failover when an endpoint group becomes unhealthy, without requiring DNS TTL expiry.
 
-This module supports creating standard accelerators for automatic traffic routing based on geography and endpoint health, as well as custom routing accelerators for application-specific routing logic. It manages the complete lifecycle of Global Accelerator resources including accelerator configuration, listeners for TCP and UDP protocols, endpoint groups spanning multiple AWS regions, and individual endpoint configurations. The module provides comprehensive health check configuration, traffic distribution controls with endpoint weighting, client IP preservation options, and flow logging for traffic analysis.
+The module exposes `listeners` as a single nested map input: each listener defines its protocol (TCP/UDP), port ranges, and client affinity, and contains its own `endpoint_groups` map with health-check settings, traffic dial percentage, weighted `endpoint_configuration` entries (ALB/NLB ARNs, EC2 instance IDs, or EIP allocation IDs), and optional `port_override` mappings. Endpoint groups can target different AWS regions (`endpoint_group_region`), which is how the module implements multi-region routing and failover. The root module supports static IPv4 or dual-stack (IPv4 + IPv6) addressing, Bring Your Own IP (BYOIP), and VPC Flow-Logs-style traffic logging to S3.
 
-Global Accelerator integrates with Application Load Balancers, Network Load Balancers, EC2 instances, and Elastic IP addresses as endpoints, supporting both IPv4 and dual-stack (IPv4/IPv6) configurations. The module simplifies multi-region deployments with automatic failover, enables Bring Your Own IP (BYOIP) for using existing IP addresses, and supports fine-grained traffic control through port overrides and client affinity settings. This makes it ideal for applications requiring consistent performance, high availability, and simplified global traffic management.
+A dedicated `custom-routing` submodule wraps the parallel `aws_globalaccelerator_custom_routing_*` resources for custom routing accelerators, which map specific client connections to specific destinations (VPC subnet endpoints) rather than health-based load balancing — the pattern used for gaming servers, VoIP, and other workloads that need deterministic per-flow destination selection. Both accelerator types integrate with Route 53 alias records via their `dns_name`/`hosted_zone_id` outputs and benefit automatically from AWS Shield Standard DDoS protection at the edge.
 
 ## Key Features
 
-- **Standard Accelerator**: Create Global Accelerators that automatically route traffic to optimal endpoints based on geography and health
-- **Static Anycast IP Addresses**: Provides two static IPv4 addresses (or four with dual-stack) as permanent entry points to applications
-- **Dual-Stack Support**: IPv4 and IPv6 address support with dual-stack DNS names for modern networking requirements
-- **Bring Your Own IP (BYOIP)**: Use your own IP address ranges with Global Accelerator for brand consistency and IP reputation preservation
-- **Multiple Listeners**: Configure TCP and UDP listeners with flexible port ranges and protocol-specific settings
-- **Client Affinity**: Support for SOURCE_IP affinity to maintain persistent connections to the same endpoint
-- **Endpoint Groups**: Define endpoint groups spanning multiple AWS regions for geographic distribution and failover
-- **Multi-Region Support**: Deploy endpoints across multiple AWS regions with automatic health-based routing
-- **Health Check Configuration**: Customizable health check intervals, thresholds, and protocols for endpoint monitoring
-- **Traffic Distribution**: Configure traffic dial percentage and endpoint weights for granular traffic control
-- **Endpoint Types**: Support for Application Load Balancers, Network Load Balancers, EC2 instances, and Elastic IP addresses
-- **Client IP Preservation**: Option to preserve client IP addresses for Application Load Balancer and EC2 endpoints
-- **Port Overrides**: Override default endpoint ports for flexible traffic routing configurations
-- **Flow Logs**: Enable VPC Flow Logs to S3 for traffic analysis and security monitoring
-- **Custom Routing Accelerator**: Dedicated submodule for application-specific routing with VPC subnet endpoints
-- **Automatic Failover**: Instant traffic rerouting when endpoint health checks fail
-- **Timeouts Configuration**: Customizable create, update, and delete timeouts for listeners and endpoint groups
-- **Conditional Creation**: Control resource creation with feature flags for flexible deployment patterns
-- **Tag Support**: Comprehensive tagging for cost allocation and resource management
+- **Standard Accelerator**: Health-based routing to the nearest healthy endpoint using anycast IPs and the AWS global network
+- **Static Anycast IPs**: Two static IPv4 addresses (four with `DUAL_STACK`: two IPv4 + two IPv6)
+- **Dual-Stack Support**: `ip_address_type = "DUAL_STACK"` exposes both `dns_name` and `dual_stack_dns_name`
+- **Bring Your Own IP (BYOIP)**: Supply 1-2 IPv4 addresses from your own BYOIP pool via `ip_addresses`
+- **Nested Listener/Endpoint-Group Map**: Single `listeners` input defines protocol, port ranges, client affinity, and per-listener endpoint groups in one structure
+- **Multi-Region Endpoint Groups**: `endpoint_group_region` on each endpoint group routes traffic to endpoints in different AWS regions for geographic failover
+- **Weighted, Multi-Endpoint Traffic Distribution**: `endpoint_configuration` list with per-endpoint `weight` for canary/blue-green/weighted routing
+- **Health Checks**: Configurable interval (10s or 30s), protocol (TCP/HTTP/HTTPS), path, port, and a single `threshold_count` (no separate healthy/unhealthy thresholds)
+- **Client IP Preservation**: `client_ip_preservation_enabled` per endpoint (ALB/EC2 endpoints only)
+- **Port Overrides**: `port_override` maps a listener-facing port to a different backend `endpoint_port`
+- **Traffic Dial**: `traffic_dial_percentage` per endpoint group for gradual regional traffic shifting
+- **Flow Logs**: `flow_logs_enabled` + `flow_logs_s3_bucket`/`flow_logs_s3_prefix` for traffic analysis
+- **Custom Routing Submodule**: Dedicated `modules/custom-routing` for deterministic per-flow routing to VPC subnet endpoints
+- **Cross-Account Endpoints**: `attachment_arn` support on `endpoint_configuration` for cross-account attachment endpoints
+- **Configurable Timeouts**: Separate `listeners_timeouts` and `endpoint_groups_timeouts` (create/update/delete)
+- **Conditional Creation**: `create` and `create_listeners` feature flags for staged/conditional deployments
 
-## Use Cases
+## Main Use Cases
 
-- **Global Application Delivery**: Provide consistent low-latency performance for applications serving users across multiple continents and regions
-- **Disaster Recovery and Failover**: Implement multi-region failover with instant automatic traffic rerouting when primary endpoints become unhealthy
-- **Gaming and Real-Time Applications**: Reduce latency and jitter for gaming, VoIP, and other latency-sensitive applications using custom routing
-- **IoT and Edge Computing**: Route IoT device traffic to nearest processing endpoints for reduced latency and improved response times
-- **API Gateway Performance**: Improve API response times for globally distributed clients accessing RESTful or GraphQL APIs
-- **Content Delivery**: Accelerate dynamic content delivery that cannot be cached at edge locations like personalized web applications
-- **Multi-Region Load Balancing**: Distribute traffic across Application Load Balancers or Network Load Balancers in multiple AWS regions
-- **Blue-Green Deployments**: Implement zero-downtime deployments by shifting traffic between endpoint groups with traffic dial controls
-- **Hybrid Cloud Connectivity**: Provide consistent IP addresses for applications spanning AWS and on-premises data centers
-- **DDoS Protection**: Benefit from AWS Shield Standard protection at AWS edge locations for improved application security
+1. **Global Application Delivery**: Consistent, low-latency access for internet-facing apps serving users across regions/continents
+2. **Multi-Region Failover / Disaster Recovery**: Automatic, near-instant rerouting from an unhealthy region's endpoint group to a healthy one
+3. **Blue-Green and Canary Deployments**: Shift traffic gradually between endpoint weights or between endpoint groups via `traffic_dial_percentage`
+4. **Gaming and Real-Time / VoIP Applications**: Use the `custom-routing` submodule for UDP traffic that needs deterministic client-to-destination mapping
+5. **API and Microservice Performance**: Reduce latency and improve throughput for globally distributed API clients
+6. **Static-IP Allowlisting**: Provide fixed anycast IPs that downstream firewalls/partners can allowlist even as backend infrastructure changes
+7. **Hybrid Cloud Connectivity**: Stable entry point in front of infrastructure spanning AWS regions and on-premises data centers
+8. **Multi-Protocol Ingress**: A single accelerator fronting TCP (HTTP/HTTPS) and UDP (DNS, gaming) listeners on different ports
+9. **DDoS-Resilient Edge Entry**: Benefit from AWS Shield Standard protection at AWS edge locations in front of ALB/NLB/EC2 origins
 
 ## Submodules
 
 ### custom-routing
 
+- **Purpose**: Provisions a custom routing accelerator that maps client connections to specific destinations inside VPC subnets, instead of health-based load balancing — for workloads (gaming, VoIP) that need deterministic per-flow destination selection.
 - **Source**: `terraform-aws-modules/global-accelerator/aws//modules/custom-routing`
 - **Documentation Link**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest/submodules/custom-routing
+- **Key Features**: Static anycast IPs (IPv4/dual-stack), BYOIP support, flow logs, per-listener `destination_configuration` (port range + protocol) and `endpoint_configuration` pointing at VPC subnet IDs; **no health checks and no `client_affinity`/`protocol` on listeners** (unlike the standard accelerator)
+- **Use Cases**: Multiplayer game server fleets, VoIP/media servers, IoT fleets requiring per-connection destination selection within a VPC subnet
 
-Creates AWS Global Accelerator custom routing accelerators for application-specific traffic routing with granular control over destination selection.
+**Variables** (key ones — same accelerator-level inputs as the root module: `create`, `name`, `ip_address_type`, `ip_addresses`, `enabled`, `flow_logs_enabled`, `flow_logs_s3_bucket`, `flow_logs_s3_prefix`, `create_listeners`, `tags`):
 
-**Purpose**: Provision custom routing accelerators that allow applications to use custom logic to direct specific users to particular destinations among many potential endpoints, ideal for gaming, VoIP, and specialized routing requirements.
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `listeners` | `any` | `{}` | Map of listeners; each entry has `port_ranges` and an `endpoint_groups` map |
+| `listeners_timeouts` | `map(string)` | `{}` | Create/update/delete timeouts for listeners |
+| `endpoint_groups_timeouts` | `map(string)` | `{}` | Create/delete timeouts for endpoint groups (no `update`) |
 
-**Key Features**:
-- Support for application-specific routing logic to VPC subnet endpoints
-- Static anycast IP addresses with AWS global network routing
-- Custom port range configuration for destination endpoints
-- VPC subnet endpoint types (EC2 instances within subnets)
-- Flow logs support for traffic analysis
-- Dual-stack IPv4/IPv6 support
-- BYOIP (Bring Your Own IP) support
-- Listener and endpoint group configuration similar to standard accelerators
-- Custom routing allows mapping specific users to specific destinations
-- Ideal for multiplayer gaming servers and voice/video applications
-
-**Variables** (key ones):
-- `name` (string): Name of the custom routing accelerator
-- `enabled` (bool): Whether the accelerator is enabled (default: true)
-- `ip_address_type` (string): Address type - "IPV4" or "DUAL_STACK" (default: "IPV4")
-- `ip_addresses` (list(string)): IP addresses for BYOIP accelerators (default: [])
-- `flow_logs_enabled` (bool): Enable flow logs (default: false)
-- `flow_logs_s3_bucket` (string): S3 bucket for flow logs
-- `flow_logs_s3_prefix` (string): S3 prefix for flow log files
-- `listeners` (any): Map of listener configurations with port ranges and protocols
-- `create_listeners` (bool): Whether to create listeners (default: true)
-- `listeners_timeouts` (map(string)): Timeout configuration for listener operations
-- `endpoint_groups_timeouts` (map(string)): Timeout configuration for endpoint group operations
-- `tags` (map(string)): Tags to apply to resources
+Each `endpoint_groups` entry supports: `endpoint_group_region` (optional cross-region target), `destination_configuration` (list of `{ from_port, to_port, protocols }`), and `endpoint_configuration` (list of `{ endpoint_id }` — a VPC subnet ID).
 
 **Outputs**:
-- `id`: ID (ARN) of the custom routing accelerator
-- `arn`: Amazon Resource Name of the custom routing accelerator
-- `dns_name`: DNS name of the custom routing accelerator
-- `hosted_zone_id`: Route 53 zone ID for alias record creation
-- `ip_sets`: IP address sets associated with the accelerator
-- `listeners`: Map of created listeners and their attributes
-- `endpoint_groups`: Map of created endpoint groups and their attributes
+
+| Output | Description |
+|--------|-------------|
+| `id` / `arn` | ARN of the custom routing accelerator |
+| `dns_name` | DNS name of the accelerator |
+| `hosted_zone_id` | Route 53 zone ID for alias records |
+| `ip_sets` | IP address set associated with the accelerator |
+| `listeners` | Map of created listeners and attributes |
+| `endpoint_groups` | Map of created endpoint groups and attributes |
 
 **Usage Example**:
+
 ```hcl
 module "global_accelerator_custom_routing" {
   source  = "terraform-aws-modules/global-accelerator/aws//modules/custom-routing"
   version = "~> 3.0"
 
-  name                = "gaming-accelerator"
-  enabled             = true
-  ip_address_type     = "IPV4"
+  name = "gaming-accelerator"
+
   flow_logs_enabled   = true
   flow_logs_s3_bucket = aws_s3_bucket.flow_logs.id
   flow_logs_s3_prefix = "custom-routing/"
 
-  # Custom routing listeners
   listeners = {
     game_servers = {
       port_ranges = [
-        {
-          from_port = 7000
-          to_port   = 7999
-        }
+        { from_port = 7000, to_port = 7999 }
       ]
+
+      endpoint_groups = {
+        primary = {
+          destination_configuration = [
+            { from_port = 7000, to_port = 7999, protocols = ["UDP"] }
+          ]
+
+          # endpoint_id must be a VPC subnet ID for custom routing
+          endpoint_configuration = [for subnet in module.vpc.private_subnets : { endpoint_id = subnet }]
+        }
+      }
     }
   }
 
   tags = {
     Environment = "production"
     Application = "gaming"
-    Type        = "custom-routing"
-  }
-}
-
-# VPC subnet endpoint group for custom routing
-resource "aws_globalaccelerator_custom_routing_endpoint_group" "game_servers" {
-  listener_arn = module.global_accelerator_custom_routing.listeners["game_servers"].arn
-
-  endpoint_configuration {
-    endpoint_id = aws_subnet.game_servers.id
-  }
-
-  destination_configuration {
-    from_port = 7000
-    to_port   = 7999
-    protocols = ["UDP"]
   }
 }
 ```
 
-## Variables
+## Main Input Variables (Root Module)
 
-### Core Accelerator Configuration
-- `create` (bool): Controls if resources should be created (default: true)
-- `tags` (map(string)): Map of tags to add to all resources (default: {})
-- `name` (string): Name of the accelerator (required)
-- `enabled` (bool): Indicates whether the accelerator is enabled (default: true)
-- `ip_address_type` (string): Address type - "IPV4" or "DUAL_STACK" (default: "IPV4")
-- `ip_addresses` (list(string)): IP addresses to use for BYOIP accelerators (default: [])
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `name` | `string` | `""` | Name of the accelerator (blank by default — set explicitly) |
+| `create` | `bool` | `true` | Controls if resources should be created |
+| `enabled` | `bool` | `true` | Whether the accelerator is enabled |
+| `ip_address_type` | `string` | `"IPV4"` | `IPV4` or `DUAL_STACK` |
+| `ip_addresses` | `list(string)` | `[]` | 1-2 IPv4 addresses for BYOIP accelerators |
+| `flow_logs_enabled` | `bool` | `false` | Enable flow logs |
+| `flow_logs_s3_bucket` | `string` | `null` | S3 bucket name for flow logs (required if enabled) |
+| `flow_logs_s3_prefix` | `string` | `null` | S3 key prefix for flow logs (required if enabled) |
+| `create_listeners` | `bool` | `true` | Controls if listeners (and their endpoint groups) should be created |
+| `listeners` | `any` | `{}` | Map of listener definitions — see schema below |
+| `listeners_timeouts` | `map(string)` | `{}` | `create`/`update`/`delete` timeouts for listeners |
+| `endpoint_groups_timeouts` | `map(string)` | `{}` | `create`/`update`/`delete` timeouts for endpoint groups |
+| `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
-### Flow Logs Configuration
-- `flow_logs_enabled` (bool): Indicates whether flow logs are enabled (default: false)
-- `flow_logs_s3_bucket` (string): Name of Amazon S3 bucket for flow logs (default: null)
-- `flow_logs_s3_prefix` (string): Prefix for location in S3 bucket for flow logs (default: null)
+### Listener Object Schema (`listeners` map entries)
 
-### Listener Configuration
-- `create_listeners` (bool): Controls if listeners should be created (default: true)
-- `listeners` (any): Map of listener definitions to create (default: {})
-  - Each listener can specify:
-    - `port_ranges`: List of port range objects with `from_port` and `to_port`
-    - `protocol`: "TCP" or "UDP"
-    - `client_affinity`: "NONE" or "SOURCE_IP"
-    - `endpoint_groups`: Map of endpoint group configurations (see below)
-- `listeners_timeouts` (map(string)): Create, update, and delete timeout configurations for listeners (default: {})
+| Key | Type | Description |
+|-----|------|-------------|
+| `protocol` | `string` | `TCP` or `UDP` |
+| `client_affinity` | `string` | `NONE` (default) or `SOURCE_IP` |
+| `port_ranges` | `list(object({from_port,to_port}))` | Listener port range(s) |
+| `endpoint_groups` | `map(object)` | Nested endpoint groups for this listener (schema below) |
 
-### Endpoint Group Configuration
-Within each listener's `endpoint_groups` map, each endpoint group can specify:
-- `health_check_interval_seconds` (number): Health check interval in seconds (default: 30)
-- `health_check_path` (string): Path for HTTP/HTTPS health checks (default: "/")
-- `health_check_port` (number): Port for health checks (default: listener port)
-- `health_check_protocol` (string): Protocol for health checks - "TCP", "HTTP", or "HTTPS" (default: "TCP")
-- `threshold_count` (number): Number of consecutive health checks before status change (default: 3)
-- `traffic_dial_percentage` (number): Percentage of traffic to dial to endpoint group (default: 100)
-- `endpoints`: Map of endpoint configurations
-  - `endpoint_id`: ID of endpoint (ALB ARN, NLB ARN, EC2 instance ID, or EIP allocation ID)
-  - `weight` (number): Endpoint weight for traffic distribution 0-255 (default: 100)
-  - `client_ip_preservation_enabled` (bool): Preserve client IP address (default: false)
-- `port_overrides`: List of port override configurations
-  - `endpoint_port`: Destination port on endpoint
-  - `listener_port`: Source port from listener
+### Endpoint Group Object Schema (`endpoint_groups` entries, nested under a listener)
 
-### Timeouts
-- `endpoint_groups_timeouts` (map(string)): Create, update, and delete timeout configurations for endpoint groups (default: {})
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `endpoint_group_region` | `string` | listener's region | AWS region where this endpoint group's endpoints live (enables multi-region) |
+| `health_check_protocol` | `string` | `TCP` | `TCP`, `HTTP`, or `HTTPS` |
+| `health_check_port` | `number` | listener port | Port used for health checks |
+| `health_check_path` | `string` | `"/"` | Path for HTTP/HTTPS health checks |
+| `health_check_interval_seconds` | `number` | `30` | `10` or `30` |
+| `threshold_count` | `number` | `3` | Consecutive checks to flip health state (single value — no separate healthy/unhealthy count) |
+| `traffic_dial_percentage` | `number` | `100` | Percentage of listener traffic sent to this endpoint group |
+| `endpoint_configuration` | `list(object)` | `[]` | List of `{ endpoint_id, weight, client_ip_preservation_enabled, attachment_arn }` — `endpoint_id` is an ALB/NLB ARN, EC2 instance ID, or EIP allocation ID |
+| `port_override` | `list(object({endpoint_port,listener_port}))` | `[]` | Maps a listener-facing port to a different backend port |
 
-## Outputs
+## Main Outputs
 
-### Accelerator Information
-- `id`: Amazon Resource Name (ARN) of the accelerator
-- `arn`: Amazon Resource Name (ARN) of the accelerator
-- `dns_name`: DNS name of the accelerator (e.g., a1234567890abcdef.awsglobalaccelerator.com)
-- `dual_stack_dns_name`: DNS name that points to both IPv4 and IPv6 addresses of the accelerator
-- `hosted_zone_id`: Global Accelerator Route 53 zone ID for creating alias records
-
-### IP Addresses
-- `ip_sets`: IP address set associated with the accelerator
-  - Contains `ip_addresses` list and `ip_family` (IPv4 or IPv6)
-
-### Listener Information
-- `listeners`: Map of created listeners and their attributes
-  - Includes ARN, client affinity, protocol, and port ranges for each listener
-
-### Endpoint Groups
-- `endpoint_groups`: Map of created endpoint groups and their attributes
-  - Includes ARN, endpoint configurations, health check settings, and traffic dial percentage
+| Output | Description |
+|--------|-------------|
+| `id` / `arn` | ARN of the accelerator |
+| `dns_name` | DNS name of the accelerator (e.g. `a1234567890abcdef.awsglobalaccelerator.com`) |
+| `dual_stack_dns_name` | DNS name resolving to both IPv4 and IPv6 addresses (dual-stack accelerators only) |
+| `hosted_zone_id` | Route 53 zone ID for alias records pointing at the accelerator |
+| `ip_sets` | IP address set(s) associated with the accelerator |
+| `listeners` | Map of created listeners and their attributes |
+| `endpoint_groups` | Map of created endpoint groups and their attributes |
 
 ## Usage Examples
 
-### Basic Global Accelerator
+### Example 1: Basic Accelerator with Weighted ALB Endpoints
 
 ```hcl
-module "global_accelerator_basic" {
+module "global_accelerator" {
   source  = "terraform-aws-modules/global-accelerator/aws"
   version = "~> 3.0"
 
-  name    = "my-accelerator"
-  enabled = true
+  name = "my-accelerator"
 
   listeners = {
-    http = {
-      port_ranges = [
-        {
-          from_port = 80
-          to_port   = 80
-        }
-      ]
-      protocol        = "TCP"
+    web = {
       client_affinity = "SOURCE_IP"
+      protocol        = "TCP"
+      port_ranges = [
+        { from_port = 80, to_port = 80 }
+      ]
 
       endpoint_groups = {
         primary = {
           health_check_protocol = "HTTP"
           health_check_path     = "/health"
 
-          endpoints = {
-            alb = {
-              endpoint_id = aws_lb.main.arn
-              weight      = 100
+          endpoint_configuration = [
+            {
+              endpoint_id                     = aws_lb.blue.arn
+              weight                          = 90
+              client_ip_preservation_enabled  = true
+            },
+            {
+              endpoint_id                     = aws_lb.green.arn
+              weight                          = 10
+              client_ip_preservation_enabled  = true
             }
-          }
+          ]
         }
       }
     }
@@ -262,66 +224,48 @@ module "global_accelerator_basic" {
 }
 ```
 
-### Multi-Region Global Accelerator
+### Example 2: Multi-Region Failover
 
 ```hcl
 module "global_accelerator_multi_region" {
   source  = "terraform-aws-modules/global-accelerator/aws"
   version = "~> 3.0"
 
-  name                = "multi-region-app"
-  enabled             = true
-  ip_address_type     = "IPV4"
+  name = "multi-region-app"
+
   flow_logs_enabled   = true
   flow_logs_s3_bucket = aws_s3_bucket.logs.id
   flow_logs_s3_prefix = "global-accelerator/"
 
   listeners = {
     https = {
-      port_ranges = [
-        {
-          from_port = 443
-          to_port   = 443
-        }
-      ]
       protocol        = "TCP"
       client_affinity = "SOURCE_IP"
+      port_ranges = [
+        { from_port = 443, to_port = 443 }
+      ]
 
       endpoint_groups = {
-        # Primary endpoint group in us-east-1
         us_east = {
-          endpoint_group_region         = "us-east-1"
-          health_check_interval_seconds = 30
-          health_check_protocol         = "HTTPS"
-          health_check_path             = "/health"
-          threshold_count               = 3
-          traffic_dial_percentage       = 100
+          endpoint_group_region  = "us-east-1"
+          health_check_protocol  = "HTTPS"
+          health_check_path      = "/health"
+          traffic_dial_percentage = 100
 
-          endpoints = {
-            alb = {
-              endpoint_id                    = aws_lb.us_east.arn
-              weight                         = 100
-              client_ip_preservation_enabled = true
-            }
-          }
+          endpoint_configuration = [
+            { endpoint_id = aws_lb.us_east.arn, weight = 100, client_ip_preservation_enabled = true }
+          ]
         }
 
-        # Secondary endpoint group in eu-west-1
         eu_west = {
-          endpoint_group_region         = "eu-west-1"
-          health_check_interval_seconds = 30
-          health_check_protocol         = "HTTPS"
-          health_check_path             = "/health"
-          threshold_count               = 3
-          traffic_dial_percentage       = 100
+          endpoint_group_region  = "eu-west-1"
+          health_check_protocol  = "HTTPS"
+          health_check_path      = "/health"
+          traffic_dial_percentage = 100
 
-          endpoints = {
-            alb = {
-              endpoint_id                    = aws_lb.eu_west.arn
-              weight                         = 100
-              client_ip_preservation_enabled = true
-            }
-          }
+          endpoint_configuration = [
+            { endpoint_id = aws_lb.eu_west.arn, weight = 100, client_ip_preservation_enabled = true }
+          ]
         }
       }
     }
@@ -329,64 +273,11 @@ module "global_accelerator_multi_region" {
 
   tags = {
     Environment = "production"
-    MultiRegion = "true"
   }
 }
 ```
 
-### Global Accelerator with Multiple Endpoints (Weighted)
-
-```hcl
-module "global_accelerator_multiple_endpoints" {
-  source  = "terraform-aws-modules/global-accelerator/aws"
-  version = "~> 3.0"
-
-  name    = "multi-endpoint-accelerator"
-  enabled = true
-
-  listeners = {
-    app = {
-      port_ranges = [
-        {
-          from_port = 80
-          to_port   = 80
-        },
-        {
-          from_port = 443
-          to_port   = 443
-        }
-      ]
-      protocol = "TCP"
-
-      endpoint_groups = {
-        primary = {
-          health_check_protocol         = "TCP"
-          health_check_interval_seconds = 10
-          threshold_count               = 2
-
-          endpoints = {
-            primary_alb = {
-              endpoint_id = aws_lb.primary.arn
-              weight      = 70  # 70% of traffic
-            }
-            secondary_alb = {
-              endpoint_id = aws_lb.secondary.arn
-              weight      = 30  # 30% of traffic
-            }
-          }
-        }
-      }
-    }
-  }
-
-  tags = {
-    Environment      = "production"
-    LoadDistribution = "weighted"
-  }
-}
-```
-
-### Dual-Stack Global Accelerator
+### Example 3: Dual-Stack Accelerator with Route 53 Alias Records
 
 ```hcl
 module "global_accelerator_dual_stack" {
@@ -394,31 +285,23 @@ module "global_accelerator_dual_stack" {
   version = "~> 3.0"
 
   name            = "dual-stack-accelerator"
-  enabled         = true
-  ip_address_type = "DUAL_STACK"  # Provides both IPv4 and IPv6
+  ip_address_type = "DUAL_STACK"
 
   listeners = {
     web = {
-      port_ranges = [
-        {
-          from_port = 443
-          to_port   = 443
-        }
-      ]
       protocol = "TCP"
+      port_ranges = [
+        { from_port = 443, to_port = 443 }
+      ]
 
       endpoint_groups = {
         primary = {
           health_check_protocol = "HTTPS"
           health_check_path     = "/health"
 
-          endpoints = {
-            alb = {
-              endpoint_id                    = aws_lb.main.arn
-              weight                         = 100
-              client_ip_preservation_enabled = true
-            }
-          }
+          endpoint_configuration = [
+            { endpoint_id = aws_lb.main.arn, weight = 100, client_ip_preservation_enabled = true }
+          ]
         }
       }
     }
@@ -426,11 +309,9 @@ module "global_accelerator_dual_stack" {
 
   tags = {
     Environment = "production"
-    IPVersion   = "dual-stack"
   }
 }
 
-# Create Route 53 alias records for both IPv4 and IPv6
 resource "aws_route53_record" "ipv4" {
   zone_id = aws_route53_zone.main.zone_id
   name    = "app.example.com"
@@ -456,49 +337,52 @@ resource "aws_route53_record" "ipv6" {
 }
 ```
 
-### Global Accelerator with Port Override
+### Example 4: Multi-Protocol Listeners (TCP + UDP) with Port Override
 
 ```hcl
-module "global_accelerator_port_override" {
+module "global_accelerator_multi_protocol" {
   source  = "terraform-aws-modules/global-accelerator/aws"
   version = "~> 3.0"
 
-  name    = "port-override-accelerator"
-  enabled = true
+  name = "multi-protocol-accelerator"
 
   listeners = {
-    custom_ports = {
-      port_ranges = [
-        {
-          from_port = 80
-          to_port   = 80
-        },
-        {
-          from_port = 8080
-          to_port   = 8080
-        }
-      ]
+    web = {
       protocol = "TCP"
+      port_ranges = [
+        { from_port = 80, to_port = 80 },
+        { from_port = 8080, to_port = 8080 }
+      ]
 
       endpoint_groups = {
         primary = {
-          endpoints = {
-            alb = {
-              endpoint_id = aws_lb.main.arn
-              weight      = 100
-            }
-          }
+          endpoint_configuration = [
+            { endpoint_id = aws_lb.main.arn, weight = 100 }
+          ]
 
-          # Override ports for specific endpoints
-          port_overrides = [
-            {
-              endpoint_port = 8443  # Backend listens on 8443
-              listener_port = 80    # Client connects to 80
-            },
-            {
-              endpoint_port = 8443  # Backend listens on 8443
-              listener_port = 8080  # Client connects to 8080
-            }
+          # Backend listens on 8443; clients connect on 80 or 8080
+          port_override = [
+            { endpoint_port = 8443, listener_port = 80 },
+            { endpoint_port = 8443, listener_port = 8080 }
+          ]
+        }
+      }
+    }
+
+    dns = {
+      protocol = "UDP"
+      port_ranges = [
+        { from_port = 53, to_port = 53 }
+      ]
+
+      endpoint_groups = {
+        dns_servers = {
+          health_check_protocol = "TCP"
+          health_check_port     = 53
+
+          endpoint_configuration = [
+            { endpoint_id = aws_eip.dns_1.id, weight = 50 },
+            { endpoint_id = aws_eip.dns_2.id, weight = 50 }
           ]
         }
       }
@@ -506,346 +390,93 @@ module "global_accelerator_port_override" {
   }
 
   tags = {
-    Environment  = "production"
-    PortOverride = "enabled"
-  }
-}
-```
-
-### Global Accelerator with UDP Protocol
-
-```hcl
-module "global_accelerator_udp" {
-  source  = "terraform-aws-modules/global-accelerator/aws"
-  version = "~> 3.0"
-
-  name    = "udp-accelerator"
-  enabled = true
-
-  listeners = {
-    dns = {
-      port_ranges = [
-        {
-          from_port = 53
-          to_port   = 53
-        }
-      ]
-      protocol = "UDP"
-
-      endpoint_groups = {
-        dns_servers = {
-          health_check_protocol         = "TCP"
-          health_check_port             = 53
-          health_check_interval_seconds = 10
-          threshold_count               = 2
-
-          endpoints = {
-            dns_1 = {
-              endpoint_id = aws_eip.dns_server_1.allocation_id
-              weight      = 50
-            }
-            dns_2 = {
-              endpoint_id = aws_eip.dns_server_2.allocation_id
-              weight      = 50
-            }
-          }
-        }
-      }
-    }
-
-    gaming = {
-      port_ranges = [
-        {
-          from_port = 7000
-          to_port   = 7100
-        }
-      ]
-      protocol = "UDP"
-
-      endpoint_groups = {
-        game_servers = {
-          endpoints = {
-            server_1 = {
-              endpoint_id = aws_instance.game_server.id
-              weight      = 100
-            }
-          }
-        }
-      }
-    }
-  }
-
-  tags = {
     Environment = "production"
-    Protocol    = "UDP"
-  }
-}
-```
-
-### Global Accelerator with BYOIP
-
-```hcl
-module "global_accelerator_byoip" {
-  source  = "terraform-aws-modules/global-accelerator/aws"
-  version = "~> 3.0"
-
-  name         = "byoip-accelerator"
-  enabled      = true
-  # BYOIP requires 1 or 2 IPv4 addresses from your BYOIP pool
-  ip_addresses = [
-    "203.0.113.10",
-    "203.0.113.11"
-  ]
-
-  listeners = {
-    web = {
-      port_ranges = [
-        {
-          from_port = 443
-          to_port   = 443
-        }
-      ]
-      protocol = "TCP"
-
-      endpoint_groups = {
-        primary = {
-          endpoints = {
-            alb = {
-              endpoint_id = aws_lb.main.arn
-              weight      = 100
-            }
-          }
-        }
-      }
-    }
-  }
-
-  tags = {
-    Environment = "production"
-    BYOIP       = "true"
-  }
-}
-```
-
-### Blue-Green Deployment with Global Accelerator
-
-```hcl
-module "global_accelerator_blue_green" {
-  source  = "terraform-aws-modules/global-accelerator/aws"
-  version = "~> 3.0"
-
-  name    = "blue-green-accelerator"
-  enabled = true
-
-  listeners = {
-    app = {
-      port_ranges = [
-        {
-          from_port = 443
-          to_port   = 443
-        }
-      ]
-      protocol        = "TCP"
-      client_affinity = "SOURCE_IP"
-
-      endpoint_groups = {
-        primary = {
-          # Gradually shift traffic from blue to green using weights
-          endpoints = {
-            blue = {
-              endpoint_id = aws_lb.blue.arn
-              weight      = 90  # Blue environment - decreasing traffic
-            }
-            green = {
-              endpoint_id = aws_lb.green.arn
-              weight      = 10  # Green environment - increasing traffic
-            }
-          }
-        }
-      }
-    }
-  }
-
-  tags = {
-    Environment    = "production"
-    DeploymentType = "blue-green"
   }
 }
 ```
 
 ## Best Practices
 
-### Architecture and Design
+### Architecture and Endpoint Selection
 
-1. **Use Global Accelerator for Global Applications**: Deploy Global Accelerator when serving users across multiple geographic regions to reduce latency and improve availability through AWS's global network.
-2. **Combine with Route 53**: Create Route 53 alias records pointing to Global Accelerator DNS names for branded domain names while maintaining static IP benefits.
-3. **Multi-Region Endpoint Strategy**: Deploy endpoints across at least two AWS regions to ensure high availability and automatic failover capabilities.
-4. **Choose Appropriate Endpoint Types**: Use Application Load Balancers for HTTP/HTTPS traffic, Network Load Balancers for TCP/UDP, and EC2/EIP for specialized applications.
-5. **Standard vs Custom Routing**: Use standard accelerators for most applications with automatic routing; reserve custom routing for specialized use cases like gaming or VoIP requiring application-specific destination selection.
-6. **Client IP Preservation Planning**: Enable client IP preservation for Application Load Balancers and EC2 instances when applications need source IP for logging, security, or compliance.
+1. **Use Global Accelerator for Global, Health-Sensitive Traffic**: Deploy it when users are geographically distributed and need low latency plus fast, automatic failover — not for pure static-content caching (use CloudFront instead).
+2. **Prefer Standard Routing Unless You Need Deterministic Destinations**: Reserve the `custom-routing` submodule for gaming/VoIP/IoT workloads that require mapping specific client flows to specific VPC subnet destinations; use the standard accelerator for everything else.
+3. **Choose Endpoint Types Deliberately**: Use ALB for HTTP/HTTPS, NLB for high-performance TCP/UDP, and EC2/EIP endpoints only for specialized or legacy workloads.
+4. **Combine with Route 53**: Point Route 53 alias records at the accelerator's `dns_name` (and `dual_stack_dns_name` for `DUAL_STACK`) to keep a branded domain while retaining the static anycast IPs.
+5. **Deploy Across at Least Two Regions**: Use `endpoint_group_region` on separate endpoint groups so Global Accelerator can fail over automatically if an entire region degrades.
 
-### Listener Configuration
+### Listener and Health Check Configuration
 
-7. **Consolidate Port Ranges**: Group related ports into single listeners with multiple port ranges to simplify management and reduce resource count.
-8. **Use Client Affinity Appropriately**: Enable SOURCE_IP client affinity for applications requiring session persistence to the same endpoint, such as WebSocket connections or stateful applications.
-9. **Protocol Selection**: Choose TCP for connection-oriented traffic (HTTP, HTTPS, database connections) and UDP for connectionless traffic (DNS, gaming, VoIP, streaming).
-10. **Avoid Overlapping Port Ranges**: Ensure port ranges across listeners don't overlap to prevent routing conflicts and undefined behavior.
+6. **Consolidate Port Ranges per Listener**: Group related ports into one listener with multiple `port_ranges` entries instead of creating many single-port listeners.
+7. **Set `client_affinity = "SOURCE_IP"`** for stateful/WebSocket workloads that need session persistence to the same endpoint; leave it `NONE` for stateless HTTP APIs.
+8. **Match Protocol to Traffic**: `TCP` for connection-oriented traffic, `UDP` for connectionless traffic (DNS, gaming, streaming).
+9. **Use HTTP/HTTPS Health Checks for Web Endpoints**: A specific `health_check_path` (e.g. `/health`) is more reliable than a bare TCP check for detecting application-level failures.
+10. **Tune `health_check_interval_seconds` and `threshold_count` Together**: `10s`/`2` gives faster failover at the cost of more health-check traffic and a higher chance of false positives; `30s`/`3` is the safer production default. Remember there is only one `threshold_count`, not separate healthy/unhealthy counters like ALB target groups.
+11. **Avoid Overlapping Port Ranges** across listeners on the same accelerator to prevent undefined routing behavior.
 
-### Endpoint Group Management
+### Traffic Management
 
-11. **Configure Health Checks Properly**: Set health check intervals (10-30 seconds) and thresholds (2-3) appropriate for your application's failure detection and recovery requirements.
-12. **Use HTTP/HTTPS Health Checks**: For web applications, use HTTP or HTTPS health checks with specific paths (e.g., "/health") for more accurate endpoint health assessment than TCP checks.
-13. **Adjust Traffic Dial Carefully**: Use traffic dial percentage for gradual rollouts, blue-green deployments, or A/B testing; change values incrementally (10-20% steps) to monitor impact.
-14. **Weight Endpoints Strategically**: Distribute traffic proportionally across endpoints using weights based on capacity, cost, or performance testing results.
-15. **Group Endpoints by Region**: Create separate endpoint groups for each region to enable region-level traffic control and failover strategies.
-16. **Monitor Endpoint Health**: Set up CloudWatch alarms for unhealthy endpoint counts to receive notifications when endpoints fail and traffic shifts.
+12. **Use `traffic_dial_percentage` for Regional Rollouts**: Shift traffic into a new region gradually (e.g. 10% -> 50% -> 100%) rather than switching all at once.
+13. **Weight Endpoints Proportionally to Capacity**: Set `weight` on each `endpoint_configuration` entry based on real capacity/performance testing, not arbitrary splits.
+14. **Blue-Green via Weights**: Model blue-green or canary deployments as two `endpoint_configuration` entries in the same endpoint group and shift `weight` over time.
+15. **Use `port_override` for Backend/Frontend Port Mismatches** instead of standing up extra listeners just to translate ports.
 
-### Performance Optimization
+### Security
 
-17. **Enable Client IP Preservation**: For Application Load Balancers, enable client IP preservation to allow backend applications to see original client IPs without parsing X-Forwarded-For headers.
-18. **Use Port Overrides for Flexibility**: Configure port overrides when backend services listen on different ports than client-facing ports for security or architectural reasons.
-19. **Optimize Health Check Settings**: Balance health check frequency and threshold count - more frequent checks (10s) with lower thresholds (2) provide faster failover but increase network overhead.
-20. **Co-locate with Endpoints**: Deploy Global Accelerator endpoints in regions closest to your actual application infrastructure to minimize hops within AWS network.
-21. **Test Failover Timing**: Regularly test endpoint failure scenarios to validate failover happens within expected timeframes (typically 30-60 seconds based on health check settings).
+16. **Enable Flow Logs** (`flow_logs_enabled = true`) for production accelerators to support traffic analysis, auditing, and incident response.
+17. **Enable `client_ip_preservation_enabled` Carefully**: It's needed for backends that rely on the real client IP, but AWS creates an unmanaged `GlobalAccelerator` security group in the target VPC that must be deleted manually before that VPC can be destroyed — Terraform will otherwise hang/retry on `terraform destroy`.
+18. **Layer Defenses**: Global Accelerator includes AWS Shield Standard automatically; add AWS WAF on ALB endpoints and security groups that restrict origin traffic for defense in depth.
+19. **Secure Flow Log Storage**: Apply least-privilege bucket policies and default encryption to the S3 bucket used for `flow_logs_s3_bucket`.
+20. **Rotate BYOIP Ranges Deliberately**: If using `ip_addresses` (BYOIP), maintain a documented process for switching pools without breaking allowlists downstream.
 
-### Security and Compliance
+### High Availability and Operations
 
-22. **Enable Flow Logs**: Activate flow logs to S3 for security analysis, traffic pattern analysis, compliance auditing, and troubleshooting connectivity issues.
-23. **Use VPC Endpoints When Possible**: For internal applications, deploy endpoints in VPCs rather than exposing them to internet to reduce attack surface.
-24. **Implement Defense in Depth**: Combine Global Accelerator with AWS Shield Standard (included), AWS WAF (for ALB endpoints), and VPC security groups for comprehensive protection.
-25. **Rotate BYOIP Addresses**: If using BYOIP, maintain rotation schedules and have procedures to switch between address pools for security or reputation management.
-26. **Restrict Flow Log Access**: Apply least-privilege IAM policies to S3 buckets containing flow logs; enable bucket encryption and access logging.
-27. **Monitor for Anomalies**: Use CloudWatch Logs Insights or Athena to analyze flow logs for traffic anomalies, DDoS attempts, or suspicious patterns.
-
-### High Availability and Disaster Recovery
-
-28. **Deploy Three or More Endpoints**: Configure at least three endpoints across multiple regions to maintain service even if entire regions become unavailable.
-29. **Test Regional Failover**: Regularly simulate regional failures by marking endpoints unhealthy to validate Global Accelerator reroutes traffic correctly to healthy regions.
-30. **Set Appropriate Threshold Counts**: Use threshold count of 2-3 for production to avoid false positives from transient network issues while maintaining quick failure detection.
-31. **Maintain Sufficient Capacity**: Ensure endpoints in secondary regions can handle full traffic load if primary region fails; avoid over-reliance on traffic dial percentage.
-32. **Document Failover Procedures**: Create runbooks for manual intervention scenarios, including how to adjust traffic dial, add/remove endpoints, or disable accelerator.
-33. **Use Multiple Availability Zones**: Deploy Application Load Balancers and Network Load Balancers across multiple AZs within each region for intra-region resilience.
-
-### Cost Optimization
-
-34. **Understand Pricing Model**: Global Accelerator charges hourly for accelerator and data transfer; review pricing for standard vs. custom routing accelerators as costs differ.
-35. **Consolidate Accelerators**: Share single accelerator across multiple applications using different listener ports to reduce hourly charges.
-36. **Use Traffic Dial for Cost Control**: Reduce traffic dial percentage to secondary regions during normal operations, increasing only during primary region issues.
-37. **Monitor Data Transfer Costs**: Track data transfer OUT from AWS per GB; use CloudWatch metrics and cost allocation tags to monitor and optimize.
-38. **Right-Size Flow Logs**: Enable flow logs selectively for production accelerators or specific time periods rather than continuously for all environments.
-39. **Disable Unused Accelerators**: Set `enabled = false` or destroy accelerators not actively serving traffic to avoid hourly charges.
-40. **Evaluate Cost vs Benefit**: Compare Global Accelerator costs against benefits (performance improvement, simplified management) for your specific use case.
-
-### Operational Excellence
-
-41. **Use Infrastructure as Code**: Manage all Global Accelerator resources through Terraform for version control, peer review, and reproducible deployments.
-42. **Implement Comprehensive Tagging**: Apply tags for environment, application, cost center, owner, and purpose to all accelerators for cost allocation and resource management.
-43. **Monitor Key Metrics**: Track CloudWatch metrics including processed bytes, new flows, active flows, and endpoint health to understand traffic patterns.
-44. **Set Up CloudWatch Alarms**: Create alarms for critical metrics like unhealthy endpoint count, flow count anomalies, or unexpected endpoint group changes.
-45. **Version Control Configuration**: Store all Terraform configurations in Git with proper branching strategy and require peer review for production changes.
-46. **Document Accelerator Purpose**: Maintain clear documentation of what each accelerator serves, which applications depend on it, and contact information for owners.
-47. **Test in Non-Production First**: Validate all configuration changes (health check intervals, traffic dial, endpoint weights) in development or staging before production.
-48. **Plan Maintenance Windows**: Schedule endpoint maintenance during low-traffic periods; use traffic dial to gracefully shift traffic before taking endpoints offline.
-
-### Monitoring and Observability
-
-49. **Enable CloudWatch Metrics**: Monitor all available CloudWatch metrics including new connections per second, active connections, and data processed to establish baselines.
-50. **Create Custom Dashboards**: Build CloudWatch dashboards visualizing accelerator health, endpoint status, traffic distribution, and performance metrics.
-51. **Analyze Flow Logs Regularly**: Use Athena or CloudWatch Logs Insights to query flow logs for traffic patterns, top talkers, geographic distribution, and security analysis.
-52. **Set Up SNS Notifications**: Configure CloudWatch alarms to send SNS notifications to operations teams when endpoint health degrades or traffic patterns anomalies occur.
-53. **Track Configuration Changes**: Enable AWS Config to track Global Accelerator resource changes over time for compliance and troubleshooting.
-54. **Correlate with Application Metrics**: Compare Global Accelerator metrics with application-level metrics (latency, error rates) to identify performance issues.
+21. **Test Failover Regularly**: Simulate endpoint or region failure (e.g., temporarily point health checks at a bad path) to validate failover timing matches your health-check settings.
+22. **Maintain Spare Capacity in Secondary Regions**: Secondary endpoint groups must be able to absorb full traffic if the primary region fails — don't rely on `traffic_dial_percentage` alone for capacity planning.
+23. **Tag Everything**: Apply consistent `tags` (environment, application, owner) for cost allocation and operational tracking.
+24. **Manage Configuration as Code**: Keep `listeners`/`endpoint_groups` maps in version control with peer review; changes to health checks or weights should go through the same review process as other infrastructure changes.
+25. **Consolidate Accelerators Where Sensible**: Share a single accelerator across multiple applications using different listener ports/protocols to reduce the number of hourly-billed accelerators.
+26. **Disable, Don't Delete, for Temporary Pauses**: Use `enabled = false` (or `create = false`) to stop routing traffic without losing the anycast IPs and configuration.
 
 ## Additional Resources
 
-### Official Documentation
-- **AWS Global Accelerator Documentation**: https://docs.aws.amazon.com/global-accelerator/
-- **Terraform AWS Global Accelerator Module GitHub**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator
-- **Terraform Registry - Global Accelerator Module**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws
-
-### User Guides
+- **Module Repository**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator
+- **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest
+- **Module Examples**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator/tree/master/examples
 - **What is AWS Global Accelerator**: https://docs.aws.amazon.com/global-accelerator/latest/dg/what-is-global-accelerator.html
 - **How Global Accelerator Works**: https://docs.aws.amazon.com/global-accelerator/latest/dg/introduction-how-it-works.html
 - **Custom Routing Accelerators**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-custom-routing-accelerators.html
 - **Endpoints for Standard Accelerators**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoints.html
-
-### Configuration and Management
-- **Creating an Accelerator**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-accelerators.html
-- **Listeners in Global Accelerator**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-listeners.html
-- **Endpoint Groups**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-endpoint-groups.html
 - **Preserve Client IP Addresses**: https://docs.aws.amazon.com/global-accelerator/latest/dg/preserve-client-ip-address.html
-
-### Monitoring and Logging
+- **Bring Your Own IP (BYOIP)**: https://docs.aws.amazon.com/global-accelerator/latest/dg/using-byoip.html
 - **Flow Logs**: https://docs.aws.amazon.com/global-accelerator/latest/dg/monitoring-global-accelerator.flow-logs.html
 - **CloudWatch Metrics**: https://docs.aws.amazon.com/global-accelerator/latest/dg/cloudwatch-monitoring.html
-- **CloudWatch Alarms**: https://docs.aws.amazon.com/global-accelerator/latest/dg/cloudwatch-alarms.html
-
-### Advanced Features
-- **Bring Your Own IP (BYOIP)**: https://docs.aws.amazon.com/global-accelerator/latest/dg/using-byoip.html
-- **Client Affinity**: https://docs.aws.amazon.com/global-accelerator/latest/dg/about-listeners.html#about-listeners-client-affinity
-
-### Pricing and Support
 - **Global Accelerator Pricing**: https://aws.amazon.com/global-accelerator/pricing/
-- **AWS Global Accelerator FAQ**: https://aws.amazon.com/global-accelerator/faqs/
+- **`aws_globalaccelerator_endpoint_group` Resource Reference**: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/globalaccelerator_endpoint_group
 
 ## Notes for AI Agents
 
 ### Module Selection Guidance
-- **Use Global Accelerator** when applications serve global users and require consistent low latency, static IP addresses, instant failover, or simplified multi-region traffic management.
-- **Use CloudFront** instead for caching static content, CDN distribution, or when edge caching provides sufficient performance improvement.
-- **Use Route 53** alone for DNS-based routing with geographic or latency-based policies when static IPs and AWS network acceleration aren't required.
-- **Use ALB/NLB directly** for single-region applications where global traffic management and static anycast IPs provide no benefit.
+- **Use Global Accelerator** for global, health-based routing with static anycast IPs and instant regional failover.
+- **Use the `custom-routing` submodule** only when the workload needs deterministic per-flow routing to specific VPC subnet destinations (gaming/VoIP) — it has no health checks and no `client_affinity`/`protocol` on listeners.
+- **Use CloudFront** instead for cacheable static/dynamic content delivery via edge caching.
+- **Use Route 53 alone** for pure DNS-based geo/latency routing when static IPs and AWS backbone acceleration aren't required.
+- **Use ALB/NLB directly** for single-region applications with no global traffic management need.
 
-### Architecture Recommendations
-- For **global web applications**: Use standard accelerator with Application Load Balancers in 2-3 regions, enable client IP preservation, configure HTTPS health checks.
-- For **gaming/VoIP applications**: Use custom routing accelerator with UDP protocol, VPC subnet endpoints, and application-specific destination selection logic.
-- For **API services**: Standard accelerator with NLBs or ALBs, multiple endpoint groups, weighted traffic distribution for canary testing.
-- For **disaster recovery**: Deploy endpoints in geographically diverse regions (US, Europe, Asia-Pacific), set aggressive health check intervals (10s), use traffic dial for controlled failover.
-- For **hybrid cloud**: Combine Global Accelerator with AWS PrivateLink or Site-to-Site VPN for seamless connectivity between AWS and on-premises endpoints.
+### Schema Gotchas (root module)
+- `listeners` is a nested map: listener-level keys are `protocol`, `client_affinity`, `port_ranges`; each listener also carries its own `endpoint_groups` map.
+- `endpoint_configuration` is a **list** of objects (`endpoint_id`, `weight`, `client_ip_preservation_enabled`, `attachment_arn`), not a map keyed by name.
+- The port-mapping field is `port_override` (singular), a list of `{ endpoint_port, listener_port }` objects.
+- Health check has a single `threshold_count` — there is no separate `healthy_threshold_count`/`unhealthy_threshold_count` as with ALB/NLB target groups.
+- `name` defaults to `""`; always set it explicitly.
+- `endpoint_group_region` is what makes an endpoint group multi-region — omit it to keep the endpoint group in the accelerator's default region context.
 
-### Common Configuration Patterns
-- **Basic Production**: Single listener (port 443), 2 endpoint groups (primary + secondary region), ALB endpoints, traffic dial 100%/50%, client IP preservation enabled.
-- **High Availability**: Multiple listeners, 3+ endpoint groups across regions, equal endpoint weights, aggressive health checks (10s interval, threshold 2).
-- **Blue-Green Deployment**: Single endpoint group with 2 endpoints (blue/green), adjust weights gradually (90/10 → 50/50 → 10/90), SOURCE_IP affinity.
-- **Multi-Protocol**: TCP listener (ports 80, 443) for web traffic, UDP listener (port 53) for DNS, separate endpoint groups per protocol.
-- **Custom Routing**: Gaming/VoIP with UDP listeners, VPC subnet endpoints, port ranges matching game server ports (7000-7999).
+### Schema Gotchas (custom-routing submodule)
+- Endpoint groups use `destination_configuration` (list of `{ from_port, to_port, protocols }`) and `endpoint_configuration` (list of `{ endpoint_id }` where `endpoint_id` is a **VPC subnet ID**, not an ALB/EC2/EIP identifier).
+- No health-check fields and no `client_affinity`/`protocol` at the listener level.
+- `endpoint_groups_timeouts` supports only `create`/`delete` (no `update`), unlike the root module's `endpoint_groups_timeouts`.
 
-### Endpoint Type Selection
-- **Application Load Balancer**: Best for HTTP/HTTPS traffic, supports client IP preservation, path-based routing at ALB level, integrates with AWS WAF.
-- **Network Load Balancer**: Ideal for TCP/UDP traffic requiring extreme performance, static IPs at NLB level, connection-based load balancing.
-- **EC2 Instance**: Direct-to-instance routing for specialized applications, requires public Elastic IP, suitable for custom protocols or appliances.
-- **Elastic IP**: Similar to EC2 but more flexible for different instance types; useful when instances frequently change but IPs must remain static.
-
-### Health Check Configuration
-- **Web applications**: Use HTTP/HTTPS health checks with specific paths (/health, /status), 30s interval, threshold 3 for balanced detection.
-- **TCP applications**: Use TCP health checks, 10-15s interval, threshold 2 for faster failover detection.
-- **Production systems**: 30s interval, threshold 3 for stability; aggressive requirements may cause false positives during network blips.
-- **Development/staging**: 60s interval, threshold 5 for cost savings and reduced check overhead.
-
-### Security Best Practices
-- **Always enable flow logs** for production accelerators to maintain audit trails and enable security analysis.
-- **Use AWS Shield** (included automatically) for DDoS protection; consider Shield Advanced for additional protection and cost protection guarantees.
-- **Implement WAF** on Application Load Balancer endpoints for application-layer protection against common attacks (SQL injection, XSS).
-- **Restrict endpoint access** using security groups that only allow traffic from Global Accelerator IP ranges (not general internet).
-- **Encrypt in transit** by using HTTPS listeners and HTTPS backends; Global Accelerator terminates and re-establishes connections at edge.
-
-### Troubleshooting Tips
-- **Endpoints showing unhealthy**: Check security group rules allow health check traffic, verify health check path returns 200 OK, confirm endpoint is actually healthy.
-- **High latency**: Verify endpoints are in multiple regions close to users, check endpoint application performance, review CloudWatch metrics for bottlenecks.
-- **Traffic not routing**: Confirm accelerator is enabled, check listener port ranges match client requests, verify endpoint group has healthy endpoints.
-- **Failover not working**: Review threshold count and health check interval, ensure multiple endpoints exist, check CloudWatch alarms for endpoint health.
-- **Client IP not preserved**: Verify endpoint type supports preservation (ALB or EC2), check client_ip_preservation_enabled is true, confirm application reads correct header.
-
-### Cost Estimation
-- **Hourly charge**: ~$0.025/hour per accelerator (varies by region) = ~$18/month per accelerator base cost.
-- **Data transfer**: $0.015-0.020 per GB for data transfer out from AWS through Global Accelerator (varies by destination region).
-- **Flow logs**: Additional S3 storage costs for logs (varies by volume); typical production accelerator generates 1-10 GB/day.
-- **Endpoints**: Separate charges for underlying resources (ALB, NLB, EC2, data transfer); Global Accelerator adds overhead but provides value through performance improvement.
-- **Optimization**: Share accelerators across applications, disable unused accelerators, use traffic dial to reduce secondary region data transfer.
-
-### Integration Patterns
-- **Route 53 + Global Accelerator**: Create alias records pointing to accelerator DNS for branded domains while maintaining static IPs.
-- **ALB + Global Accelerator**: ALB handles path-based routing and host-based routing, Global Accelerator handles multi-region traffic management.
-- **CloudWatch + Global Accelerator**: Monitor accelerator metrics, endpoint health, create alarms for unhealthy endpoints, analyze flow logs.
-- **Terraform + Global Accelerator**: Manage all configuration as code, use workspaces for multi-environment deployments, implement CI/CD for changes.
-- **Multi-account**: Create accelerator in central networking account, use cross-account ALB/NLB endpoints via resource sharing.
+### Operational Gotchas
+- Enabling `client_ip_preservation_enabled = true` on an ALB/EC2 endpoint causes AWS to create an unmanaged `GlobalAccelerator` security group in the target VPC; that SG must be deleted manually before the VPC can be destroyed, or `terraform destroy` will stall with a `DependencyViolation`.
+- `endpoint_id` accepts an ALB/NLB ARN, an EC2 instance ID, or an Elastic IP allocation ID — the resource type must match what the endpoint actually is.
+- Weight is a relative value (0-255) across the endpoints in one endpoint group, not a percentage; use `traffic_dial_percentage` to control the share of traffic reaching an entire endpoint group.
