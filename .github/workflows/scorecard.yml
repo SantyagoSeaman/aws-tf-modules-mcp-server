@@ -3,6 +3,7 @@ name: Scorecard
 # OpenSSF Scorecard — supply-chain / security-health analysis.
 # Publishes the score to the public OpenSSF API so the README badge works.
 on:
+  workflow_dispatch:
   branch_protection_rule:
   schedule:
     - cron: "20 7 * * 1" # weekly, Monday 07:20 UTC
@@ -25,7 +26,7 @@ jobs:
           persist-credentials: false
 
       - name: Run analysis
-        uses: ossf/scorecard-action@v2
+        uses: ossf/scorecard-action@v2.4.3
         with:
           results_file: results.sarif
           results_format: sarif
