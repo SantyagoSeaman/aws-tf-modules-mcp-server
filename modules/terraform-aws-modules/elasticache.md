@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `elasticache`
+- **Module ID**: `terraform-aws-modules/elasticache/aws`
 - **Source**: `terraform-aws-modules/elasticache/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-elasticache
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/elasticache/aws/latest

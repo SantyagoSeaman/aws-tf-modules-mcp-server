@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `sns`
+- **Module ID**: `terraform-aws-modules/sns/aws`
 - **Source**: `terraform-aws-modules/sns/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-sns
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sns/aws/latest

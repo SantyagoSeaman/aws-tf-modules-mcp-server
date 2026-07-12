@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `ecs`
+- **Module ID**: `terraform-aws-modules/ecs/aws`
 - **Source**: `terraform-aws-modules/ecs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ecs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ecs/aws/latest

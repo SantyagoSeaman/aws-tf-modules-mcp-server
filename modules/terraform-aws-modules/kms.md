@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `kms`
+- **Module ID**: `terraform-aws-modules/kms/aws`
 - **Source**: `terraform-aws-modules/kms/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-kms
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/kms/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `managed-service-grafana`
+- **Module ID**: `terraform-aws-modules/managed-service-grafana/aws`
 - **Source**: `terraform-aws-modules/managed-service-grafana/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-grafana
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-grafana/aws/latest

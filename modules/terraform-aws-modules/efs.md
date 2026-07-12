@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `efs`
+- **Module ID**: `terraform-aws-modules/efs/aws`
 - **Source**: `terraform-aws-modules/efs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-efs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/efs/aws/latest

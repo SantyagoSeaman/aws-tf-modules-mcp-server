@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `autoscaling`
+- **Module ID**: `terraform-aws-modules/autoscaling/aws`
 - **Source**: `terraform-aws-modules/autoscaling/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-autoscaling
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/autoscaling/aws/latest

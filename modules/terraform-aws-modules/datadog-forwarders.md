@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `datadog-forwarders`
+- **Module ID**: `terraform-aws-modules/datadog-forwarders/aws`
 - **Source**: `terraform-aws-modules/datadog-forwarders/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-datadog-forwarders
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/datadog-forwarders/aws/latest

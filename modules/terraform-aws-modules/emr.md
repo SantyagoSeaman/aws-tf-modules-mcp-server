@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `emr`
+- **Module ID**: `terraform-aws-modules/emr/aws`
 - **Source**: `terraform-aws-modules/emr/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-emr
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/emr/aws/latest

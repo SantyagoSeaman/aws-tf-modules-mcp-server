@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `iam`
+- **Module ID**: `terraform-aws-modules/iam/aws`
 - **Source**: `terraform-aws-modules/iam/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-iam
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/iam/aws/latest

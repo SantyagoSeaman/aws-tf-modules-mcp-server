@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `acm`
+- **Module ID**: `terraform-aws-modules/acm/aws`
 - **Source**: `terraform-aws-modules/acm/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-acm
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/acm/aws/latest

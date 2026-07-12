@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `network-firewall`
+- **Module ID**: `terraform-aws-modules/network-firewall/aws`
 - **Source**: `terraform-aws-modules/network-firewall/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-network-firewall
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/network-firewall/aws/latest

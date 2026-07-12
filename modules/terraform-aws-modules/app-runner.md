@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `app-runner`
+- **Module ID**: `terraform-aws-modules/app-runner/aws`
 - **Source**: `terraform-aws-modules/app-runner/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-app-runner
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/app-runner/aws/latest

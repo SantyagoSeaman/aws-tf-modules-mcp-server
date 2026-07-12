@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `ecr`
+- **Module ID**: `terraform-aws-modules/ecr/aws`
 - **Source**: `terraform-aws-modules/ecr/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ecr
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ecr/aws/latest

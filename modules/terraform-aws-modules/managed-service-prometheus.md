@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `managed-service-prometheus`
+- **Module ID**: `terraform-aws-modules/managed-service-prometheus/aws`
 - **Source**: `terraform-aws-modules/managed-service-prometheus/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-prometheus/aws/latest

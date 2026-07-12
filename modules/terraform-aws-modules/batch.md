@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `batch`
+- **Module ID**: `terraform-aws-modules/batch/aws`
 - **Source**: `terraform-aws-modules/batch/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-batch
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/batch/aws/latest

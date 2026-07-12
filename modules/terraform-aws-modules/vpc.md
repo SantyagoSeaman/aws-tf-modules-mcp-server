@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `vpc`
+- **Module ID**: `terraform-aws-modules/vpc/aws`
 - **Source**: `terraform-aws-modules/vpc/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpc
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest

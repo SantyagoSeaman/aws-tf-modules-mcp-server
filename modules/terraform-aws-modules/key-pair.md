@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `key-pair`
+- **Module ID**: `terraform-aws-modules/key-pair/aws`
 - **Source**: `terraform-aws-modules/key-pair/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-key-pair
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/key-pair/aws/latest

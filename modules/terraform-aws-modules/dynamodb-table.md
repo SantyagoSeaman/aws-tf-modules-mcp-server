@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `dynamodb-table`
+- **Module ID**: `terraform-aws-modules/dynamodb-table/aws`
 - **Source**: `terraform-aws-modules/dynamodb-table/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-dynamodb-table
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/dynamodb-table/aws/latest

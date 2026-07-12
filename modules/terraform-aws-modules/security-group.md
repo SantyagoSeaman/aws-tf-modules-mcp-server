@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `security-group`
+- **Module ID**: `terraform-aws-modules/security-group/aws`
 - **Source**: `terraform-aws-modules/security-group/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-security-group
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest

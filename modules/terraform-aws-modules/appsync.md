@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `appsync`
+- **Module ID**: `terraform-aws-modules/appsync/aws`
 - **Source**: `terraform-aws-modules/appsync/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appsync
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appsync/aws/latest

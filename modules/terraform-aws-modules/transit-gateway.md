@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `transit-gateway`
+- **Module ID**: `terraform-aws-modules/transit-gateway/aws`
 - **Source**: `terraform-aws-modules/transit-gateway/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-transit-gateway
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/transit-gateway/aws/latest

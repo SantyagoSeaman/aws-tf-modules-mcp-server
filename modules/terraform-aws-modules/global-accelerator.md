@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `global-accelerator`
+- **Module ID**: `terraform-aws-modules/global-accelerator/aws`
 - **Source**: `terraform-aws-modules/global-accelerator/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest

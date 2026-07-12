@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `eks`
+- **Module ID**: `terraform-aws-modules/eks/aws`
 - **Source**: `terraform-aws-modules/eks/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eks
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eks/aws/latest

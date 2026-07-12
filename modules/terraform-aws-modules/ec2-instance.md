@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `ec2-instance`
+- **Module ID**: `terraform-aws-modules/ec2-instance/aws`
 - **Source**: `terraform-aws-modules/ec2-instance/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ec2-instance
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ec2-instance/aws/latest

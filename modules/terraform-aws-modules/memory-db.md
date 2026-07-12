@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `memory-db`
+- **Module ID**: `terraform-aws-modules/memory-db/aws`
 - **Source**: `terraform-aws-modules/memory-db/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-memory-db
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/memory-db/aws/latest
