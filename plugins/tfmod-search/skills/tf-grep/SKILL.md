@@ -20,7 +20,10 @@ module, including non-AWS ones and specific older versions.
    - If an argument already looks like `namespace/name/provider` (two slashes,
      e.g. `cloudposse/label/null`), use it directly.
    - Otherwise treat the first argument as a module name and call
-     `search_modules`; take the top hit's `module_id`.
+     `search_modules`; take the top hit's `module_id`. `search_modules` only
+     covers the AWS catalog, so if the target is a non-AWS module and no hit is
+     relevant, ask the user for the full `namespace/name/provider` coordinate
+     rather than grepping the wrong module.
 2. **Detect an optional version.** If an argument looks like a semver
    (`6.6.1`, `20.8.4`), pass it as `version`; otherwise omit it and the latest
    is used.
@@ -28,7 +31,7 @@ module, including non-AWS ones and specific older versions.
    intent. For a literal variable/output name, use it as-is (escape regex
    metacharacters such as `.` if the name contains them). Call
    `grep_module_docs` with `module_id`, `pattern`, and `version` when given.
-   Narrow with `scope="root/inputs"` / `"root/outputs"` when the intent is
+   Narrow with `scope=["inputs"]` / `scope=["outputs"]` when the intent is
    clearly a variable or an output.
 4. **Reply with the exact matches** — each with its section label, line number,
    and surrounding context — plus the resolved version and source URL. Do not

@@ -19,7 +19,7 @@ current variable names, is the deliverable.
    written from the retrieved docs, never from memory. Pin each module's
    `version` to the documented current version. When you are unsure of an exact
    output or input name for the wiring, grep it with `grep_module_docs`
-   (`scope="root/outputs"` for outputs) rather than guessing; a component with
+   (`scope=["outputs"]` for outputs) rather than guessing; a component with
    no catalog module (non-AWS, third-party) can still be wired from its live
    docs the same way.
 3. **Produce one coherent configuration:**

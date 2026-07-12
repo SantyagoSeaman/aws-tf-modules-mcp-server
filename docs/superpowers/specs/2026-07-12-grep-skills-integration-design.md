@@ -61,7 +61,7 @@ Canonical escalation triggers (each skill keeps only the ones its workflow hits)
 | E1 | A variable/attribute is absent from the curated doc | Grep its name before claiming it is dead/missing/renamed. Replaces every "confirm via the registry link" step. |
 | E2 | The project pins an older version | Grep at **that** version (`version="x.y.z"`), not latest. For upgrades: grep both pinned and latest to diff behavior. |
 | E3 | The module is outside the curated catalog (cloudposse, any namespace) | Grep is the only source. Derive `module_id` from the block's `source` argument (strip `//submodule` suffix and any `?ref=`). |
-| E4 | A claim rests on an exact default/type/description | Quote the line (`scope="root/inputs"` / `"root/outputs"`) instead of paraphrasing from memory. |
+| E4 | A claim rests on an exact default/type/description | Quote the line (`scope=["inputs"]` / `scope=["outputs"]`) instead of paraphrasing from memory. |
 
 Practical notes taught alongside: the pattern is a regex (escape literal dots);
 matching is case-insensitive by default; a zero-match response lists
@@ -144,7 +144,7 @@ implementation plan; the spec fixes intent and placement.
 
 ### `tf-stack/SKILL.md`
 - **Step 3 (wiring):** add — when unsure of an exact output name, grep with
-  `scope="root/outputs"` rather than guessing (E4). Components without a
+  `scope=["outputs"]` rather than guessing (E4). Components without a
   catalog module (non-AWS or third-party) may still be wired from live docs
   via grep (E3).
 

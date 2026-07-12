@@ -107,7 +107,7 @@ module, including non-AWS ones and specific older versions.
    intent. For a literal variable/output name, use it as-is (escape regex
    metacharacters such as `.` if the name contains them). Call
    `grep_module_docs` with `module_id`, `pattern`, and `version` when given.
-   Narrow with `scope="root/inputs"` / `"root/outputs"` when the intent is
+   Narrow with `scope=["inputs"]` / `scope=["outputs"]` when the intent is
    clearly a variable or an output.
 4. **Reply with the exact matches** — each with its section label, line number,
    and surrounding context — plus the resolved version and source URL. Do not
@@ -439,7 +439,7 @@ with:
    written from the retrieved docs, never from memory. Pin each module's
    `version` to the documented current version. When you are unsure of an exact
    output or input name for the wiring, grep it with `grep_module_docs`
-   (`scope="root/outputs"` for outputs) rather than guessing; a component with
+   (`scope=["outputs"]` for outputs) rather than guessing; a component with
    no catalog module (non-AWS, third-party) can still be wired from its live
    docs the same way.
 ```
