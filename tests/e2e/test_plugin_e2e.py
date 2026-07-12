@@ -90,9 +90,10 @@ EXPECTED_SKILLS = {
     "tf-review",
     "tf-stack",
     "tf-troubleshoot",
+    "tf-grep",
 }
 # user-invoked only; everything else may be model-invoked
-USER_INVOKED_SKILLS = {"tf-module", "tf-stack"}
+USER_INVOKED_SKILLS = {"tf-module", "tf-stack", "tf-grep"}
 # skills that declare the MCP dependency for Codex (all but the pure-lookup one)
 CODEX_BOUND_SKILLS = EXPECTED_SKILLS - {"tf-module"}
 EXPECTED_AGENTS = {"tf-log-analyst", "tf-diff-reviewer"}
