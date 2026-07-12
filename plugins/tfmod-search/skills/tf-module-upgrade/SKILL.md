@@ -13,18 +13,27 @@ change — *before* a version bump or `terraform plan` does.
 
 1. **Inventory.** Scan `*.tf` files for `module` blocks whose `source` is
    `terraform-aws-modules/...`. For each block record: file:line, source,
-   pinned `version` (or its absence), and every variable set.
+   pinned `version` (or its absence), and every variable set. Blocks from other
+   namespaces (cloudposse, project-specific) are not in the curated catalog but
+   can still be audited via `grep_module_docs` against their live docs — include
+   them, marked as live-doc-verified rather than curated-doc-verified.
 2. **Ground truth.** For each distinct module: `get_module` → current version
    and input schema. One call per module, reused across blocks. Passing
    `sections=["inputs", "outputs"]` keeps responses small — version pins and
-   gotchas are always included.
+   gotchas are always included. When a block pins an older version than the
+   doc, `grep_module_docs` at the pinned `version` shows what the code
+   currently relies on and at the latest shows what changed — that diff is the
+   audit.
 3. **Compare, per block:**
    - **Version drift** — pinned version vs current; flag major-version gaps
      loudest; flag missing pins.
    - **Dead variables** — variables set that do not appear in the current
-     doc. Treat as *suspicious, not proven dead*: the docs are curated
-     summaries; confirm via the registry link in the doc before reporting as
-     removed, and mark unconfirmed cases as such.
+     doc. The curated doc is a summary, so absence there is *suspicious, not
+     proven*. Confirm with `grep_module_docs`: grep the variable at the latest
+     version (a hit ⇒ not dead, just unsummarized) and at the pinned version
+     (a hit there but not at latest ⇒ genuinely removed or renamed — report it
+     with the quoted line). Mark a finding unconfirmed only if the grep itself
+     is inconclusive.
    - **Deprecations** — arguments the doc notes as deprecated/renamed, with
      the replacement.
    - **Default drift** — variables the block omits whose documented defaults

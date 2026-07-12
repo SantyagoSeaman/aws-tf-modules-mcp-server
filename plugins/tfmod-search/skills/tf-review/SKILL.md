@@ -19,10 +19,12 @@ naming, or general Terraform hygiene — other tooling owns those.
    inline: read only the `.tf` hunks, then for each touched
    terraform-aws-modules block check against the current doc:
    - every variable set exists in the current inputs (absence in the curated
-     doc = *suspicious*, confirm via the doc's registry link before calling
-     it dead)
+     doc = *suspicious*; confirm with `grep_module_docs` at the version the
+     block pins before calling it dead)
    - required inputs present, `version` pinned and not a major behind
    - deprecated arguments per the doc's notes
+   Blocks whose `source` is outside the curated catalog are verified the same
+   way — grep their live docs — rather than skipped.
 3. **Raw-resource suggestion.** New clusters of hand-written `aws_*`
    resources that a catalog module covers get flagged as a `suggestion`
    with the module name (the full replacement analysis belongs to the
