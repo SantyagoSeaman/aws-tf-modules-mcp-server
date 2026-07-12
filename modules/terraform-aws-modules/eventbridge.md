@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/eventbridge/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eventbridge
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eventbridge/aws/latest
-- **Latest Version**: 4.3.0 (requires Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Latest Version**: 4.3.0
 - **Purpose**: Terraform module that creates and manages AWS EventBridge resources (buses, rules, targets, scheduler, pipes, archives, connections, API destinations, permissions) for building event-driven architectures
 - **Service**: AWS EventBridge (Amazon EventBridge)
 - **Category**: Integration, Serverless, Event-Driven Architecture

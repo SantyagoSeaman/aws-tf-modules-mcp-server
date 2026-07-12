@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/memory-db/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-memory-db
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/memory-db/aws/latest
-- **Latest Version**: 3.2.0 (requires Terraform >= 1.5.7, AWS provider >= 6.34)
+- **Latest Version**: 3.2.0
 - **Purpose**: Terraform module to create AWS MemoryDB resources including the cluster, users, ACL, parameter group, and subnet group
 - **Service**: AWS MemoryDB (for Redis OSS and Valkey)
 - **Category**: Database, In-Memory Database, Caching

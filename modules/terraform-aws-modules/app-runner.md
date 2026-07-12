@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/app-runner/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-app-runner
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/app-runner/aws/latest
-- **Latest Version**: 1.2.2 (Terraform >= 1.0, AWS Provider >= 4.51)
+- **Latest Version**: 1.2.2
 - **Purpose**: Terraform module that creates and configures AWS App Runner services, auto-scaling configurations, VPC networking, IAM roles, custom domains, and observability for deploying containerized web applications
 - **Service**: AWS App Runner (Fully Managed Container Application Service)
 - **Category**: Compute, Serverless, Container Orchestration

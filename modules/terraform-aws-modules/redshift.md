@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/redshift/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-redshift
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/redshift/aws/latest
-- **Latest Version**: 7.1.0 (requires Terraform >= 1.11 and AWS provider >= 6.27 - see Compatibility notes below)
+- **Latest Version**: 7.1.0
 - **Purpose**: Creates and manages a single AWS Redshift data warehouse cluster together with its parameter group, subnet group, optional security group, and supporting automation (scheduled actions, usage limits, managed VPC endpoints, snapshots, logging)
 - **Service**: AWS Redshift (Managed Data Warehouse Service)
 - **Category**: Analytics, Database, Data Warehousing

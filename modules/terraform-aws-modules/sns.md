@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/sns/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-sns
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sns/aws/latest
-- **Latest Version**: 7.1.0 (2026-01-08)
+- **Latest Version**: 7.1.0
 - **Minimum Versions**: Terraform >= 1.5.7, AWS Provider >= 6.28
 - **Purpose**: Terraform module that creates a single AWS SNS topic with its access policy, subscriptions, and (optionally) a data protection policy
 - **Service**: AWS SNS (Simple Notification Service)

@@ -10,6 +10,7 @@
 - **AWS Provider**: >= 6.28
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-atlantis
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/atlantis/aws/latest
+- **Latest Version**: 5.1.0
 - **Purpose**: Deploy Atlantis as a single always-on ECS Fargate task, fronted by an ALB, for pull-request-driven Terraform plan/apply automation
 - **Service**: AWS ECS Fargate, Application Load Balancer, ACM, Route53, EFS
 - **Category**: DevOps, CI/CD, Infrastructure Automation

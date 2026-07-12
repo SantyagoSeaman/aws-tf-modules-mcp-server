@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/appsync/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appsync
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appsync/aws/latest
-- **Latest Version**: 4.1.0 (released 2026-01-08)
+- **Latest Version**: 4.1.0
 - **Purpose**: Terraform module that creates an AWS AppSync GraphQL API together with its datasources, resolvers, pipeline functions, caching, custom domain, and supporting IAM roles
 - **Service**: AWS AppSync (Managed GraphQL Service)
 - **Category**: Serverless, API Management, Application Integration

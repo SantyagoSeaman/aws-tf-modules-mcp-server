@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/global-accelerator/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-global-accelerator
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/global-accelerator/aws/latest
-- **Latest Version**: 3.0.1
+- **Latest Version**: 3.0.0
 - **Terraform**: >= 1.0
 - **AWS Provider**: >= 5.84
 - **Purpose**: Creates AWS Global Accelerator standard accelerators (listeners + multi-region endpoint groups) and, via a submodule, custom routing accelerators

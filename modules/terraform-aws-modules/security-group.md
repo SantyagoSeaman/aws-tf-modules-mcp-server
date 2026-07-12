@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/security-group/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-security-group
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/security-group/aws/latest
-- **Latest Version**: 6.0.0 (major rewrite, released 2026-06-03; requires Terraform >= 1.5.7 and AWS provider >= 6.29)
+- **Latest Version**: 6.0.0
 - **Purpose**: Creates an AWS VPC security group and its ingress/egress rules as individual `aws_vpc_security_group_*_rule` resources, with 53 curated preset submodules for common services
 - **Service**: AWS VPC Security Groups
 - **Category**: Networking, Security

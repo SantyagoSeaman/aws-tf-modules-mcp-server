@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/managed-service-prometheus/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-managed-service-prometheus
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/managed-service-prometheus/aws/latest
-- **Latest Version**: 4.3.1 (requires Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Latest Version**: 4.3.1
 - **Purpose**: Terraform module that creates and manages AWS Managed Service for Prometheus (AMP) workspaces, workspace configuration (retention/cardinality limits), Alert Manager definitions, rule group namespaces, and resource policies
 - **Service**: AWS Managed Service for Prometheus (Amazon Managed Prometheus / AMP)
 - **Category**: Monitoring, Observability, Container Management

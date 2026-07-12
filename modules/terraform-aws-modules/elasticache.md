@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/elasticache/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-elasticache
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/elasticache/aws/latest
-- **Latest Version**: 1.11.0 (2026-01-29)
+- **Latest Version**: 1.11.0
 - **Minimum Versions**: Terraform >= 1.0, AWS Provider >= 5.93, random Provider >= 3.0
 - **Purpose**: Terraform module that creates and manages AWS ElastiCache resources — standalone clusters, Redis/Valkey replication groups (with optional cluster mode/sharding), and cross-region global replication groups — for the Redis, Memcached, and Valkey cache engines
 - **Service**: AWS ElastiCache (Managed In-Memory Caching Service)

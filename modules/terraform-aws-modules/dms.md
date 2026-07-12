@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/dms/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-dms
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/dms/aws/latest
-- **Latest Version**: 2.6.1
+- **Latest Version**: 2.6.0
 - **Purpose**: Terraform module to create AWS Database Migration Service (DMS) resources for database migrations and continuous data replication
 - **Service**: AWS Database Migration Service (AWS DMS)
 - **Category**: Database, Migration, Data Integration
