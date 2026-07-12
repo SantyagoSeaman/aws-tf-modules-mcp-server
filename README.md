@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/tfmodsearch)](https://pypi.org/project/tfmodsearch/)
-[![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
+[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
@@ -125,7 +125,7 @@ Then add to your MCP client config:
 
 ### Prerequisites
 
-- Python 3.13 or higher
+- Python 3.12 or higher
 - [uv](https://github.com/astral-sh/uv) (recommended) or pip
 
 ### Local Installation (For Development)
@@ -136,7 +136,7 @@ git clone https://github.com/SantyagoSeaman/tfmodsearch.git
 cd tfmodsearch
 
 # Create virtual environment and install dependencies
-uv venv --python 3.13
+uv venv --python 3.12
 source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```

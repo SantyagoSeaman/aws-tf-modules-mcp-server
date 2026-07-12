@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.11.0] - 2026-07-12
+
+[0.11.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.11.0
+
+Compatibility release: lowers the Python floor to 3.12 and moves to FastMCP 3.x — the latter genuinely fixes the three FastMCP advisories that 0.10.0 could only triage as unreachable. No runtime API changes.
+
+### Changed
+
+- **Python floor 3.13 → 3.12** (`requires-python = ">=3.12"`). `numpy`'s own `>=3.12` floor makes 3.12 the lowest viable version; CI now runs the test suite on a `["3.12", "3.13"]` matrix. mypy target and trove classifiers updated (ruff already targeted py312).
+- **FastMCP 2.x → 3.x** (`fastmcp>=3.2.0,<4`). The `<3` pin existed only because FastMCP 3.x used to fail on import (breaking fresh installs); that is resolved upstream (3.4.4 imports cleanly). The upgrade needed **no code changes** — the full suite passes on 3.x — and it closes the FastMCP OpenAPI/OAuth advisories (fixed in 3.2.0) and drops the transitively-flagged `diskcache`/`lupa` from the dependency tree.
+
+### Tests
+
+- Full suite: 361 tests, green on Python 3.12 and 3.13 with FastMCP 3.4.4 (6 opt-in live tests skip without `RUN_REGISTRY_BENCHMARK=1`; the 2 live `claude`-CLI e2e tests skip when the `claude` CLI is absent, e.g. in CI).
+
 ## [0.10.0] - 2026-07-12
 
 [0.10.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.10.0
