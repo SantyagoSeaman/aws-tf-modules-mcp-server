@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.9.0] - 2026-07-12
+
+[0.9.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.9.0
+
+The skills-integration release: 0.8.0 shipped `grep_module_docs` but left every plugin skill on pre-0.8.0 guidance. This release teaches the skills and subagents **when to escalate** from the compact curated `get_module` doc to an exact, version-pinnable quote from the live registry docs — and adds a direct `/tf-grep` command.
+
+### Added
+
+- **New user-invoked skill `/tf-grep <module> <pattern>`** — grep the live registry documentation of any module (version-pinnable, non-AWS namespaces too) for an exact quote. Resolves a bare name to a `module_id` via `search_modules` or takes a full `namespace/name/provider` coordinate directly, detects an optional pinned version, and returns the matched lines with section label, line number, and context. Ships a Codex binding.
+- **Grep-escalation guidance across all seven skills and both subagents**, driven by one shared model (compact doc = overview → `grep_module_docs` = proof) with four canonical triggers:
+  - A variable is **absent from the curated doc** → grep the name before calling it dead. This replaces the pre-0.8.0 "confirm via the registry link in the doc" cop-out in `tf-review`, `tf-module-upgrade`, `tf-migrate`, `tf-diff-reviewer`, and `tf-log-analyst` — an agent cannot follow a link mid-review, so those findings previously stayed permanently "unconfirmed".
+  - The **project pins an older version** → grep at that `version`, not latest. Upgrade audits now grep both the pinned and the latest version; that diff is the audit.
+  - The **module is outside the curated AWS catalog** (cloudposse, any namespace) → grep its live docs instead of surrendering with "not indexed".
+  - A claim **rests on an exact default/type** → quote the line (`scope=["inputs"]` / `["outputs"]`) instead of paraphrasing from memory.
+- **`verified-against-live-doc`** confidence level in the `tf-log-analyst` subagent, between `verified-against-doc` and `inferred-from-error`.
+- **Contract regression tests** (`test_model_invoked_skills_reference_grep_tool`, `test_agents_reference_grep_tool`) asserting every model-invoked skill and both subagents reference `grep_module_docs`, so a future skill edit cannot silently drop the integration.
+
+### Changed
+
+- README skills table: "Seven skills" → "Eight skills" with the `/tf-grep` entry; test counts refreshed.
+
+### Tests
+
+- Full suite: 355 tests (349 pass, 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`).
+
 ## [0.8.0] - 2026-07-12
 
 [0.8.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.8.0
