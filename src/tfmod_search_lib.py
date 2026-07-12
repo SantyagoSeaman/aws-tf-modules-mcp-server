@@ -765,7 +765,7 @@ def build_index(
         >>> index = build_index("./modules/terraform-aws-modules", logger=logger)
         >>> print(f"Indexed {len(index.docs)} documents")
     """
-    assert logger is not None, "Logger must not be None"
+    assert logger is not None, "Logger must not be None"  # noqa: S101
     logger.info(f"Building index from directory: {docs_dir}")
     logger.info(f"Using embedding model: {model_name}")
 
@@ -884,7 +884,7 @@ def load_index(path: str, logger: logging.Logger) -> SearchIndex:
     """
     logger.info(f"Loading index from {path}")
     with open(path, "rb") as f:
-        index = pickle.load(f)
+        index = pickle.load(f)  # noqa: S301 - index is our own locally-built, trusted artifact
 
     logger.info(
         f"Index loaded successfully: {len(index.docs)} documents, {len(index.kw_idf)} keywords, model={index.model_name}"
@@ -969,7 +969,7 @@ def compute_scores(
         >>> # Only exact name matching
         >>> results = compute_scores(index, "vpc", w_kw=0, w_bm25=0, w_sem=0, w_exact=10.0, logger=logger)
     """
-    assert logger is not None, "Logger must not be None"
+    assert logger is not None, "Logger must not be None"  # noqa: S101
     logger.info(f"Executing search query: '{query}'")
     logger.debug(f"Search weights: kw={w_kw}, exact={w_exact}, bm25={w_bm25}, sem={w_sem}, top_k={top_k}")
 
