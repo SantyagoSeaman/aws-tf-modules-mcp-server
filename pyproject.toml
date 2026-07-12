@@ -1,12 +1,12 @@
 [project]
 name = "tfmodsearch"
-version = "0.9.0"
+version = "0.10.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "fastmcp>=2.12.4,<3",
-    "nltk>=3.9.2",
+    "nltk>=3.9.4",
     "numpy>=2.4.1",
     "pyyaml>=6.0.3",
     "rank-bm25>=0.2.2",
@@ -66,6 +66,11 @@ markers = [
     "integration: Integration tests that may take longer to run",
     "e2e: End-to-end tests that spawn real processes (MCP stdio sessions, wheel builds, uvx, claude CLI)",
     "benchmark: Retrieval benchmarks; the live registry comparison is opt-in via RUN_REGISTRY_BENCHMARK=1",
+]
+filterwarnings = [
+    # authlib>=1.7 deprecates authlib.jose, imported transitively by fastmcp's JWT auth
+    # provider — a code path this stdio server never runs. Third-party; keep output pristine.
+    "ignore::authlib.deprecate.AuthlibDeprecationWarning",
 ]
 
 [tool.ruff]

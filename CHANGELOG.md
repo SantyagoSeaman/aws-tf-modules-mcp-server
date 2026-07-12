@@ -1,6 +1,10 @@
 # Changelog
 
-## [Unreleased]
+## [0.10.0] - 2026-07-12
+
+[0.10.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.10.0
+
+Security & supply-chain hardening release: adds a proportionate, GitHub-native security baseline and sweeps the dependency tree for known vulnerabilities. No runtime API changes.
 
 ### Security
 
@@ -9,6 +13,16 @@
 - **ruff `S` (flake8-bandit)** security lint enforced in CI; the single networked path (`tfmod_registry_docs.py`) now refuses any non-`https` URL before opening it.
 - **Least-privilege `GITHUB_TOKEN`**: both workflows declare top-level `permissions: contents: read` (publish keeps job-scoped `id-token: write` for OIDC).
 - **`SECURITY.md`** disclosure policy with GitHub Private Vulnerability Reporting enabled.
+
+### Dependencies
+
+- Upgraded pinned GitHub Actions to current majors: `checkout` v4→v7, `setup-uv` v5→v7 (with `activate-environment: true` for the v6+ implicit-venv change), `cache` v4→v6, `upload-artifact` v4→v7, `download-artifact` v4→v8 — the last clears the deprecated Node 20 warning in the publish job.
+- Refreshed `uv.lock` to pull security-patched transitive dependencies (transformers 5.x, sentence-transformers, starlette, authlib, cryptography, …); raised the direct `nltk` floor to `>=3.9.4`.
+- Triaged every open Dependabot alert against the server's actual runtime (MCP **stdio** transport, no auth provider configured, fixed embedding model, single hardcoded-host HTTPS fetch): none were reachable in an executed, attacker-influenced code path — the flagged web/auth stack (Starlette/Authlib/PyJWT/python-multipart) and model-download TLS libraries sit in code paths this server never runs.
+
+### Tests
+
+- Full suite: 361 tests (355 pass, 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`), verified against the upgraded dependency set. Added `tests/integration/test_security_config.py` — asserts the Dependabot config, SECURITY.md reporting policy, both workflows' least-privilege permissions, and that the publish job retains its OIDC `id-token: write` grant.
 
 ## [0.9.0] - 2026-07-12
 
