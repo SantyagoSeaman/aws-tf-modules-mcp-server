@@ -49,6 +49,7 @@ Think of it as an always-available, searchable reference card for every terrafor
 - [Configuration](#️-configuration)
 - [Development](#-development)
 - [Testing](#-testing)
+- [Security](#-security)
 - [Architecture](#-architecture)
   - [Indexed Modules](#indexed-modules)
 - [Contributing](#-contributing)
@@ -588,7 +589,7 @@ The project includes the following development tools:
 ### Code Quality
 
 ```bash
-# Run linter
+# Run linter (includes flake8-bandit `S` security rules)
 ruff check src/ tests/
 
 # Run formatter
@@ -620,6 +621,7 @@ pytest tests/integration/test_registry_docs.py -v          # registry client + c
 pytest tests/integration/test_grep_module_docs.py -v       # grep_module_docs tool (3 tests)
 pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (14 tests)
 pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
+pytest tests/integration/test_security_config.py -v         # Security config contract (5 tests)
 
 # Run the opt-in live tests (real calls to the public Terraform Registry)
 RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v -s
@@ -639,9 +641,21 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
 - **Markdown Parsing** (14 tests): `## Module Information` parsing (name, keywords, `module_id`, `latest_version`), description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
+- **Security Config** (5 tests): the Dependabot config, `SECURITY.md` reporting policy, both workflows' least-privilege `permissions`, and the publish job's retained OIDC `id-token: write` grant
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 355 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+**Total**: 361 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+
+## 🔒 Security
+
+TFModSearch is a local, CPU-only server that is offline by design except for one module (`tfmod_registry_docs.py`, which fetches public Terraform Registry documentation over HTTPS for `grep_module_docs`). Supply-chain and code hygiene are enforced with GitHub-native tooling:
+
+- **Vulnerability reporting**: see [`SECURITY.md`](SECURITY.md) — please use GitHub Private Vulnerability Reporting rather than a public issue.
+- **CodeQL** default setup runs static analysis on every pull request and on a weekly schedule.
+- **Dependabot** opens weekly GitHub Actions version-updates and automatic security-update PRs for vulnerable dependencies.
+- **Secret scanning + push protection** are enabled on the repository.
+- **ruff `S` (flake8-bandit)** security lint runs in CI, and the registry fetch refuses any non-`https` URL.
+- **Least-privilege CI**: workflows run with `permissions: contents: read`; PyPI publishing uses OIDC Trusted Publishing (no long-lived token) with PEP 740 attestations.
 
 ## 🏗️ Architecture
 
