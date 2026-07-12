@@ -142,6 +142,14 @@ class TestSkills:
         _, body = _parse_frontmatter(SKILLS_DIR / "tf-troubleshoot" / "SKILL.md")
         assert "extract_tf_errors.py" in body
 
+    @pytest.mark.parametrize("skill_name", sorted(EXPECTED_SKILLS - USER_INVOKED_SKILLS))
+    def test_model_invoked_skills_reference_grep_tool(self, skill_name):
+        """Every model-invoked skill must teach the compact-doc -> grep
+        escalation. Regression guard for the grep_module_docs skills
+        integration: future skill edits cannot silently drop the guidance."""
+        _, body = _parse_frontmatter(SKILLS_DIR / skill_name / "SKILL.md")
+        assert "grep_module_docs" in body, f"{skill_name} must reference grep_module_docs"
+
     def test_trigger_descriptions_are_disjoint(self):
         """Each description must own its trigger vocabulary: the review/upgrade/
         error/scaffold keywords may appear in exactly one model-invoked skill."""
@@ -186,6 +194,13 @@ class TestAgents:
         assert "tf-log-analyst" in troubleshoot
         _, review = _parse_frontmatter(SKILLS_DIR / "tf-review" / "SKILL.md")
         assert "tf-diff-reviewer" in review
+
+    @pytest.mark.parametrize("agent_name", sorted(EXPECTED_AGENTS))
+    def test_agents_reference_grep_tool(self, agent_name):
+        """Both subagents must verify findings against live docs via
+        grep_module_docs, not only the curated get_module doc."""
+        _, body = _parse_frontmatter(self.AGENTS_DIR / f"{agent_name}.md")
+        assert "grep_module_docs" in body, f"{agent_name} must reference grep_module_docs"
 
 
 class TestMaintainerSkills:

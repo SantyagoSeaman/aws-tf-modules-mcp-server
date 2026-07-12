@@ -74,9 +74,10 @@ The plugin configures the MCP server automatically **and** adds workflow skills 
 
 Both bundle:
 - The **tfmod-search MCP server** (runs via `uvx tfmodsearch` — [uv](https://github.com/astral-sh/uv) required)
-- **Seven skills**:
+- **Eight skills**:
   - `aws-terraform-modules` — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
   - `/tf-module <query>` — instant module lookup with a ready-to-paste snippet
+  - `/tf-grep <module> <pattern>` — grep the live registry docs of any module (version-pinnable, non-AWS too) for an exact quote
   - `/tf-stack <requirement>` — scaffold a multi-module stack with correct output→input wiring
   - `tf-migrate` — replace hand-written `aws_*` resources with a covering module, verified attribute-by-attribute
   - `tf-module-upgrade` — audit pinned versions and variable usage against current docs
@@ -633,14 +634,14 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
 - **MCP Server** (40 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters, `module_id`/`latest_version` fields, security validation, integration workflows
-- **End-to-End** (49 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
+- **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
 - **Markdown Parsing** (14 tests): `## Module Information` parsing (name, keywords, `module_id`, `latest_version`), description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 345 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+**Total**: 355 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
 
 ## 🏗️ Architecture
 
