@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `rds-proxy`
+- **Module ID**: `terraform-aws-modules/rds-proxy/aws`
 - **Source**: `terraform-aws-modules/rds-proxy/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-rds-proxy
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/rds-proxy/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `fsx`
+- **Module ID**: `terraform-aws-modules/fsx/aws`
 - **Source**: `terraform-aws-modules/fsx/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-fsx
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/fsx/aws/latest

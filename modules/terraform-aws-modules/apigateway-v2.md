@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `apigateway-v2`
+- **Module ID**: `terraform-aws-modules/apigateway-v2/aws`
 - **Source**: `terraform-aws-modules/apigateway-v2/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-apigateway-v2
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/apigateway-v2/aws/latest

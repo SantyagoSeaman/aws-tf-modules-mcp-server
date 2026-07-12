@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `opensearch`
+- **Module ID**: `terraform-aws-modules/opensearch/aws`
 - **Source**: `terraform-aws-modules/opensearch/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-opensearch
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/opensearch/aws/latest

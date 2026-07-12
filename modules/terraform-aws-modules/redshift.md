@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `redshift`
+- **Module ID**: `terraform-aws-modules/redshift/aws`
 - **Source**: `terraform-aws-modules/redshift/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-redshift
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/redshift/aws/latest

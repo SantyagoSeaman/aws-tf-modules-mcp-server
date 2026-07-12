@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `eventbridge`
+- **Module ID**: `terraform-aws-modules/eventbridge/aws`
 - **Source**: `terraform-aws-modules/eventbridge/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eventbridge
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eventbridge/aws/latest

@@ -6,6 +6,7 @@ Tools exposed:
 - modules_list() -> complete catalog of indexed modules
 - search_modules(query: str) -> top-3 ranked hits
 - get_module(module_identifier: str) -> full module documentation
+- grep_module_docs(module_id: str, pattern: str) -> regex-grepped live registry documentation
 
 The server requires an index file specified via --index_path argument or uses default location.
 Search scoring weights are loaded from config.yaml and can be overridden via CLI arguments.
@@ -13,6 +14,7 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 
 import argparse
 import logging
+import os
 import re
 import sys
 import threading
@@ -27,6 +29,9 @@ from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field, field_serializer
 
+import tfmod_registry_docs
+from tfmod_doc_grep import grep_document
+from tfmod_registry_docs import get_assembled_docs
 from tfmod_search_lib import (
     _PROJECT_ROOT,
     BGE_QUERY_INSTRUCTION,
@@ -51,20 +56,23 @@ app = FastMCP(
     name="tfmod-search",
     version=_SERVER_VERSION,
     instructions="""
-# TFModSearch — Terraform AWS Module Documentation Search
+# TFModSearch — Terraform Module Documentation Search & Live Registry Grep
 
-Hybrid search (keyword + BM25 + semantic) over current documentation for all 54
-community terraform-aws-modules. Module APIs change between major versions;
+Two complementary tool families. Module APIs change between major versions;
 memorized variable names are frequently stale. Before writing or modifying
-Terraform that uses AWS community modules, ALWAYS:
+Terraform, ALWAYS retrieve current documentation rather than relying on
+training data.
+
+## Curated AWS catalog (offline, compact) — 54 community terraform-aws-modules
 
 1. `search_modules(query, top_k=3)` — find the right module. Returns the
    top-ranked matches (default 3, up to 10) with name, path, keywords,
-   description, and relevance score. Query by functionality ("s3 bucket with
-   encryption and versioning"), technology ("kubernetes cluster"), or exact
-   module name ("vpc", "eks").
+   description, relevance score, and `module_id`/`latest_version` (registry
+   coordinates for chaining into `grep_module_docs`). Query by functionality
+   ("s3 bucket with encryption and versioning"), technology ("kubernetes
+   cluster"), or exact module name ("vpc", "eks").
 2. `get_module(module_identifier, sections=None)` — fetch the complete,
-   current documentation for the chosen module. Accepts a module name ("vpc")
+   curated documentation for the chosen module. Accepts a module name ("vpc")
    or a relative doc path ("modules/terraform-aws-modules/vpc.md"). Pass
    `sections` (e.g. ["inputs", "examples"]) to keep the response small; core
    context (version pins, agent notes, gotchas) is always included and a
@@ -73,7 +81,31 @@ Terraform that uses AWS community modules, ALWAYS:
    retrieved documentation — not values recalled from training data.
 
 `modules_list()` returns the full catalog (names, paths, descriptions,
-keywords) when browsing is preferable to search.
+keywords, module_id, latest_version) when browsing is preferable to search.
+
+## Live registry grep (any module, any provider ecosystem, version-pinnable)
+
+4. `grep_module_docs(module_id, pattern, version=None, ...)` — fetch the
+   full, current documentation for ANY Terraform Registry module (not just
+   the curated AWS catalog) — optionally pinned to an exact `version` — and
+   regex-grep it, returning only matching lines with a few lines of context
+   (like the Grep tool), not the whole document. Use this when: the module
+   isn't in the curated catalog; you need a specific/older version's exact
+   variable names or defaults; or you want to pinpoint one detail (e.g. "what
+   is the default of the NAT-gateway variable in 6.6.1?") without flooding
+   context with a 10k+ token document. Results are disk-cached: pinned
+   versions forever, `latest` for `doc_cache_ttl_hours` (default 24h, or pass
+   `refresh=true` to bypass). Zero matches still returns `available_sections`
+   so you can refine `pattern`/`scope`.
+
+## Tool Boundaries
+
+- Curated AWS module, general usage/examples/inputs → `search_modules` +
+  `get_module` (fast, offline, hand-curated).
+- Any registry module (AWS or not), a specific/older version, or a pinpoint
+  variable/default lookup → `grep_module_docs` (live, version-aware, regex).
+- Chain them: `search_modules` results carry `module_id`/`latest_version` —
+  feed those straight into `grep_module_docs` without guessing coordinates.
 
 ## Search Tips
 
@@ -266,6 +298,66 @@ class ConfigLoader:
 
         return log_level.upper()
 
+    @staticmethod
+    def load_doc_cache(
+        config_path: Path | None = None,
+        cli_overrides: dict[str, Any] | None = None,
+        logger: logging.Logger | None = None,
+    ) -> tuple[Path, int]:
+        """
+        Load registry-docs cache configuration with precedence: CLI > YAML > defaults.
+
+        Args:
+            config_path: Path to YAML configuration file
+            cli_overrides: Dict with optional 'doc_cache_dir' (str) and
+                'doc_cache_ttl_hours' (int) overrides
+            logger: Logger instance for logging operations
+
+        Returns:
+            Tuple of (cache_dir, ttl_hours) for grep_module_docs's registry-docs cache.
+            Default cache_dir: $TFMODSEARCH_CACHE_DIR or $XDG_CACHE_HOME or ~/.cache,
+            joined with "tfmodsearch/registry_docs". Default ttl_hours: 24.
+        """
+        default_cache_root = Path(
+            os.environ.get("TFMODSEARCH_CACHE_DIR") or os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")
+        )
+        cache_dir = default_cache_root / "tfmodsearch" / "registry_docs"
+        ttl_hours = 24
+
+        # Load from YAML if exists
+        if config_path and config_path.exists():
+            try:
+                with open(config_path) as f:
+                    config = yaml.safe_load(f)
+                    if config:
+                        if config.get("doc_cache_dir"):
+                            cache_dir = Path(config["doc_cache_dir"])
+                            if logger:
+                                logger.info(f"Loaded doc_cache_dir from config: {config_path}")
+                        if config.get("doc_cache_ttl_hours") is not None:
+                            ttl_hours = int(config["doc_cache_ttl_hours"])
+                            if logger:
+                                logger.info(f"Loaded doc_cache_ttl_hours from config: {config_path}")
+            except Exception as e:
+                if logger:
+                    logger.warning(f"Error loading doc cache config from {config_path}: {e}, using defaults")
+        elif config_path:
+            if logger:
+                logger.warning(f"Config file not found at {config_path}, using doc cache defaults")
+
+        # Apply CLI overrides (take precedence)
+        if cli_overrides:
+            if cli_overrides.get("doc_cache_dir"):
+                cache_dir = Path(cli_overrides["doc_cache_dir"])
+                if logger:
+                    logger.info(f"Applied CLI override for doc_cache_dir: {cache_dir}")
+            if cli_overrides.get("doc_cache_ttl_hours") is not None:
+                ttl_hours = int(cli_overrides["doc_cache_ttl_hours"])
+                if logger:
+                    logger.info(f"Applied CLI override for doc_cache_ttl_hours: {ttl_hours}")
+
+        return cache_dir, ttl_hours
+
 
 class ServerState:
     """
@@ -279,6 +371,8 @@ class ServerState:
         _weights: Search scoring weights configuration
         _index_path: Path to the index file
         _query_instruction: Optional query instruction prefix for BGE models
+        _doc_cache_dir: Disk cache directory for grep_module_docs registry documents
+        _doc_cache_ttl_hours: TTL (hours) for "latest" registry doc cache entries
     """
 
     def __init__(
@@ -288,6 +382,8 @@ class ServerState:
         index_path: Path,
         query_instruction: str | None = None,
         logger: logging.Logger | None = None,
+        doc_cache_dir: Path | None = None,
+        doc_cache_ttl_hours: int = 24,
     ):
         """
         Initialize server state.
@@ -298,6 +394,11 @@ class ServerState:
             index_path: Path to index file
             query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
+            doc_cache_dir: Disk cache directory for grep_module_docs registry documents
+                (None until resolved by initialize_server/ConfigLoader.load_doc_cache;
+                grep_module_docs falls back to the default location if still None)
+            doc_cache_ttl_hours: TTL (hours) for "latest" (unpinned) registry doc cache
+                entries; pinned versions are always cached forever regardless
         """
         self._index = index
         self._weights = weights
@@ -305,13 +406,16 @@ class ServerState:
         self._query_instruction = query_instruction
         self._lock = threading.RLock()
         self._logger = logger
+        self._doc_cache_dir = doc_cache_dir
+        self._doc_cache_ttl_hours = doc_cache_ttl_hours
 
         doc_count = len(index.docs) if index is not None else 0
         if self._logger:
             self._logger.info(
                 f"ServerState initialized: index_path={index_path}, "
                 f"docs={doc_count}, weights={weights.to_dict()}, "
-                f"query_instruction={'set' if query_instruction else 'disabled'}"
+                f"query_instruction={'set' if query_instruction else 'disabled'}, "
+                f"doc_cache_dir={doc_cache_dir}, doc_cache_ttl_hours={doc_cache_ttl_hours}"
             )
 
     @property
@@ -340,6 +444,16 @@ class ServerState:
     def query_instruction(self) -> str | None:
         """Get optional query instruction prefix for BGE models."""
         return self._query_instruction
+
+    @property
+    def doc_cache_dir(self) -> Path | None:
+        """Get the disk cache directory for grep_module_docs registry documents."""
+        return self._doc_cache_dir
+
+    @property
+    def doc_cache_ttl_hours(self) -> int:
+        """Get the TTL (hours) for 'latest' (unpinned) registry doc cache entries."""
+        return self._doc_cache_ttl_hours
 
     def reload_index(self, new_index_path: Path | None = None) -> None:
         """
@@ -392,6 +506,8 @@ class ServerStateManager:
         index_path: Path,
         query_instruction: str | None = None,
         logger: logging.Logger | None = None,
+        doc_cache_dir: Path | None = None,
+        doc_cache_ttl_hours: int = 24,
     ) -> ServerState:
         """
         Initialize the server state singleton.
@@ -404,6 +520,8 @@ class ServerStateManager:
             index_path: Path to index file
             query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
+            doc_cache_dir: Disk cache directory for grep_module_docs registry documents
+            doc_cache_ttl_hours: TTL (hours) for "latest" registry doc cache entries
 
         Returns:
             Initialized ServerState instance
@@ -414,7 +532,9 @@ class ServerStateManager:
         with cls._lock:
             if cls._instance is not None:
                 raise RuntimeError("ServerState already initialized")
-            cls._instance = ServerState(index, weights, index_path, query_instruction, logger)
+            cls._instance = ServerState(
+                index, weights, index_path, query_instruction, logger, doc_cache_dir, doc_cache_ttl_hours
+            )
             if logger:
                 logger.info("ServerStateManager initialized")
             return cls._instance
@@ -461,6 +581,17 @@ class SearchHit(BaseModel):
     keywords: list[str] = Field(..., description="Module keywords/tags extracted from documentation.")
     description: str = Field(..., description="Module description extracted from documentation text.")
     score: float = Field(..., description="Combined relevance score from hybrid search.")
+    module_id: str = Field(
+        ...,
+        description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
+        "'terraform-aws-modules/vpc/aws'). Pass this to grep_module_docs to grep the "
+        "live, current registry documentation for this module.",
+    )
+    latest_version: str = Field(
+        ...,
+        description="Latest version known at doc-curation time (a hint, not a live guarantee). "
+        "Pass as `version` to grep_module_docs to pin that snapshot, or omit to resolve the true latest.",
+    )
 
     @field_serializer("score")
     def serialize_score(self, value: float) -> float:
@@ -477,11 +608,60 @@ class ModuleListItem(BaseModel):
     path: str = Field(..., description="File path to module documentation.")
     description: str = Field(..., description="Module description extracted from documentation text.")
     keywords: list[str] = Field(..., description="Module keywords/tags.")
+    module_id: str = Field(
+        ...,
+        description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
+        "'terraform-aws-modules/vpc/aws'). Pass this to grep_module_docs to grep the "
+        "live, current registry documentation for this module.",
+    )
+    latest_version: str = Field(
+        ...,
+        description="Latest version known at doc-curation time (a hint, not a live guarantee). "
+        "Pass as `version` to grep_module_docs to pin that snapshot, or omit to resolve the true latest.",
+    )
 
 
 class ModulesListOutput(BaseModel):
     modules: list[ModuleListItem] = Field(..., description="Complete list of all available Terraform modules.")
     count: int = Field(..., description="Total number of modules in the catalog.")
+
+
+class GrepMatch(BaseModel):
+    section: str = Field(
+        ...,
+        description="Section label the match was found in, e.g. 'root/readme', 'root/inputs', "
+        "'submodule:flow-log/readme', 'example:complete/readme'.",
+    )
+    line_number: int = Field(..., description="1-based line number within the assembled document.")
+    line: str = Field(..., description="The matching line's text.")
+    before: list[str] = Field(..., description="Up to context_lines lines immediately preceding the match.")
+    after: list[str] = Field(..., description="Up to context_lines lines immediately following the match.")
+
+
+class CacheInfo(BaseModel):
+    hit: bool = Field(..., description="Whether the assembled document was served from the on-disk/memory cache.")
+    fetched_at: str = Field(..., description="ISO-8601 timestamp of the underlying registry fetch.")
+    policy: str = Field(
+        ..., description="Cache policy applied: 'pinned' (immutable, cached forever) or 'latest-ttl' (TTL-based)."
+    )
+
+
+class GrepOutput(BaseModel):
+    module_id: str = Field(..., description="Terraform Registry coordinates 'namespace/name/provider' requested.")
+    resolved_version: str = Field(
+        ..., description="Concrete version actually served (never the literal string 'latest')."
+    )
+    source_url: str = Field(..., description="Terraform Registry URL of the resolved module version.")
+    total_matches: int = Field(..., description="Total logical matches found before the max_matches cap.")
+    returned_matches: int = Field(..., description="Number of matches actually returned (<= max_matches).")
+    truncated: bool = Field(..., description="True when total_matches exceeds max_matches.")
+    cache: CacheInfo = Field(..., description="Cache status for the underlying document fetch.")
+    matches: list[GrepMatch] = Field(..., description="Matching lines with section labels and surrounding context.")
+    available_sections: list[str] = Field(
+        ...,
+        description="Full ordered list of section labels present in the assembled document, so pattern/scope "
+        "can be refined — especially useful when total_matches is 0.",
+    )
 
 
 # -----------------------------
@@ -775,6 +955,8 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
                 keywords=d.keywords or [],
                 description=description,
                 score=float(score),
+                module_id=getattr(d, "module_id", ""),
+                latest_version=getattr(d, "latest_version", ""),
             )
         )
 
@@ -832,13 +1014,101 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
 
         modules.append(
             ModuleListItem(
-                module_name=doc.module_name or "", path=doc.path, description=description, keywords=doc.keywords or []
+                module_name=doc.module_name or "",
+                path=doc.path,
+                description=description,
+                keywords=doc.keywords or [],
+                module_id=getattr(doc, "module_id", ""),
+                latest_version=getattr(doc, "latest_version", ""),
             )
         )
 
     state.logger.debug(f"Modules list generated: {len(modules)} items")
 
     return ModulesListOutput(modules=modules, count=len(modules))
+
+
+def grep_module_docs_impl(
+    module_id: str,
+    pattern: str,
+    *,
+    version: str | None = None,
+    case_sensitive: bool = False,
+    context_lines: int = 2,
+    scope: list[str] | None = None,
+    max_matches: int = 50,
+    refresh: bool = False,
+    cache_dir: Path,
+    ttl_hours: int = 24,
+) -> GrepOutput:
+    """
+    Helper function to fetch, cache, and grep live Terraform Registry module documentation.
+
+    This function is testable (not decorated) and can be called directly with an
+    explicit cache_dir, independent of ServerState/ServerStateManager.
+
+    Args:
+        module_id: Terraform Registry coordinates "namespace/name/provider".
+        pattern: Python regex to search for.
+        version: Exact version to pin, or None to resolve the current latest.
+        case_sensitive: Case-sensitive match (default False).
+        context_lines: Lines of context before/after each match, clamped to 0..20.
+        scope: Optional list restricting the grep to specific document parts
+            (root, inputs, outputs, resources, submodules, examples).
+        max_matches: Cap on returned matches, clamped to >= 1.
+        refresh: Bypass the cache and refetch from the registry.
+        cache_dir: Disk cache directory for assembled registry documents.
+        ttl_hours: TTL (hours) for "latest" (unpinned) cache entries.
+
+    Returns:
+        GrepOutput with matches, cache status, and available section labels.
+
+    Raises:
+        ValueError: If module_id is malformed (propagated from parse_module_id
+            via get_assembled_docs) or pattern is not a valid regex.
+
+    See grep_module_docs() tool documentation for full details.
+    """
+    context_lines = max(0, min(int(context_lines), 20))
+    max_matches = max(1, int(max_matches))
+
+    # Look up tfmod_registry_docs._http_fetch on the module at call time (rather than
+    # relying on get_assembled_docs's bound default) so tests that monkeypatch
+    # tfmod_registry_docs._http_fetch are honored without any real network access.
+    assembled_text, resolved_version, source_url, cache_hit, fetched_at = get_assembled_docs(
+        module_id,
+        version,
+        cache_dir=cache_dir,
+        ttl_hours=ttl_hours,
+        refresh=refresh,
+        fetch=tfmod_registry_docs._http_fetch,
+    )
+
+    doc_matches, total, available_sections = grep_document(
+        assembled_text,
+        pattern,
+        case_sensitive=case_sensitive,
+        context_lines=context_lines,
+        scope=scope,
+        max_matches=max_matches,
+    )
+
+    matches = [
+        GrepMatch(section=m.section, line_number=m.line_number, line=m.line, before=m.before, after=m.after)
+        for m in doc_matches
+    ]
+
+    return GrepOutput(
+        module_id=module_id,
+        resolved_version=resolved_version,
+        source_url=source_url,
+        total_matches=total,
+        returned_matches=len(matches),
+        truncated=total > max_matches,
+        cache=CacheInfo(hit=cache_hit, fetched_at=fetched_at, policy="pinned" if version else "latest-ttl"),
+        matches=matches,
+        available_sections=available_sections,
+    )
 
 
 # -----------------------------
@@ -1079,6 +1349,126 @@ def get_module(
     return get_module_impl(module_identifier, state, sections=sections)
 
 
+@app.tool(
+    description=(
+        "Grep the full, current documentation for ANY Terraform Registry module (not limited to the "
+        "curated AWS catalog), optionally pinned to a specific version. Fetches root readme/inputs/"
+        "outputs/resources plus submodules and examples, assembles them into one document, caches it on "
+        "disk, and returns only matching lines with a few lines of context — like the Grep tool, not a "
+        "document dump. Use search_modules/get_module for curated AWS modules; use this tool for any "
+        "registry module, live/version-pinned lookups, or to pinpoint an exact current variable name or "
+        "default without guessing from training data."
+    ),
+    tags={"grep", "registry", "terraform", "live", "documentation"},
+    annotations=ToolAnnotations(title="Grep live Terraform Registry module documentation"),
+)
+def grep_module_docs(
+    module_id: Annotated[
+        str,
+        Field(
+            description="Terraform Registry module coordinates 'namespace/name/provider', e.g. "
+            "'terraform-aws-modules/vpc/aws'. Get this from search_modules/modules_list results "
+            "(module_id field) or from a registry.terraform.io URL."
+        ),
+    ],
+    pattern: Annotated[
+        str,
+        Field(description="Python regex to search for, e.g. 'enable_nat_gateway' or 'nat.*gateway'."),
+    ],
+    version: Annotated[
+        str | None,
+        Field(
+            description="Exact version to pin (e.g. '6.6.1'), cached forever once fetched. Omit to "
+            "resolve and use the true current latest, which is refetched once the cache entry is "
+            "older than doc_cache_ttl_hours (default 24h)."
+        ),
+    ] = None,
+    case_sensitive: Annotated[
+        bool, Field(description="Case-sensitive match. Default False (case-insensitive).")
+    ] = False,
+    context_lines: Annotated[
+        int,
+        Field(
+            ge=0,
+            le=20,
+            description="Lines of context before AND after each match (0-20, like grep -C). Default 2.",
+        ),
+    ] = 2,
+    scope: Annotated[
+        list[str] | None,
+        Field(
+            description="Restrict the grep to specific parts of the assembled document: 'root', "
+            "'inputs', 'outputs', 'resources', 'submodules', 'examples'. Default: search everything."
+        ),
+    ] = None,
+    max_matches: Annotated[
+        int, Field(ge=1, description="Cap on returned matches, to manage token budget. Default 50.")
+    ] = 50,
+    refresh: Annotated[
+        bool, Field(description="Bypass the cache and refetch from the registry. Default False.")
+    ] = False,
+) -> GrepOutput:
+    """
+    Grep the live, current documentation for any Terraform Registry module.
+
+    Fetches the module's full detail from the Terraform Registry API (root readme,
+    inputs, outputs, resources, submodules, examples), assembles it into one
+    deterministic, section-marked text, caches it on disk, and runs a regex grep
+    over it — returning only matching lines with surrounding context rather than
+    the whole (often 10k+ token) document.
+
+    Args:
+        module_id: Terraform Registry coordinates "namespace/name/provider".
+        pattern: Python regex to search for.
+        version: Exact version to pin, or None to resolve the current latest.
+        case_sensitive: Case-sensitive match (default False).
+        context_lines: Lines of context before/after each match (0-20, default 2).
+        scope: Optional list restricting the grep to specific document parts.
+        max_matches: Cap on returned matches (default 50).
+        refresh: Bypass the cache and refetch from the registry.
+
+    Returns:
+        GrepOutput: matches (with section label, line number, and context),
+            total_matches/returned_matches/truncated, resolved_version,
+            source_url, cache status, and available_sections (useful to refine
+            pattern/scope, especially when total_matches is 0).
+
+    Raises:
+        ValueError: If module_id is not exactly "namespace/name/provider", or
+            pattern is not a valid regex.
+        RuntimeError: If server state is not initialized.
+
+    Examples:
+        Pin an exact version and find a variable's default:
+            Input: module_id="terraform-aws-modules/vpc/aws", pattern="enable_nat_gateway", version="6.6.1"
+            Output: matching input row(s) from root/inputs with context
+
+        Look up a module not in the curated catalog:
+            Input: module_id="hashicorp/consul/aws", pattern="cluster_size"
+
+    Typical Workflow:
+        1. search_modules("s3 bucket") → note the module_id/latest_version of the hit
+        2. grep_module_docs(module_id, "encryption", version=latest_version) → pinpoint details
+    """
+    state = ServerStateManager.get()
+    cache_dir = state.doc_cache_dir
+    ttl_hours = state.doc_cache_ttl_hours
+    if cache_dir is None:
+        cache_dir, ttl_hours = ConfigLoader.load_doc_cache()
+    return grep_module_docs_impl(
+        module_id,
+        pattern,
+        version=version,
+        case_sensitive=case_sensitive,
+        context_lines=context_lines,
+        scope=scope,
+        max_matches=max_matches,
+        refresh=refresh,
+        cache_dir=cache_dir,
+        ttl_hours=ttl_hours,
+    )
+
+
 # -----------------------------
 # Initialization and Entry Point
 # -----------------------------
@@ -1197,6 +1587,14 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
 
         logger.info(f"Query instruction: {'enabled' if query_instruction else 'disabled'}")
 
+        # Resolve registry-docs cache config (grep_module_docs) with precedence: YAML > defaults
+        doc_cache_dir, doc_cache_ttl_hours = ConfigLoader.load_doc_cache(
+            config_path=config_path,
+            logger=logger,
+        )
+
+        logger.info(f"Doc cache: dir={doc_cache_dir}, ttl_hours={doc_cache_ttl_hours}")
+
         # Resolve index path using shared logic from tfmod_search_lib
         index_path = resolve_index_path(args.index_path)
 
@@ -1221,6 +1619,8 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
             index_path=index_path,
             query_instruction=query_instruction,
             logger=logger,
+            doc_cache_dir=doc_cache_dir,
+            doc_cache_ttl_hours=doc_cache_ttl_hours,
         )
 
         logger.info(f"Server initialized successfully: {state}")

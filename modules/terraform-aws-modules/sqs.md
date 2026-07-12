@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `sqs`
+- **Module ID**: `terraform-aws-modules/sqs/aws`
 - **Source**: `terraform-aws-modules/sqs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-sqs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest

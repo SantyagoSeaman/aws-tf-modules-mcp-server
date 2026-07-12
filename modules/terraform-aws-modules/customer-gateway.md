@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `customer-gateway`
+- **Module ID**: `terraform-aws-modules/customer-gateway/aws`
 - **Source**: `terraform-aws-modules/customer-gateway/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-customer-gateway
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/customer-gateway/aws/latest

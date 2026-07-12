@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `cloudfront`
+- **Module ID**: `terraform-aws-modules/cloudfront/aws`
 - **Source**: `terraform-aws-modules/cloudfront/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-cloudfront
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/cloudfront/aws/latest

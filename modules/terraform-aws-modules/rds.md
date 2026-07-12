@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `rds`
+- **Module ID**: `terraform-aws-modules/rds/aws`
 - **Source**: `terraform-aws-modules/rds/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-rds
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/rds/aws/latest

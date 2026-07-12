@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `elb`
+- **Module ID**: `terraform-aws-modules/elb/aws`
 - **Source**: `terraform-aws-modules/elb/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-elb
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/elb/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `s3-bucket`
+- **Module ID**: `terraform-aws-modules/s3-bucket/aws`
 - **Source**: `terraform-aws-modules/s3-bucket/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-s3-bucket
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest

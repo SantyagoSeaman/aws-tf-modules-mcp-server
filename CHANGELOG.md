@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.8.0] - 2026-07-12
+
+[0.8.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.8.0
+
+The live-registry release: the server reaches beyond its curated offline catalog. A new grep tool pinpoints lines in the full, current documentation of **any** Terraform Registry module — version-pinnable, cached, and returning matches with context instead of dumping 100k-token documents into the agent's context window.
+
+### Added
+
+- **New MCP tool `grep_module_docs(module_id, pattern, version=None, case_sensitive=False, context_lines=2, scope=None, max_matches=50, refresh=False)`** — regex-greps the live documentation of any Terraform Registry module (`namespace/name/provider`), not just the curated AWS catalog. Fetches the module detail from the registry API, assembles README + inputs/outputs/resources rows + every submodule and example into one greppable text, and returns only the matching lines with section label, line number, and surrounding context. A zero-match response includes `available_sections` for follow-up queries. Built for surgical lookups: an exact variable default in a pinned older version, a submodule input, a non-AWS module.
+- **Disk cache for assembled registry docs**: pinned versions are immutable and cached forever; `latest` is cached for `doc_cache_ttl_hours` (default 24h). Location `${TFMODSEARCH_CACHE_DIR:-${XDG_CACHE_HOME:-~/.cache}}/tfmodsearch/registry_docs`, overridable via `config.yaml` (`doc_cache_dir`, `doc_cache_ttl_hours`); `refresh=True` bypasses the cache.
+- **`module_id` and `latest_version` fields on `search_modules` and `modules_list` results** — registry coordinates parsed from a new explicit `**Module ID**` header bullet backfilled into all 54 curated docs (with a fallback to the root `**Source**` bullet), so an agent can chain `search_modules → grep_module_docs` without guessing coordinates. Index rebuilt with the new fields.
+- **Two new source modules** with a strict boundary: `src/tfmod_registry_docs.py` (registry client: fetch + document assembly + disk cache — the **only** networked module, stdlib `urllib` only, zero new dependencies) and `src/tfmod_doc_grep.py` (pure offline grep engine). The curated `search_modules`/`get_module`/`modules_list` tools remain fully offline.
+- **Registry Search Comparison benchmark** in the README: top-1/top-3 retrieval on the full 54-module/162-query golden set vs. the public Terraform Registry search API (the same endpoint HashiCorp's `terraform-mcp-server` wraps). TFModSearch: 92% top-1 / 100% top-3 overall; registry keyword search: 42.6% / 42.6% (official namespace) — the gap is entirely in descriptive queries, where semantic search finds modules that keyword search never surfaces. Reproducible via `RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py`.
+
+### Tests
+
+- 16 new tests for the grep feature: pure grep engine (regex, case-insensitivity, context lines, section labeling, `scope`, `max_matches` cap, invalid-regex error), registry client + cache semantics with an injected fetcher — no real network (pinned-forever, latest-TTL, `refresh`), tool wiring, a header invariant (every curated doc's `Module ID` equals its root registry `Source`), and a 2-test opt-in live smoke test against the real registry.
+- Full suite: 345 tests (6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`).
+
 ## [0.7.0] - 2026-07-11
 
 [0.7.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.7.0

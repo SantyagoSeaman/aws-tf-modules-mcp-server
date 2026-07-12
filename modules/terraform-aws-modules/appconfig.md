@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `appconfig`
+- **Module ID**: `terraform-aws-modules/appconfig/aws`
 - **Source**: `terraform-aws-modules/appconfig/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-appconfig
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/appconfig/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `ssm-parameter`
+- **Module ID**: `terraform-aws-modules/ssm-parameter/aws`
 - **Source**: `terraform-aws-modules/ssm-parameter/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ssm-parameter
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ssm-parameter/aws/latest

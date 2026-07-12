@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `atlantis`
+- **Module ID**: `terraform-aws-modules/atlantis/aws`
 - **Source**: `terraform-aws-modules/atlantis/aws`
 - **Version**: 5.1.0
 - **Terraform**: >= 1.10

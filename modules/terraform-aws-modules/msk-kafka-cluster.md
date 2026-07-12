@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `msk-kafka-cluster`
+- **Module ID**: `terraform-aws-modules/msk-kafka-cluster/aws`
 - **Source**: `terraform-aws-modules/msk-kafka-cluster/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-msk-kafka-cluster
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/msk-kafka-cluster/aws/latest

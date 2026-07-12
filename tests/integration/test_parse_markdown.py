@@ -359,6 +359,31 @@ This should also be included."""
     assert "Section Header" not in result
 
 
+def test_parses_module_id_and_latest_version():
+    from tfmod_search_lib import ModuleDocumentParser
+
+    text = (
+        "# T\n\n## Module Information\n\n"
+        "- **Module Name**: `vpc`\n"
+        "- **Module ID**: `terraform-aws-modules/vpc/aws`\n"
+        "- **Source**: `terraform-aws-modules/vpc/aws`\n"
+        "- **Latest Version**: 6.6.1\n"
+        "- **Keywords**: vpc, subnet\n"
+    )
+    p = ModuleDocumentParser(logging.getLogger("t"))
+    info = p.parse_module_info(text)
+    assert info.module_id == "terraform-aws-modules/vpc/aws"
+    assert info.latest_version == "6.6.1"
+
+
+def test_module_id_falls_back_to_source_without_submodule_suffix():
+    from tfmod_search_lib import ModuleDocumentParser
+
+    text = "## Module Information\n\n- **Module Name**: `x`\n- **Source**: `ns/x/aws//modules/sub`\n"
+    info = ModuleDocumentParser(logging.getLogger("t")).parse_module_info(text)
+    assert info.module_id == "ns/x/aws"
+
+
 if __name__ == "__main__":
     # Allow running tests directly
     pytest.main([__file__, "-v", "-s"])

@@ -27,51 +27,57 @@ Generate the following bullet points in order:
  - Extract short name from full module path (e.g., `terraform-aws-modules/vpc/aws` → `vpc`)
  - Example: `vpc`, `s3-bucket`, `security-group`
 
-2. **Source**:
+2. **Module ID**:
+ - Format: - **Module ID**: `{namespace}/{name}/{provider}`
+ - The Terraform Registry coordinate of the ROOT module — no `//modules/...` submodule suffix
+ - Equals the root **Source** value; consumed by the `grep_module_docs` MCP tool
+ - Example: `terraform-aws-modules/vpc/aws`
+
+3. **Source**:
  - Format: - **Source**: `{terraform-module-source-path}`
  - Extract from module source or registry
  - Example: `terraform-aws-modules/vpc/aws`
 
-3. **GitHub Repository**:
+4. **GitHub Repository**:
  - Format: - **GitHub Repository**: {full-github-url}
  - Construct from source path or find in documentation
  - Example: https://github.com/terraform-aws-modules/terraform-aws-vpc
 
-4. **Terraform Registry**:
+5. **Terraform Registry**:
  - Format: - **Terraform Registry**: {registry-url}
  - Standard format: https://registry.terraform.io/modules/{namespace}/{module}/{provider}/latest
  - Example: https://registry.terraform.io/modules/terraform-aws-modules/vpc/aws/latest
 
-5. **Latest Version**:
+6. **Latest Version**:
  - Format: - **Latest Version**: {version-number OR "Check registry for current version"}
  - Include actual version if available, otherwise use placeholder text
  - Version can be found on registry module web-page in block "Provision Instructions"
  - Alternatively, try to find on Github releases page
  - Example: 5.0.0, 3.2.1, Check registry
 
-6. **Purpose**:
+7. **Purpose**:
  - Format: - **Purpose**: {One-sentence description of what the module creates/manages}
  - Extract from module README or description
  - Focus on primary resources created (e.g., "Terraform module that creates AWS VPC resources")
 
-7. **Service**:
+8. **Service**:
  - Format: - **Service**: {AWS Service Name (Full Name)}
  - Example: AWS VPC (Virtual Private Cloud), AWS S3 (Simple Storage Service)
  - Use official AWS service names
 
-8. **Category**:
+9. **Category**:
  - Format: - **Category**: {Primary category, Secondary category}
  - Common categories: Networking, Storage, Compute, Database, Security, Monitoring, Analytics, etc.
  - List 1-3 relevant categories separated by commas
 
-9. **Keywords**:
+10. **Keywords**:
  - Format: - **Keywords**: {comma-separated-keyword-list}
  - Extract from module tags, README, or infer from functionality
  - Include: resource types, features, use cases, abbreviations, related services
  - 10-20 keywords covering technical terms, features, integrations, and use cases
  - Examples: vpc, subnet, nat-gateway, internet-gateway, route-table, security-group
 
-10. **Use For**:
+11. **Use For**:
  - Format: - **Use For**: {comma-separated list of practical use cases}
  - 8-12 practical, real-world scenarios where this module would be used
  - Focus on business/technical outcomes, not technical features

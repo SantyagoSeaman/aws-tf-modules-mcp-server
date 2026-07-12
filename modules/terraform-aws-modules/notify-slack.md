@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `notify-slack`
+- **Module ID**: `terraform-aws-modules/notify-slack/aws`
 - **Source**: `terraform-aws-modules/notify-slack/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-notify-slack
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/notify-slack/aws/latest

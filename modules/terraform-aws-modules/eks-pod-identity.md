@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `eks-pod-identity`
+- **Module ID**: `terraform-aws-modules/eks-pod-identity/aws`
 - **Source**: `terraform-aws-modules/eks-pod-identity/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eks-pod-identity
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eks-pod-identity/aws/latest

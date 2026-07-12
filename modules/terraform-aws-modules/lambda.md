@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `lambda`
+- **Module ID**: `terraform-aws-modules/lambda/aws`
 - **Source**: `terraform-aws-modules/lambda/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-lambda
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest

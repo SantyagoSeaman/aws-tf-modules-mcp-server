@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `vpn-gateway`
+- **Module ID**: `terraform-aws-modules/vpn-gateway/aws`
 - **Source**: `terraform-aws-modules/vpn-gateway/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpn-gateway
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpn-gateway/aws/latest

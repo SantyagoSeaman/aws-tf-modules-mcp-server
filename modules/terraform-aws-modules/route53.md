@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `route53`
+- **Module ID**: `terraform-aws-modules/route53/aws`
 - **Source**: `terraform-aws-modules/route53/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-route53
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/route53/aws/latest

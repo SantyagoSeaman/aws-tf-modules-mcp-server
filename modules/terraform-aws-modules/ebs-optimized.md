@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `ebs-optimized`
+- **Module ID**: `terraform-aws-modules/ebs-optimized/aws`
 - **Source**: `terraform-aws-modules/ebs-optimized/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ebs-optimized
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ebs-optimized/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `secrets-manager`
+- **Module ID**: `terraform-aws-modules/secrets-manager/aws`
 - **Source**: `terraform-aws-modules/secrets-manager/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-secrets-manager
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/secrets-manager/aws/latest

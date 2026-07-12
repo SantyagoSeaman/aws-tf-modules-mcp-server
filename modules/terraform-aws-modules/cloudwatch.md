@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `cloudwatch`
+- **Module ID**: `terraform-aws-modules/cloudwatch/aws`
 - **Source**: `terraform-aws-modules/cloudwatch/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-cloudwatch
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/cloudwatch/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `rds-aurora`
+- **Module ID**: `terraform-aws-modules/rds-aurora/aws`
 - **Source**: `terraform-aws-modules/rds-aurora/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-rds-aurora
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/rds-aurora/aws/latest

@@ -3,6 +3,7 @@
 ## Module Information
 
 - **Module Name**: `dms`
+- **Module ID**: `terraform-aws-modules/dms/aws`
 - **Source**: `terraform-aws-modules/dms/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-dms
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/dms/aws/latest
