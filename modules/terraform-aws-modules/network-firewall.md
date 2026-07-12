@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/network-firewall/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-network-firewall
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/network-firewall/aws/latest
-- **Latest Version**: 2.1.0 (requires Terraform >= 1.5.7; submodules require AWS provider >= 6.28)
+- **Latest Version**: 2.1.0
 - **Purpose**: Terraform module that creates and manages AWS Network Firewall resources (firewall, firewall policy, and rule groups) for stateful/stateless traffic inspection and intrusion detection/prevention in VPCs and Transit Gateways
 - **Service**: AWS Network Firewall (Amazon Network Firewall)
 - **Category**: Security, Networking, Firewall

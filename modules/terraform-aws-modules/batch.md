@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/batch/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-batch
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/batch/aws/latest
-- **Latest Version**: 3.1.0
+- **Latest Version**: 3.0.3
 - **Purpose**: Terraform module that creates and manages AWS Batch compute environments, job queues, scheduling policies, job definitions, and their associated IAM roles for running containerized and multi-node batch workloads at scale
 - **Service**: AWS Batch
 - **Category**: Compute, Batch Processing, Containers

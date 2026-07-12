@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/step-functions/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-step-functions
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/step-functions/aws/latest
-- **Latest Version**: 5.1.0 (Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Latest Version**: 5.1.0
 - **Purpose**: Creates an AWS Step Functions state machine together with its IAM role and pre-built IAM policies for 35+ AWS service integration patterns
 - **Service**: AWS Step Functions (Workflow Orchestration)
 - **Category**: Workflow, Serverless, Orchestration

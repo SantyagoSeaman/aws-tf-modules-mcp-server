@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.11.1] - 2026-07-12
+
+[0.11.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.11.1
+
+Data-quality patch: corrects the `Latest Version` of every curated module doc against the Terraform Registry and rebuilds the search index. Every `Module ID` was verified valid.
+
+### Fixed
+
+- Corrected four docs that claimed a **non-existent newer version**: `batch` 3.1.0→3.0.3, `dms` 2.6.1→2.6.0, `global-accelerator` 3.0.1→3.0.0, `lambda` 8.8.1→8.8.0.
+- Added the missing `Latest Version` bullet to `atlantis` (5.1.0).
+- Stripped trailing annotation text from 18 `Latest Version` bullets so the value the server reports (and chains into `grep_module_docs`) is a clean version number; compatibility details remain in the dedicated `Compatibility` bullet.
+- Refreshed the `latest_version` metadata in `model/tfmod_e5_small_index.pkl` **in place** (embeddings/BM25 untouched — a full rebuild with the upgraded sentence-transformers/transformers drifts semantic rankings and would need the golden set re-tuned); all 54 docs now carry a valid `Module ID` and a `Latest Version` matching the registry.
+
 ## [0.11.0] - 2026-07-12
 
 [0.11.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.11.0

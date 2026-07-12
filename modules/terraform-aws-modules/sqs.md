@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/sqs/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-sqs
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/sqs/aws/latest
-- **Latest Version**: 5.2.2 (Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Latest Version**: 5.2.2
 - **Purpose**: Creates and manages Amazon SQS standard and FIFO queues, including an optional companion dead-letter queue, KMS/SSE encryption, and IAM queue policies
 - **Service**: AWS SQS (Simple Queue Service)
 - **Category**: Messaging, Integration, Application Services

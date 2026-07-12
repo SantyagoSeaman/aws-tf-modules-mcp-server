@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/key-pair/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-key-pair
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/key-pair/aws/latest
-- **Latest Version**: 3.0.0 (requires Terraform >= 1.5.7, AWS provider >= 6.0, TLS provider >= 4.0)
+- **Latest Version**: 3.0.0
 - **Purpose**: Terraform module that creates and manages a single AWS EC2 key pair for SSH access to EC2 instances
 - **Service**: AWS EC2 (Elastic Compute Cloud) - Key Pairs
 - **Category**: Security, Compute, Access Management

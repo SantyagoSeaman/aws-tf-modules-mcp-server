@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/lambda/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-lambda
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/lambda/aws/latest
-- **Latest Version**: 8.8.1
+- **Latest Version**: 8.8.0
 - **Purpose**: Terraform module that creates and manages AWS Lambda functions, layers, and aliases, including building and packaging deployment artifacts
 - **Service**: AWS Lambda (Serverless Compute)
 - **Category**: Compute, Serverless, Application Integration

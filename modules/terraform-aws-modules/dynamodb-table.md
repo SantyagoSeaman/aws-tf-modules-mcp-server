@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/dynamodb-table/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-dynamodb-table
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/dynamodb-table/aws/latest
-- **Latest Version**: 5.5.0 (2026-01-08)
+- **Latest Version**: 5.5.0
 - **Minimum Versions**: Terraform >= 1.5.7, AWS Provider >= 6.28
 - **Purpose**: Terraform module that creates and manages a single AWS DynamoDB table with its indexes, autoscaling policies, streams, and (optionally) global-table replicas
 - **Service**: AWS DynamoDB (NoSQL Database Service)

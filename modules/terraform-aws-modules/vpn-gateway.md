@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/vpn-gateway/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-vpn-gateway
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/vpn-gateway/aws/latest
-- **Latest Version**: 4.0.0 (released 2024-12-20)
+- **Latest Version**: 4.0.0
 - **Compatibility**: Terraform >= 1.3, AWS provider >= 5.42
 - **Purpose**: Creates an AWS Site-to-Site VPN connection (`aws_vpn_connection`) between an existing Virtual Private Gateway or Transit Gateway and an existing Customer Gateway, along with its attachment, route propagation, and static route resources
 - **Service**: AWS Site-to-Site VPN (IPsec)

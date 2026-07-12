@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/eks-pod-identity/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-eks-pod-identity
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/eks-pod-identity/aws/latest
-- **Latest Version**: 2.8.1 (Terraform >= 1.5.7, AWS provider >= 6.28)
+- **Latest Version**: 2.8.1
 - **Purpose**: Terraform module that creates an IAM role plus one or more `aws_eks_pod_identity_association` resources, so Kubernetes service accounts can assume the role via AWS EKS Pod Identity
 - **Service**: AWS EKS (Elastic Kubernetes Service) - Pod Identity
 - **Category**: Container Orchestration, Security, Identity and Access Management

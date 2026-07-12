@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/ebs-optimized/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-ebs-optimized
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/ebs-optimized/aws/latest
-- **Latest Version**: 0.2.1 (final release)
+- **Latest Version**: 0.2.1
 - **Status**: **ARCHIVED** — read-only since November 23, 2021; not maintained
 - **Purpose**: Static lookup utility that returns whether a given EC2 instance type supports the `ebs_optimized` flag
 - **Service**: AWS EC2 (Elastic Compute Cloud)
