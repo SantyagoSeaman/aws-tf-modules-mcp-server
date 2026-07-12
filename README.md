@@ -1,6 +1,8 @@
 # TFModSearch MCP Server
 
 [![CI](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/security/code-scanning)
+[![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/SantyagoSeaman/tfmodsearch/badge)](https://securityscorecards.dev/viewer/?uri=github.com/SantyagoSeaman/tfmodsearch)
 [![PyPI](https://img.shields.io/pypi/v/tfmodsearch)](https://pypi.org/project/tfmodsearch/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
