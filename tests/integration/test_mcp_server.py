@@ -140,6 +140,14 @@ class TestSearchModulesTool:
             assert hit.score >= 0, "score should be non-negative"
             assert len(hit.description) <= 203, "description should be truncated to ~200 chars"
 
+    def test_search_hit_includes_module_id(self, server_state):
+        """Test that search hits surface module_id and latest_version for chaining into grep_module_docs."""
+        result = search_modules_impl("vpc", server_state)
+
+        top = result.results[0]
+        assert top.module_id == "terraform-aws-modules/vpc/aws"
+        assert top.latest_version, "latest_version should be non-empty"
+
     def test_search_without_index_raises_error(self, search_weights, test_logger):
         """Test that searching without loaded index raises error."""
         # Create a ServerState with None index to trigger error
@@ -372,6 +380,12 @@ class TestModulesListTool:
         for module in result.modules:
             # Descriptions should be truncated to ~200 chars
             assert len(module.description) <= 203, f"Description for {module.module_name} should be truncated"
+
+    def test_modules_list_includes_module_id(self, server_state):
+        """Test that every catalog entry carries a non-empty module_id for chaining into grep_module_docs."""
+        result = modules_list_impl(server_state)
+
+        assert all(m.module_id for m in result.modules), "Every module should have a non-empty module_id"
 
 
 class TestMCPServerIntegration:
