@@ -65,6 +65,7 @@ addopts = [
 markers = [
     "integration: Integration tests that may take longer to run",
     "e2e: End-to-end tests that spawn real processes (MCP stdio sessions, wheel builds, uvx, claude CLI)",
+    "benchmark: Retrieval benchmarks; the live registry comparison is opt-in via RUN_REGISTRY_BENCHMARK=1",
 ]
 
 [tool.ruff]

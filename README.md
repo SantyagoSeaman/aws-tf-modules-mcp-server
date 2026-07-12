@@ -576,6 +576,9 @@ pytest tests/integration/test_mcp_server.py -v              # MCP server tools (
 pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (12 tests)
 pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
 
+# Run the registry retrieval benchmark (opt-in; live calls to the public registry)
+RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v -s
+
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 ```
@@ -588,8 +591,9 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **End-to-End** (49 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
+- **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 318 tests (integration + e2e)
+**Total**: 323 tests (integration + e2e; 4 opt-in registry-benchmark tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
 
 ## 🏗️ Architecture
 
@@ -753,6 +757,43 @@ The project supports any sentence-transformers model via `--model`. The table be
 **Why `e5-small-v2`**: it's the only smaller model that matches `bge-base-en-v1.5`'s 100% success rate on this corpus — at **~3x smaller** and **~3x faster per query**, with no weight retuning or query/passage prompt prefixes required (both were tried; neither moved the needle on this corpus). `gte-small` is the smallest option (~65 MB, ~6x smaller than the old default) and is a reasonable choice if binary size matters more than the last percentage point of recall — see `tests/integration/test_model_comparison.py` for a repo-committed, CI-run comparison across all three (`gte-small`, `bge-base-en-v1.5`, `e5-small-v2`). `bge-small-en-v1.5` and `all-MiniLM-L12-v2` were also evaluated and are documented here for completeness, but weren't selected: no clear edge over `gte-small`/`e5-small-v2` on either size or accuracy.
 
 To use a different model, rebuild the index with `--model <name>` (see [Building the Index](#1-building-the-index)) and point `--index_path` / `config.yaml` at the new file.
+
+### Registry Search Comparison (vs. Terraform Registry / HashiCorp MCP)
+
+How does hybrid-semantic search actually compare to a plain keyword lookup against the public Terraform Registry? The registry endpoint used below — `GET /v1/modules/search?q=…&provider=aws` — is exactly the API that the official [`hashicorp/terraform-mcp-server`](https://github.com/hashicorp/terraform-mcp-server)'s `search_modules` tool wraps, so this doubles as an apples-to-apples comparison against that competitor's module search.
+
+The benchmark reuses the same **golden set** as the searchability tests: all 54 modules, each queried 3 ways (exact name, keyword, natural language) — 162 labeled queries — asking *"is the expected module in the top-1 / top-3 results?"*. Registry results are scored two ways: `official` (hit only if the match comes from the `terraform-aws-modules` namespace — the same module we document) and `any-author` (hit if any namespace returns a name-matching module — deliberately generous to the registry).
+
+| Query type | System | Top-1 | Top-3 |
+|---|---|---:|---:|
+| **keyword** (n=54) | **TFModSearch** (semantic, AWS curated) | **94.4%** | **100.0%** |
+| | Registry — official `terraform-aws-modules` | 22.2% | 22.2% |
+| | Registry — any-author aws module | 29.6% | 38.9% |
+| **exact-name** (n=54) | **TFModSearch** | 100.0% | 100.0% |
+| | Registry — official | 100.0% | 100.0% |
+| | Registry — any-author | 100.0% | 100.0% |
+| **natural-lang** (n=54) | **TFModSearch** | **81.5%** | **100.0%** |
+| | Registry — official | 5.6% | 5.6% |
+| | Registry — any-author | 13.0% | 14.8% |
+| **OVERALL** (n=162) | **TFModSearch** | **92.0%** | **100.0%** |
+| | Registry — official | 42.6% | 42.6% |
+| | Registry — any-author | 47.5% | 51.2% |
+
+**Takeaways:**
+
+- **This is a retrieval-quality story, not a coverage story.** All **54/54** curated modules exist as standalone official `terraform-aws-modules` entries in the registry — the registry *can* return every one; it just doesn't surface them from a descriptive query.
+- **Semantic search dominates on natural language.** For free-text queries (e.g. `managed kubernetes cluster` → `eks`, `serverless function execution` → `lambda`), TFModSearch keeps **100% top-3** while the official registry search lands **5.6%** (misses 51 of 54). Keyword search only matches when the query already contains the module's terms.
+- **The registry's failure mode is "not in results at all," not mis-ranking.** Its official top-1 equals top-3 in every row — when the right module appears it's already #1 (download counts float it up); the problem is that for descriptive queries it doesn't appear.
+- **Parity only on exact names.** If you already know the module name (`vpc`, `s3-bucket`), keyword search is fine — the entire value of semantic search is in the other two rows, where a user describes a *task* rather than a *name*.
+- **Caveats (in the registry's favor):** the natural-language queries were authored alongside this corpus (mild home-turf bias, though they are generic task descriptions), and `any-author` credits the registry for same-named modules from *any* author — yet it still trails at 51.2% top-3 vs. our 100%.
+
+Reproduce it yourself (opt-in, makes live calls to the public registry):
+
+```bash
+RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v -s
+```
+
+The comparison is committed as `tests/integration/test_registry_comparison.py`. It stays hermetic in normal CI (live tests skip unless `RUN_REGISTRY_BENCHMARK=1`, and skip gracefully if the registry is unreachable); a network-free guard test pins the "100% top-3" figure on our side.
 
 ## 🤝 Contributing
 
