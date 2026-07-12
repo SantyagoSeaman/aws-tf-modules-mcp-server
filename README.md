@@ -15,13 +15,15 @@ When an AI assistant writes Terraform, it often guesses at module names, invents
 
 - **Find the right module from intent** — "I need a Redis cache" resolves to `elasticache`, not a hallucinated module name.
 - **Ground generated code in real inputs/outputs** — the assistant pulls the full, current module documentation (submodules, variables, outputs, examples) on demand instead of improvising.
-- **Stay fast, private, and deterministic** — search runs locally on CPU against a pre-built index. No external API calls, no rate limits, no network round-trips.
+- **Stay fast, private, and deterministic** — *search* runs locally on CPU against a pre-built index. No external API calls, no rate limits, no network round-trips.
+- **Grep any module's live docs when you need to** — for a pinpoint variable/default lookup, a module outside the curated AWS catalog, or a specific older version, `grep_module_docs` fetches the registry's current docs (cached, version-pinnable) and returns just the matching lines with context.
 
 Think of it as an always-available, searchable reference card for every terraform-aws-modules module — kept accurate and shipped ready to run.
 
 ## 🚀 Features
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
+- **Live Registry Grep**: `grep_module_docs` regex-searches the full, current docs of *any* Terraform Registry module (version-pinnable, cached), returning only matching lines with context — pinpoint lookups without dumping 100k-token documents
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
 - **Fast & Efficient**: Pre-built search index with CPU-only inference using `intfloat/e5-small-v2` model
 - **Ready to Use**: Includes pre-built index (`model/tfmod_e5_small_index.pkl`) with embeddings from `intfloat/e5-small-v2` model and curated Terraform AWS module documentation
@@ -405,7 +407,7 @@ python src/tfmod_search_cli.py search \
 
 ## 🛠️ MCP Tools
 
-The MCP server exposes three tools for Terraform module discovery and documentation retrieval:
+The MCP server exposes four tools for Terraform module discovery and documentation retrieval:
 
 ### `modules_list()`
 
@@ -413,7 +415,7 @@ List all available Terraform modules in the catalog.
 
 **Parameters**: None
 
-**Returns**: Complete list of modules with names, paths, descriptions, and keywords.
+**Returns**: Complete list of modules with names, paths, descriptions, keywords, and registry coordinates (`module_id`, `latest_version`).
 
 **Example**:
 ```json
@@ -423,7 +425,9 @@ List all available Terraform modules in the catalog.
       "module_name": "vpc",
       "path": "modules/terraform-aws-modules/vpc.md",
       "description": "Terraform module to create AWS VPC resources...",
-      "keywords": ["vpc", "subnet", "networking", "aws"]
+      "keywords": ["vpc", "subnet", "networking", "aws"],
+      "module_id": "terraform-aws-modules/vpc/aws",
+      "latest_version": "6.6.1"
     }
   ],
   "count": 54
@@ -438,7 +442,7 @@ Search for Terraform modules using keywords, exact names, or natural language qu
 - `query` (string): Free-text search query
 - `top_k` (int, optional): Number of results to return, 1–10 (default 3). Raise it for ambiguous queries like `"iam"`.
 
-**Returns**: Top-ranked modules with metadata and relevance scores.
+**Returns**: Top-ranked modules with metadata and relevance scores. Each hit also carries `module_id` (the registry coordinate, e.g. `terraform-aws-modules/vpc/aws`) and `latest_version`, so an assistant can chain a hit straight into `grep_module_docs` without guessing coordinates.
 
 **Example queries**:
 - `"vpc"` - Find VPC module by exact name
@@ -457,6 +461,34 @@ Retrieve full documentation for a specific Terraform module.
 **Returns**: Complete module documentation as markdown text, or a filtered subset if `sections` is given.
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
+
+### `grep_module_docs(module_id: str, pattern: str, version: str | None = None, ...)`
+
+Regex-grep the **full, live** documentation of **any** Terraform Registry module (not just the curated AWS catalog), optionally pinned to a specific version. The tool fetches the module's complete docs from the Terraform Registry API, assembles them into one text (README + inputs/outputs/resources rows + every submodule and example), caches them, and returns only the matching lines with surrounding context — the way a `grep` tool works. A single module's docs run to 100k+ tokens, so grep — not a full dump — is how you pinpoint a variable name, default, or example without flooding the context window.
+
+**Parameters**:
+- `module_id` (string): Registry coordinate `namespace/name/provider` (e.g. `"terraform-aws-modules/vpc/aws"`). Comes straight from a `search_modules`/`modules_list` result.
+- `pattern` (string): Regex (Python `re` syntax), e.g. `"enable_nat_gateway"` or `"nat_gateway|subnet"`.
+- `version` (string, optional): Pin a version (e.g. `"6.6.1"`). Omit for `latest`.
+- `case_sensitive` (bool, default `false`), `context_lines` (int, default `2`, 0–20), `scope` (list, optional — restrict to `root`/`inputs`/`outputs`/`resources`/`submodules`/`examples`), `max_matches` (int, default `50`), `refresh` (bool, default `false` — bypass the cache).
+
+**Returns**: `module_id`, `resolved_version`, `source_url`, `total_matches`/`returned_matches`/`truncated`, `cache` info, `available_sections` (all section labels in the assembled doc), and `matches` — each with its `section` label, `line_number`, matched `line`, and `before`/`after` context.
+
+**Caching**: pinned versions are immutable and cached forever; `latest` is cached for `doc_cache_ttl_hours` (default 24h) and re-fetched after that or when `refresh=true`. Cache location: `${TFMODSEARCH_CACHE_DIR:-${XDG_CACHE_HOME:-~/.cache}}/tfmodsearch/registry_docs`, overridable via `config.yaml`.
+
+**Example**:
+```json
+{
+  "module_id": "terraform-aws-modules/vpc/aws",
+  "pattern": "enable_nat_gateway",
+  "version": "6.6.1"
+}
+```
+returns matches like:
+```
+root/readme (line 23):   enable_nat_gateway = true
+root/inputs (line …):  - enable_nat_gateway | bool | false | Should be true if you want to provision NAT Gateways ...
+```
 
 ### Typical Workflow
 
@@ -477,6 +509,15 @@ A coding assistant discovers and uses a module in two steps:
    ```
 
 The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates by default (raise `top_k` for broader queries) so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing. When only part of the documentation is needed, `get_module(..., sections=["inputs", "examples"])` keeps the response small without losing version pins or gotchas.
+
+For a **pinpoint lookup** — the exact name/default of one variable, or how a specific feature is wired — or for a module **outside the curated AWS catalog** or at a **specific older version**, reach for `grep_module_docs`. `search_modules`/`modules_list` hand back a ready `module_id`, so the chain is direct:
+
+```
+grep_module_docs("terraform-aws-modules/eks/aws", "enable_cluster_creator_admin_permissions", version="20.8.5")
+→ the exact input row + its default + the README lines that use it — no full-document dump
+```
+
+**Tool boundaries**: `search_modules` finds the right AWS module; `get_module` returns its curated, compact, offline doc; `grep_module_docs` greps the live registry docs of *any* module, version-pinnable, for surgical lookups.
 
 ## ⚙️ Configuration
 
@@ -572,12 +613,16 @@ pytest tests/ -v
 # Run specific test suite
 pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 54 modules (169 tests)
 pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
-pytest tests/integration/test_mcp_server.py -v              # MCP server tools (38 tests)
-pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (12 tests)
+pytest tests/integration/test_mcp_server.py -v              # MCP server tools (40 tests)
+pytest tests/integration/test_doc_grep.py -v               # grep engine (6 tests)
+pytest tests/integration/test_registry_docs.py -v          # registry client + cache (6 tests)
+pytest tests/integration/test_grep_module_docs.py -v       # grep_module_docs tool (3 tests)
+pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (14 tests)
 pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
 
-# Run the registry retrieval benchmark (opt-in; live calls to the public registry)
+# Run the opt-in live tests (real calls to the public Terraform Registry)
 RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v -s
+RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_grep_module_docs_live.py -v
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
@@ -587,13 +632,15 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
-- **MCP Server** (38 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters, security validation, integration workflows
+- **MCP Server** (40 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters, `module_id`/`latest_version` fields, security validation, integration workflows
 - **End-to-End** (49 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
-- **Markdown Parsing** (12 tests): YAML front-matter parsing, description extraction, normalization
+- **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
+- **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
+- **Markdown Parsing** (14 tests): `## Module Information` parsing (name, keywords, `module_id`, `latest_version`), description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 323 tests (integration + e2e; 4 opt-in registry-benchmark tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+**Total**: 345 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
 
 ## 🏗️ Architecture
 
