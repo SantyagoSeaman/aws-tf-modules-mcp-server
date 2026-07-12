@@ -1,11 +1,11 @@
 [project]
 name = "tfmodsearch"
-version = "0.10.0"
+version = "0.11.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 dependencies = [
-    "fastmcp>=2.12.4,<3",
+    "fastmcp>=3.2.0,<4",
     "nltk>=3.9.4",
     "numpy>=2.4.1",
     "pyyaml>=6.0.3",
@@ -21,6 +21,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Systems Administration",
@@ -112,7 +113,7 @@ module = "tests.*"
 ignore_errors = true
 
 [tool.mypy]
-python_version = "3.13"
+python_version = "3.12"
 warn_return_any = false
 warn_unused_configs = true
 disallow_untyped_defs = false
