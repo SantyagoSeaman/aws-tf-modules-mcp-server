@@ -153,6 +153,16 @@ class DocRecord:
     module_name: str  # normalized lower-case
     keywords: list[str]  # lower-case, unique
     text: str
+    module_id: str = ""  # "namespace/name/provider", verbatim as parsed (old pickles default to "")
+    latest_version: str = ""  # verbatim as parsed (old pickles default to "")
+
+
+@dataclass
+class ModuleInfo:
+    module_name: str
+    keywords: list[str]
+    module_id: str
+    latest_version: str
 
 
 @dataclass
@@ -225,6 +235,36 @@ class ModuleDocumentParser:
 
         return module_name, keywords, body
 
+    def _find_module_info_section(self, text: str) -> str | None:
+        """
+        Locate the raw text of the "## Module Information" section.
+
+        Args:
+            text: Full document text
+
+        Returns:
+            Section text (everything between the heading and the next "##" heading
+            or end of document), or None if the section is not present.
+        """
+        module_info_match = re.search(r"## Module Information\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL | re.IGNORECASE)
+        return module_info_match.group(1) if module_info_match else None
+
+    def _extract_bullet(self, section: str, key: str) -> str | None:
+        """
+        Extract the value of a "- **Key**: value" bullet (with or without backticks).
+
+        Args:
+            section: Text to search (typically a "## Module Information" section)
+            key: Bullet label to match, e.g. "Module Name" or "Module ID"
+
+        Returns:
+            Stripped bullet value, or None if the bullet is not present.
+        """
+        match = re.search(
+            rf"^\s*-\s*\*\*{re.escape(key)}\*\*:\s*`?([^`\n]+?)`?\s*$", section, re.IGNORECASE | re.MULTILINE
+        )
+        return match.group(1).strip() if match else None
+
     def _parse_module_information_section(self, text: str) -> tuple[str, list[str], str] | None:
         """
         Parse module name and keywords from "## Module Information" section.
@@ -240,24 +280,16 @@ class ModuleDocumentParser:
             Tuple of (module_name, keywords, strategy_name) or None if section not found
         """
         # Find the Module Information section
-        module_info_match = re.search(r"## Module Information\s*\n(.*?)(?=\n##|\Z)", text, re.DOTALL | re.IGNORECASE)
+        module_info_section = self._find_module_info_section(text)
 
-        if not module_info_match:
+        if module_info_section is None:
             return None
 
-        module_info_section = module_info_match.group(1)
-        module_name = ""
-        keywords: list[str] = []
-
         # Extract Module Name: look for "- **Module Name**: VALUE" (with or without backticks)
-        # Use [^`]+ to explicitly exclude backticks from capture
-        name_match = re.search(
-            r"^\s*-\s*\*\*Module Name\*\*:\s*`?([^`]+?)`?\s*$", module_info_section, re.IGNORECASE | re.MULTILINE
-        )
-        if name_match:
-            module_name = name_match.group(1).strip()  # Remove whitespace
+        module_name = self._extract_bullet(module_info_section, "Module Name") or ""
 
         # Extract Keywords: look for "- **Keywords**: comma, separated, values"
+        keywords: list[str] = []
         kw_match = re.search(r"^\s*-\s*\*\*Keywords\*\*:\s*(.+?)$", module_info_section, re.IGNORECASE | re.MULTILINE)
         if kw_match:
             kw_text = kw_match.group(1).strip()
@@ -269,6 +301,45 @@ class ModuleDocumentParser:
             return module_name, keywords, "Module Information section"
 
         return None
+
+    def parse_module_info(self, text: str) -> ModuleInfo:
+        """
+        Parse module_name, keywords, module_id, and latest_version from the
+        "## Module Information" section.
+
+        `module_id` is read from an explicit "**Module ID**" bullet; if that bullet
+        is absent, it falls back to the first root "**Source**" bullet with any
+        submodule suffix (the part from "//" onward) stripped.
+
+        Args:
+            text: Full document text
+
+        Returns:
+            ModuleInfo with best-effort extracted fields (empty string/list for any
+            field that could not be found).
+        """
+        module_name = ""
+        keywords: list[str] = []
+        module_id = ""
+        latest_version = ""
+
+        module_info_section = self._find_module_info_section(text)
+        if module_info_section is not None:
+            parsed = self._parse_module_information_section(text)
+            if parsed:
+                module_name, keywords, _ = parsed
+
+            module_id = self._extract_bullet(module_info_section, "Module ID") or ""
+            if not module_id:
+                source = self._extract_bullet(module_info_section, "Source")
+                if source:
+                    module_id = source.split("//")[0]
+
+            latest_version = self._extract_bullet(module_info_section, "Latest Version") or ""
+
+        return ModuleInfo(
+            module_name=module_name, keywords=keywords, module_id=module_id, latest_version=latest_version
+        )
 
     def _parse_inline_keywords(self, text: str) -> list[str] | None:
         """
@@ -592,12 +663,22 @@ def parse_markdown_file(p: Path, logger: logging.Logger) -> DocRecord | None:
     # Normalize and deduplicate keywords
     keywords = sorted({k.lower() for k in keywords})
 
+    # module_id/latest_version are stored verbatim as parsed (no normalization)
+    module_info = parser.parse_module_info(text)
+
     # Validate we have content
     if not body.strip():
         logger.warning(f"File {p.name} has no content, skipping")
         return None
 
-    return DocRecord(path=str(p), module_name=module_name, keywords=keywords, text=body)
+    return DocRecord(
+        path=str(p),
+        module_name=module_name,
+        keywords=keywords,
+        text=body,
+        module_id=module_info.module_id,
+        latest_version=module_info.latest_version,
+    )
 
 
 # -----------------------------
