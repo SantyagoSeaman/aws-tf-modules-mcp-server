@@ -23,3 +23,7 @@ Look up Terraform AWS community module documentation for: $ARGUMENTS
      deprecations, notable submodules, or defaults that commonly surprise.
 4. If the query is ambiguous or nothing fits well, do not guess — show the
    top-3 candidates with one-line descriptions and ask which to expand.
+5. If the request is really about one specific variable, default, or output
+   ("what's the default of `X` in vpc?") rather than a whole module, skip the
+   full doc and answer with an exact `grep_module_docs` quote — that is what
+   the `/tf-grep` command is for, and you can call the same tool here.
