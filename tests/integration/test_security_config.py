@@ -32,3 +32,9 @@ def test_workflow_has_least_privilege_permissions(workflow):
     wf_path = _repo_root() / ".github" / "workflows" / workflow
     wf = yaml.safe_load(wf_path.read_text())
     assert wf["permissions"] == {"contents": "read"}, f"{workflow} must declare top-level permissions: contents: read"
+
+
+def test_publish_job_retains_oidc_permission():
+    """Least-privilege hardening must not strip the publish job's OIDC token grant."""
+    wf = yaml.safe_load((_repo_root() / ".github" / "workflows" / "publish.yml").read_text())
+    assert wf["jobs"]["publish"]["permissions"] == {"id-token": "write"}

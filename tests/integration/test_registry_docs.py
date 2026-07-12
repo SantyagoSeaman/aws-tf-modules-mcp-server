@@ -13,8 +13,6 @@ def test_parse_module_id_ok():
 
 
 def test_parse_module_id_bad():
-    import pytest
-
     with pytest.raises(ValueError):
         parse_module_id("vpc/aws")
 
