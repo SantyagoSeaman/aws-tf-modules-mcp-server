@@ -2,13 +2,11 @@
 
 [![CI](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/ci.yml)
 [![CodeQL](https://github.com/SantyagoSeaman/tfmodsearch/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/SantyagoSeaman/tfmodsearch/security/code-scanning)
+[![mypy](https://img.shields.io/badge/mypy-checked-2a6db2.svg)](https://mypy-lang.org/)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/SantyagoSeaman/tfmodsearch/badge)](https://securityscorecards.dev/viewer/?uri=github.com/SantyagoSeaman/tfmodsearch)
 [![PyPI](https://img.shields.io/pypi/v/tfmodsearch)](https://pypi.org/project/tfmodsearch/)
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![mypy](https://img.shields.io/badge/mypy-checked-2a6db2.svg)](https://mypy-lang.org/)
 
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
 
