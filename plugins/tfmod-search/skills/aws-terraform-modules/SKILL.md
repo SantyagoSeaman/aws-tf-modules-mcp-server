@@ -31,7 +31,11 @@ work from the retrieved documentation.
    configuration (verify in the documentation first) or would over-abstract a
    single trivial resource.
 5. **Verify.** After writing, cross-check every variable used against the
-   documentation. Run `terraform validate` and `terraform fmt` when available.
+   documentation. When you are unsure a variable exists, or the project pins an
+   older major than the doc describes, confirm it with `grep_module_docs` — an
+   exact quote from the live registry docs at that version — instead of
+   shipping the uncertainty. Run `terraform validate` and `terraform fmt` when
+   available.
 
 ## Notes
 
@@ -43,6 +47,9 @@ work from the retrieved documentation.
   (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
   to keep the response small — version pins, agent notes, and gotchas are
   always included.
-- The corpus covers the terraform-aws-modules organization only. Modules from
-  other namespaces (cloudposse, project-specific) are not indexed — say so
-  rather than guessing their APIs.
+- The curated corpus covers the terraform-aws-modules organization only, so
+  `search_modules`/`get_module` will not find other namespaces (cloudposse,
+  project-specific). You are not stuck: `grep_module_docs` greps the live
+  registry docs of *any* module — derive its `module_id` from the block's
+  `source` and grep the variable you need. Say the module is outside the
+  curated catalog, then verify against its live docs rather than guessing.

@@ -26,8 +26,12 @@ log — only your report — so the report must stand entirely on its own.
    that names a module from terraform-aws-modules: call `get_module` (the
    tfmod-search MCP server) and check the failing variable against the
    documented inputs. Quote the documented variable name/type you verified.
-   If the module is not in the tfmod-search catalog, say so explicitly and
-   reason from the error text alone, clearly marked as unverified.
+   When the curated doc is not enough — the variable is absent from it, or the
+   log pins an older version — escalate to `grep_module_docs` (grep the exact
+   name, at the log's version when present) and quote the live line. A module
+   outside the catalog is no longer a dead end: grep its live registry docs the
+   same way; fall back to reasoning from the error text alone only when even the
+   grep is inconclusive, clearly marked as unverified.
 4. **Propose the exact fix**: the corrected argument line(s) with current
    variable names, the version to pin, and any migration caveat
    (state moves, `moved` blocks, behavior-changing defaults).
@@ -38,7 +42,7 @@ For each finding:
 - **[severity] summary** — file:line, module
 - Root cause (one or two sentences, verified against the doc where possible)
 - Fix (concrete HCL lines or a precise instruction)
-- Confidence: verified-against-doc | inferred-from-error
+- Confidence: verified-against-doc | verified-against-live-doc | inferred-from-error
 
 End with a one-paragraph overall assessment (single root cause vs several
 independent problems, and what to run to confirm — usually

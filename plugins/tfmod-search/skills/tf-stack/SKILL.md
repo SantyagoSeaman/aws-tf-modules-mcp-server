@@ -17,7 +17,11 @@ current variable names, is the deliverable.
    functional query; pick the best fit from the top-3.
 2. **Read before writing.** `get_module` for every chosen module — blocks are
    written from the retrieved docs, never from memory. Pin each module's
-   `version` to the documented current version.
+   `version` to the documented current version. When you are unsure of an exact
+   output or input name for the wiring, grep it with `grep_module_docs`
+   (`scope=["outputs"]` for outputs) rather than guessing; a component with
+   no catalog module (non-AWS, third-party) can still be wired from its live
+   docs the same way.
 3. **Produce one coherent configuration:**
    - `terraform` block with `required_providers` (aws provider version per
      the docs' compatibility notes)

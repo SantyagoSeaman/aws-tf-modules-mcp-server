@@ -25,9 +25,10 @@ worse than no replacement.
 4. **Coverage check — the critical step.** Build an explicit mapping table:
    every attribute of every existing resource → the module input that
    expresses it. Anything you cannot map goes into a "not covered" list.
-   Never claim coverage from memory; only from the retrieved doc. If an
-   input's existence is uncertain (docs are curated summaries), say so and
-   point to the registry link in the doc.
+   Never claim coverage from memory; only from the retrieved doc. When an
+   input's existence is uncertain (the curated doc is a summary), confirm it
+   with `grep_module_docs` by name: quote the matched line in the mapping
+   table, or move the attribute to "not covered" on a confirmed miss.
 5. **Decide honestly.**
    - Full coverage → propose the `module` block (pinned version, exact
      documented variable names) plus the mapping table.
