@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from tfmod_registry_docs import assemble_document, get_assembled_docs, parse_module_id
 
 FIX = json.loads((Path(__file__).parent.parent / "fixtures/registry_vpc_min.json").read_text())
@@ -11,8 +13,6 @@ def test_parse_module_id_ok():
 
 
 def test_parse_module_id_bad():
-    import pytest
-
     with pytest.raises(ValueError):
         parse_module_id("vpc/aws")
 
@@ -58,3 +58,12 @@ def test_latest_ttl_expiry(tmp_path):
     get_assembled_docs("terraform-aws-modules/vpc/aws", None, cache_dir=tmp_path, ttl_hours=0, fetch=fake_fetch)
     get_assembled_docs("terraform-aws-modules/vpc/aws", None, cache_dir=tmp_path, ttl_hours=0, fetch=fake_fetch)
     assert calls["n"] == 2  # ttl=0 always stale
+
+
+def test_http_fetch_rejects_non_https(monkeypatch):
+    """The one networked path must refuse any non-https URL before opening it."""
+    import tfmod_registry_docs as rd
+
+    monkeypatch.setattr(rd, "REGISTRY_API_BASE", "http://insecure.example/v1/modules")
+    with pytest.raises(ValueError, match="non-https"):
+        rd._http_fetch("terraform-aws-modules", "vpc", "aws", None)

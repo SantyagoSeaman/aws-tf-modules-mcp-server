@@ -1,5 +1,15 @@
 # Changelog
 
+## [Unreleased]
+
+### Security
+
+- **Dependabot**: weekly version-updates for GitHub Actions plus repo-level security-updates for Python dependencies (auto-PRs on known vulnerabilities).
+- **CodeQL default setup**: GitHub-managed SAST over the Python code on pull requests and a weekly schedule.
+- **ruff `S` (flake8-bandit)** security lint enforced in CI; the single networked path (`tfmod_registry_docs.py`) now refuses any non-`https` URL before opening it.
+- **Least-privilege `GITHUB_TOKEN`**: both workflows declare top-level `permissions: contents: read` (publish keeps job-scoped `id-token: write` for OIDC).
+- **`SECURITY.md`** disclosure policy with GitHub Private Vulnerability Reporting enabled.
+
 ## [0.9.0] - 2026-07-12
 
 [0.9.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.9.0

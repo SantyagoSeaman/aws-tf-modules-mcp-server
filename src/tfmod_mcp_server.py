@@ -465,7 +465,7 @@ class ServerState:
         Raises:
             ValueError: If index file not found or invalid
         """
-        assert self._logger is not None, "ServerState must have a logger"
+        assert self._logger is not None, "ServerState must have a logger"  # noqa: S101
         path = new_index_path or self._index_path
         try:
             self._logger.info(f"Reloading index from: {path}")
@@ -861,7 +861,7 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
 
     See get_module() resource documentation for full details.
     """
-    assert state.logger is not None, "ServerState must have a logger"
+    assert state.logger is not None, "ServerState must have a logger"  # noqa: S101
 
     # Determine strategy based on identifier format
     is_path = "/" in module_identifier or module_identifier.endswith(".md")
@@ -924,7 +924,7 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
 
     See search_modules() tool documentation for full details.
     """
-    assert state.logger is not None, "ServerState must have a logger"
+    assert state.logger is not None, "ServerState must have a logger"  # noqa: S101
 
     top_k = max(1, min(int(top_k), 10))
 
@@ -1003,7 +1003,7 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
 
     See modules_list() tool documentation for full details.
     """
-    assert state.logger is not None, "ServerState must have a logger"
+    assert state.logger is not None, "ServerState must have a logger"  # noqa: S101
 
     state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents")
 

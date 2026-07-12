@@ -52,7 +52,9 @@ def _http_fetch(namespace: str, name: str, provider: str, version: str | None) -
     url = f"{REGISTRY_API_BASE}/{namespace}/{name}/{provider}"
     if version is not None:
         url = f"{url}/{version}"
-    with urllib.request.urlopen(url, timeout=25) as resp:
+    if not url.startswith("https://"):
+        raise ValueError(f"Refusing to fetch non-https URL: {url!r}")
+    with urllib.request.urlopen(url, timeout=25) as resp:  # noqa: S310 - scheme guarded above
         return json.load(resp)
 
 
