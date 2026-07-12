@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 
@@ -24,3 +25,10 @@ def test_security_policy_exists_and_describes_reporting():
     text = sec_path.read_text().lower()
     assert "report" in text
     assert "vulnerabilit" in text
+
+
+@pytest.mark.parametrize("workflow", ["ci.yml", "publish.yml"])
+def test_workflow_has_least_privilege_permissions(workflow):
+    wf_path = _repo_root() / ".github" / "workflows" / workflow
+    wf = yaml.safe_load(wf_path.read_text())
+    assert wf["permissions"] == {"contents": "read"}, f"{workflow} must declare top-level permissions: contents: read"
