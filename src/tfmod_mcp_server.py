@@ -119,8 +119,8 @@ keywords, module_id, latest_version) when browsing is preferable to search.
 - If you already know the module name (an obvious AWS service), call
   `get_module("<name>")` DIRECTLY — skip `search_modules`. Search is for when
   the module is NOT obvious from the requirement.
-- ONE `get_module(sections=["inputs"])` returns the authoritative CURRENT
-  variable table. Do NOT then call `grep_module_docs` to re-verify names you
+- ONE `get_module("<name>", sections=["inputs"])` returns the authoritative
+  CURRENT variable table. Do NOT then call `grep_module_docs` to re-verify names you
   already have — that is a wasted call. `grep_module_docs` is ONLY for modules
   outside the curated catalog, a specific/older version, or a pinpoint lookup
   the head/sections don't carry.
@@ -1448,9 +1448,9 @@ def search_modules(
         "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
         "for the complete document (prefer scoped sections on large modules — they run to "
         "10k+ tokens in full). "
-        "The variable names, defaults, and version in the head and in `sections` are the current "
-        "authoritative values from live docs — use them directly; you do not need to re-confirm them "
-        "with grep_module_docs. "
+        "The variable names, defaults, and version in the head and in `sections` are the "
+        "authoritative values from the curated catalog — use them directly; you do not need to "
+        "re-confirm them with grep_module_docs. "
         "To get original documentation including full lists of inputs/outputs for each sub-module, "
         "use direct links to registry.terraform.io from documentation."
     ),
