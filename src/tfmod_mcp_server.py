@@ -71,12 +71,15 @@ training data.
    coordinates for chaining into `grep_module_docs`). Query by functionality
    ("s3 bucket with encryption and versioning"), technology ("kubernetes
    cluster"), or exact module name ("vpc", "eks").
-2. `get_module(module_identifier, sections=None)` — fetch the complete,
-   curated documentation for the chosen module. Accepts a module name ("vpc")
-   or a relative doc path ("modules/terraform-aws-modules/vpc.md"). Pass
-   `sections` (e.g. ["inputs", "examples"]) to keep the response small; core
-   context (version pins, agent notes, gotchas) is always included and a
-   footer lists what was omitted.
+2. `get_module(module_identifier, sections=None)` — orient on the chosen
+   module. Accepts a module name ("vpc") or a relative doc path
+   ("modules/terraform-aws-modules/vpc.md"). By default returns a compact
+   orientation head — description, module info, exact version pin, agent
+   notes, any gotchas, key features, use cases — plus a footer with the full
+   section inventory (an explicit menu of logical keys + headings). Pass
+   `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
+   `sections=["all"]` for the full document; prefer scoped `sections` over
+   "all" on large modules.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 
@@ -750,7 +753,55 @@ _SECTION_ALIASES: dict[str, str] = {
 # context (version pins, agent guidance, gotchas) that must not be trimmed away.
 _CORE_SECTIONS = ("Description", "Module Information", "Notes for AI Agents", "Important Gotchas")
 
+# Logical keys whose canonical heading may be absent in docs that bundle the
+# module interface differently (combined "Main Module:"/"Root Module:" sections,
+# or pure submodule-collection docs). When such a key finds no exact heading,
+# resolution falls back to the doc's interface-bearing section(s).
+_INTERFACE_KEYS = frozenset({"inputs", "variables", "outputs", "examples", "usage"})
+
+# Headings that carry a module's interface when the split scheme is not used:
+# a combined root/main section, or numbered submodule sections.
+_COMBINED_INTERFACE_PREFIXES = ("main module", "root module", "submodule")
+
+# Passed in `sections` to bypass the compact orientation head and return the
+# complete document (the pre-orientation default behaviour).
+_FULL_DOC_KEYS = frozenset({"all", "full", "everything"})
+
+# Default sections for the compact orientation head returned by get_module when
+# no `sections` are requested: short, high-signal context. Core sections are
+# always added on top by filter_module_sections; the footer lists the rest as a
+# table of contents the agent can request next.
+_ORIENTATION_KEYS = ("features", "use-cases")
+
+_LATEST_VERSION_RE = re.compile(r"^\s*[-*]\s*\*\*Latest Version\*\*:\s*`?([^`\s]+)`?", re.MULTILINE)
+
 _H2_RE = re.compile(r"^## .+$", re.MULTILINE)
+
+
+def _matches_combined_interface(title_lower: str) -> bool:
+    """True for headings that carry the interface outside the split scheme."""
+    return title_lower.startswith(_COMBINED_INTERFACE_PREFIXES)
+
+
+def _version_pin_hint(text: str) -> str | None:
+    """
+    Build an actionable exact-pin line from the doc's `**Latest Version**` bullet.
+
+    Agents that read only the module body tend to copy the `~> X.0` range shown
+    in usage examples and pin a floor instead of the exact latest release. This
+    surfaces the concrete version up front so an exact pin is the obvious choice.
+    Returns None when the doc carries no parseable Latest Version bullet.
+    """
+    m = _LATEST_VERSION_RE.search(text)
+    if not m:
+        return None
+    version = m.group(1).strip()
+    major = version.split(".")[0]
+    return (
+        f"> **Version pin** — latest release is `{version}`. For an exact pin use "
+        f'`version = "{version}"`; use a range like `~> {major}.0` only when you '
+        f"deliberately want automatic minor-version updates."
+    )
 
 
 def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
@@ -786,10 +837,10 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
     (e.g. "inputs", "examples", "submodules") or a free-form case-insensitive
     substring matched against H2 headings (e.g. "karpenter" to fetch a single
     EKS submodule section). Core sections — front-matter, Description,
-    Module Information, Notes for AI Agents, Important Gotchas — are always
-    included regardless of the request. A footer lists the omitted sections
-    (serving as a table of contents) and any requested entries that matched
-    nothing.
+    Module Information, Notes for AI Agents, and Important Gotchas (the last
+    only on docs that carry that heading) — are always included regardless of
+    the request. A footer lists the omitted sections (serving as a table of
+    contents) and any requested entries that matched nothing.
 
     Args:
         text: Full markdown document text
@@ -818,26 +869,39 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
             if hit:
                 wanted.add(title)
                 matched = True
+        # Fallback: the corpus is heterogeneous — some docs bundle inputs/outputs/
+        # examples into a combined "Main Module:"/"Root Module:" section or spread
+        # them across numbered submodule sections instead of the split scheme the
+        # aliases target. When an interface key resolves to no exact heading, fall
+        # back to those interface-bearing sections rather than reporting it missing.
+        if not matched and key in _INTERFACE_KEYS:
+            for title, _ in sections:
+                if _matches_combined_interface(title.lower()):
+                    wanted.add(title)
+                    matched = True
         if not matched:
             unmatched.append(entry)
 
     parts = [preamble.rstrip()] if preamble.strip() else []
     parts.extend(block.rstrip() for title, block in sections if title in wanted)
 
-    footer_lines = ["---"]
-    omitted = [title for title, _ in sections if title not in wanted]
+    # Always advertise the complete section inventory so the agent has an explicit
+    # menu for follow-up get_module(sections=[...]) calls — not just what was
+    # omitted from this particular response.
+    all_titles = [title for title, _ in sections]
+    omitted = [title for title in all_titles if title not in wanted]
+
+    footer_lines = [
+        "---",
+        "Available sections (request any via `get_module`'s `sections` parameter — "
+        "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
+        "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
+    ]
     if omitted:
-        footer_lines.append(
-            "Sections omitted from this response (request them via the `sections` "
-            "parameter, by key or by heading substring): " + "; ".join(omitted)
-        )
+        footer_lines.append("Not included above (request to expand): " + "; ".join(omitted))
     if unmatched:
-        available = "; ".join(title for title, _ in sections)
-        footer_lines.append(
-            "Requested sections not found: " + ", ".join(unmatched) + ". Available sections: " + available
-        )
-    if len(footer_lines) > 1:
-        parts.append("\n".join(footer_lines))
+        footer_lines.append("Requested sections not found: " + ", ".join(unmatched))
+    parts.append("\n".join(footer_lines))
 
     return "\n\n".join(parts) + "\n"
 
@@ -964,6 +1028,23 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
     return SearchOutput(results=out)
 
 
+def orientation_head(text: str) -> str:
+    """
+    Build the compact orientation view returned by get_module by default.
+
+    Combines the always-included core sections (Description, Module Information,
+    Notes for AI Agents, and Important Gotchas where the doc has it) with Key
+    Features and Main Use Cases, prepends an actionable exact-version pin hint,
+    and appends a footer listing
+    every omitted section as a table of contents. Keeps a first orientation call
+    small — what the module is plus how to reach the rest — instead of returning
+    the full body, which runs to ~12k tokens for the largest modules.
+    """
+    body = filter_module_sections(text, list(_ORIENTATION_KEYS))
+    hint = _version_pin_hint(text)
+    return f"{hint}\n\n{body}" if hint else body
+
+
 def get_module_impl(module_identifier: str, state: ServerState, sections: list[str] | None = None) -> str:
     """
     Helper function to get module documentation.
@@ -974,18 +1055,24 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     Args:
         module_identifier: Module name or relative file path
         state: Server state containing index and configuration
-        sections: Optional section keys or heading substrings; when given,
-            the response is reduced to core sections plus the requested ones
+        sections: Optional section keys or heading substrings. When omitted, a
+            compact orientation head is returned (core sections + features/use-
+            cases + a section-index footer + version-pin hint). Pass explicit
+            keys to add sections, or one of {"all", "full", "everything"} to get
+            the complete document.
 
     Returns:
-        Full module documentation text, or a filtered subset if sections given
+        The compact orientation head by default, a filtered subset when specific
+        sections are requested, or the full document when an all/full key is given
 
     See get_module() tool documentation for full details.
     """
     content = get_module_documentation(module_identifier, state)
     if sections:
+        if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
+            return content
         return filter_module_sections(content, sections)
-    return content
+    return orientation_head(content)
 
 
 def modules_list_impl(state: ServerState) -> ModulesListOutput:
@@ -1257,11 +1344,15 @@ def search_modules(
 @app.tool(
     description=(
         "Get compacted documentation for a specific Terraform module. "
-        "Use this tool after search_modules to retrieve module documentation including "
-        "usage examples, inputs, outputs, and configuration details. "
-        "Pass `sections` to fetch only the parts you need (large modules run to 10k+ tokens in full); "
-        "version pins, agent notes, and gotchas are always included. "
-        "To get original documentation including full lists inputs/outputs for each sub-module, "
+        "Use this tool after search_modules to orient on the chosen module. "
+        "By default returns a compact orientation head — description, module info, exact "
+        "version pin, agent notes, any gotchas, key features, and use cases — plus a footer "
+        "with the full section inventory: an explicit menu of the logical keys (inputs, "
+        "outputs, examples, submodules, ...) and every heading in the doc. "
+        "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
+        "for the complete document (prefer scoped sections on large modules — they run to "
+        "10k+ tokens in full). "
+        "To get original documentation including full lists of inputs/outputs for each sub-module, "
         "use direct links to registry.terraform.io from documentation."
     ),
     tags={"documentation", "terraform", "aws", "modules"},
@@ -1278,36 +1369,42 @@ def get_module(
     sections: Annotated[
         list[str] | None,
         Field(
-            description="Optional list of sections to return instead of the full document. "
-            "Accepts logical keys — inputs, outputs, examples, submodules, features, use-cases, "
-            "best-practices, resources — or case-insensitive substrings of section headings "
-            "(e.g. 'karpenter' for a single EKS submodule). Core context (description, version "
-            "pins, notes for AI agents, gotchas) is always included. Omitted sections are listed "
-            "in a footer so you can request them later. Omit this parameter for the complete "
-            "documentation."
+            description="Optional list of sections to return. Accepts logical keys — inputs, "
+            "outputs, examples, submodules, features, use-cases, best-practices, resources — "
+            "or case-insensitive substrings of section headings (e.g. 'karpenter' for a single "
+            "EKS submodule); the inputs/outputs/examples keys also resolve on modules that bundle "
+            "them into a combined section. Core context (description, module info, version pin, "
+            "notes for AI agents, and any Important Gotchas the doc carries) is always included, and omitted sections are listed in "
+            "a footer so you can request them later. Omit this parameter for the compact "
+            "orientation head; pass ['all'] (or 'full') for the complete document."
         ),
     ] = None,
 ) -> str:
     """
-    Get full documentation for a specific Terraform module.
+    Get compacted documentation for a specific Terraform module.
 
-    Retrieves the complete documentation text for a Terraform module identified
-    by either its name or file path. This provides access to full module
-    documentation without ranking or truncation.
+    Retrieves documentation for a Terraform module identified by either its name
+    or file path. By default returns a compact orientation head; the full body
+    is available on request via `sections`.
 
     Args:
         module_identifier: Either:
             - Module name (e.g., "vpc", "s3-bucket", "eks")
             - Relative path to module file (e.g., "modules/terraform-aws-modules/vpc.md")
         sections: Optional list of section keys or heading substrings. When
-            given, the response contains the core sections (front-matter,
-            Description, Module Information, Notes for AI Agents, Important
-            Gotchas) plus the requested ones, with a footer listing what was
-            omitted. When omitted, the full document is returned.
+            omitted, a compact orientation head is returned — the core sections
+            (front-matter, Description, Module Information, Notes for AI Agents,
+            and Important Gotchas where the doc has it) plus Key Features, Main
+            Use Cases, an exact version-pin hint, and a footer listing every
+            omitted section as a
+            table of contents. When given, the response is those core sections
+            plus the requested ones (same footer). Pass one of {"all", "full",
+            "everything"} to return the complete document.
 
     Returns:
-        str: Full documentation text from the module's Markdown file,
-            or a filtered subset if sections were requested
+        str: The compact orientation head by default, a filtered subset when
+            specific sections are requested, or the full documentation text when
+            an all/full key is given
 
     Raises:
         ValueError: If module not found or path is invalid/insecure
@@ -1329,13 +1426,13 @@ def get_module(
         - Only reads from indexed module documentation
 
     Examples:
-        Get module by name:
+        Get module by name (compact orientation head):
             Input: "vpc"
-            Returns: Full VPC module documentation
+            Returns: VPC orientation head + section index
 
-        Get module by path:
-            Input: "modules/terraform-aws-modules/s3-bucket.md"
-            Returns: Full S3 bucket module documentation
+        Get the full document:
+            Input: "s3-bucket", sections=["all"]
+            Returns: Complete S3 bucket module documentation
 
         Get only specific sections:
             Input: "s3-bucket", sections=["inputs", "examples"]
@@ -1343,7 +1440,8 @@ def get_module(
 
         Typical workflow:
             1. search_modules("s3 encryption") → get top result path
-            2. get_module(path) → retrieve full documentation
+            2. get_module(path) → orient (compact head)
+            3. get_module(path, sections=["inputs"]) → pull the details you need
     """
     state = ServerStateManager.get()
     return get_module_impl(module_identifier, state, sections=sections)
