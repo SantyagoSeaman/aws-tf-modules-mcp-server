@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.14.0] - 2026-07-13
+
+[0.14.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.0
+
+Submodule reachability: closes the recurring gap where the right answer is a submodule (e.g. an IAM role assumable via GitHub OIDC → `iam//modules/iam-role`) that `search_modules` — one record per top-level module — can never return directly. Both changes reuse data the curated docs already carry; the index is untouched, so there is no embedding drift.
+
+### Added
+
+- **Submodule inventory inline in the orientation head (A1).** For a module that carries submodules, the default `get_module` head now inlines the compact `## Submodules` inventory — each submodule's name, purpose, and pinnable source string (`terraform-aws-modules/iam/aws//modules/iam-role`) — so the moment search lands on the parent, the head answers "here are the submodules, pick one, here's the source to pin." Only the compact inventory is inlined; the far larger `## Submodule N:` deep-dive sections stay out of the head (request one by name, or via the submodule address below). Implemented as a head-assembly change (`extra_exact_titles` on `filter_module_sections`); no index change.
+- **`get_module` accepts a submodule address (A3).** `get_module("iam//modules/iam-role")` (or the full `terraform-aws-modules/iam/aws//modules/iam-role`) returns an orientation head **scoped to that submodule's section** — parent core context plus the one submodule — instead of the whole 895-line parent doc. An unknown submodule degrades gracefully to core context plus a footer listing the real submodule titles.
+
+### Changed
+
+- Server `instructions`, the `get_module` tool description, `module_identifier` field, and docstrings document the submodule-address form and the inline inventory.
+
+### Deferred
+
+- **Parent keyword-enrichment did not ship.** The plan gated it behind a control rebuild of the search index; that rebuild — with **zero** doc changes — drifted the e5 embeddings enough to drop one golden-set target (`lambda` by keyword), confirming the committed index is not bit-reproducible from current deps. Rather than ship a drifted index, enrichment is deferred to a dedicated, separately-validated index migration. A1 and A3 need no rebuild and are unaffected.
+
+### Tests
+
+- Full suite: 765 tests (742 passing; 23 skip — 6 opt-in live without `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the new schema guard).
+- New: A1 inventory-in-head + `extra_exact_titles` exactness; A3 `_parse_submodule_address` table + scoped-head / full-id / graceful-miss; a per-doc schema guard that every doc with a `## Submodules` inventory surfaces it in the head.
+
 ## [0.13.0] - 2026-07-13
 
 [0.13.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.13.0

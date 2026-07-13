@@ -19,6 +19,7 @@ from tfmod_mcp_server import (
     SearchWeights,
     ServerState,
     ServerStateManager,
+    _parse_submodule_address,
     filter_module_sections,
     get_module_documentation,
     get_module_impl,
@@ -321,6 +322,30 @@ class TestGetModuleSections:
         assert "Submodule 4: karpenter" in head, "Inventory should include omitted headings"
         assert "Not included above" in head, "Head should flag which sections would expand on request"
 
+    def test_orientation_head_surfaces_submodule_inventory_inline(self, server_state):
+        """A1: the head inlines the compact ## Submodules inventory (name + source), not deep-dives."""
+        head = get_module_impl("iam", server_state)
+        assert "## Submodules" in head, "Submodule inventory heading should be inline in the head"
+        assert (
+            "terraform-aws-modules/iam/aws//modules/iam-role" in head
+        ), "Inventory source strings must be inline so the agent can pin a submodule"
+        # The full deep-dive submodule sections must NOT be expanded into the head body.
+        assert "## Submodule 4: iam-role" not in head, "Deep-dive submodule sections must stay out of the head"
+        full = get_module_impl("iam", server_state, sections=["all"])
+        assert len(head) < len(full), "Inventory-in-head must still be far smaller than the full doc"
+
+    def test_orientation_head_without_submodules_has_no_inventory(self, server_state):
+        """A doc with no ## Submodules section gets no inventory heading in the head body."""
+        head = get_module_impl("kms", server_state)
+        assert "## Submodules" not in head, "No inventory heading when the doc has none"
+
+    def test_filter_extra_exact_titles_are_exact_only(self):
+        """extra_exact_titles includes a title by exact equality, never as a prefix match."""
+        text = "# T\n\n## Submodules\ninventory body\n\n" "## Submodule 1: alpha\ndeep dive\n\n## Description\ndesc\n"
+        out = filter_module_sections(text, [], extra_exact_titles=("Submodules",))
+        assert "## Submodules\ninventory body" in out, "Exact 'Submodules' heading included"
+        assert "## Submodule 1: alpha" not in out, "Prefix-similar deep-dive heading excluded"
+
     def test_sections_reduce_payload(self, server_state):
         """Test that requesting sections returns a smaller document containing them."""
         full = get_module_impl("security-group", server_state, sections=["all"])
@@ -381,6 +406,67 @@ class TestGetModuleSections:
         """Test that documents without H2 sections pass through unfiltered."""
         text = "# Title\n\nJust a paragraph, no sections.\n"
         assert filter_module_sections(text, ["inputs"]) == text
+
+
+class TestSubmoduleAddress:
+    """A3: get_module accepts a submodule address and returns a scoped head."""
+
+    @pytest.mark.parametrize(
+        ("identifier", "expected"),
+        [
+            ("iam//modules/iam-role", ("iam", "iam-role")),
+            ("terraform-aws-modules/iam/aws//modules/iam-role", ("iam", "iam-role")),
+            ("iam//iam-role", ("iam", "iam-role")),
+            ("route53//modules/zones", ("route53", "zones")),
+            ("iam // modules/iam-role", ("iam", "iam-role")),
+            ("vpc", None),
+            ("modules/terraform-aws-modules/vpc.md", None),
+            ("iam//", None),
+            ("//modules/iam-role", None),
+            ("iam//modules/", None),
+            ("iam//modules", None),
+        ],
+    )
+    def test_parse_submodule_address(self, identifier, expected):
+        assert _parse_submodule_address(identifier) == expected
+
+    def test_submodule_address_without_segment_falls_back(self, server_state):
+        """'iam//modules/' has no submodule segment → normal resolution, not a bogus scope."""
+        # Not a submodule address, so it falls through to normal path/name resolution,
+        # which rejects it (no such module/file) instead of scoping to a bogus section.
+        with pytest.raises(ValueError):
+            get_module_impl("iam//modules/", server_state)
+
+    def test_submodule_address_honors_full_doc_escape_hatch(self, server_state):
+        """A submodule address + sections=['all'] returns the complete parent doc verbatim."""
+        for key in ("all", "full", "everything"):
+            out = get_module_impl("iam//modules/iam-role", server_state, sections=[key])
+            assert out == get_module_documentation("iam", server_state), f"['{key}'] should return the full parent doc"
+            assert "Requested sections not found" not in out
+
+    def test_submodule_address_returns_scoped_head(self, server_state):
+        """get_module('iam//modules/iam-role') scopes to that submodule's section."""
+        scoped = get_module_impl("iam//modules/iam-role", server_state)
+        assert "## Submodule 4: iam-role" in scoped, "The addressed submodule's section is expanded"
+        assert "Version pin" in scoped, "Scoped head keeps the exact-version pin hint"
+        assert "## Module Information" in scoped, "Parent core context is retained for orientation"
+        # It is scoped, not the whole parent: a different submodule's deep-dive is absent.
+        assert "## Submodule 7: iam-oidc-provider" not in scoped, "Other submodules must not be expanded"
+        full = get_module_impl("iam", server_state, sections=["all"])
+        assert len(scoped) < len(full), "Scoped head is smaller than the full parent doc"
+
+    def test_submodule_full_id_form_matches_short_form(self, server_state):
+        """The ns/name/provider//modules/sub form resolves identically to the short form."""
+        short = get_module_impl("iam//modules/iam-role", server_state)
+        full_id = get_module_impl("terraform-aws-modules/iam/aws//modules/iam-role", server_state)
+        assert short == full_id
+
+    def test_unknown_submodule_degrades_gracefully(self, server_state):
+        """An unknown submodule returns core context + a menu of the real submodules, not an error."""
+        scoped = get_module_impl("iam//modules/does-not-exist", server_state)
+        assert "## Module Information" in scoped, "Parent core context still returned"
+        assert "Requested sections not found: does-not-exist" in scoped, "Miss is reported"
+        assert "Submodule 4: iam-role" in scoped, "Footer lists the real submodule titles for retry"
 
 
 class TestModulesListTool:
