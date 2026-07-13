@@ -302,6 +302,16 @@ class TestGetModuleSections:
         assert "Version pin" in head, "Orientation head should surface an exact-pin hint"
         assert 'version = "' in head, "Pin hint should show an exact version pin"
 
+    def test_response_carries_escalation_pointer(self, server_state):
+        """Head and filtered responses point to grep_module_docs for complete/exact data."""
+        for resp in (
+            get_module_impl("s3-bucket", server_state),
+            get_module_impl("s3-bucket", server_state, sections=["inputs"]),
+        ):
+            assert "grep_module_docs" in resp, "Response must point to the live-registry tier"
+            assert "COMPLETE inputs/outputs" in resp, "Response must flag that it is a curated subset"
+            assert "module source" in resp, "Response must name source as the creation-condition tier"
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)

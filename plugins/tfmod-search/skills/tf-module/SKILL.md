@@ -11,9 +11,11 @@ Look up Terraform AWS community module documentation for: $ARGUMENTS
 1. Call `search_modules` with the query above. List the top-3 hits, one line
    each: module name — short description — relevance score. For ambiguous
    queries pass `top_k` (up to 10) to widen the candidate list.
-2. Call `get_module` for the best match. If only part of the document is
-   needed, pass `sections` (e.g. `["inputs", "examples"]`) — version pins and
-   gotchas are always included.
+2. Call `get_module` for the best match. It returns a compact orientation head
+   by default, so pull the interface for the block: `sections=["inputs",
+   "examples"]` (version pins and gotchas are always included). If a variable
+   you need is missing from the curated table or you need its exact type/default,
+   the footer points to `grep_module_docs` for the complete, live inputs.
 3. Reply with:
    - The module source and current version, pinned.
    - A minimal working `module` block for the stated requirement, using exact

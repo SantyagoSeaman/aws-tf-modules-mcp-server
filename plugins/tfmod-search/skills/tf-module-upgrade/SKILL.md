@@ -17,10 +17,10 @@ change — *before* a version bump or `terraform plan` does.
    namespaces (cloudposse, project-specific) are not in the curated catalog but
    can still be audited via `grep_module_docs` against their live docs — include
    them, marked as live-doc-verified rather than curated-doc-verified.
-2. **Ground truth.** For each distinct module: `get_module` → current version
-   and input schema. One call per module, reused across blocks. Passing
-   `sections=["inputs", "outputs"]` keeps responses small — version pins and
-   gotchas are always included. When a block pins an older version than the
+2. **Ground truth.** For each distinct module: `get_module` with
+   `sections=["inputs", "outputs"]` → current version and input schema (the
+   default response is a compact head, so pull the interface). One call per
+   module, reused across blocks — version pins and gotchas are always included. When a block pins an older version than the
    doc, `grep_module_docs` at the pinned `version` shows what the code
    currently relies on and at the latest shows what changed — that diff is the
    audit.

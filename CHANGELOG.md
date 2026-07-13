@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.13.0] - 2026-07-13
+
+[0.13.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.13.0
+
+Documentation-escalation guidance: makes the compact → full → source tier boundary a mechanical decision instead of a guess, and corrects the skills' description of `get_module`'s 0.12.0 default.
+
+### Added
+
+- **Honest-limits pointer in every `get_module` response.** The footer now states that the curated doc is a selected subset and points to the completeness/exactness tier explicitly: complete inputs/outputs (every variable, exact type & default) and examples → `grep_module_docs` (with the Module ID shown above); resource-creation conditions (`count`/`for_each` gating) → module source. It also warns not to assert an exact default/type/existence from the summary or from memory when a wrong value would break `apply`. This converts "false confidence" into a cheap, explicit escalation decision (design §5.4).
+
+### Changed
+
+- **Skills aligned with the 0.12.0 orientation-head default.** `aws-terraform-modules` and `tf-module` no longer describe `get_module` as returning "the full document / complete inputs and outputs" by default — they orient on the compact head, pull `sections=["inputs", ...]` for the interface, and escalate to `grep_module_docs` for completeness/exactness and when reproducing an existing resource (greenfield-vs-brownfield prior; never assert an exact default/type from the summary or memory). `tf-stack`, `tf-migrate`, and `tf-module-upgrade` got the same one-line correction. All already referenced `grep_module_docs`; this fixes their `get_module` mental model.
+
+### Tests
+
+- Full suite: 692 tests, green (686 passing; 6 opt-in live tests skip without `RUN_REGISTRY_BENCHMARK=1`).
+
 ## [0.12.0] - 2026-07-13
 
 [0.12.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.12.0

@@ -15,9 +15,11 @@ current variable names, is the deliverable.
 1. **Decompose** the requirement into components (network, compute, data,
    load balancing, storage, ...). For each, `search_modules` with a
    functional query; pick the best fit from the top-3.
-2. **Read before writing.** `get_module` for every chosen module — blocks are
-   written from the retrieved docs, never from memory. Pin each module's
-   `version` to the documented current version. When you are unsure of an exact
+2. **Read before writing.** `get_module` for every chosen module, pulling the
+   interface for the wiring: `sections=["inputs", "outputs"]` (the default
+   response is a compact head). Blocks are written from the retrieved docs,
+   never from memory. Pin each module's `version` to the documented current
+   version. When you are unsure of an exact
    output or input name for the wiring, grep it with `grep_module_docs`
    (`scope=["outputs"]` for outputs) rather than guessing; a component with
    no catalog module (non-AWS, third-party) can still be wired from its live

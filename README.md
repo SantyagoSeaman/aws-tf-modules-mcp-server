@@ -462,7 +462,7 @@ Get documentation for a specific Terraform module. **By default returns a compac
 **Parameters**:
 - `module_identifier` (string): Module name (e.g., `"vpc"`) or relative path (e.g., `"modules/terraform-aws-modules/vpc.md"`)
 - `sections` (list of strings, optional): Control what comes back.
-  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request.
+  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. The footer also states that the curated doc is a subset and points to `grep_module_docs` for the complete, exact inputs/outputs and to module source for resource-creation conditions.
   - **Logical keys or heading substrings** → those sections added on top of the always-included core. Accepts `inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`, or case-insensitive substrings of headings (e.g. `"karpenter"` for a single EKS submodule). The `inputs`/`outputs`/`examples` keys also resolve on modules that bundle their interface into a combined `Main Module:`/`Root Module:` section or spread it across submodules.
   - **`["all"]`** (or `"full"`/`"everything"`) → the complete document verbatim.
 
@@ -643,7 +643,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
-- **MCP Server** (45 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
+- **MCP Server** (46 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
 - **Doc Schema** (325 tests): schema-integrity guards over all 54 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, and a clean orientation head — so `get_module` section filtering can't silently break
 - **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
@@ -653,7 +653,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **Security Config** (5 tests): the Dependabot config, `SECURITY.md` reporting policy, both workflows' least-privilege `permissions`, and the publish job's retained OIDC `id-token: write` grant
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 691 tests (integration + e2e; 685 passing, 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+**Total**: 692 tests (integration + e2e; 686 passing, 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
 
 ## 🔒 Security
 
