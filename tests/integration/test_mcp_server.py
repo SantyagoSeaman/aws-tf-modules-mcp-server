@@ -423,10 +423,26 @@ class TestSubmoduleAddress:
             ("modules/terraform-aws-modules/vpc.md", None),
             ("iam//", None),
             ("//modules/iam-role", None),
+            ("iam//modules/", None),
+            ("iam//modules", None),
         ],
     )
     def test_parse_submodule_address(self, identifier, expected):
         assert _parse_submodule_address(identifier) == expected
+
+    def test_submodule_address_without_segment_falls_back(self, server_state):
+        """'iam//modules/' has no submodule segment → normal resolution, not a bogus scope."""
+        # Not a submodule address, so it falls through to normal path/name resolution,
+        # which rejects it (no such module/file) instead of scoping to a bogus section.
+        with pytest.raises(ValueError):
+            get_module_impl("iam//modules/", server_state)
+
+    def test_submodule_address_honors_full_doc_escape_hatch(self, server_state):
+        """A submodule address + sections=['all'] returns the complete parent doc verbatim."""
+        for key in ("all", "full", "everything"):
+            out = get_module_impl("iam//modules/iam-role", server_state, sections=[key])
+            assert out == get_module_documentation("iam", server_state), f"['{key}'] should return the full parent doc"
+            assert "Requested sections not found" not in out
 
     def test_submodule_address_returns_scoped_head(self, server_state):
         """get_module('iam//modules/iam-role') scopes to that submodule's section."""

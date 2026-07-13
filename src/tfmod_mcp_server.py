@@ -812,7 +812,10 @@ def _parse_submodule_address(module_identifier: str) -> tuple[str, str] | None:
     left, _, right = module_identifier.partition(_SUBMODULE_SEP)
     sub = right.strip().rstrip("/").split("/")[-1].strip()
     left = left.strip()
-    if not left or not sub:
+    # "modules" is the conventional submodule directory, never a submodule name —
+    # reject "iam//modules" / "iam//modules/" so they fall back to normal resolution
+    # instead of scoping to a bogus section.
+    if not left or not sub or sub == "modules":
         return None
     if "/" in left:
         parts = [p for p in left.split("/") if p]
@@ -1135,6 +1138,10 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     if sub_address is not None:
         parent_name, sub = sub_address
         content = get_module_documentation(parent_name, state)
+        # Honor the full-doc escape hatch (all/full/everything) the same way the
+        # name/path branch does — return the complete parent document verbatim.
+        if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
+            return content
         body = filter_module_sections(content, [sub, *(sections or [])])
         hint = _version_pin_hint(content)
         return f"{hint}\n\n{body}" if hint else body

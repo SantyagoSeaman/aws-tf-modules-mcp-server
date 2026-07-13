@@ -21,7 +21,7 @@ Submodule reachability: closes the recurring gap where the right answer is a sub
 
 ### Tests
 
-- Full suite: 761 tests (738 passing; 23 skip — 6 opt-in live without `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the new schema guard).
+- Full suite: 765 tests (742 passing; 23 skip — 6 opt-in live without `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the new schema guard).
 - New: A1 inventory-in-head + `extra_exact_titles` exactness; A3 `_parse_submodule_address` table + scoped-head / full-id / graceful-miss; a per-doc schema guard that every doc with a `## Submodules` inventory surfaces it in the head.
 
 ## [0.13.0] - 2026-07-13
