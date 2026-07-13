@@ -72,12 +72,16 @@ training data.
    ("s3 bucket with encryption and versioning"), technology ("kubernetes
    cluster"), or exact module name ("vpc", "eks").
 2. `get_module(module_identifier, sections=None)` — orient on the chosen
-   module. Accepts a module name ("vpc") or a relative doc path
-   ("modules/terraform-aws-modules/vpc.md"). By default returns a compact
-   orientation head — description, module info, exact version pin, agent
-   notes, any gotchas, key features, use cases — plus a footer with the full
-   section inventory (an explicit menu of logical keys + headings). Pass
-   `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
+   module. Accepts a module name ("vpc"), a relative doc path
+   ("modules/terraform-aws-modules/vpc.md"), or a submodule address
+   ("iam//modules/iam-role"). By default returns a compact orientation head —
+   description, module info, exact version pin, agent notes, any gotchas, key
+   features, use cases — plus a footer with the full section inventory (an
+   explicit menu of logical keys + headings). For a module WITH submodules the
+   head also inlines the submodule inventory (each submodule's name, purpose,
+   and pinnable source), so the right answer is often a submodule: pin its
+   source, or call `get_module("<name>//modules/<sub>")` for its scoped head.
+   Pass `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
    `sections=["all"]` for the full document; prefer scoped `sections` over
    "all" on large modules.
 3. Use the exact variable names, defaults, and pinned version shown in the
@@ -783,6 +787,42 @@ def _matches_combined_interface(title_lower: str) -> bool:
     return title_lower.startswith(_COMBINED_INTERFACE_PREFIXES)
 
 
+# Terraform's submodule-address separator: "<source>//modules/<sub>".
+_SUBMODULE_SEP = "//"
+
+
+def _parse_submodule_address(module_identifier: str) -> tuple[str, str] | None:
+    """
+    Parse a Terraform submodule address into ``(parent_name, submodule_name)``.
+
+    Accepts the double-slash submodule form used in module sources so an agent
+    can orient on a submodule in one call:
+
+    - ``"iam//modules/iam-role"``                          -> ``("iam", "iam-role")``
+    - ``"terraform-aws-modules/iam/aws//modules/iam-role"`` -> ``("iam", "iam-role")``
+    - ``"iam//iam-role"``                                  -> ``("iam", "iam-role")``
+
+    The left side may be a bare module name or a full ``ns/name/provider`` module
+    id (its middle component is the name). The right side's last path component is
+    the submodule name. Returns ``None`` when the identifier is not a submodule
+    address (no ``//``), leaving normal name/path resolution unchanged.
+    """
+    if _SUBMODULE_SEP not in module_identifier:
+        return None
+    left, _, right = module_identifier.partition(_SUBMODULE_SEP)
+    sub = right.strip().rstrip("/").split("/")[-1].strip()
+    left = left.strip()
+    if not left or not sub:
+        return None
+    if "/" in left:
+        parts = [p for p in left.split("/") if p]
+        # "ns/name/provider" -> the name is the middle component; fall back to last.
+        parent = parts[1] if len(parts) >= 3 else parts[-1]
+    else:
+        parent = left
+    return (parent, sub) if parent else None
+
+
 def _version_pin_hint(text: str) -> str | None:
     """
     Build an actionable exact-pin line from the doc's `**Latest Version**` bullet.
@@ -829,7 +869,7 @@ def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
     return preamble, sections
 
 
-def filter_module_sections(text: str, requested: list[str]) -> str:
+def filter_module_sections(text: str, requested: list[str], *, extra_exact_titles: tuple[str, ...] = ()) -> str:
     """
     Reduce a module document to core sections plus the requested ones.
 
@@ -845,6 +885,10 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
     Args:
         text: Full markdown document text
         requested: Section keys or heading substrings to include
+        extra_exact_titles: Additional H2 titles to always include, matched by
+            case-insensitive equality (not substring/prefix). Used by the
+            orientation head to inline the exact ``## Submodules`` inventory
+            heading without dragging in the ``## Submodule N:`` deep-dives.
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
@@ -853,7 +897,8 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
     if not sections:
         return text
 
-    wanted: set[str] = {title for title, _ in sections if title in _CORE_SECTIONS}
+    extra_lower = {t.lower() for t in extra_exact_titles}
+    wanted: set[str] = {title for title, _ in sections if title in _CORE_SECTIONS or title.lower() in extra_lower}
     unmatched: list[str] = []
     for entry in requested:
         key = entry.strip().lower()
@@ -1050,8 +1095,14 @@ def orientation_head(text: str) -> str:
     every omitted section as a table of contents. Keeps a first orientation call
     small — what the module is plus how to reach the rest — instead of returning
     the full body, which runs to ~12k tokens for the largest modules.
+
+    For modules that carry submodules, the compact ``## Submodules`` inventory
+    (each submodule's name, purpose, and pinnable source string) is inlined so a
+    single orientation call surfaces which submodule to reach for — without
+    expanding the far larger ``## Submodule N:`` deep-dive sections (request one
+    by name, or via ``get_module("<name>//modules/<sub>")``).
     """
-    body = filter_module_sections(text, list(_ORIENTATION_KEYS))
+    body = filter_module_sections(text, list(_ORIENTATION_KEYS), extra_exact_titles=("Submodules",))
     hint = _version_pin_hint(text)
     return f"{hint}\n\n{body}" if hint else body
 
@@ -1078,6 +1129,16 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
 
     See get_module() tool documentation for full details.
     """
+    # A submodule address ("iam//modules/iam-role") resolves to the parent doc,
+    # scoped to that submodule's section — a one-call submodule orientation.
+    sub_address = _parse_submodule_address(module_identifier)
+    if sub_address is not None:
+        parent_name, sub = sub_address
+        content = get_module_documentation(parent_name, state)
+        body = filter_module_sections(content, [sub, *(sections or [])])
+        hint = _version_pin_hint(content)
+        return f"{hint}\n\n{body}" if hint else body
+
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
@@ -1373,8 +1434,10 @@ def get_module(
     module_identifier: Annotated[
         str,
         Field(
-            description="Module identifier: either module name (e.g., 'vpc', 's3-bucket') "
-            "or relative path (e.g., 'modules/terraform-aws-modules/vpc.md')"
+            description="Module identifier: a module name (e.g., 'vpc', 's3-bucket'), a relative "
+            "path (e.g., 'modules/terraform-aws-modules/vpc.md'), or a submodule address "
+            "(e.g., 'iam//modules/iam-role') to orient on a single submodule in one call. The "
+            "default head of a module with submodules inlines their inventory (name + source)."
         ),
     ],
     sections: Annotated[
@@ -1399,9 +1462,12 @@ def get_module(
     is available on request via `sections`.
 
     Args:
-        module_identifier: Either:
+        module_identifier: One of:
             - Module name (e.g., "vpc", "s3-bucket", "eks")
             - Relative path to module file (e.g., "modules/terraform-aws-modules/vpc.md")
+            - Submodule address (e.g., "iam//modules/iam-role" or the full
+              "terraform-aws-modules/iam/aws//modules/iam-role") — returns an
+              orientation head scoped to that submodule's section
         sections: Optional list of section keys or heading substrings. When
             omitted, a compact orientation head is returned — the core sections
             (front-matter, Description, Module Information, Notes for AI Agents,
@@ -1449,10 +1515,15 @@ def get_module(
             Input: "s3-bucket", sections=["inputs", "examples"]
             Returns: Core sections plus input variables and usage examples
 
+        Orient on a single submodule in one call:
+            Input: "iam//modules/iam-role"
+            Returns: Core context + the iam-role submodule section, scoped
+
         Typical workflow:
             1. search_modules("s3 encryption") → get top result path
-            2. get_module(path) → orient (compact head)
+            2. get_module(path) → orient (compact head; submodule inventory inline)
             3. get_module(path, sections=["inputs"]) → pull the details you need
+               (or get_module("<name>//modules/<sub>") for a submodule)
     """
     state = ServerStateManager.get()
     return get_module_impl(module_identifier, state, sections=sections)

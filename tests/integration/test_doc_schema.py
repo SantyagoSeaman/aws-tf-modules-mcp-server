@@ -116,3 +116,19 @@ def test_orientation_head_reports_nothing_missing(doc):
         f"{doc.name}: orientation head reports missing sections — a heading the "
         "default view requests (Key Features / Main Use Cases) is absent"
     )
+
+
+@pytest.mark.parametrize("doc", DOCS, ids=_id)
+def test_submodule_inventory_surfaced_in_head(doc):
+    """A1: a doc's ## Submodules inventory (if present) is inlined in the head.
+
+    Guards the head-assembly contract: when a doc carries the compact submodule
+    inventory, the orientation head must surface that exact heading inline (so an
+    agent sees which submodule to reach for) without expanding the far larger
+    ``## Submodule N:`` deep-dive sections.
+    """
+    text = doc.read_text()
+    if "Submodules" not in _headings(text):
+        pytest.skip(f"{doc.name}: no submodule inventory")
+    head = orientation_head(text)
+    assert "## Submodules" in head, f"{doc.name}: submodule inventory not surfaced in the orientation head"
