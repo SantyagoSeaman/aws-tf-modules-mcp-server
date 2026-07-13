@@ -63,7 +63,7 @@ memorized variable names are frequently stale. Before writing or modifying
 Terraform, ALWAYS retrieve current documentation rather than relying on
 training data.
 
-## Curated AWS catalog (offline, compact) — 54 community terraform-aws-modules
+## Curated AWS catalog (offline, compact) — community terraform-aws-modules
 
 1. `search_modules(query, top_k=3)` — find the right module. Returns the
    top-ranked matches (default 3, up to 10) with name, path, keywords,
@@ -114,12 +114,29 @@ keywords, module_id, latest_version) when browsing is preferable to search.
 - Chain them: `search_modules` results carry `module_id`/`latest_version` —
   feed those straight into `grep_module_docs` without guessing coordinates.
 
+## Call economy — spend the fewest calls
+
+- If you already know the module name (an obvious AWS service), call
+  `get_module("<name>")` DIRECTLY — skip `search_modules`. Search is for when
+  the module is NOT obvious from the requirement.
+- ONE `get_module("<name>", sections=["inputs"])` returns the authoritative
+  CURRENT variable table. Do NOT then call `grep_module_docs` to re-verify names you
+  already have — that is a wasted call. `grep_module_docs` is ONLY for modules
+  outside the curated catalog, a specific/older version, or a pinpoint lookup
+  the head/sections don't carry.
+- Budget: a curated-catalog requirement should cost ~1–2 calls total
+  (an optional search + one get_module), not 3–4.
+
 ## Search Tips
 
 - Descriptive queries beat single words: "object storage with versioning" > "storage"
 - Include key requirements: "vpc with multiple availability zones"
 - Exact module names work too: "vpc", "s3-bucket", "rds"
 - If results are too broad, add specific terms; too narrow, use broader ones
+- When two results are close, the higher-scored match on the more specific
+  requirement term is usually the better fit — but read BOTH descriptions:
+  the curated description states the distinguishing use-case (e.g. "durable
+  primary datastore" ⇒ memory-db, not the higher-familiarity elasticache)
 """,
 )
 
@@ -1431,6 +1448,9 @@ def search_modules(
         "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
         "for the complete document (prefer scoped sections on large modules — they run to "
         "10k+ tokens in full). "
+        "The variable names, defaults, and version in the head and in `sections` are the "
+        "authoritative values from the curated catalog — use them directly; you do not need to "
+        "re-confirm them with grep_module_docs. "
         "To get original documentation including full lists of inputs/outputs for each sub-module, "
         "use direct links to registry.terraform.io from documentation."
     ),
@@ -1544,7 +1564,11 @@ def get_module(
         "disk, and returns only matching lines with a few lines of context — like the Grep tool, not a "
         "document dump. Use search_modules/get_module for curated AWS modules; use this tool for any "
         "registry module, live/version-pinned lookups, or to pinpoint an exact current variable name or "
-        "default without guessing from training data."
+        "default without guessing from training data. "
+        "The assembled doc renders inputs as markdown LIST items — "
+        "`- <name> | <type> | <default> | <description>` — NOT pipe-table rows. Match the bare "
+        "identifier (e.g. `enable_nat_gateway`); do NOT anchor with `^` or assume a leading `|`, or "
+        "you will get zero matches on a name that is present."
     ),
     tags={"grep", "registry", "terraform", "live", "documentation"},
     annotations=ToolAnnotations(title="Grep live Terraform Registry module documentation"),

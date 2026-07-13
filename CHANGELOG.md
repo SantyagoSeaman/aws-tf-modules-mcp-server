@@ -1,5 +1,19 @@
 # Changelog
 
+## [0.14.2] - 2026-07-13
+
+[0.14.2]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.2
+
+Agent-guidance tuning (tool descriptions only — no index, schema, or behavior change), from field observation of a weaker model's tool-call transcript. Reduces redundant `grep_module_docs` re-verification and zero-match greps.
+
+### Changed
+
+- **New "Call economy" section in the server instructions.** Explicit budget guidance: call `get_module("<name>")` directly for an obvious service (skip `search_modules`); one `get_module(sections=["inputs"])` is the authoritative current variable table — do not re-verify names with `grep_module_docs`; a curated-catalog requirement should cost ~1–2 calls, not 3–4 (the observed source of ~19 redundant calls / a 45-vs-26 call blowup on a weaker model).
+- **`get_module` — "trust the head".** The head/`sections` values are stated as the current authoritative doc values so agents use them directly instead of re-confirming with `grep_module_docs`.
+- **`grep_module_docs` — input rendering hint.** Documents that assembled inputs are markdown LIST items (`- <name> | <type> | <default> | <description>`), not pipe-table rows; match the bare identifier and do not anchor with `^` or assume a leading `|` (the observed source of zero-match greps on present variables).
+- **`search_modules` Search Tips — score disambiguation.** Added guidance to prefer the higher-scored match on the more specific requirement term and to read both descriptions for the distinguishing use-case (e.g. memory-db vs elasticache).
+- **Server instructions — dropped the hardcoded catalog count** ("54 community terraform-aws-modules" → "community terraform-aws-modules") so it can no longer go stale as the catalog grows.
+
 ## [0.14.1] - 2026-07-13
 
 [0.14.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.1
