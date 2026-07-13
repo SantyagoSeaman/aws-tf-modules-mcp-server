@@ -155,7 +155,7 @@ revisit if/when Codex CLI fixes plugin-root interpolation.
 #!/usr/bin/env python3
 import os, sys
 if os.environ.get("TFMODSEARCH_DOCKER", "0") != "0":
-    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.15.0")
+    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.15.1")
     os.execvp("docker", ["docker", "run", "-i", "--rm", img])   # opt-in
 else:
     os.execvp("uvx", ["uvx", "tfmodsearch", *sys.argv[1:]])      # DEFAULT (local, unchanged)
