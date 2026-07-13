@@ -1,8 +1,8 @@
 # Feature spec — Run TFModSearch as a Docker container (stdio-in-container)
 
-Status: proposed / ready for implementation
-Owner: (assign)
-Audience: implementing agent working in this repo (`aws_tf_modules_mcp_server`)
+Status: implemented, shipped in 0.15.0 (see section 8 for implementation notes and deviations
+from the skeleton below)
+Audience: maintainers of this repository (GitHub: `SantyagoSeaman/tfmodsearch`)
 
 ---
 
@@ -154,7 +154,7 @@ revisit if/when Codex CLI fixes plugin-root interpolation.
 #!/usr/bin/env python3
 import os, sys
 if os.environ.get("TFMODSEARCH_DOCKER", "0") != "0":
-    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.14.2")
+    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.15.0")
     os.execvp("docker", ["docker", "run", "-i", "--rm", img])   # opt-in
 else:
     os.execvp("uvx", ["uvx", "tfmodsearch", *sys.argv[1:]])      # DEFAULT (local, unchanged)
