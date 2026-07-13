@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.15.1] - 2026-07-13
+
+[0.15.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.15.1
+
+Adds `linux/arm64` to the Docker image published in 0.15.0 (Apple-Silicon demand confirmed). No other changes.
+
+### Added
+
+- **`linux/arm64` image variant**, published alongside `linux/amd64` under the same tags (`ghcr.io/santyagoseaman/tfmodsearch:0.15.1`, `:latest`). `docker-publish.yml` now runs `docker/setup-qemu-action` before the build/push step and builds both platforms via buildx; the amd64 GitHub-hosted runner emulates the arm64 leg via QEMU. Verified locally before the CI change: `docker build --platform linux/arm64 .` builds natively on Apple Silicon and `docker run --platform linux/arm64 --network none -i --rm <image> --warmup` passes offline — confirming the CPU-only `torch` install serves a real `aarch64` wheel from `download.pytorch.org/whl/cpu`, not just x86_64.
+
 ## [0.15.0] - 2026-07-13
 
 [0.15.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.15.0
