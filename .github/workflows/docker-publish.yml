@@ -36,6 +36,9 @@ jobs:
           fi
           echo "IMAGE_VERSION=$VERSION" >> "$GITHUB_ENV"
 
+      - name: Set up QEMU (for linux/arm64 emulation)
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@bb05f3f5519dd87d3ba754cc423b652a5edd6d2c # v4.2.0
 
@@ -46,14 +49,15 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # v1 scope: linux/amd64 only (see docs/docker-container-support.md §4.5). Add a platform
-      # to the list below if/when arm64 demand is confirmed — QEMU emulation roughly doubles
-      # build time, so it's not enabled speculatively.
+      # Multi-arch since 0.15.1 (see docs/docker-container-support.md §4.5): linux/amd64 +
+      # linux/arm64 (Apple-Silicon demand confirmed). This workflow runs on an amd64
+      # GitHub-hosted runner, so QEMU emulates the arm64 leg -- slower than a native arm64
+      # runner would be, but no extra infra to maintain.
       - name: Build and push
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           context: .
-          platforms: linux/amd64
+          platforms: linux/amd64,linux/arm64
           push: true
           tags: |
             ghcr.io/santyagoseaman/tfmodsearch:${{ env.IMAGE_VERSION }}

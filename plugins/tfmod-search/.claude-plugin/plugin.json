@@ -1,7 +1,7 @@
 {
   "name": "tfmod-search",
   "displayName": "TFModSearch",
-  "version": "0.15.0",
+  "version": "0.15.1",
   "description": "Search current Terraform AWS module documentation before writing Terraform — hybrid keyword + BM25 + semantic search over the community terraform-aws-modules catalog.",
   "author": {
     "name": "Alexander Makeev",

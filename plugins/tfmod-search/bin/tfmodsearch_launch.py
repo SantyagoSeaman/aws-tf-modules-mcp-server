@@ -15,7 +15,7 @@ import shutil
 import sys
 from collections.abc import Mapping
 
-DEFAULT_IMAGE = "ghcr.io/santyagoseaman/tfmodsearch:0.15.0"
+DEFAULT_IMAGE = "ghcr.io/santyagoseaman/tfmodsearch:0.15.1"
 _FALSY = {"", "0", "false", "no", "off"}
 
 

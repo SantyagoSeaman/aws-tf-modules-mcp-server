@@ -106,10 +106,11 @@ ENV HF_HUB_OFFLINE=1 \
 ### 4.5 Publish (CI)
 - GitHub Actions workflow: on git tag / release, `docker buildx` build + push to **GHCR**
   (`ghcr.io/santyagoseaman/tfmodsearch:<version>` and `:latest`).
-- **v1 scope: `linux/amd64` only.** Multi-arch (`linux/arm64` via buildx + QEMU) is deferred —
-  it's a real added CI cost (QEMU emulation roughly doubles build time) that should be added once
-  there's confirmed arm64/Apple-Silicon demand, not speculatively. The workflow should be
-  structured so adding a second platform to the `platforms:` list is the only change needed later.
+- **v1 scope was `linux/amd64` only**; `linux/arm64` added in 0.15.1 once Apple-Silicon demand was
+  confirmed (the maintainer's own dev machine). `docker/setup-qemu-action` + `platforms:
+  linux/amd64,linux/arm64` on `docker/build-push-action` — QEMU emulates the arm64 leg on the
+  amd64 GitHub-hosted runner (roughly doubles build time vs. amd64-only), which was an accepted
+  cost once the platform was actually needed rather than speculative.
 - Tag the image with the same version as the PyPI package/plugin.
 - **GHCR package visibility**: images pushed via `GITHUB_TOKEN` from a public repo may still land
   as a **private** package on first push. After the first tag-triggered publish, check
@@ -226,7 +227,7 @@ if the code expects nltk_data at project root.)
 4. **MCP handshake** — wire the image as an MCP server (`docker run -i --rm`) in a real client and
    confirm all four tools respond: `search_modules`, `get_module`, `grep_module_docs`,
    `modules_list`. Confirm no `-t` in the args.
-5. **Platform** — image runs on `linux/amd64` (v1 scope; see §4.5).
+5. **Platform** — image runs on `linux/amd64` and `linux/arm64` (multi-arch since 0.15.1; see §4.5).
 6. **No regression** — `uvx tfmodsearch` path still works unchanged; existing tests pass.
 7. **Dual-mode launcher** — with the plugin installed: env unset → server comes up via `uvx`
    (default, tools respond); `TFMODSEARCH_DOCKER=1` → same server comes up via `docker run -i --rm`
@@ -298,6 +299,17 @@ if the code expects nltk_data at project root.)
   .../tfmodsearch_launch.py` → `uvx tfmodsearch`) and the opt-in path (`TFMODSEARCH_DOCKER=1`
   against a locally-built image tagged to match `DEFAULT_IMAGE`) showed `✔ Connected`. This is the
   strongest possible confirmation of acceptance criterion 7 short of a real end-user session.
+- **0.15.1 — multi-arch (`linux/arm64` added)**: demand confirmed (the maintainer's own machine is
+  Apple Silicon, and pulling the v1 `linux/amd64`-only image without `--platform` failed with "no
+  matching manifest"). Before touching CI, sanity-checked locally that the build itself is
+  arm64-safe: `docker build --platform linux/arm64 .` succeeded natively (no cross-compilation
+  needed on an Apple Silicon host) and `docker run --platform linux/arm64 --network none -i --rm
+  <image> --warmup` passed — confirming `pip install torch --index-url
+  .../whl/cpu` actually serves a `manylinux_..._aarch64` wheel (it does; this was the one real risk
+  worth checking before committing to the CI change, since that index is easy to assume is
+  x86_64-only). CI change is `docker/setup-qemu-action` + `platforms: linux/amd64,linux/arm64` on
+  the existing `build-push-action` step — the runner itself is amd64, so QEMU emulates the arm64
+  leg (slower than a native arm64 runner, accepted rather than adding new runner infra).
 
 ---
 
