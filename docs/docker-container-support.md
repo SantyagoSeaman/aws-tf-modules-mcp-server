@@ -285,6 +285,19 @@ if the code expects nltk_data at project root.)
   is `sentence-transformers`' own dependency footprint, and shedding it would mean swapping the
   embedding backend, which is out of scope (no new deps, no behavior change). Recorded as a known
   finding, not a blocker (see §6 criterion 1: "flag if larger").
+- **Independent review (Opus) caught two real gaps, both fixed**: (1) the Claude Code plugin now
+  requires `python3` on `PATH` in addition to `uv`/`uvx`, since the launch goes through the bundled
+  launcher rather than calling `uvx` directly — not a concern on a typical macOS/Linux box, flagged
+  for Windows where bare `python3` may not resolve; documented in README/CHANGELOG. (2) the
+  "zero network calls" framing was scoped too absolutely — `search_modules`/`get_module`/
+  `modules_list` are offline, `grep_module_docs` is explicitly not (it's the live-registry tool by
+  design); wording corrected everywhere it appeared.
+- **`${CLAUDE_PLUGIN_ROOT}` interpolation verified live, not just asserted in a unit test.**
+  Installed the plugin via `claude plugin marketplace add`/`install` into a scratch
+  `CLAUDE_CONFIG_DIR`, then ran `claude mcp list`: both the default path (env unset → `python3
+  .../tfmodsearch_launch.py` → `uvx tfmodsearch`) and the opt-in path (`TFMODSEARCH_DOCKER=1`
+  against a locally-built image tagged to match `DEFAULT_IMAGE`) showed `✔ Connected`. This is the
+  strongest possible confirmation of acceptance criterion 7 short of a real end-user session.
 
 ---
 

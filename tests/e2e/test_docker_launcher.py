@@ -11,6 +11,7 @@ or `uvx` binary on PATH.
 """
 
 import importlib.util
+import sys
 from pathlib import Path
 
 import pytest
@@ -43,6 +44,23 @@ def test_docker_flag_unset_or_zero_selects_uvx():
         command, argv, docker_unavailable = launcher.select_backend(env, [])
         assert command == "uvx"
         assert docker_unavailable is False
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("value", ["false", "False", "FALSE", "no", "No", "off", "Off", " 0 ", " "])
+def test_docker_flag_other_falsy_variants_select_uvx(value):
+    command, argv, docker_unavailable = launcher.select_backend({"TFMODSEARCH_DOCKER": value}, [])
+    assert command == "uvx"
+    assert docker_unavailable is False
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("value", ["1", "true", "True", "yes", "on", " 1 "])
+def test_docker_flag_truthy_variants_select_docker(monkeypatch, value):
+    monkeypatch.setattr(launcher.shutil, "which", lambda name: "/usr/bin/docker" if name == "docker" else None)
+    command, argv, docker_unavailable = launcher.select_backend({"TFMODSEARCH_DOCKER": value}, [])
+    assert command == "docker"
+    assert docker_unavailable is False
 
 
 @pytest.mark.e2e
@@ -93,3 +111,30 @@ def test_default_image_matches_project_version():
     with open(PROJECT_ROOT / "pyproject.toml", "rb") as f:
         version = tomllib.load(f)["project"]["version"]
     assert launcher.DEFAULT_IMAGE == f"ghcr.io/santyagoseaman/tfmodsearch:{version}"
+
+
+@pytest.mark.e2e
+def test_main_execs_uvx_by_default(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["tfmodsearch_launch.py"])
+    monkeypatch.delenv("TFMODSEARCH_DOCKER", raising=False)
+    calls = []
+    monkeypatch.setattr(launcher.os, "execvp", lambda command, argv: calls.append((command, argv)))
+
+    launcher.main()
+
+    assert calls == [("uvx", ["uvx", "tfmodsearch"])]
+    assert capsys.readouterr().err == ""
+
+
+@pytest.mark.e2e
+def test_main_warns_and_falls_back_when_docker_missing(monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["tfmodsearch_launch.py", "--warmup"])
+    monkeypatch.setenv("TFMODSEARCH_DOCKER", "1")
+    monkeypatch.setattr(launcher.shutil, "which", lambda name: None)
+    calls = []
+    monkeypatch.setattr(launcher.os, "execvp", lambda command, argv: calls.append((command, argv)))
+
+    launcher.main()
+
+    assert calls == [("uvx", ["uvx", "tfmodsearch", "--warmup"])]
+    assert "not on PATH" in capsys.readouterr().err

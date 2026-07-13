@@ -6,8 +6,10 @@
 # Every asset that would otherwise trigger a runtime network call is baked in at build time:
 # the intfloat/e5-small-v2 embedding model, the NLTK punkt_tab tokenizer, the prebuilt search
 # index, and the module docs corpus (the last two are already force-included in the wheel).
-# Runtime env below (HF_HUB_OFFLINE/TRANSFORMERS_OFFLINE/NLTK_DATA) enforces zero network calls;
-# verify with `docker run --network none -i --rm <image> --warmup`.
+# Runtime env below (HF_HUB_OFFLINE/TRANSFORMERS_OFFLINE/NLTK_DATA) makes search_modules/
+# get_module/modules_list fully offline; verify with `docker run --network none -i --rm <image>
+# --warmup`. grep_module_docs is the one tool designed to reach the live Terraform Registry and
+# still needs real network when called -- that is by design, not a gap in this offline setup.
 
 # --- builder ---
 FROM python:3.12-slim AS builder
