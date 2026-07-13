@@ -1,5 +1,27 @@
 # Changelog
 
+## [0.15.0] - 2026-07-13
+
+[0.15.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.15.0
+
+Adds an official Docker image as a second, opt-in distribution channel alongside `uvx tfmodsearch` — for air-gapped/offline environments, CI runners without a Python/uv toolchain, or teams standardizing MCP deployment on containers. `uvx` remains the documented default; nothing about search behavior, the index, or existing tool signatures changed.
+
+### Added
+
+- **Docker image, published to GHCR** (`ghcr.io/santyagoseaman/tfmodsearch`, `linux/amd64` for v1). Multi-stage build bakes in the `intfloat/e5-small-v2` embedding model, the prebuilt search index, the module docs corpus, and the NLTK `punkt_tab` tokenizer at build time — **`search_modules`/`get_module`/`modules_list` make zero network calls at runtime**, verified with `docker run --network none -i --rm <image> --warmup` and a live MCP session (`grep_module_docs` is the one tool designed to reach the live Terraform Registry and is unaffected by the offline build; it just needs real network when called). CPU-only `torch` (not the CUDA wheel) keeps the image in the few-hundred-MB-to-low-GB range instead of multi-GB. Runs as a non-root user. `docker run -i --rm <image>` speaks the same stdio JSON-RPC as `uvx tfmodsearch` — never pass `-t`/`--tty`, it corrupts the stream.
+- **`.github/workflows/docker-publish.yml`**: on `v*` tag push, builds and pushes `ghcr.io/santyagoseaman/tfmodsearch:<version>` and `:latest` after the full CI suite passes.
+- **Dual-mode launcher for the Claude Code plugin** (`plugins/tfmod-search/bin/tfmodsearch_launch.py`): defaults to `uvx tfmodsearch`; set `TFMODSEARCH_DOCKER=1` to switch to `docker run -i --rm <image>` instead (tag overridable via `TFMODSEARCH_IMAGE`). Falls back to `uvx` with a warning if Docker is requested but not on `PATH`. Verified live with the `claude` CLI (`claude mcp list`) that both the default and `TFMODSEARCH_DOCKER=1` paths actually connect. The Codex plugin stays `uvx`-only — Codex CLI doesn't yet reliably interpolate a plugin-relative path in its `mcp.json`.
+
+### Changed
+
+- **Claude Code plugin now requires `python3` on `PATH`**, in addition to `uv`/`uvx` — the MCP server launch now goes through the bundled launcher script rather than calling `uvx` directly. Not a concern on a typical macOS/Linux dev box; flagged for Windows users where bare `python3` may not resolve.
+
+### Known limitations
+
+- Image size is ~1.7 GB, over the spec's aspirational <1.5 GB — the floor is `sentence-transformers`' own `torch`/`scipy`/`scikit-learn`/`transformers` dependency footprint; not chased further since shedding it means swapping the embedding backend (out of scope).
+- `linux/arm64` is not built in v1 (real QEMU build-time cost); add to come only if Apple-Silicon demand shows up.
+- GHCR package visibility may default to private on first push — see `docs/docker-container-support.md` §4.5 for the one-time manual fix.
+
 ## [0.14.2] - 2026-07-13
 
 [0.14.2]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.2

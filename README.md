@@ -40,6 +40,7 @@ Think of it as an always-available, searchable reference card for every terrafor
 - [Installation](#-installation)
   - [Plugin Install (Claude Code / Codex)](#plugin-install-claude-code--codex--recommended)
   - [Quick Install (Any MCP Client)](#quick-install-any-mcp-client)
+  - [Docker (opt-in)](#-docker-opt-in)
 - [Quick Start](#-quick-start)
   - [Claude Code CLI Integration](#claude-code-cli-integration)
   - [Claude Desktop Integration](#claude-desktop-integration)
@@ -77,7 +78,7 @@ The plugin configures the MCP server automatically **and** adds workflow skills 
 ```
 
 Both bundle:
-- The **tfmod-search MCP server** (runs via `uvx tfmodsearch` — [uv](https://github.com/astral-sh/uv) required)
+- The **tfmod-search MCP server** (runs via `uvx tfmodsearch` by default — [uv](https://github.com/astral-sh/uv) required; the Claude Code plugin can optionally run it via Docker instead, see [Docker](#-docker-opt-in) below)
 - **Eight skills**:
   - `aws-terraform-modules` — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
   - `/tf-module <query>` — instant module lookup with a ready-to-paste snippet
@@ -125,6 +126,52 @@ Then add to your MCP client config:
 > ```json
 > "command": "/Users/username/.local/bin/uvx"
 > ```
+
+### 🐳 Docker (opt-in)
+
+`uvx tfmodsearch` stays the documented default. An official Docker image is also published to
+GHCR for environments that prefer or require a container — air-gapped/offline setups, CI runners
+without a Python/uv toolchain, or teams that standardize MCP server deployment on Docker. The
+image bakes in the embedding model, the search index, and the NLTK tokenizer data at build time,
+so **`search_modules`, `get_module`, and `modules_list` make zero network calls at runtime**.
+(`grep_module_docs` is the one tool designed to reach the live Terraform Registry — that still
+needs real network; only a `--network none` warmup, which never calls it, is fully offline.)
+
+**Any MCP client**, launch the image directly (never add `-t`/`--tty` — it corrupts the stdio
+JSON-RPC stream):
+```json
+{
+  "mcpServers": {
+    "terraform-modules": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.15.0"]
+    }
+  }
+}
+```
+
+**Claude Code plugin**, the bundled launcher defaults to `uvx` and switches to Docker when
+`TFMODSEARCH_DOCKER=1` is set (in `~/.claude/settings.json`'s `env` block, or exported before
+launching Claude Code):
+```bash
+export TFMODSEARCH_DOCKER=1
+# optional: pin a different tag
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.15.0
+```
+If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
+of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
+Codex plugin stays `uvx`-only (Codex CLI doesn't yet reliably resolve a plugin-relative path in
+its `mcp.json`).
+
+> **Note**: the Claude Code plugin now launches via a bundled `python3` launcher script instead of
+> calling `uvx` directly, so a `python3` interpreter on `PATH` is a prerequisite for the plugin
+> (in addition to `uv`/`uvx`) — on macOS/Linux this is normally already present; on Windows, make
+> sure `python3` (not just `python`/the `py` launcher) resolves on `PATH`.
+
+Verify the offline property yourself:
+```bash
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.15.0 --warmup
+```
 
 ### Prerequisites
 

@@ -1,7 +1,7 @@
 {
   "name": "tfmod-search",
   "displayName": "TFModSearch",
-  "version": "0.14.2",
+  "version": "0.15.0",
   "description": "Search current Terraform AWS module documentation before writing Terraform — hybrid keyword + BM25 + semantic search over the community terraform-aws-modules catalog.",
   "author": {
     "name": "Alexander Makeev",
@@ -17,8 +17,8 @@
   ],
   "mcpServers": {
     "tfmod-search": {
-      "command": "uvx",
-      "args": ["tfmodsearch"]
+      "command": "python3",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/tfmodsearch_launch.py"]
     }
   }
 }
