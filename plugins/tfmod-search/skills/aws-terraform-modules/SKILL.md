@@ -16,21 +16,35 @@ work from the retrieved documentation.
    `search_modules` with a descriptive query for the component you are about to
    write, e.g. "vpc with private subnets and nat gateway", "rds postgres multi-az",
    "s3 bucket with lifecycle rules and encryption".
-2. **Read the documentation.** Call `get_module` for the best match. The document
-   contains the current major version, complete inputs and outputs, usage
-   examples, and available submodules.
-3. **Write from the doc, not from memory.**
+2. **Orient, then pull what you need.** Call `get_module` for the best match. By
+   default it returns a compact **orientation head** — what the module is, the
+   current version and exact pin, gotchas, key features, and a menu of the other
+   sections. It is a **curated subset**, not the whole doc. To write the block,
+   pull the interface: `get_module(name, sections=["inputs", "examples"])` (add
+   `"outputs"` when wiring modules together, `"submodules"` when you need one).
+3. **Match the documentation depth to the question — use the least that answers it.**
+   - **Greenfield, common case** (defaults are fine): the curated inputs/examples
+     sections are usually enough. Go no deeper.
+   - **Reproducing an existing resource** (migration/brownfield), or you need an
+     input that is **not in the curated table**, an input's **exact type or
+     default**, the **complete** inputs/outputs, or a concrete shape of a complex
+     (`any`/`object(...)`) input: the curated table is a subset — get the exact,
+     complete answer from the live registry doc with `grep_module_docs` (grep by
+     the variable name, or the `examples` section). Never assert an exact default,
+     type, or that an input exists from the summary or from memory when a wrong
+     value would break `apply`.
+4. **Write from the doc, not from memory.**
    - Use exact variable names as documented. Modules rename variables between
      major versions (for example, security-group v6 rearchitected per-rule
      resources; eks v21 renamed many cluster inputs).
    - Pin the module `version` to the version shown in the documentation.
    - Set only the variables the requirement needs; do not restate defaults.
-4. **Prefer the community module** over hand-written `aws_*` resources when it
+5. **Prefer the community module** over hand-written `aws_*` resources when it
    covers the use case — modules encode hardening, tagging, and edge cases.
    Fall back to raw resources only when the module does not support the required
    configuration (verify in the documentation first) or would over-abstract a
    single trivial resource.
-5. **Verify.** After writing, cross-check every variable used against the
+6. **Verify.** After writing, cross-check every variable used against the
    documentation. When you are unsure a variable exists, or the project pins an
    older major than the doc describes, confirm it with `grep_module_docs` — an
    exact quote from the live registry docs at that version — instead of
@@ -43,10 +57,13 @@ work from the retrieved documentation.
 - Search returns the top-3 matches by default; pass `top_k` (up to 10) for
   ambiguous queries, and if nothing fits, retry with different terms before
   concluding no module exists.
-- `get_module` returns the full document by default; pass `sections`
+- `get_module` returns a compact orientation head by default; pass `sections`
   (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
-  to keep the response small — version pins, agent notes, and gotchas are
-  always included.
+  to pull the parts you need, or `sections=["all"]` for the whole curated doc.
+  Version pins, agent notes, and gotchas are always included. The head and
+  `sections=[...]` responses carry a footer that names every available section
+  and points to `grep_module_docs` for the complete, exact inputs/outputs; the
+  `sections=["all"]` escape hatch returns the curated doc verbatim (no footer).
 - The curated corpus covers the terraform-aws-modules organization only, so
   `search_modules`/`get_module` will not find other namespaces (cloudposse,
   project-specific). You are not stuck: `grep_module_docs` greps the live

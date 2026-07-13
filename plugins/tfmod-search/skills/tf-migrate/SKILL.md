@@ -20,8 +20,9 @@ worse than no replacement.
    `search_modules` more than once with different aspects
    ("security group with http ingress rules", "vpc private subnets nat
    gateway", "s3 bucket lifecycle encryption"). One query is not enough.
-3. **Read the winner.** `get_module` for the best candidate — the doc has the
-   current major version, inputs, and submodules.
+3. **Read the winner.** `get_module` for the best candidate, pulling
+   `sections=["inputs", "submodules"]` for the interface (the default response
+   is a compact head); note its current major version.
 4. **Coverage check — the critical step.** Build an explicit mapping table:
    every attribute of every existing resource → the module input that
    expresses it. Anything you cannot map goes into a "not covered" list.

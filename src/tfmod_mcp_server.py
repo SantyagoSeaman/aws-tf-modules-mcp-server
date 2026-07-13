@@ -893,6 +893,17 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
 
     footer_lines = [
         "---",
+        # Honest-limits pointer: the curated doc is a hand-picked SUBSET. Anything
+        # requiring completeness or exactness lives one tier down (live registry),
+        # and resource-creation conditions live in module source. Keeps the
+        # compact→full→source escalation a mechanical decision, not a guess.
+        "This is TFModSearch's curated summary (a selected subset of the module's inputs/"
+        "outputs). For the COMPLETE inputs/outputs — every variable with its exact type and "
+        "default — plus all examples, grep the live registry doc with `grep_module_docs` "
+        "using the Module ID above. Resource-creation conditions (whether an input gates a "
+        "`count`/`for_each` resource) live in the module source, not the rendered doc. Do "
+        "not assert an exact default, type, or that an input exists from this summary or from "
+        "memory when a wrong value would break `apply` — confirm it in the full doc first.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
