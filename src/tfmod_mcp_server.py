@@ -75,10 +75,11 @@ training data.
    module. Accepts a module name ("vpc") or a relative doc path
    ("modules/terraform-aws-modules/vpc.md"). By default returns a compact
    orientation head — description, module info, exact version pin, agent
-   notes, gotchas, key features, use cases — plus a footer listing every
-   other section as a table of contents. Pass `sections` (e.g. ["inputs",
-   "examples"]) to pull specific parts, or `sections=["all"]` for the full
-   document; prefer scoped `sections` over "all" on large modules.
+   notes, any gotchas, key features, use cases — plus a footer with the full
+   section inventory (an explicit menu of logical keys + headings). Pass
+   `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
+   `sections=["all"]` for the full document; prefer scoped `sections` over
+   "all" on large modules.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 
@@ -836,10 +837,10 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
     (e.g. "inputs", "examples", "submodules") or a free-form case-insensitive
     substring matched against H2 headings (e.g. "karpenter" to fetch a single
     EKS submodule section). Core sections — front-matter, Description,
-    Module Information, Notes for AI Agents, Important Gotchas — are always
-    included regardless of the request. A footer lists the omitted sections
-    (serving as a table of contents) and any requested entries that matched
-    nothing.
+    Module Information, Notes for AI Agents, and Important Gotchas (the last
+    only on docs that carry that heading) — are always included regardless of
+    the request. A footer lists the omitted sections (serving as a table of
+    contents) and any requested entries that matched nothing.
 
     Args:
         text: Full markdown document text
@@ -884,20 +885,23 @@ def filter_module_sections(text: str, requested: list[str]) -> str:
     parts = [preamble.rstrip()] if preamble.strip() else []
     parts.extend(block.rstrip() for title, block in sections if title in wanted)
 
-    footer_lines = ["---"]
-    omitted = [title for title, _ in sections if title not in wanted]
+    # Always advertise the complete section inventory so the agent has an explicit
+    # menu for follow-up get_module(sections=[...]) calls — not just what was
+    # omitted from this particular response.
+    all_titles = [title for title, _ in sections]
+    omitted = [title for title in all_titles if title not in wanted]
+
+    footer_lines = [
+        "---",
+        "Available sections (request any via `get_module`'s `sections` parameter — "
+        "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
+        "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
+    ]
     if omitted:
-        footer_lines.append(
-            "Sections omitted from this response (request them via the `sections` "
-            "parameter, by key or by heading substring): " + "; ".join(omitted)
-        )
+        footer_lines.append("Not included above (request to expand): " + "; ".join(omitted))
     if unmatched:
-        available = "; ".join(title for title, _ in sections)
-        footer_lines.append(
-            "Requested sections not found: " + ", ".join(unmatched) + ". Available sections: " + available
-        )
-    if len(footer_lines) > 1:
-        parts.append("\n".join(footer_lines))
+        footer_lines.append("Requested sections not found: " + ", ".join(unmatched))
+    parts.append("\n".join(footer_lines))
 
     return "\n\n".join(parts) + "\n"
 
@@ -1029,8 +1033,9 @@ def orientation_head(text: str) -> str:
     Build the compact orientation view returned by get_module by default.
 
     Combines the always-included core sections (Description, Module Information,
-    Notes for AI Agents, Important Gotchas) with Key Features and Main Use Cases,
-    prepends an actionable exact-version pin hint, and appends a footer listing
+    Notes for AI Agents, and Important Gotchas where the doc has it) with Key
+    Features and Main Use Cases, prepends an actionable exact-version pin hint,
+    and appends a footer listing
     every omitted section as a table of contents. Keeps a first orientation call
     small — what the module is plus how to reach the rest — instead of returning
     the full body, which runs to ~12k tokens for the largest modules.
@@ -1341,9 +1346,10 @@ def search_modules(
         "Get compacted documentation for a specific Terraform module. "
         "Use this tool after search_modules to orient on the chosen module. "
         "By default returns a compact orientation head — description, module info, exact "
-        "version pin, agent notes, gotchas, key features, and use cases — plus a footer "
-        "listing every other section (inputs, outputs, examples, submodules, ...) as a table "
-        "of contents. Pass `sections` to fetch specific parts you need, or `sections=['all']` "
+        "version pin, agent notes, any gotchas, key features, and use cases — plus a footer "
+        "with the full section inventory: an explicit menu of the logical keys (inputs, "
+        "outputs, examples, submodules, ...) and every heading in the doc. "
+        "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
         "for the complete document (prefer scoped sections on large modules — they run to "
         "10k+ tokens in full). "
         "To get original documentation including full lists of inputs/outputs for each sub-module, "
@@ -1368,7 +1374,7 @@ def get_module(
             "or case-insensitive substrings of section headings (e.g. 'karpenter' for a single "
             "EKS submodule); the inputs/outputs/examples keys also resolve on modules that bundle "
             "them into a combined section. Core context (description, module info, version pin, "
-            "notes for AI agents, gotchas) is always included, and omitted sections are listed in "
+            "notes for AI agents, and any Important Gotchas the doc carries) is always included, and omitted sections are listed in "
             "a footer so you can request them later. Omit this parameter for the compact "
             "orientation head; pass ['all'] (or 'full') for the complete document."
         ),
@@ -1388,8 +1394,9 @@ def get_module(
         sections: Optional list of section keys or heading substrings. When
             omitted, a compact orientation head is returned — the core sections
             (front-matter, Description, Module Information, Notes for AI Agents,
-            Important Gotchas) plus Key Features, Main Use Cases, an exact
-            version-pin hint, and a footer listing every omitted section as a
+            and Important Gotchas where the doc has it) plus Key Features, Main
+            Use Cases, an exact version-pin hint, and a footer listing every
+            omitted section as a
             table of contents. When given, the response is those core sections
             plus the requested ones (same footer). Pass one of {"all", "full",
             "everything"} to return the complete document.

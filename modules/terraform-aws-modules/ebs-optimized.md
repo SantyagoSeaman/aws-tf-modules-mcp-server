@@ -52,6 +52,13 @@ Because the module was archived in November 2021, its lookup table is frozen at 
 - **Minimal Interface**: Single required input (`instance_type`), single output (`answer`)
 - **Legacy-Friendly**: Fits patterns built around `aws_launch_configuration` that predate provider-level instance-type introspection
 
+## Main Use Cases
+
+1. **Gate `ebs_optimized` on a variable instance type**: feed the `answer` output straight into the `ebs_optimized` argument of `aws_instance`/`aws_launch_template`/`aws_launch_configuration`/`aws_autoscaling_group` so a parameterized instance type never triggers an apply-time failure.
+2. **Avoid silent Auto Scaling Group launch failures**: on launch configurations and ASGs an unsupported `ebs_optimized = true` is accepted at plan time but instances then fail to launch — the module's safe `0` default prevents that hard-to-debug outage.
+3. **Credential-free, offline compatibility checks**: resolve EBS-optimization support with pure local computation (no provider credentials, no data-source round-trip) in modules that must plan without AWS API access.
+4. **Legacy stacks predating provider introspection**: fits older `aws_launch_configuration`-based patterns built before the `aws_ec2_instance_type` data source existed (new code should prefer that data source — see the notice above).
+
 ## Main Input Variables
 
 | Variable | Type | Required | Description |

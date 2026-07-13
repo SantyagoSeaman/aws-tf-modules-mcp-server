@@ -23,11 +23,14 @@ from tfmod_mcp_server import filter_module_sections, orientation_head
 DOCS = sorted((Path(__file__).parent.parent.parent / "modules/terraform-aws-modules").glob("*.md"))
 
 # Headings that must appear in every curated doc: the high-signal context the
-# orientation head always includes.
+# orientation head builds from. Includes the two orientation keys the head
+# requests (Key Features / Main Use Cases) so a future doc cannot drop one and
+# leave get_module emitting a "Requested sections not found" footer.
 UNIVERSAL_CORE_HEADINGS = (
     "Description",
     "Module Information",
     "Key Features",
+    "Main Use Cases",
     "Best Practices",
     "Additional Resources",
     "Notes for AI Agents",
@@ -99,3 +102,17 @@ def test_orientation_head_is_well_formed(doc):
     head = orientation_head(text)
     assert "## Module Information" in head, f"{doc.name}: orientation head missing Module Information"
     assert len(head) <= len(text) + 512, f"{doc.name}: orientation head unexpectedly larger than full doc"
+
+
+@pytest.mark.parametrize("doc", DOCS, ids=_id)
+def test_orientation_head_reports_nothing_missing(doc):
+    """The default head's own keys (features/use-cases) must resolve on every doc.
+
+    Guards against a doc dropping Key Features or Main Use Cases and get_module
+    then emitting a "Requested sections not found" footer on its default response.
+    """
+    head = orientation_head(doc.read_text())
+    assert "Requested sections not found" not in head, (
+        f"{doc.name}: orientation head reports missing sections — a heading the "
+        "default view requests (Key Features / Main Use Cases) is absent"
+    )

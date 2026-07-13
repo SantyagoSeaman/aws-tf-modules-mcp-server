@@ -8,7 +8,7 @@ Retrieval-efficiency & orientation release, driven by a field experiment running
 
 ### Changed
 
-- **`get_module` returns a compact orientation head by default** instead of the full document. The head carries the always-included core sections (Description, Module Information, Notes for AI Agents, Important Gotchas) plus Key Features, Main Use Cases, an actionable exact **version-pin hint**, and a footer listing every other section as a table of contents — ~9–10k chars even for the largest modules (vs 34–50k full), so a first orientation call never overflows the client. Pass `sections=["all"]` (or `"full"`/`"everything"`) for the complete document, or scoped keys for specific parts. **Behavior change**: callers that relied on full-document-by-default should now pass `sections=["all"]`.
+- **`get_module` returns a compact orientation head by default** instead of the full document. The head carries the always-included core sections (Description, Module Information, Notes for AI Agents, and Important Gotchas where the doc has it) plus Key Features, Main Use Cases, an actionable exact **version-pin hint**, and a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. ~9–10k chars even for the largest modules (vs 34–50k full), so a first orientation call never overflows the client. Pass `sections=["all"]` (or `"full"`/`"everything"`) for the complete document, or scoped keys for specific parts. **Behavior change**: callers that relied on full-document-by-default should now pass `sections=["all"]`.
 
 ### Fixed
 
@@ -18,8 +18,9 @@ Retrieval-efficiency & orientation release, driven by a field experiment running
 
 ### Tests
 
-- New `tests/integration/test_doc_schema.py`: schema-integrity guards over all 54 curated docs — universal core headings present and unique, a recognised interface scheme (split / combined `Main Module:` / submodule-only), and `inputs`/`outputs`/`examples` resolving for every doc. Fails CI the moment a future doc's headings would break `get_module` section filtering.
-- Full suite: 636 tests, green (630 passing; 6 opt-in live tests skip without `RUN_REGISTRY_BENCHMARK=1`).
+- New `tests/integration/test_doc_schema.py`: schema-integrity guards over all 54 curated docs — universal core headings present and unique (now including Key Features + Main Use Cases, the two headings the orientation head itself requests), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving for every doc, and the orientation head reporting no missing sections. Fails CI the moment a future doc's headings would break `get_module` section filtering.
+- Added a `Main Use Cases` section to `ebs-optimized.md` (the only doc that lacked one) so the orientation head is clean on all 54 docs.
+- Full suite: 691 tests, green (685 passing; 6 opt-in live tests skip without `RUN_REGISTRY_BENCHMARK=1`).
 
 ## [0.11.1] - 2026-07-12
 

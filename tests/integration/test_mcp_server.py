@@ -225,7 +225,7 @@ class TestGetModuleTool:
         assert isinstance(head, str), "Should return string"
         assert "vpc" in head.lower(), "Should contain VPC content"
         assert "## Module Information" in head, "Orientation head must carry module info"
-        assert "Sections omitted from this response" in head, "Head lists a section index"
+        assert "Available sections" in head, "Head lists the full section inventory as a menu"
 
         # Escape hatch → complete document, larger than the head
         full = get_module_impl("vpc", server_state, sections=["all"])
@@ -285,7 +285,7 @@ class TestGetModuleSections:
         full = get_module_impl("security-group", server_state, sections=["all"])
         assert len(head) < len(full), "Default head should be smaller than the full document"
         assert "## Module Information" in head, "Core context is always present in the head"
-        assert "Sections omitted from this response" in head, "Head lists omitted sections as a TOC"
+        assert "Available sections" in head, "Head lists the full section inventory as a menu"
         # sections=None is the same as omitting the argument
         assert get_module_impl("security-group", server_state, sections=None) == head
 
@@ -301,6 +301,15 @@ class TestGetModuleSections:
         head = get_module_impl("vpc", server_state)
         assert "Version pin" in head, "Orientation head should surface an exact-pin hint"
         assert 'version = "' in head, "Pin hint should show an exact version pin"
+
+    def test_orientation_head_lists_available_sections_menu(self, server_state):
+        """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
+        head = get_module_impl("eks", server_state)
+        assert "Available sections" in head, "Head must advertise the section inventory"
+        assert "best-practices" in head, "Footer should list the logical keys agents can request"
+        # The inventory is complete: it lists headings that are NOT expanded in the head body.
+        assert "Submodule 4: karpenter" in head, "Inventory should include omitted headings"
+        assert "Not included above" in head, "Head should flag which sections would expand on request"
 
     def test_sections_reduce_payload(self, server_state):
         """Test that requesting sections returns a smaller document containing them."""
@@ -337,8 +346,9 @@ class TestGetModuleSections:
     def test_omitted_sections_listed_in_footer(self, server_state):
         """Test that the footer lists omitted sections as a table of contents."""
         filtered = get_module_impl("security-group", server_state, sections=["inputs"])
-        assert "Sections omitted from this response" in filtered, "Footer should list omitted sections"
-        assert "Best Practices" in filtered, "Omitted section titles should appear in the footer"
+        assert "Available sections" in filtered, "Footer should advertise the full section inventory"
+        assert "Not included above" in filtered, "Footer should flag what was not expanded"
+        assert "Best Practices" in filtered, "Every section title should appear in the footer menu"
 
     def test_freeform_heading_substring_match(self, server_state):
         """Test that free-form entries match H2 headings by substring."""
@@ -355,7 +365,7 @@ class TestGetModuleSections:
         """Test that unmatched entries are reported with available sections."""
         filtered = get_module_impl("vpc", server_state, sections=["nonexistent-section-xyz"])
         assert "Requested sections not found: nonexistent-section-xyz" in filtered
-        assert "Available sections:" in filtered, "Footer should list available sections for retry"
+        assert "Available sections" in filtered, "Footer should list available sections for retry"
 
     def test_filter_returns_text_without_h2_unchanged(self):
         """Test that documents without H2 sections pass through unfiltered."""
