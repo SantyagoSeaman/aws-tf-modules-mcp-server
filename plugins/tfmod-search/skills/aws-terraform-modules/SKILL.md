@@ -60,9 +60,10 @@ work from the retrieved documentation.
 - `get_module` returns a compact orientation head by default; pass `sections`
   (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
   to pull the parts you need, or `sections=["all"]` for the whole curated doc.
-  Version pins, agent notes, and gotchas are always included; the response
-  footer names every available section and points to `grep_module_docs` for the
-  complete, exact inputs/outputs.
+  Version pins, agent notes, and gotchas are always included. The head and
+  `sections=[...]` responses carry a footer that names every available section
+  and points to `grep_module_docs` for the complete, exact inputs/outputs; the
+  `sections=["all"]` escape hatch returns the curated doc verbatim (no footer).
 - The curated corpus covers the terraform-aws-modules organization only, so
   `search_modules`/`get_module` will not find other namespaces (cloudposse,
   project-specific). You are not stuck: `grep_module_docs` greps the live
