@@ -55,8 +55,11 @@ class TestClaudeManifests:
         assert manifest["name"] == "tfmod-search"
         assert manifest["version"] == _project_version()
         server = manifest["mcpServers"]["tfmod-search"]
-        assert server["command"] == "uvx"
-        assert server["args"] == ["tfmodsearch"]
+        assert server["command"] == "python3"
+        assert server["args"] == ["${CLAUDE_PLUGIN_ROOT}/bin/tfmodsearch_launch.py"]
+        launcher = PLUGIN_DIR / "bin" / "tfmodsearch_launch.py"
+        assert launcher.is_file()
+        assert os.access(launcher, os.X_OK), "launcher must be executable"
 
 
 class TestCodexManifests:
@@ -68,6 +71,9 @@ class TestCodexManifests:
         assert source.resolve() == PLUGIN_DIR.resolve()
 
     def test_plugin_manifest(self):
+        # uvx-only, unlike the Claude Code plugin: Codex CLI doesn't reliably interpolate
+        # ${CLAUDE_PLUGIN_ROOT} in a plugin's mcp.json, so it can't portably reference the
+        # bundled dual-mode launcher (see docs/docker-container-support.md §4.6).
         manifest = _load_json(PLUGIN_DIR / ".codex-plugin" / "plugin.json")
         assert manifest["name"] == "tfmod-search"
         assert manifest["version"] == _project_version()
