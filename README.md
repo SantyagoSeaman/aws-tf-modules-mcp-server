@@ -457,13 +457,16 @@ Search for Terraform modules using keywords, exact names, or natural language qu
 
 ### `get_module(module_identifier: str, sections: list[str] | None = None)`
 
-Retrieve full documentation for a specific Terraform module.
+Get documentation for a specific Terraform module. **By default returns a compact orientation head** — not the full document — so a first orientation call stays small (large modules run to 10k+ tokens in full).
 
 **Parameters**:
 - `module_identifier` (string): Module name (e.g., `"vpc"`) or relative path (e.g., `"modules/terraform-aws-modules/vpc.md"`)
-- `sections` (list of strings, optional): Return only the requested sections instead of the full document — large modules run to 10k+ tokens in full. Accepts logical keys (`inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`) or case-insensitive substrings of section headings (e.g. `"karpenter"` for a single EKS submodule). Core context — description, pinned versions, notes for AI agents, gotchas — is always included, and a footer lists the omitted sections so they can be requested later.
+- `sections` (list of strings, optional): Control what comes back.
+  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, gotchas, key features, use cases, plus a footer listing every other section as a table of contents.
+  - **Logical keys or heading substrings** → those sections added on top of the always-included core. Accepts `inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`, or case-insensitive substrings of headings (e.g. `"karpenter"` for a single EKS submodule). The `inputs`/`outputs`/`examples` keys also resolve on modules that bundle their interface into a combined `Main Module:`/`Root Module:` section or spread it across submodules.
+  - **`["all"]`** (or `"full"`/`"everything"`) → the complete document verbatim.
 
-**Returns**: Complete module documentation as markdown text, or a filtered subset if `sections` is given.
+**Returns**: The compact orientation head by default, a filtered subset when specific sections are requested, or the complete markdown document when an `all`/`full` key is given.
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
@@ -506,14 +509,16 @@ A coding assistant discovers and uses a module in two steps:
    → eks (score 8.9), eks-pod-identity (2.1), autoscaling (1.7)
    ```
 
-2. **Fetch the full docs** — it pulls the complete documentation to ground the generated code:
+2. **Orient, then drill in** — it pulls a compact orientation head, then requests the parts it needs:
 
    ```
    get_module("eks")
-   → full EKS module reference: inputs, outputs, submodules, and copy-paste HCL examples
+   → EKS orientation head: what it is, exact version pin, gotchas, key features + a section index
+   get_module("eks", sections=["inputs", "karpenter"])
+   → core context plus the input variables and the karpenter submodule
    ```
 
-The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates by default (raise `top_k` for broader queries) so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing. When only part of the documentation is needed, `get_module(..., sections=["inputs", "examples"])` keeps the response small without losing version pins or gotchas.
+The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates by default (raise `top_k` for broader queries) so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing. `get_module` returns a small orientation head by default so the first call never overflows; scoped `sections=["inputs", "examples"]` pull only what's needed, and `sections=["all"]` returns the complete document when the whole thing is genuinely wanted.
 
 For a **pinpoint lookup** — the exact name/default of one variable, or how a specific feature is wired — or for a module **outside the curated AWS catalog** or at a **specific older version**, reach for `grep_module_docs`. `search_modules`/`modules_list` hand back a ready `module_id`, so the chain is direct:
 
@@ -638,7 +643,8 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 - **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
-- **MCP Server** (40 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters, `module_id`/`latest_version` fields, security validation, integration workflows
+- **MCP Server** (44 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
+- **Doc Schema** (271 tests): schema-integrity guards over all 54 curated docs — universal core headings present and unique, a recognised interface scheme (split / combined `Main Module:` / submodule-only), and `inputs`/`outputs`/`examples` resolving on every doc so `get_module` section filtering can't silently break
 - **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
@@ -647,7 +653,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **Security Config** (5 tests): the Dependabot config, `SECURITY.md` reporting policy, both workflows' least-privilege `permissions`, and the publish job's retained OIDC `id-token: write` grant
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 361 tests (integration + e2e; 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
+**Total**: 636 tests (integration + e2e; 630 passing, 6 opt-in live tests skip unless `RUN_REGISTRY_BENCHMARK=1`)
 
 ## 🔒 Security
 

@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.12.0] - 2026-07-13
+
+[0.12.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.12.0
+
+Retrieval-efficiency & orientation release, driven by a field experiment running `get_module`/`grep_module_docs` through a 14-module refactoring. Changes `get_module`'s **default response shape** (see **Changed**).
+
+### Changed
+
+- **`get_module` returns a compact orientation head by default** instead of the full document. The head carries the always-included core sections (Description, Module Information, Notes for AI Agents, Important Gotchas) plus Key Features, Main Use Cases, an actionable exact **version-pin hint**, and a footer listing every other section as a table of contents — ~9–10k chars even for the largest modules (vs 34–50k full), so a first orientation call never overflows the client. Pass `sections=["all"]` (or `"full"`/`"everything"`) for the complete document, or scoped keys for specific parts. **Behavior change**: callers that relied on full-document-by-default should now pass `sections=["all"]`.
+
+### Fixed
+
+- **`get_module(sections=[...])` now resolves `inputs`/`outputs`/`examples` on every doc** (previously failed on 15/54). Docs that bundle their interface into a combined `Main Module:`/`Root Module:` section (e.g. `s3-bucket`, `lambda`, `vpc`) or spread it across submodules (e.g. `iam`, `cloudwatch`, `fsx`) reported these keys as "not found", causing a wasteful full-document re-fetch. The keys now fall back to the doc's interface-bearing sections.
+- **`get_module` surfaces the exact latest version as an actionable pin** in the orientation head, so an agent pins `= X.Y.Z` instead of copying a `~> X.0` range from a usage example.
+- **`sns.md`**: rewrote the `create_topic_policy`/`topic_policy` documentation to spell out the two distinct policy mechanisms — a generated standalone `aws_sns_topic_policy` when `create_topic_policy = true` (in which branch `topic_policy` is ignored) vs the inline `aws_sns_topic.policy = var.topic_policy` when `false`; a custom full policy goes through `source_topic_policy_documents` + `enable_default_topic_policy = false`. The previous wording read as self-contradictory and led agents to silently drop a custom policy. Verified against the module's `main.tf`.
+
+### Tests
+
+- New `tests/integration/test_doc_schema.py`: schema-integrity guards over all 54 curated docs — universal core headings present and unique, a recognised interface scheme (split / combined `Main Module:` / submodule-only), and `inputs`/`outputs`/`examples` resolving for every doc. Fails CI the moment a future doc's headings would break `get_module` section filtering.
+- Full suite: 636 tests, green (630 passing; 6 opt-in live tests skip without `RUN_REGISTRY_BENCHMARK=1`).
+
 ## [0.11.1] - 2026-07-12
 
 [0.11.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.11.1

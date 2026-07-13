@@ -219,17 +219,21 @@ class TestGetModuleTool:
             assert len(content_by_path) > 10000, "Should return full content (not truncated)"
 
     def test_get_module_tool_implementation(self, server_state):
-        """Test calling the get_module tool implementation function."""
-        # Test with module name
-        content = get_module_impl("vpc", server_state)
+        """Default returns a compact orientation head; sections=['all'] returns the full doc."""
+        # Default (no sections) → orientation head
+        head = get_module_impl("vpc", server_state)
+        assert isinstance(head, str), "Should return string"
+        assert "vpc" in head.lower(), "Should contain VPC content"
+        assert "## Module Information" in head, "Orientation head must carry module info"
+        assert "Sections omitted from this response" in head, "Head lists a section index"
 
-        assert isinstance(content, str), "Should return string"
-        assert len(content) > 10000, "Should return full content"
-        assert "vpc" in content.lower(), "Should contain VPC content"
+        # Escape hatch → complete document, larger than the head
+        full = get_module_impl("vpc", server_state, sections=["all"])
+        assert len(full) > len(head), "Full document should exceed the orientation head"
+        assert len(full) > 10000, "Full document should be substantial"
 
-        # Test with path
+        # Path identifier resolves to an orientation head too
         content_path = get_module_impl("modules/terraform-aws-modules/s3-bucket.md", server_state)
-
         assert len(content_path) > 1000, "Should return substantial content"
         assert "s3" in content_path.lower() or "bucket" in content_path.lower(), "Should contain S3/bucket content"
 
@@ -275,17 +279,47 @@ class TestSearchTopK:
 class TestGetModuleSections:
     """Test the sections parameter of get_module."""
 
-    def test_no_sections_returns_full_document(self, server_state):
-        """Test that omitting sections returns the unmodified full document."""
-        full = get_module_impl("security-group", server_state)
-        assert get_module_impl("security-group", server_state, sections=None) == full
+    def test_default_returns_orientation_head(self, server_state):
+        """Omitting sections returns the compact orientation head, not the full document."""
+        head = get_module_impl("security-group", server_state)
+        full = get_module_impl("security-group", server_state, sections=["all"])
+        assert len(head) < len(full), "Default head should be smaller than the full document"
+        assert "## Module Information" in head, "Core context is always present in the head"
+        assert "Sections omitted from this response" in head, "Head lists omitted sections as a TOC"
+        # sections=None is the same as omitting the argument
+        assert get_module_impl("security-group", server_state, sections=None) == head
+
+    def test_full_escape_hatch_returns_complete_document(self, server_state):
+        """sections=['all'] bypasses filtering and returns the unmodified full document."""
+        for key in ("all", "full", "everything"):
+            full = get_module_impl("security-group", server_state, sections=[key])
+            raw = get_module_documentation("security-group", server_state)
+            assert full == raw, f"sections=['{key}'] should return the complete document verbatim"
+
+    def test_orientation_head_includes_version_pin_hint(self, server_state):
+        """The default head surfaces an actionable exact-version pin (BUG-5)."""
+        head = get_module_impl("vpc", server_state)
+        assert "Version pin" in head, "Orientation head should surface an exact-pin hint"
+        assert 'version = "' in head, "Pin hint should show an exact version pin"
 
     def test_sections_reduce_payload(self, server_state):
         """Test that requesting sections returns a smaller document containing them."""
-        full = get_module_impl("security-group", server_state)
+        full = get_module_impl("security-group", server_state, sections=["all"])
         filtered = get_module_impl("security-group", server_state, sections=["inputs"])
         assert len(filtered) < len(full), "Filtered response should be smaller than full document"
         assert "## Main Input Variables" in filtered, "Requested inputs section should be present"
+
+    def test_inputs_key_resolves_on_combined_scheme(self, server_state):
+        """inputs resolves on docs bundling the interface into a combined section (BUG-1)."""
+        filtered = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "Requested sections not found" not in filtered, "inputs must resolve, not report missing"
+        assert "## Root Module: S3 Bucket" in filtered, "Combined interface section should be pulled"
+
+    def test_inputs_key_resolves_on_submodule_only_doc(self, server_state):
+        """inputs resolves on pure submodule-collection docs via submodule fallback (BUG-1)."""
+        filtered = get_module_impl("iam", server_state, sections=["inputs"])
+        assert "Requested sections not found" not in filtered, "inputs must resolve, not report missing"
+        assert "## Submodule 1: iam-account" in filtered, "Submodule sections should be pulled"
 
     def test_core_sections_always_included(self, server_state):
         """Test that core context is included regardless of the request."""
