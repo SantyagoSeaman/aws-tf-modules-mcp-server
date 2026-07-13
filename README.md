@@ -10,7 +10,7 @@
 
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
 
-**Ready to Use**: Includes a pre-built search index with embeddings for 54 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
+**Ready to Use**: Includes a pre-built search index with embeddings for 55 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
 
 ## 🤔 Why TFModSearch?
 
@@ -113,7 +113,7 @@ Then add to your MCP client config:
 
 > **Tip**: Run `uvx tfmodsearch --warmup` once after installing — it pre-downloads the embedding model (~130 MB) and verifies the server end-to-end, so the first real query is instant.
 
-> **Bundled and ready**: The pre-built search index and all 54 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `intfloat/e5-small-v2` embedding model — ~130 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
+> **Bundled and ready**: The pre-built search index and all 55 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `intfloat/e5-small-v2` embedding model — ~130 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
 
 > **Note**: If you get "command not found" error, use the full path to `uvx`:
 > ```bash
@@ -163,7 +163,7 @@ pip install -e .
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_e5_small_index.pkl` with embeddings for 54 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_e5_small_index.pkl` with embeddings for 55 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
@@ -435,7 +435,7 @@ List all available Terraform modules in the catalog.
       "latest_version": "6.6.1"
     }
   ],
-  "count": 54
+  "count": 55
 }
 ```
 
@@ -622,7 +622,7 @@ The project includes comprehensive integration tests covering all major function
 pytest tests/ -v
 
 # Run specific test suite
-pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 54 modules (169 tests)
+pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 55 modules (172 tests)
 pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
 pytest tests/integration/test_mcp_server.py -v              # MCP server tools (40 tests)
 pytest tests/integration/test_doc_grep.py -v               # grep engine (6 tests)
@@ -642,10 +642,10 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 ### Test Coverage
 
-- **All Modules Searchable** (169 tests): every one of the 54 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
+- **All Modules Searchable** (172 tests): every one of the 55 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
 - **MCP Server** (65 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, inline submodule inventory, submodule-address scoped head, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
-- **Doc Schema** (379 tests): schema-integrity guards over all 54 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, a clean orientation head, and every doc's submodule inventory surfaced in the head — so `get_module` section filtering can't silently break
+- **Doc Schema** (386 tests): schema-integrity guards over all 55 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, a clean orientation head, and every doc's submodule inventory surfaced in the head — so `get_module` section filtering can't silently break
 - **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
@@ -654,7 +654,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **Security Config** (5 tests): the Dependabot config, `SECURITY.md` reporting policy, both workflows' least-privilege `permissions`, and the publish job's retained OIDC `id-token: write` grant
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 765 tests (integration + e2e; 742 passing, 23 skip — 6 opt-in live tests unless `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the schema guard)
+**Total**: 775 tests (integration + e2e; 752 passing, 23 skip — 6 opt-in live tests unless `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the schema guard)
 
 ## 🔒 Security
 
@@ -676,18 +676,18 @@ This repository includes:
 - **Pre-built Search Index** (`model/tfmod_e5_small_index.pkl`):
   - Ready-to-use search index with pre-computed embeddings using `intfloat/e5-small-v2` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
-  - Includes 54 curated Terraform AWS modules
+  - Includes 55 curated Terraform AWS modules
   - File size: ~4.27 MB
 
 - **Curated Module Documentation** (`modules/terraform-aws-modules/`):
-  - Compiled documentation for 54 Terraform AWS modules covering compute, storage, networking, databases, security, and more
+  - Compiled documentation for 55 Terraform AWS modules covering compute, storage, networking, databases, security, and more
   - Sourced from official [terraform-aws-modules](https://github.com/terraform-aws-modules) project
   - Formatted as Markdown with YAML front-matter metadata
   - Each module includes comprehensive documentation with best practices, use cases, and examples
 
 ### Indexed Modules
 
-The search index includes 54 Terraform AWS modules across multiple service categories. Each module is documented with comprehensive descriptions, best practices, use cases, and integration examples.
+The search index includes 55 Terraform AWS modules across multiple service categories. Each module is documented with comprehensive descriptions, best practices, use cases, and integration examples.
 
 **Compute & Containers:**
 - `app-runner` - Containerized web application deployments
@@ -732,6 +732,7 @@ The search index includes 54 Terraform AWS modules across multiple service categ
 - `kms` - Key Management Service
 - `secrets-manager` - Secrets Manager
 - `security-group` - VPC security groups
+- `wafv2` - AWS WAF v2 web application firewall
 
 **Monitoring & Logging:**
 - `cloudwatch` - CloudWatch logs and metrics

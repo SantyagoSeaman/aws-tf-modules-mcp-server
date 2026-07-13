@@ -101,13 +101,16 @@ MODULE_TEST_DATA = [
     ModuleTestCase("rds-aurora", "aurora serverless", "aurora mysql postgresql"),
     ModuleTestCase("rds-proxy", "connection-pooling", "rds proxy connection management"),
     ModuleTestCase("redshift", "data-warehouse", "analytical data warehouse"),
-    # Security & Identity - 6 modules
+    # Security & Identity - 7 modules
     ModuleTestCase("acm", "certificate", "ssl tls certificate management"),
     ModuleTestCase("iam", "identity access management", "iam roles and policies"),
     ModuleTestCase("key-pair", "key-generation", "EC2 cryptographic key pair"),
     ModuleTestCase("kms", "encryption keys", "key management service"),
     ModuleTestCase("secrets-manager", "secrets", "secret credentials storage"),
     ModuleTestCase("security-group", "firewall rules", "vpc security group firewall"),
+    ModuleTestCase(
+        "wafv2", "web-application-firewall", "web application firewall protecting against sql injection and xss"
+    ),
     # Monitoring & Logging - 4 modules
     ModuleTestCase("cloudwatch", "logs metrics", "cloudwatch monitoring alarms"),
     ModuleTestCase("datadog-forwarders", "datadog", "datadog log forwarding"),
@@ -310,7 +313,7 @@ class TestModuleResultCompleteness:
     """Test that all modules have complete metadata in search results."""
 
     def test_all_modules_have_keywords(self, server_state):
-        """Verify that all 54 modules have keywords populated."""
+        """Verify that all 55 modules have keywords populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -324,7 +327,7 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_keywords)} modules without keywords: {modules_without_keywords}"
 
     def test_all_modules_have_module_name(self, server_state):
-        """Verify that all 54 modules have module_name populated."""
+        """Verify that all 55 modules have module_name populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -338,7 +341,7 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_name)} modules without module_name: {modules_without_name}"
 
     def test_all_modules_have_text_content(self, server_state):
-        """Verify that all 54 modules have text content populated."""
+        """Verify that all 55 modules have text content populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -352,9 +355,9 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_content)} modules without sufficient text content: {modules_without_content}"
 
     def test_module_count(self, server_state):
-        """Verify that index contains exactly 54 modules."""
+        """Verify that index contains exactly 55 modules."""
         module_count = len(server_state.index.docs)
-        assert module_count == 54, f"Expected 54 modules in index, found {module_count}"
+        assert module_count == 55, f"Expected 55 modules in index, found {module_count}"
 
 
 class TestSearchQuality:

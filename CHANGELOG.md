@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.14.1] - 2026-07-13
+
+[0.14.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.1
+
+Catalog coverage: adds the `wafv2` (AWS WAF v2) module, closing a real gap where the right answer — a web application firewall — existed as an official `terraform-aws-modules/wafv2/aws` module on the registry but was absent from the curated catalog, so `search_modules`/`modules_list` could not surface it.
+
+### Added
+
+- **`wafv2` module (55th in the catalog).** Curated documentation for `terraform-aws-modules/wafv2/aws` (v2.1.0): Web ACL root module (declarative `rules` map, `REGIONAL`/`CLOUDFRONT` scope, managed rule groups, rate-based rules, CAPTCHA/challenge, logging) plus its eight submodules (`ip-set`, `regex-pattern-set`, `rule-group`, `logging-configuration`, `web-acl-association`, `web-acl-rule`, `web-acl-rule-group-association`, `api-key`). Searchable by keyword (`web-application-firewall`, `waf`), exact name, and natural language ("web application firewall protecting against sql injection and xss").
+
+### Changed
+
+- **Search index extended incrementally, not rebuilt.** The new doc's embedding was appended to the shipped index; the existing 54 embeddings are byte-identical, so the tuned golden set is unaffected (no e5 drift — the failure mode that gates every full rebuild). Catalog size references (README, e2e/count assertions) updated 54 → 55.
+
+### Tests
+
+- Full suite: 775 tests (752 passing; 23 skip — 6 opt-in live without `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the schema guard; `wafv2` carries an inventory so it is not among them).
+- `wafv2` added to the searchability golden set (now 55 × 3 = 165 labeled queries, still 100% top-3) and to the per-doc schema guards; catalog-count assertions bumped to 55.
+
 ## [0.14.0] - 2026-07-13
 
 [0.14.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.14.0
