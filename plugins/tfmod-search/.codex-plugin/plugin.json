@@ -1,7 +1,7 @@
 {
   "name": "tfmod-search",
   "version": "0.14.1",
-  "description": "Search current Terraform AWS module documentation before writing Terraform — hybrid keyword + BM25 + semantic search over all 54 community terraform-aws-modules.",
+  "description": "Search current Terraform AWS module documentation before writing Terraform — hybrid keyword + BM25 + semantic search over all 55 community terraform-aws-modules.",
   "license": "MIT",
   "skills": "./skills/",
   "mcpServers": "./codex/mcp.json",

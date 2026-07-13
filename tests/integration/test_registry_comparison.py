@@ -202,7 +202,7 @@ class TestRegistryComparison:
 
     @pytest.fixture(scope="class")
     def metrics(self, search_index, production_weights):
-        """Run the full 162-query benchmark once and return per-type rates.
+        """Run the full 165-query benchmark once and return per-type rates.
 
         Returns a dict: system -> qtype -> Rates, plus a `coverage` count of how
         many of the 55 modules exist as a standalone official registry module.
@@ -252,7 +252,8 @@ class TestRegistryComparison:
             for system in ("ours", "reg_official", "reg_any"):
                 print(line(system, rates[system][qtype]))
 
-        print("\n### OVERALL (n=162)")
+        overall_n = sum(rates["ours"][q].n for q, _ in QUERY_TYPES)
+        print(f"\n### OVERALL (n={overall_n})")
         print(f"  {'system':44} {'top-1':>7} {'top-3':>6}")
         for system in ("ours", "reg_official", "reg_any"):
             agg = Rates()
