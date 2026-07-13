@@ -8,8 +8,8 @@ exactly the API that the official HashiCorp `terraform-mcp-server`'s
 `search_modules` tool wraps, so this doubles as an apples-to-apples comparison
 against that competitor's module search.
 
-Golden set: the 54-module x 3-query-type set from
-``test_all_modules_searchable.py`` (162 labeled queries) — the single source of
+Golden set: the 55-module x 3-query-type set from
+``test_all_modules_searchable.py`` (165 labeled queries) — the single source of
 truth for "which module is the right answer for this query".
 
 Metric: is the EXPECTED module in the top-1 / top-3 results?
@@ -205,7 +205,7 @@ class TestRegistryComparison:
         """Run the full 162-query benchmark once and return per-type rates.
 
         Returns a dict: system -> qtype -> Rates, plus a `coverage` count of how
-        many of the 54 modules exist as a standalone official registry module.
+        many of the 55 modules exist as a standalone official registry module.
         """
         systems = ("ours", "reg_official", "reg_any")
         rates = {s: {qtype: Rates() for qtype, _ in QUERY_TYPES} for s in systems}
@@ -243,7 +243,7 @@ class TestRegistryComparison:
             return f"  {label[system]:44} {r.top1_rate * 100:6.1f}% {r.top3_rate * 100:6.1f}%"
 
         print("\n" + "=" * 78)
-        print("TOP-1 / TOP-3 HIT RATE — golden set: 54 modules x 3 query types (162 queries)")
+        print("TOP-1 / TOP-3 HIT RATE — golden set: 55 modules x 3 query types (165 queries)")
         print("=" * 78)
         for qtype, _ in QUERY_TYPES:
             n = rates["ours"][qtype].n

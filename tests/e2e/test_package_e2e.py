@@ -47,7 +47,7 @@ def test_wheel_payload(built_wheel):
         assert module in names
 
     docs = [n for n in names if n.startswith("modules/terraform-aws-modules/")]
-    assert len(docs) == 54
+    assert len(docs) == 55
 
     strays = [
         n
@@ -87,4 +87,4 @@ def test_uvx_runs_packaged_server_warmup(built_wheel, tmp_path):
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert "Warmup complete" in proc.stdout
-    assert "54 modules" in proc.stdout
+    assert "55 modules" in proc.stdout
