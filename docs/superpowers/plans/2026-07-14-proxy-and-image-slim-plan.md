@@ -2,6 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Post-execution corrections** (this plan is a historical execution artifact; the code and
+> the spec addendum are authoritative where they differ): (1) the proxy uses fastmcp
+> `create_proxy`, not the deprecated `FastMCP.as_proxy` shown in Task 1; (2) proxy mode is
+> dispatched through the import-light `tfmod_entry` -> `tfmod_proxy` path (blind-review MAJOR-1
+> fix), so the Task 1 snippet that sets up startup.log logging inside tfmod_mcp_server main()
+> is superseded; (3) Task 4 step 1 as written removes `torch/bin` — do NOT: torch resolves
+> `torch/bin/torch_shm_manager` unconditionally at import time, only `torch/test` and
+> `torch/include` are removable (see the Dockerfile comment and the spec addendum).
+
 **Goal:** Let plugin users target the shared HTTP daemon without losing the plugin's skills (stdio→HTTP proxy mode), and cut ~350 MB of dead weight from the Docker image.
 
 **Architecture:** A `--proxy-url` flag on the server runs `FastMCP.as_proxy(url)` before any index/model loading; the plugin launcher gains a `TFMODSEARCH_URL` env var with a `/health` preflight and graceful fallback to the existing uvx/Docker selection. The Dockerfile drops the torch wheel's test/include/bin dirs in the builder stage and replaces the layer-duplicating `chown -R` with `COPY --chown`.

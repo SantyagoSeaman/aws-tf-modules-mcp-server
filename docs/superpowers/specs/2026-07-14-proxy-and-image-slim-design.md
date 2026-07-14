@@ -30,8 +30,10 @@ plugin stays enabled (skills intact); its MCP server becomes a lightweight forwa
 daemon.
 
 FastMCP 3.4.4 (already our dependency, version verified in the dev venv) ships this natively:
-`FastMCP.as_proxy(url)` returns a server that transparently forwards the MCP handshake and
-all tool calls to a remote backend. No new dependencies.
+`create_proxy(url)` (from `fastmcp.server`; the implementation uses it instead of the
+deprecated-in-3.4.4 `FastMCP.as_proxy` originally named here) returns a server that
+transparently forwards the MCP handshake and all tool calls to a remote backend. No new
+dependencies.
 
 ### Server changes (`src/tfmod_mcp_server.py`)
 

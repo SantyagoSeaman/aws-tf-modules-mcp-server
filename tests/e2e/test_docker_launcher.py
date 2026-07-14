@@ -248,3 +248,22 @@ def test_main_proxy_no_uvx_falls_back(monkeypatch, capsys):
     assert "uvx is not on PATH" in err
     assert "takes precedence" not in err
     assert calls[0][0] == "docker"
+
+
+@pytest.mark.e2e
+def test_redact_userinfo_strips_credentials():
+    assert launcher._redact_userinfo("http://user:secret@127.0.0.1:9000/mcp") == "http://127.0.0.1:9000/mcp"
+    clean = "http://127.0.0.1:9000/mcp"
+    assert launcher._redact_userinfo(clean) == clean
+
+
+@pytest.mark.e2e
+def test_main_proxy_unhealthy_fallback_message_redacts_credentials(monkeypatch, capsys):
+    monkeypatch.setattr(launcher.os, "execvp", lambda cmd, argv: None)
+    monkeypatch.setattr(launcher, "daemon_healthy", lambda url: False)
+    monkeypatch.setattr(launcher.shutil, "which", lambda name: f"/usr/bin/{name}")
+    monkeypatch.setattr(launcher.sys, "argv", ["tfmodsearch_launch.py"])
+    launcher.main(env={"TFMODSEARCH_URL": "http://user:secret@127.0.0.1:9999/mcp"})
+    err = capsys.readouterr().err
+    assert "secret" not in err
+    assert "127.0.0.1:9999/mcp is not responding" in err

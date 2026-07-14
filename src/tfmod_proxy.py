@@ -11,6 +11,19 @@ import logging
 import sys
 
 
+def _redact_userinfo(url: str) -> str:
+    """Strip user:password@ credentials from a URL before it reaches any log."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if parts.username is None and parts.password is None:
+        return url
+    netloc = parts.hostname or ""
+    if parts.port:
+        netloc = f"{netloc}:{parts.port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 def run_proxy(proxy_url: str, log_level: str = "INFO") -> None:
     """Serve stdio MCP, transparently forwarding everything to proxy_url."""
     logging.basicConfig(
@@ -20,7 +33,7 @@ def run_proxy(proxy_url: str, log_level: str = "INFO") -> None:
     )
     logger = logging.getLogger(__name__)
     logger.info("=" * 80)
-    logger.info(f"Proxy mode: forwarding stdio to {proxy_url}")
+    logger.info(f"Proxy mode: forwarding stdio to {_redact_userinfo(proxy_url)}")
 
     from fastmcp.server import create_proxy
 

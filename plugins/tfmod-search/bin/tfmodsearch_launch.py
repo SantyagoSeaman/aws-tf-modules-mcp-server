@@ -39,6 +39,19 @@ def resolve_proxy_url(env: Mapping[str, str]) -> str | None:
     return _normalize_proxy_url(raw)
 
 
+def _redact_userinfo(url: str) -> str:
+    """Strip user:password@ credentials from a URL before printing it to stderr."""
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if parts.username is None and parts.password is None:
+        return url
+    netloc = parts.hostname or ""
+    if parts.port:
+        netloc = f"{netloc}:{parts.port}"
+    return urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+
+
 def _normalize_proxy_url(url: str) -> str:
     """Default a bare-origin http(s) URL to the /mcp endpoint path.
 
@@ -102,7 +115,7 @@ def main(env: Mapping[str, str] | None = None) -> None:
         if shutil.which("uvx") is None:
             fallback_reason = "uvx is not on PATH"
         elif not daemon_healthy(health_url_for(proxy_url)):
-            fallback_reason = f"{proxy_url} is not responding"
+            fallback_reason = f"{_redact_userinfo(proxy_url)} is not responding"
         if fallback_reason is None:
             # Printed only when the proxy actually launches: on fallback the
             # normal selection below DOES honor TFMODSEARCH_DOCKER.

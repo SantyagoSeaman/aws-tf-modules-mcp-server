@@ -22,3 +22,11 @@ def test_entry_and_proxy_modules_do_not_import_ml_stack():
         "assert not loaded, f'heavy modules imported: {loaded}'"
     )
     subprocess.run([sys.executable, "-c", code], check=True, cwd=PROJECT_ROOT)
+
+
+def test_redact_userinfo_strips_credentials():
+    sys.path.insert(0, str(PROJECT_ROOT / "src"))
+    from tfmod_proxy import _redact_userinfo
+
+    assert _redact_userinfo("http://user:secret@host:8765/mcp") == "http://host:8765/mcp"
+    assert _redact_userinfo("http://host:8765/mcp") == "http://host:8765/mcp"
