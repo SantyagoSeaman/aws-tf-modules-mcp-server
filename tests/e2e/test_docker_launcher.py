@@ -185,7 +185,12 @@ def test_main_proxy_healthy_execs_proxy(monkeypatch):
     monkeypatch.setattr(launcher, "daemon_healthy", lambda url: True)
     monkeypatch.setattr(launcher.sys, "argv", ["tfmodsearch_launch.py"])
     launcher.main(env={"TFMODSEARCH_URL": "1"})
-    assert calls == [("uvx", ["uvx", "tfmodsearch", "--proxy-url", launcher.DEFAULT_PROXY_URL])]
+    assert calls == [
+        (
+            "uvx",
+            ["uvx", "--from", launcher.PROXY_PACKAGE_SPEC, "tfmodsearch", "--proxy-url", launcher.DEFAULT_PROXY_URL],
+        )
+    ]
 
 
 @pytest.mark.e2e

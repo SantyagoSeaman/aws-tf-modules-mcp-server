@@ -23,6 +23,9 @@ from collections.abc import Mapping
 DEFAULT_IMAGE = "ghcr.io/santyagoseaman/tfmodsearch:0.18.0"
 _FALSY = {"", "0", "false", "no", "off"}
 DEFAULT_PROXY_URL = "http://127.0.0.1:8765/mcp"
+# --proxy-url exists only since 0.18.0; without this floor a stale uvx cache could
+# resolve an older tfmodsearch and die on the unknown flag AFTER the exec (no fallback).
+PROXY_PACKAGE_SPEC = "tfmodsearch>=0.18.0"
 _TRUTHY_SHORTHAND = {"1", "true", "yes", "on"}
 
 
@@ -85,7 +88,8 @@ def main(env: Mapping[str, str] | None = None) -> None:
                 file=sys.stderr,
             )
         if daemon_healthy(health_url_for(proxy_url)):
-            os.execvp("uvx", ["uvx", "tfmodsearch", "--proxy-url", proxy_url])  # noqa: S606, S607 -- no shell by design, uvx resolved via PATH
+            argv = ["uvx", "--from", PROXY_PACKAGE_SPEC, "tfmodsearch", "--proxy-url", proxy_url]
+            os.execvp("uvx", argv)  # noqa: S606, S607 -- no shell by design, uvx resolved via PATH
             return  # type: ignore[unreachable]  # os.execvp is typed NoReturn but tests stub it out
         print(
             f"tfmodsearch_launch: TFMODSEARCH_URL is set but {proxy_url} is not responding; "
