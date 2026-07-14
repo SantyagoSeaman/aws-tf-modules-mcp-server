@@ -145,7 +145,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.17.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.18.0"]
     }
   }
 }
@@ -157,7 +157,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.17.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.18.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -171,7 +171,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.17.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.18.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -191,7 +191,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.17.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.18.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -210,9 +210,25 @@ Then point Claude Code at the running daemon (URL, not a command):
 claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
 ```
 
-**Migrating from the plugin (stdio)**: make sure only one `tfmod-search` server is registered.
-Disable the plugin (this removes its bundled stdio server — and its skills, which is the
-trade-off), then add the HTTP entry:
+**Keeping the plugin (proxy mode, recommended since 0.18.0)**: plugin users do not have to
+choose between the skills and the shared daemon anymore. Set one env var and the plugin's
+bundled server becomes a lightweight stdio proxy to the daemon — skills, subagents, and the
+auto-search workflow all keep working, and the 600 MB model loads only once, in the daemon:
+
+```jsonc
+// ~/.claude/settings.json
+{ "env": { "TFMODSEARCH_URL": "1" } }               // default daemon on 127.0.0.1:8765
+// or a custom target:
+{ "env": { "TFMODSEARCH_URL": "http://127.0.0.1:9000/mcp" } }
+```
+
+The launcher health-checks the daemon first (3 s): if it is not responding, it falls back to
+the normal local server with a stderr warning, so a stopped daemon never breaks the session.
+`TFMODSEARCH_URL` takes precedence over `TFMODSEARCH_DOCKER`. Rollback: unset the var.
+Any MCP client can use the same mode without the plugin: `tfmodsearch --proxy-url <url>`.
+
+**Migrating from the plugin (plugin-less setups)**: if you do not want the plugin at all, make
+sure only one `tfmod-search` server is registered. Disable the plugin, then add the HTTP entry:
 ```bash
 claude plugin disable tfmod-search
 claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
@@ -234,7 +250,7 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.17.0", "modules": 55,
+# {"status": "ok", "version": "0.18.0", "modules": 55,
 #  "latest_version": null, "update_available": false}
 ```
 

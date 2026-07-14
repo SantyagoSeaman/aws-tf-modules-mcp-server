@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.18.0] - 2026-07-14
+
+[0.18.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.18.0
+
+Adds a stdio proxy mode so plugin users can point at a shared HTTP daemon without giving up the
+plugin's skills and subagents, plus a slimmed Docker image with the torch wheel's dead weight
+removed.
+
+### Added
+
+- **`--proxy-url` server flag**: runs the server as a lightweight stdio-to-HTTP forwarder (`FastMCP.as_proxy`) that exits before any NLTK, config, index, or embedding-model initialization — the daemon at the given URL owns all of that. Implies stdio; conflicts with an explicit `--transport http` and with `--warmup` (nothing to warm up). Index/weight flags are accepted but ignored in this mode.
+- **Launcher `TFMODSEARCH_URL` env var** (`plugins/tfmod-search/bin/tfmodsearch_launch.py`): set `TFMODSEARCH_URL=1` for the default daemon (`http://127.0.0.1:8765/mcp`), or a full URL for a custom target, and the plugin's bundled server becomes a stdio proxy to it via `uvx tfmodsearch --proxy-url <url>`. A `/health` preflight (3s timeout) gates the switch; if the daemon does not respond, the launcher falls back to the normal local uvx/Docker path with a stderr warning instead of failing the session. Takes precedence over `TFMODSEARCH_DOCKER` when both are set (with a notice printed to stderr).
+- **E2E proxy coverage** (`tests/e2e/test_mcp_proxy_e2e.py`): spawns a real HTTP daemon plus a real stdio proxy subprocess, drives a full MCP session through the proxy (tool discovery, `search_modules`, `get_module`) with a nonexistent index path and an empty offline HF cache, proving no index or model load ever happens on the proxy side.
+- **Docker image slimmed from 1.69 GB to 1.42 GB**: the builder stage now removes the CPU torch wheel's `test/` and `include/` directories (its own test suite and C++ headers, neither touched at inference time), and the runtime stage uses `COPY --from=builder --chown=app:app` for the baked HF/NLTK assets instead of a layer-duplicating `chown -R` pass. `torch/bin` stays in the image — `torch` resolves `torch/bin/torch_shm_manager` unconditionally at import time, so removing it breaks the image. Verified with an offline `--warmup` run and a real `search_modules` call over the HTTP transport against the slimmed image.
+- README and `docs/docker-container-support.md` document the new proxy mode (recommended path for plugin users who also want a shared daemon) alongside the existing `TFMODSEARCH_DOCKER` opt-in.
+- Design + plan committed under `docs/superpowers/{specs,plans}/2026-07-14-proxy-and-image-slim-*`.
+
+### Unchanged
+
+- **stdio default path is byte-identical to 0.17.0** when no new env vars or flags are set — no proxy branch, no launcher behavior change, the existing test suite passes unmodified.
+- **No new dependencies.** `FastMCP.as_proxy` was already available in the existing `fastmcp` dependency; the launcher stays stdlib-only.
+- **The plugin remains stdio by default.** `TFMODSEARCH_URL` and `TFMODSEARCH_DOCKER` are both opt-in; nothing changes for a user who sets neither.
+- **No index rebuild, no changes to search behavior, tool signatures, or the module catalog.**
+
 ## [0.17.0] - 2026-07-14
 
 [0.17.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.17.0
