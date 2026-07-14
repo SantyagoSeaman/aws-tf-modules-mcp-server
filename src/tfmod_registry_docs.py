@@ -60,6 +60,48 @@ def _http_fetch(namespace: str, name: str, provider: str, version: str | None) -
         return json.load(resp)
 
 
+PYPI_JSON_URL = "https://pypi.org/pypi/{package}/json"
+
+
+def _pypi_json_fetch(url: str, timeout: int) -> dict:
+    if not url.startswith("https://"):
+        raise ValueError(f"refusing non-https URL: {url}")
+    with urllib.request.urlopen(url, timeout=timeout) as resp:  # noqa: S310 - scheme guarded above
+        return json.loads(resp.read())
+
+
+def fetch_latest_pypi_version(
+    package: str = "tfmodsearch",
+    timeout: int = 5,
+    fetcher: Callable[[str, int], dict] | None = None,
+) -> str | None:
+    """Latest released version of *package* on PyPI, or None on any failure.
+
+    Used by the HTTP daemon update check. One anonymous GET to the public
+    PyPI JSON API; never raises - the caller treats None as "unknown".
+    """
+    fetch = fetcher or _pypi_json_fetch
+    try:
+        payload = fetch(PYPI_JSON_URL.format(package=package), timeout)
+        version = payload["info"]["version"]
+        return version if isinstance(version, str) and version else None
+    except Exception:
+        return None
+
+
+def is_newer_version(latest: str, current: str) -> bool:
+    """True when *latest* is strictly newer than *current*.
+
+    Plain X.Y.Z int-tuple comparison; any parse failure returns False
+    (fail closed: no update notice on uncertainty). This project publishes
+    plain numeric versions, so rc/dev suffixes intentionally do not match.
+    """
+    try:
+        return tuple(map(int, latest.split("."))) > tuple(map(int, current.split(".")))
+    except (ValueError, AttributeError):
+        return False
+
+
 def _format_input_row(item: dict[str, Any]) -> str:
     name = item.get("name", "")
     itype = item.get("type", "")

@@ -19,6 +19,8 @@ import os
 import re
 import sys
 import threading
+import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
@@ -28,13 +30,14 @@ from typing import Annotated, Any
 import yaml
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, GetJsonSchemaHandler, field_serializer, model_serializer
+from pydantic.json_schema import JsonSchemaValue
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 import tfmod_registry_docs
 from tfmod_doc_grep import grep_document
-from tfmod_registry_docs import get_assembled_docs
+from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
     BGE_QUERY_INSTRUCTION,
@@ -151,7 +154,16 @@ async def health(request: Request) -> JSONResponse:
         state = ServerStateManager.get()
     except RuntimeError:
         return JSONResponse({"status": "initializing"}, status_code=503)
-    return JSONResponse({"status": "ok", "version": _SERVER_VERSION, "modules": len(state.index.docs)})
+    update_state = _UPDATE_STATE  # local snapshot: both keys come from one consistent dict
+    return JSONResponse(
+        {
+            "status": "ok",
+            "version": _SERVER_VERSION,
+            "modules": len(state.index.docs),
+            "latest_version": update_state["latest_version"],
+            "update_available": update_state["update_available"],
+        }
+    )
 
 
 # -----------------------------
@@ -636,7 +648,59 @@ class SearchHit(BaseModel):
         return round(value, 2)
 
 
-class SearchOutput(BaseModel):
+class UpdateNoticeMixin(BaseModel):
+    """Adds an optional update_notice that vanishes from output when None.
+
+    FastMCP serializes pydantic None fields as JSON null; the spec requires
+    the field to be entirely absent when no update is known, hence the
+    wrap-mode serializer (verified against FastMCP 3.4.4).
+
+    Side effect: a model_serializer(mode="wrap") makes pydantic unable to
+    statically describe the serialization-mode JSON schema of the model (it
+    cannot know what the wrap function returns), so
+    `model_json_schema(mode="serialization")` collapses to `{}`. FastMCP
+    publishes exactly that serialization-mode schema as a tool's
+    `outputSchema`, so every model built on this mixin advertised an empty
+    schema in `list_tools` -- a real contract regression, even though the
+    actual JSON payload was unaffected.
+
+    `__get_pydantic_json_schema__` below works around this: the emptiness is
+    specific to serialization mode (validation mode is unaffected by the
+    serializer and already renders the real properties, including
+    `update_notice` as an optional field), so when asked for a
+    serialization-mode schema we temporarily flip the live
+    `GenerateJsonSchema` instance to validation mode for the duration of this
+    model's own schema generation, then restore it. `GenerateJsonSchema.mode`
+    has no public setter, hence the `_mode` write; verified against
+    pydantic 2.13.4. This only affects the advertised schema shape -- actual
+    JSON serialization (None absent, set value present) is untouched.
+    """
+
+    update_notice: str | None = Field(
+        default=None,
+        description="Present only when a newer tfmodsearch release exists; relay it to the user.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _drop_none_notice(self, handler: Any) -> Any:
+        data = handler(self)
+        if isinstance(data, dict) and data.get("update_notice") is None:
+            data.pop("update_notice", None)
+        return data
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        generator = handler.generate_json_schema  # type: ignore[attr-defined]
+        original_mode = generator.mode
+        if original_mode == "serialization":
+            generator._mode = "validation"
+        try:
+            return handler(core_schema)
+        finally:
+            generator._mode = original_mode
+
+
+class SearchOutput(UpdateNoticeMixin):
     results: list[SearchHit] = Field(..., description="Top-ranked Terraform modules matching the query.")
 
 
@@ -658,7 +722,7 @@ class ModuleListItem(BaseModel):
     )
 
 
-class ModulesListOutput(BaseModel):
+class ModulesListOutput(UpdateNoticeMixin):
     modules: list[ModuleListItem] = Field(..., description="Complete list of all available Terraform modules.")
     count: int = Field(..., description="Total number of modules in the catalog.")
 
@@ -683,7 +747,7 @@ class CacheInfo(BaseModel):
     )
 
 
-class GrepOutput(BaseModel):
+class GrepOutput(UpdateNoticeMixin):
     module_id: str = Field(..., description="Terraform Registry coordinates 'namespace/name/provider' requested.")
     resolved_version: str = Field(
         ..., description="Concrete version actually served (never the literal string 'latest')."
@@ -1365,7 +1429,9 @@ def modules_list() -> ModulesListOutput:
         4. Use get_module() to retrieve full documentation
     """
     state = ServerStateManager.get()
-    return modules_list_impl(state)
+    result = modules_list_impl(state)
+    result.update_notice = _update_notice()
+    return result
 
 
 @app.tool(
@@ -1447,7 +1513,9 @@ def search_modules(
         - Empty queries return empty results
     """
     state = ServerStateManager.get()
-    return search_modules_impl(query, state, top_k=top_k)
+    result = search_modules_impl(query, state, top_k=top_k)
+    result.update_notice = _update_notice()
+    return result
 
 
 @app.tool(
@@ -1679,7 +1747,7 @@ def grep_module_docs(
     ttl_hours = state.doc_cache_ttl_hours
     if cache_dir is None:
         cache_dir, ttl_hours = ConfigLoader.load_doc_cache()
-    return grep_module_docs_impl(
+    result = grep_module_docs_impl(
         module_id,
         pattern,
         version=version,
@@ -1691,6 +1759,8 @@ def grep_module_docs(
         cache_dir=cache_dir,
         ttl_hours=ttl_hours,
     )
+    result.update_notice = _update_notice()
+    return result
 
 
 # -----------------------------
@@ -1710,6 +1780,66 @@ def _is_loopback(host: str) -> bool:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
         return host.lower() == "localhost"
+
+
+UPDATE_CHECK_INTERVAL_HOURS = 24
+_UPDATE_CHECK_FALSY = {"", "0", "false", "no", "off"}
+_UPDATE_NOTICE_TEMPLATE = (
+    "tfmodsearch {latest} is available (this shared daemon runs {current}). "
+    "Ask the operator to update: bump the image tag in docker-compose.yml, "
+    "then docker compose pull && docker compose up -d."
+)
+# Replaced atomically (single assignment) by the checker thread; readers
+# (health route, tool wrappers) never see a torn value thanks to the GIL.
+_UPDATE_STATE: dict[str, Any] = {"latest_version": None, "update_available": False}
+
+
+def _update_check_enabled(env: Mapping[str, str]) -> bool:
+    """Kill switch: TFMODSEARCH_UPDATE_CHECK in the falsy set disables the check."""
+    return env.get("TFMODSEARCH_UPDATE_CHECK", "1").strip().lower() not in _UPDATE_CHECK_FALSY
+
+
+def _run_update_check_once(fetcher: Any = None) -> None:
+    """One check cycle: fetch latest from PyPI, compare, publish state, log.
+
+    Failures leave the previous state untouched (fetch returns None).
+    """
+    global _UPDATE_STATE
+    logger = logging.getLogger(__name__)
+    latest = fetch_latest_pypi_version(fetcher=fetcher) if fetcher else fetch_latest_pypi_version()
+    if latest is None:
+        logger.debug("Update check failed; keeping previous state")
+        return
+    newer = is_newer_version(latest, _SERVER_VERSION)
+    _UPDATE_STATE = {"latest_version": latest, "update_available": newer}
+    if newer:
+        logger.warning(_UPDATE_NOTICE_TEMPLATE.format(latest=latest, current=_SERVER_VERSION))
+
+
+def _update_notice() -> str | None:
+    """Agent-facing notice string, or None when no update is known."""
+    state = _UPDATE_STATE  # local snapshot: both keys come from one consistent dict
+    if state["update_available"]:
+        return _UPDATE_NOTICE_TEMPLATE.format(latest=state["latest_version"], current=_SERVER_VERSION)
+    return None
+
+
+def _start_update_checker_thread() -> threading.Thread:
+    """Daily update check in a daemon thread (HTTP mode only; see main())."""
+
+    def _loop() -> None:
+        while True:
+            try:
+                _run_update_check_once()
+            except Exception:
+                # The check must never kill the thread for the daemon lifetime;
+                # a failed cycle is retried on the next one.
+                logging.getLogger(__name__).debug("Update check cycle failed", exc_info=True)
+            time.sleep(UPDATE_CHECK_INTERVAL_HOURS * 3600)
+
+    thread = threading.Thread(target=_loop, name="tfmodsearch-update-check", daemon=True)
+    thread.start()
+    return thread
 
 
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
@@ -1950,6 +2080,11 @@ def main() -> None:
             warm = search_modules_impl("vpc networking", state)
             logger.info(f"Warmup complete: test query returned {len(warm.results)} results")
             logger.info(f"READY on http://{args.host}:{args.port}/mcp")
+            if _update_check_enabled(os.environ):
+                logger.info("Update check enabled: daily PyPI version check (TFMODSEARCH_UPDATE_CHECK=0 to disable)")
+                _start_update_checker_thread()
+            else:
+                logger.info("Update check disabled via TFMODSEARCH_UPDATE_CHECK")
             # host_origin_protection="auto" installs FastMCP Host/Origin validation
             # (rejects browser-initiated cross-origin requests -> DNS-rebinding guard).
             # Orthogonal to auth: SDK clients and curl send no Origin and pass.

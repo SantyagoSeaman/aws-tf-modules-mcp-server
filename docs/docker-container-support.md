@@ -156,7 +156,7 @@ revisit if/when Codex CLI fixes plugin-root interpolation.
 #!/usr/bin/env python3
 import os, sys
 if os.environ.get("TFMODSEARCH_DOCKER", "0") != "0":
-    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.16.0")
+    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.17.0")
     os.execvp("docker", ["docker", "run", "-i", "--rm", img])   # opt-in
 else:
     os.execvp("uvx", ["uvx", "tfmodsearch", *sys.argv[1:]])      # DEFAULT (local, unchanged)
@@ -322,7 +322,7 @@ argv passed to the same `ENTRYPOINT ["tfmodsearch"]`.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.16.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.17.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -349,6 +349,15 @@ from the host entirely. The actual security boundary is the **host** side of the
 interface into the container. Do not "fix" the warning by changing `--host`; do not publish the
 port on a non-loopback host address (`-p 8765:8765` or `-p 0.0.0.0:8765:8765`) without a reverse
 proxy that adds authentication in front — there is no auth or TLS in the server itself.
+
+**Update notifications** (since 0.17.0): because the daemon runs a pinned image tag indefinitely,
+the server itself checks PyPI once a day (HTTP mode only) and reports what it finds through
+`GET /health` (`latest_version`/`update_available`), a `docker logs` WARNING once per cycle while
+stale, and an `update_notice` field on `search_modules`/`modules_list`/`grep_module_docs`
+responses that is absent entirely when there is nothing to report. There is no auto-update — the
+operator still bumps the tag and runs `docker compose pull && docker compose up -d`. Set
+`TFMODSEARCH_UPDATE_CHECK=0` to disable the check for air-gapped deployments; the only network
+call it makes is one anonymous GET to the public PyPI JSON API.
 
 ---
 

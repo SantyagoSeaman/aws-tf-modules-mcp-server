@@ -145,7 +145,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.16.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.17.0"]
     }
   }
 }
@@ -157,7 +157,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.16.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.17.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -171,7 +171,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.16.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.17.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -191,7 +191,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.16.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.17.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -234,7 +234,8 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.16.0", "modules": 55}
+# {"status": "ok", "version": "0.17.0", "modules": 55,
+#  "latest_version": null, "update_available": false}
 ```
 
 **Configuration** (CLI flags take precedence over env vars, which take precedence over the
@@ -263,6 +264,18 @@ The compose file mounts a named volume (`tfmodsearch-cache`) over `/home/app/.ca
 `grep_module_docs` registry-doc cache survives container recreates and image upgrades. Running
 the non-Docker variant as a daemon is on you (a terminal multiplexer, `nohup`, or a
 launchd/systemd unit) — the server itself is just a foreground process.
+
+**Update notifications** (since 0.17.0): a pinned image tag means the daemon otherwise runs
+forever with no signal that a newer release exists. In HTTP mode the server checks PyPI once a
+day and surfaces what it finds through three channels — `curl /health` gains `latest_version`/
+`update_available` fields, a WARNING lands in `docker logs` once per cycle while stale, and an
+`update_notice` field appears on `search_modules`/`modules_list`/`grep_module_docs` responses
+(absent entirely when there is nothing to report) so your agent can relay it directly. Nothing
+auto-updates — the operator still owns bumping the tag and running
+`docker compose pull && docker compose up -d`. Set `TFMODSEARCH_UPDATE_CHECK=0` to disable the check entirely
+(air-gapped deployments).
+Privacy: the check is one anonymous GET to the public PyPI JSON API — nothing about you or your
+host is sent.
 
 > **Do not run both the plugin's stdio entry and the HTTP entry at the same time.** Two
 > `tfmod-search` MCP servers registered simultaneously present duplicate toolsets and confuse
