@@ -30,7 +30,8 @@ from typing import Annotated, Any
 import yaml
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel, Field, field_serializer, model_serializer
+from pydantic import BaseModel, Field, GetJsonSchemaHandler, field_serializer, model_serializer
+from pydantic.json_schema import JsonSchemaValue
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -653,6 +654,26 @@ class UpdateNoticeMixin(BaseModel):
     FastMCP serializes pydantic None fields as JSON null; the spec requires
     the field to be entirely absent when no update is known, hence the
     wrap-mode serializer (verified against FastMCP 3.4.4).
+
+    Side effect: a model_serializer(mode="wrap") makes pydantic unable to
+    statically describe the serialization-mode JSON schema of the model (it
+    cannot know what the wrap function returns), so
+    `model_json_schema(mode="serialization")` collapses to `{}`. FastMCP
+    publishes exactly that serialization-mode schema as a tool's
+    `outputSchema`, so every model built on this mixin advertised an empty
+    schema in `list_tools` -- a real contract regression, even though the
+    actual JSON payload was unaffected.
+
+    `__get_pydantic_json_schema__` below works around this: the emptiness is
+    specific to serialization mode (validation mode is unaffected by the
+    serializer and already renders the real properties, including
+    `update_notice` as an optional field), so when asked for a
+    serialization-mode schema we temporarily flip the live
+    `GenerateJsonSchema` instance to validation mode for the duration of this
+    model's own schema generation, then restore it. `GenerateJsonSchema.mode`
+    has no public setter, hence the `_mode` write; verified against
+    pydantic 2.13.4. This only affects the advertised schema shape -- actual
+    JSON serialization (None absent, set value present) is untouched.
     """
 
     update_notice: str | None = Field(
@@ -666,6 +687,17 @@ class UpdateNoticeMixin(BaseModel):
         if isinstance(data, dict) and data.get("update_notice") is None:
             data.pop("update_notice", None)
         return data
+
+    @classmethod
+    def __get_pydantic_json_schema__(cls, core_schema: Any, handler: GetJsonSchemaHandler) -> JsonSchemaValue:
+        generator = handler.generate_json_schema  # type: ignore[attr-defined]
+        original_mode = generator.mode
+        if original_mode == "serialization":
+            generator._mode = "validation"
+        try:
+            return handler(core_schema)
+        finally:
+            generator._mode = original_mode
 
 
 class SearchOutput(UpdateNoticeMixin):

@@ -184,3 +184,49 @@ async def test_health_reports_update_fields(initialized_state):
     body = json.loads(response.body)
     assert body["latest_version"] == "9.9.9"
     assert body["update_available"] is True
+
+
+# Regression pin for the empty-outputSchema finding: UpdateNoticeMixin's
+# model_serializer(mode="wrap") (used to drop a None update_notice from
+# serialized JSON) made pydantic's serialization-mode JSON schema collapse to
+# `{}` for every model built on it. FastMCP publishes exactly that
+# serialization-mode schema as a tool's `outputSchema`, so search_modules,
+# modules_list, and grep_module_docs all advertised an empty result schema in
+# list_tools -- a real contract regression even though the JSON payload
+# itself was fine. These tests pin that the advertised schema is real again.
+class TestToolOutputSchemasNotEmpty:
+    @pytest.mark.asyncio
+    async def test_search_modules_schema_has_results(self):
+        tool = await app.get_tool("search_modules")
+        schema = tool.output_schema
+        assert schema, "search_modules output_schema must not be empty"
+        assert schema.get("properties", {}).get(
+            "results"
+        ), "search_modules output_schema must describe the 'results' property"
+
+    @pytest.mark.asyncio
+    async def test_modules_list_schema_has_modules(self):
+        tool = await app.get_tool("modules_list")
+        schema = tool.output_schema
+        assert schema, "modules_list output_schema must not be empty"
+        properties = schema.get("properties", {})
+        assert properties.get("modules"), "modules_list output_schema must describe the 'modules' property"
+        assert properties.get("count"), "modules_list output_schema must describe the 'count' property"
+
+    @pytest.mark.asyncio
+    async def test_grep_module_docs_schema_has_matches(self):
+        tool = await app.get_tool("grep_module_docs")
+        schema = tool.output_schema
+        assert schema, "grep_module_docs output_schema must not be empty"
+        assert schema.get("properties", {}).get(
+            "matches"
+        ), "grep_module_docs output_schema must describe the 'matches' property"
+
+    @pytest.mark.asyncio
+    async def test_none_of_the_three_tools_has_empty_defs_entry(self):
+        """No $defs entry for any referenced model may be the degenerate `{}`."""
+        for name in ("search_modules", "modules_list", "grep_module_docs"):
+            tool = await app.get_tool(name)
+            schema = tool.output_schema
+            for def_name, def_schema in schema.get("$defs", {}).items():
+                assert def_schema, f"{name}: $defs['{def_name}'] must not be empty"
