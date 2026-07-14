@@ -22,6 +22,7 @@ from mcp.client.stdio import stdio_client
 
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 SERVER_SCRIPT = PROJECT_ROOT / "src" / "tfmod_mcp_server.py"
+ENTRY_SCRIPT = PROJECT_ROOT / "src" / "tfmod_entry.py"
 EXPECTED_TOOLS = {"modules_list", "search_modules", "get_module", "grep_module_docs"}
 READY_TIMEOUT = 120  # first start loads the embedding model
 
@@ -121,3 +122,34 @@ async def test_proxy_starts_fast(http_daemon, tmp_path):
         async with ClientSession(read, write) as session:
             await session.initialize()
     assert time.monotonic() - start < 20
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(240)
+@pytest.mark.asyncio
+async def test_entry_dispatcher_serves_proxy_light(http_daemon, tmp_path):
+    # The console-script path: tfmod_entry dispatches --proxy-url to the
+    # torch-free proxy module. Same offline guards as above, plus a startup
+    # bound tight enough (10s) that a torch import would trip it.
+    empty_hf = tmp_path / "hf-empty-entry"
+    empty_hf.mkdir(exist_ok=True)
+    params = StdioServerParameters(
+        command=sys.executable,
+        args=[
+            str(ENTRY_SCRIPT),
+            "--proxy-url",
+            f"http://127.0.0.1:{http_daemon}/mcp",
+            "--index_path",
+            "/nonexistent/never-loaded.pkl",
+        ],
+        cwd=str(PROJECT_ROOT),
+        env={**os.environ, "HF_HOME": str(empty_hf), "HF_HUB_OFFLINE": "1"},
+    )
+    start = time.monotonic()
+    async with stdio_client(params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            assert time.monotonic() - start < 10
+            result = await session.call_tool("search_modules", {"query": "vpc networking", "top_k": 1})
+            payload = json.loads(result.content[0].text)
+            assert payload["results"][0]["module_name"]

@@ -36,7 +36,23 @@ def resolve_proxy_url(env: Mapping[str, str]) -> str | None:
         return None
     if raw.lower() in _TRUTHY_SHORTHAND:
         return DEFAULT_PROXY_URL
-    return raw
+    return _normalize_proxy_url(raw)
+
+
+def _normalize_proxy_url(url: str) -> str:
+    """Default a bare-origin http(s) URL to the /mcp endpoint path.
+
+    Users plausibly set TFMODSEARCH_URL=http://127.0.0.1:8765 (the origin they
+    curl for /health); without this the health preflight would pass but the
+    proxy would then fail against the root path, AFTER the exec (no fallback).
+    Non-http schemes are returned untouched and left to fail the preflight.
+    """
+    from urllib.parse import urlsplit, urlunsplit
+
+    parts = urlsplit(url)
+    if parts.scheme in ("http", "https") and parts.path in ("", "/"):
+        return urlunsplit((parts.scheme, parts.netloc, "/mcp", parts.query, parts.fragment))
+    return url
 
 
 def health_url_for(mcp_url: str) -> str:
@@ -82,18 +98,24 @@ def main(env: Mapping[str, str] | None = None) -> None:
         env = os.environ
     proxy_url = resolve_proxy_url(env)
     if proxy_url is not None:
-        if env.get("TFMODSEARCH_DOCKER", "").strip().lower() not in _FALSY:
-            print(
-                "tfmodsearch_launch: TFMODSEARCH_URL takes precedence; ignoring TFMODSEARCH_DOCKER.",
-                file=sys.stderr,
-            )
-        if daemon_healthy(health_url_for(proxy_url)):
+        fallback_reason = None
+        if shutil.which("uvx") is None:
+            fallback_reason = "uvx is not on PATH"
+        elif not daemon_healthy(health_url_for(proxy_url)):
+            fallback_reason = f"{proxy_url} is not responding"
+        if fallback_reason is None:
+            # Printed only when the proxy actually launches: on fallback the
+            # normal selection below DOES honor TFMODSEARCH_DOCKER.
+            if env.get("TFMODSEARCH_DOCKER", "").strip().lower() not in _FALSY:
+                print(
+                    "tfmodsearch_launch: TFMODSEARCH_URL takes precedence; ignoring TFMODSEARCH_DOCKER.",
+                    file=sys.stderr,
+                )
             argv = ["uvx", "--from", PROXY_PACKAGE_SPEC, "tfmodsearch", "--proxy-url", proxy_url]
             os.execvp("uvx", argv)  # noqa: S606, S607 -- no shell by design, uvx resolved via PATH
             return  # type: ignore[unreachable]  # os.execvp is typed NoReturn but tests stub it out
         print(
-            f"tfmodsearch_launch: TFMODSEARCH_URL is set but {proxy_url} is not responding; "
-            "falling back to a local server.",
+            f"tfmodsearch_launch: TFMODSEARCH_URL is set but {fallback_reason}; " "falling back to a local server.",
             file=sys.stderr,
         )
     command, argv, docker_unavailable = select_backend(env, sys.argv[1:])
