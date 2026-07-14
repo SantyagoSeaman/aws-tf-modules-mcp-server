@@ -2041,6 +2041,11 @@ def main() -> None:
             warm = search_modules_impl("vpc networking", state)
             logger.info(f"Warmup complete: test query returned {len(warm.results)} results")
             logger.info(f"READY on http://{args.host}:{args.port}/mcp")
+            if _update_check_enabled(os.environ):
+                logger.info("Update check enabled: daily PyPI version check (TFMODSEARCH_UPDATE_CHECK=0 to disable)")
+                _start_update_checker_thread()
+            else:
+                logger.info("Update check disabled via TFMODSEARCH_UPDATE_CHECK")
             # host_origin_protection="auto" installs FastMCP Host/Origin validation
             # (rejects browser-initiated cross-origin requests -> DNS-rebinding guard).
             # Orthogonal to auth: SDK clients and curl send no Origin and pass.

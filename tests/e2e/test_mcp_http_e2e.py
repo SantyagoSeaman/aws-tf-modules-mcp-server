@@ -54,6 +54,7 @@ def http_server():
     proc = subprocess.Popen(
         [sys.executable, str(SERVER_SCRIPT), "--transport", "http", "--port", str(port)],
         cwd=str(PROJECT_ROOT),
+        env={**os.environ, "TFMODSEARCH_UPDATE_CHECK": "0"},
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL,
     )
@@ -80,6 +81,8 @@ def test_health_reports_version_and_modules(http_server):
     assert health["status"] == "ok"
     assert health["version"]
     assert health["modules"] > 50
+    assert health["latest_version"] is None
+    assert health["update_available"] is False
 
 
 @pytest.mark.e2e
@@ -171,10 +174,27 @@ def test_cross_origin_request_rejected(http_server):
 
 
 @pytest.mark.e2e
+@pytest.mark.timeout(180)
+@pytest.mark.asyncio
+async def test_no_update_notice_when_disabled(http_server):
+    port, _ = http_server
+    async with streamablehttp_client(f"http://127.0.0.1:{port}/mcp") as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+            result = await session.call_tool("search_modules", {"query": "vpc"})
+            assert "update_notice" not in json.loads(_result_text(result))
+
+
+@pytest.mark.e2e
 @pytest.mark.timeout(240)
 def test_env_fallback_serves_http():
     port = _free_port()
-    env = {**os.environ, "TFMODSEARCH_TRANSPORT": "http", "TFMODSEARCH_PORT": str(port)}
+    env = {
+        **os.environ,
+        "TFMODSEARCH_TRANSPORT": "http",
+        "TFMODSEARCH_PORT": str(port),
+        "TFMODSEARCH_UPDATE_CHECK": "0",
+    }
     proc = subprocess.Popen(
         [sys.executable, str(SERVER_SCRIPT)],
         cwd=str(PROJECT_ROOT),
