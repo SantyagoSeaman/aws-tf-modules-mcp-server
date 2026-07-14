@@ -37,6 +37,15 @@ COPY modules/ modules/
 
 RUN pip install .
 
+# The CPU torch wheel ships dead weight that inference never touches: its own test
+# suite and C++ headers. NOTE: torch/bin is NOT dead weight -- torch/__init__.py
+# unconditionally resolves torch/bin/torch_shm_manager at import time (shared-memory
+# manager init) and raises RuntimeError if it is missing, so it must stay. Verified
+# safe by the release gate (offline --warmup + a real search_modules call exercise
+# the full encode path).
+RUN rm -rf /usr/local/lib/python3.12/site-packages/torch/test \
+           /usr/local/lib/python3.12/site-packages/torch/include
+
 # Pre-download the embedding model into the HF cache baked into the image.
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/e5-small-v2')"
 
@@ -59,8 +68,8 @@ ENV HF_HUB_OFFLINE=1 \
 
 COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
 COPY --from=builder /usr/local/bin/tfmodsearch /usr/local/bin/tfmodsearch
-COPY --from=builder /opt/hf /opt/hf
-COPY --from=builder /opt/nltk_data /opt/nltk_data
+COPY --from=builder --chown=app:app /opt/hf /opt/hf
+COPY --from=builder --chown=app:app /opt/nltk_data /opt/nltk_data
 
 # Two of the server's paths are computed relative to tfmod_search_lib.py's own location
 # (src/tfmod_search_lib.py), which in the wheel-installed layout sits directly in site-packages
@@ -72,12 +81,12 @@ COPY --from=builder /opt/nltk_data /opt/nltk_data
 #   - setup_logging() writes startup.log/mcp_server.log under <site-packages>/../logs.
 # Pre-create both, owned by the runtime user, instead of patching the app's path resolution.
 RUN mkdir -p /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs && \
-    chown -R app:app /opt/hf /opt/nltk_data \
-      /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs
+    chown app:app /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs
 
 # pip/setuptools and bytecode caches aren't needed at runtime; trim what's cheap to trim (the
-# CPU-only torch wheel itself is the size floor here — a few hundred MB is not on the table
-# without swapping the embedding backend, which is out of scope).
+# CPU-only torch wheel, now stripped of its test/include dirs above, is still the size floor
+# here — the remainder is not on the table without swapping the embedding backend, which is out
+# of scope).
 RUN rm -rf /usr/local/lib/python3.12/site-packages/pip \
            /usr/local/lib/python3.12/site-packages/setuptools \
            /usr/local/lib/python3.12/site-packages/pip-*.dist-info \
