@@ -1,7 +1,8 @@
 # Feature spec — Run TFModSearch as a Docker container (stdio-in-container)
 
 Status: implemented, shipped in 0.15.0 (see section 8 for implementation notes and deviations
-from the skeleton below)
+from the skeleton below); the shared HTTP daemon mode described in section 9 shipped separately
+in 0.16.0 (see `docs/superpowers/specs/2026-07-14-http-transport-design.md`)
 Audience: maintainers of this repository (GitHub: `SantyagoSeaman/tfmodsearch`)
 
 ---
@@ -310,6 +311,37 @@ if the code expects nltk_data at project root.)
   x86_64-only). CI change is `docker/setup-qemu-action` + `platforms: linux/amd64,linux/arm64` on
   the existing `build-push-action` step — the runner itself is amd64, so QEMU emulates the arm64
   leg (slower than a native arm64 runner, accepted rather than adding new runner infra).
+
+## 9. HTTP mode (shared daemon)
+
+Same image, second opt-in mode, shipped in 0.16.0 (design: `docs/superpowers/specs/2026-07-14-http-transport-design.md`).
+No second Dockerfile, no second stage, no second entrypoint — `--transport http` is just an
+argv passed to the same `ENTRYPOINT ["tfmodsearch"]`.
+
+**Recipe** (identical to the README's "Shared HTTP instance" section):
+```bash
+docker run -d --name tfmodsearch-http --restart unless-stopped \
+  -p 127.0.0.1:8765:8765 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.16.0 \
+  --transport http --host 0.0.0.0 --port 8765
+```
+
+Or via the repo-root `docker-compose.yml` (service `tfmodsearch-http`, pinned image tag, loopback
+port mapping, `restart: unless-stopped`, and a healthcheck against `/health`):
+```bash
+docker compose up -d
+```
+
+**Why the container binds `0.0.0.0` and that is fine**: `--host 0.0.0.0` inside the recipe above
+looks like exactly the non-loopback bind the server warns about (`_is_loopback` logs a WARNING for
+any non-loopback host). That warning is expected and correct *inside a container* — if the server
+bound `127.0.0.1` inside the container's own network namespace, the published port mapping
+(`-p 127.0.0.1:8765:8765`) would have nothing to forward to, and the daemon would be unreachable
+from the host entirely. The actual security boundary is the **host** side of the port mapping:
+`-p 127.0.0.1:8765:8765` means Docker only forwards traffic arriving on the host's loopback
+interface into the container. Do not "fix" the warning by changing `--host`; do not publish the
+port on a non-loopback host address (`-p 8765:8765` or `-p 0.0.0.0:8765:8765`) without a reverse
+proxy that adds authentication in front — there is no auth or TLS in the server itself.
 
 ---
 

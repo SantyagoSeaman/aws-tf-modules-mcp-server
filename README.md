@@ -41,6 +41,7 @@ Think of it as an always-available, searchable reference card for every terrafor
   - [Plugin Install (Claude Code / Codex)](#plugin-install-claude-code--codex--recommended)
   - [Quick Install (Any MCP Client)](#quick-install-any-mcp-client)
   - [Docker (opt-in)](#-docker-opt-in)
+  - [Shared HTTP instance (opt-in)](#-shared-http-instance-opt-in)
 - [Quick Start](#-quick-start)
   - [Claude Code CLI Integration](#claude-code-cli-integration)
   - [Claude Desktop Integration](#claude-desktop-integration)
@@ -172,6 +173,75 @@ Verify the offline property yourself:
 ```bash
 docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.15.1 --warmup
 ```
+
+### 🌐 Shared HTTP instance (opt-in)
+
+stdio is one server process per client session: every MCP client (and every subagent it spawns)
+starts its own process, and each process loads the ~600 MB embedding model on its own. Fan a task
+out across N subagents and you pay for N model loads — the cost multiplies with fan-out.
+Streamable HTTP transport (since 0.16.0) inverts that: **one long-lived shared instance**, many
+clients connect to it by URL. The model and index load once; the main session and every subagent
+share that single instance.
+
+This is an **operator-managed opt-in mode** — stdio via `uvx tfmodsearch` remains the default for
+both the plugin and every install path above. Reach for HTTP only when you want one daemon shared
+across sessions/subagents on a machine.
+
+**Quickstart (Docker)**:
+```bash
+docker run -d --name tfmodsearch-http --restart unless-stopped \
+  -p 127.0.0.1:8765:8765 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.16.0 \
+  --transport http --host 0.0.0.0 --port 8765
+```
+
+Or with the bundled `docker-compose.yml` (same recipe, one command):
+```bash
+docker compose up -d
+```
+
+**Quickstart (no Docker)**:
+```bash
+tfmodsearch --transport http
+```
+
+Then point Claude Code at the running daemon (URL, not a command):
+```bash
+claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
+```
+
+**Readiness**: poll the health endpoint (no MCP handshake needed) — it returns 200 once the
+model and index have finished loading, 503 while still initializing:
+```bash
+curl -s http://127.0.0.1:8765/health
+# {"status": "ok", "version": "0.16.0", "modules": 55}
+```
+
+**Configuration** (CLI flags take precedence over env vars, which take precedence over the
+defaults below):
+
+| Setting | Flag | Env var | Default |
+|---|---|---|---|
+| Transport | `--transport {stdio,http}` | `TFMODSEARCH_TRANSPORT` | `stdio` |
+| Host | `--host` | `TFMODSEARCH_HOST` | `127.0.0.1` |
+| Port | `--port` | `TFMODSEARCH_PORT` | `8765` |
+
+**Lifecycle ownership**: the operator owns the daemon — start it, keep it running (`--restart
+unless-stopped` / the compose healthcheck), and stop it. MCP clients never auto-start or manage
+it; if the daemon is down, clients simply fail to connect. That's the trade-off for sharing one
+instance across sessions.
+
+> **Do not run both the plugin's stdio entry and the HTTP entry at the same time.** Two
+> `tfmod-search` MCP servers registered simultaneously present duplicate toolsets and confuse
+> agents about which one to call. Remove or disable the plugin's stdio entry before adding the
+> HTTP entry (or vice versa).
+
+**Security**: the HTTP transport has **no authentication and no TLS**. Keep the port
+loopback-only (`127.0.0.1:8765:8765`, not `0.0.0.0:8765:8765`) and never expose it directly to a
+network without a reverse proxy in front that adds auth. Binding `0.0.0.0` *inside* the container
+is expected and fine — the container's own loopback would make the published port unreachable —
+the actual security boundary is the host port mapping (`-p 127.0.0.1:8765:8765`), which restricts
+reachability to the host's loopback interface.
 
 ### Prerequisites
 

@@ -1,5 +1,32 @@
 # Changelog
 
+## [0.16.0] - 2026-07-14
+
+[0.16.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.16.0
+
+Adds an opt-in Streamable HTTP transport so the server can run as a single long-lived shared instance instead of one process per client — the fix for fan-out scenarios where N subagents each pay for their own embedding-model load. stdio remains the default and is unchanged; the plugin remains stdio-only; the index and search behavior are untouched.
+
+### Added
+
+- **Streamable HTTP transport** (`--transport http`, default `--transport stdio` — full backward compatibility with no flags). `--host`/`--port` (default `127.0.0.1`/`8765`) with env fallbacks `TFMODSEARCH_TRANSPORT`/`TFMODSEARCH_HOST`/`TFMODSEARCH_PORT`; precedence CLI > env > default. Serves Streamable HTTP (never legacy SSE) at `http://<host>:<port>/mcp` via FastMCP's `app.run(transport="http", ...)`.
+- **`GET /health` endpoint** (HTTP mode only): returns 200 with `{"status": "ok", "version": ..., "modules": <count>}` once the index and embedding model have finished loading, 503 `{"status": "initializing"}` before — a cheap liveness/readiness probe for `docker run -d` and scripted setups that doesn't need a full MCP handshake.
+- **Warm-once startup for HTTP mode**: the embedding model loads exactly once, deterministically, before the server starts serving (reuses the existing `--warmup` search path); a `READY on http://host:port/mcp` log line marks readiness. stdio mode keeps its existing lazy load, unchanged.
+- **Non-loopback bind warning**: binding a `--host` that isn't loopback (e.g. `0.0.0.0`) logs a prominent WARNING — the transport has no authentication, so anyone who can reach the address can query the server.
+- **`EXPOSE 8765`** added to the existing Dockerfile (documentation only, no structural change) and a new repo-root **`docker-compose.yml`** encoding the shared-daemon recipe: pinned image tag, `restart: unless-stopped`, loopback-only port mapping (`127.0.0.1:8765:8765`), and a healthcheck against `/health`.
+- **E2E test suite for HTTP transport** (`tests/e2e/test_mcp_http_e2e.py`): spawns the real server with `--transport http`, waits on `/health`, then drives a full MCP session over `mcp.client.streamable_http` — handshake, tool discovery, `search_modules`/`get_module` calls, an 8-way concurrent-call burst, and an env-fallback variant.
+- Design + plan committed under `docs/superpowers/{specs,plans}/2026-07-14-http-transport-*`.
+
+### Changed / Hardened
+
+- **Model load and query encode serialized with a lock.** `SentenceTransformer` construction and the query-embedding `encode()` call in `tfmod_search_lib.py` are now guarded by a module-level `threading.Lock` — `SentenceTransformer.encode()` isn't guaranteed thread-safe, and the HTTP transport can serve genuinely concurrent tool calls (stdio never contended on this). Query encode is ~10 ms, so contention is negligible; verified with an 8-thread concurrent-load test that the model constructs exactly once.
+- **Registry doc-cache writes are now atomic.** `_write_cache_entry` in `tfmod_registry_docs.py` writes via a temp file plus `os.replace` (atomic on POSIX) instead of a direct write, so concurrent `grep_module_docs` calls racing on the same cache entry can no longer corrupt it — worst case under a race is a harmless duplicate fetch.
+
+### Unchanged
+
+- **stdio remains the default transport** with no flags — behavior is byte-identical to before this release; the full pre-existing test suite passes unmodified.
+- **The Claude Code/Codex plugin is unchanged** and stays stdio-only (`uvx tfmodsearch` / Docker opt-in via `TFMODSEARCH_DOCKER`, per 0.15.x) — HTTP is an operator-managed mode configured via the documented `claude mcp add --transport http` recipe, not a plugin feature.
+- **No index rebuild, no changes to search behavior, tool signatures, or the module catalog.**
+
 ## [0.15.1] - 2026-07-13
 
 [0.15.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.15.1
