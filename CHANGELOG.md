@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.17.0] - 2026-07-14
+
+[0.17.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.17.0
+
+Adds a daily PyPI update check for the shared HTTP daemon (since 0.16.0) so long-lived,
+pinned-image installs learn when a newer release ships, surfaced through `/health`, a log
+WARNING, and an agent-visible `update_notice` field on JSON tool responses. stdio remains
+completely unaffected.
+
+### Added
+
+- **Daily PyPI update check** (HTTP mode only): a background daemon thread checks `https://pypi.org/pypi/tfmodsearch/json` once at startup and every 24h thereafter (`fetch_latest_pypi_version`/`is_newer_version` in `tfmod_registry_docs.py`), comparing the published version against the running one with a self-contained, fail-closed int-tuple compare (no `packaging` dependency; rc/dev suffixes intentionally produce no notice). Failures (network, malformed response) are silent at DEBUG and keep the previous state; the check runs in its own thread with a 5s timeout and never blocks a request.
+- **`GET /health` gains `latest_version`/`update_available`** (additive; existing fields unchanged) — `latest_version` is `null` until the first successful check.
+- **Log WARNING once per 24h cycle** while a newer version is known, naming the exact operator action (bump the image tag in `docker-compose.yml`, then `docker compose pull && up -d`) — visible in `docker logs`.
+- **Agent-visible `update_notice` field** on the JSON-returning tools (`search_modules`, `modules_list`, `grep_module_docs`) when an update is available; absent entirely (not `null`) otherwise, so there is zero output noise in the common case. `get_module`'s curated markdown output is untouched.
+- **Kill switch `TFMODSEARCH_UPDATE_CHECK`** (falsy: empty string, `0`, `false`, `no`, `off`, case-insensitive) disables the checker thread entirely, for air-gapped deployments. Default: enabled in HTTP mode.
+- Design + plan committed under `docs/superpowers/{specs,plans}/2026-07-14-update-check-*`.
+
+### Unchanged
+
+- **stdio remains byte-identical to 0.16.0** — no checker thread, no new fields, no notice; the checker only starts in the HTTP branch of `main()`. The existing test suite passes unmodified.
+- **No auto-update.** The server never pulls images or restarts itself; the operator stays in control of when to upgrade.
+- **No telemetry.** The check is one anonymous GET to the public PyPI JSON API; nothing about the customer, host, or usage is sent.
+- **No new runtime dependencies, no index rebuild, no change to the plugin or the module catalog.**
+
 ## [0.16.0] - 2026-07-14
 
 [0.16.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.16.0
