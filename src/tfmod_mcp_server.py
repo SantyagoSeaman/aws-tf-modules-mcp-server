@@ -13,6 +13,7 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 """
 
 import argparse
+import ipaddress
 import logging
 import os
 import re
@@ -28,6 +29,8 @@ import yaml
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field, field_serializer
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 import tfmod_registry_docs
 from tfmod_doc_grep import grep_document
@@ -139,6 +142,16 @@ keywords, module_id, latest_version) when browsing is preferable to search.
   primary datastore" ⇒ memory-db, not the higher-familiarity elasticache)
 """,
 )
+
+
+@app.custom_route("/health", methods=["GET"])
+async def health(request: Request) -> JSONResponse:
+    """Liveness/readiness probe for the HTTP transport (no MCP handshake needed)."""
+    try:
+        state = ServerStateManager.get()
+    except RuntimeError:
+        return JSONResponse({"status": "initializing"}, status_code=503)
+    return JSONResponse({"status": "ok", "version": _SERVER_VERSION, "modules": len(state.index.docs)})
 
 
 # -----------------------------
@@ -1685,7 +1698,21 @@ def grep_module_docs(
 # -----------------------------
 
 
-def parse_arguments() -> argparse.Namespace:
+def _env_default(name: str, fallback: str) -> str:
+    """Environment fallback for a CLI default (empty/unset -> fallback)."""
+    value = os.environ.get(name, "").strip()
+    return value if value else fallback
+
+
+def _is_loopback(host: str) -> bool:
+    """True when host is a loopback address or the literal localhost."""
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host.lower() == "localhost"
+
+
+def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     """
     Parse and return command-line arguments.
 
@@ -1725,8 +1752,33 @@ def parse_arguments() -> argparse.Namespace:
         action="store_true",
         help="Load the index and embedding model (downloading the model if needed), run a test query, and exit",
     )
+    parser.add_argument(
+        "--transport",
+        type=str,
+        choices=["stdio", "http"],
+        default=_env_default("TFMODSEARCH_TRANSPORT", "stdio"),
+        help="MCP transport: stdio (default, one process per client) or http "
+        "(streamable HTTP shared instance at /mcp). Env fallback: TFMODSEARCH_TRANSPORT",
+    )
+    parser.add_argument(
+        "--host",
+        type=str,
+        default=_env_default("TFMODSEARCH_HOST", "127.0.0.1"),
+        help="Bind address for --transport http. Env fallback: TFMODSEARCH_HOST",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=_env_default("TFMODSEARCH_PORT", "8765"),
+        help="Bind port for --transport http. Env fallback: TFMODSEARCH_PORT",
+    )
 
-    return parser.parse_args()
+    args = parser.parse_args(argv)
+    # argparse does not validate string defaults against choices, so a bad
+    # TFMODSEARCH_TRANSPORT value would otherwise slip through silently.
+    if args.transport not in ("stdio", "http"):
+        parser.error(f"invalid transport {args.transport!r} (check TFMODSEARCH_TRANSPORT): choose stdio or http")
+    return args
 
 
 def resolve_config_path(config_arg: str) -> Path | None:
@@ -1885,8 +1937,26 @@ def main() -> None:
         logger.info("MCP Server operational logging started")
 
         # Start FastMCP server
-        logger.info("Starting MCP server (stdio transport)")
-        app.run(transport="stdio")
+        if args.transport == "http":
+            if not _is_loopback(args.host):
+                logger.warning(
+                    f"Binding non-loopback host {args.host} with NO authentication - anyone who can "
+                    "reach this address can query the server. Intended only inside a container whose "
+                    "host port mapping restricts exposure (e.g. -p 127.0.0.1:8765:8765)."
+                )
+            # Warm once, BEFORE serving: the whole point of the shared instance is a
+            # single deterministic model load; stdio keeps its lazy load untouched.
+            logger.info("HTTP mode: warming up embedding model before serving")
+            warm = search_modules_impl("vpc networking", state)
+            logger.info(f"Warmup complete: test query returned {len(warm.results)} results")
+            logger.info(f"READY on http://{args.host}:{args.port}/mcp")
+            # host_origin_protection="auto" installs FastMCP Host/Origin validation
+            # (rejects browser-initiated cross-origin requests -> DNS-rebinding guard).
+            # Orthogonal to auth: SDK clients and curl send no Origin and pass.
+            app.run(transport="http", host=args.host, port=args.port, host_origin_protection="auto")
+        else:
+            logger.info("Starting MCP server (stdio transport)")
+            app.run(transport="stdio")
 
     except KeyboardInterrupt:
         if logger:

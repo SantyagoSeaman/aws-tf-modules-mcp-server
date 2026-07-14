@@ -14,6 +14,8 @@ Exports:
 
 import datetime
 import json
+import os
+import threading
 import urllib.request
 from collections.abc import Callable
 from pathlib import Path
@@ -180,8 +182,20 @@ def _read_cache_entry(path: Path) -> dict[str, Any] | None:
 
 
 def _write_cache_entry(path: Path, entry: dict[str, Any]) -> None:
+    """Atomically write a cache entry (temp file + rename).
+
+    Concurrent HTTP tool calls may write the same entry simultaneously;
+    os.replace guarantees readers never observe a partially written file.
+    Worst case under a race is a duplicate fetch, never corruption.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(entry))
+    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}-{threading.get_ident()}")
+    try:
+        tmp.write_text(json.dumps(entry))
+        os.replace(tmp, path)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def _is_latest_entry_fresh(entry: dict[str, Any], ttl_hours: int) -> bool:

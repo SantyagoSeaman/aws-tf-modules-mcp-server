@@ -1,0 +1,31 @@
+# Shared HTTP daemon for the TFModSearch MCP server.
+#
+#   docker compose up -d
+#   claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
+#
+# One long-lived instance, one embedding-model load, shared by every MCP
+# client/session on this machine. Loopback-only by design: the server has no
+# auth, so the host port mapping is the security boundary. Inside the
+# container the server must bind 0.0.0.0 or the published port is unreachable.
+services:
+  tfmodsearch-http:
+    image: ghcr.io/santyagoseaman/tfmodsearch:0.16.0
+    container_name: tfmodsearch-http
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8765:8765"
+    command: ["--transport", "http", "--host", "0.0.0.0", "--port", "8765"]
+    volumes:
+      # Persist the grep_module_docs registry-doc cache across container
+      # recreates/upgrades (pinned-version entries are cached forever; without
+      # this they would all re-fetch after every image bump or compose down/up).
+      - tfmodsearch-cache:/home/app/.cache
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8765/health', timeout=5).status == 200 else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+volumes:
+  tfmodsearch-cache:

@@ -1,7 +1,12 @@
-# TFModSearch MCP server — stdio-in-container.
+# TFModSearch MCP server — stdio-in-container, or a shared HTTP daemon.
 #
 # `docker run -i --rm <image>` speaks the same stdio JSON-RPC as `tfmodsearch` (uvx). Never pass
-# `-t`/`--tty`: a pseudo-TTY corrupts the stdio byte stream.
+# `-t`/`--tty`: a pseudo-TTY corrupts the stdio byte stream. stdio stays the default and is what
+# runs when no arguments are given.
+#
+# The same image also serves `--transport http` as a shared daemon: one long-lived instance,
+# one embedding-model load, many clients over http://host:8765/mcp (see docker-compose.yml and
+# README's "Shared HTTP instance" section for the run recipe).
 #
 # Every asset that would otherwise trigger a runtime network call is baked in at build time:
 # the intfloat/e5-small-v2 embedding model, the NLTK punkt_tab tokenizer, the prebuilt search
@@ -81,5 +86,9 @@ RUN rm -rf /usr/local/lib/python3.12/site-packages/pip \
 
 USER app
 WORKDIR /home/app
+
+# HTTP mode only (docs): `docker run -d -p 127.0.0.1:8765:8765 <image> --transport http --host 0.0.0.0`.
+# stdio mode ignores this. EXPOSE is documentation, not a port publication.
+EXPOSE 8765
 
 ENTRYPOINT ["tfmodsearch"]

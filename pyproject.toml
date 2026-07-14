@@ -1,6 +1,6 @@
 [project]
 name = "tfmodsearch"
-version = "0.15.1"
+version = "0.16.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Topic :: System :: Systems Administration",
 ]
@@ -104,9 +105,10 @@ ignore = [
 known-first-party = ["tfmod_search_lib", "tfmod_mcp_server", "tfmod_search_cli", "tfmod_doc_grep", "tfmod_registry_docs"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests legitimately use assert (S101) and spawn the packaged server as a
-# subprocess in e2e checks (S603/S607).
-"tests/**" = ["S101", "S603", "S607"]
+# Tests legitimately use assert (S101), spawn the packaged server as a
+# subprocess in e2e checks (S603/S607), and exercise the non-loopback
+# --host/--transport http code paths with the literal 0.0.0.0 (S104).
+"tests/**" = ["S101", "S603", "S607", "S104"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
