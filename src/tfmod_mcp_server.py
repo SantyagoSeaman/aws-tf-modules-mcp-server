@@ -30,7 +30,7 @@ from typing import Annotated, Any
 import yaml
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
-from pydantic import BaseModel, Field, field_serializer
+from pydantic import BaseModel, Field, field_serializer, model_serializer
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
@@ -153,7 +153,15 @@ async def health(request: Request) -> JSONResponse:
         state = ServerStateManager.get()
     except RuntimeError:
         return JSONResponse({"status": "initializing"}, status_code=503)
-    return JSONResponse({"status": "ok", "version": _SERVER_VERSION, "modules": len(state.index.docs)})
+    return JSONResponse(
+        {
+            "status": "ok",
+            "version": _SERVER_VERSION,
+            "modules": len(state.index.docs),
+            "latest_version": _UPDATE_STATE["latest_version"],
+            "update_available": _UPDATE_STATE["update_available"],
+        }
+    )
 
 
 # -----------------------------
@@ -638,7 +646,28 @@ class SearchHit(BaseModel):
         return round(value, 2)
 
 
-class SearchOutput(BaseModel):
+class UpdateNoticeMixin(BaseModel):
+    """Adds an optional update_notice that vanishes from output when None.
+
+    FastMCP serializes pydantic None fields as JSON null; the spec requires
+    the field to be entirely absent when no update is known, hence the
+    wrap-mode serializer (verified against FastMCP 3.4.4).
+    """
+
+    update_notice: str | None = Field(
+        default=None,
+        description="Present only when a newer tfmodsearch release exists; relay it to the user.",
+    )
+
+    @model_serializer(mode="wrap")
+    def _drop_none_notice(self, handler: Any) -> Any:
+        data = handler(self)
+        if isinstance(data, dict) and data.get("update_notice") is None:
+            data.pop("update_notice", None)
+        return data
+
+
+class SearchOutput(UpdateNoticeMixin):
     results: list[SearchHit] = Field(..., description="Top-ranked Terraform modules matching the query.")
 
 
@@ -660,7 +689,7 @@ class ModuleListItem(BaseModel):
     )
 
 
-class ModulesListOutput(BaseModel):
+class ModulesListOutput(UpdateNoticeMixin):
     modules: list[ModuleListItem] = Field(..., description="Complete list of all available Terraform modules.")
     count: int = Field(..., description="Total number of modules in the catalog.")
 
@@ -685,7 +714,7 @@ class CacheInfo(BaseModel):
     )
 
 
-class GrepOutput(BaseModel):
+class GrepOutput(UpdateNoticeMixin):
     module_id: str = Field(..., description="Terraform Registry coordinates 'namespace/name/provider' requested.")
     resolved_version: str = Field(
         ..., description="Concrete version actually served (never the literal string 'latest')."
@@ -1367,7 +1396,9 @@ def modules_list() -> ModulesListOutput:
         4. Use get_module() to retrieve full documentation
     """
     state = ServerStateManager.get()
-    return modules_list_impl(state)
+    result = modules_list_impl(state)
+    result.update_notice = _update_notice()
+    return result
 
 
 @app.tool(
@@ -1449,7 +1480,9 @@ def search_modules(
         - Empty queries return empty results
     """
     state = ServerStateManager.get()
-    return search_modules_impl(query, state, top_k=top_k)
+    result = search_modules_impl(query, state, top_k=top_k)
+    result.update_notice = _update_notice()
+    return result
 
 
 @app.tool(
@@ -1681,7 +1714,7 @@ def grep_module_docs(
     ttl_hours = state.doc_cache_ttl_hours
     if cache_dir is None:
         cache_dir, ttl_hours = ConfigLoader.load_doc_cache()
-    return grep_module_docs_impl(
+    result = grep_module_docs_impl(
         module_id,
         pattern,
         version=version,
@@ -1693,6 +1726,8 @@ def grep_module_docs(
         cache_dir=cache_dir,
         ttl_hours=ttl_hours,
     )
+    result.update_notice = _update_notice()
+    return result
 
 
 # -----------------------------
