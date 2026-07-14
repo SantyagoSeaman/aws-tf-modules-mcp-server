@@ -1950,7 +1950,10 @@ def main() -> None:
             warm = search_modules_impl("vpc networking", state)
             logger.info(f"Warmup complete: test query returned {len(warm.results)} results")
             logger.info(f"READY on http://{args.host}:{args.port}/mcp")
-            app.run(transport="http", host=args.host, port=args.port)
+            # host_origin_protection="auto" installs FastMCP Host/Origin validation
+            # (rejects browser-initiated cross-origin requests -> DNS-rebinding guard).
+            # Orthogonal to auth: SDK clients and curl send no Origin and pass.
+            app.run(transport="http", host=args.host, port=args.port, host_origin_protection="auto")
         else:
             logger.info("Starting MCP server (stdio transport)")
             app.run(transport="stdio")

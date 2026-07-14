@@ -13,6 +13,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -131,6 +132,42 @@ async def test_concurrent_tool_calls(http_server):
         assert payload["results"], "concurrent call returned empty results"
         for r in payload["results"]:
             assert set(r) >= {"module_name", "path", "score"}
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(180)
+def test_cross_origin_request_rejected(http_server):
+    """DNS-rebinding guard: a browser-style cross-origin POST must be rejected.
+
+    host_origin_protection="auto" installs FastMCP Host/Origin validation; SDK
+    clients and curl send no Origin header and pass (covered by the other tests).
+    """
+    port, _ = http_server
+    body = json.dumps(
+        {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2025-03-26",
+                "capabilities": {},
+                "clientInfo": {"name": "t", "version": "1"},
+            },
+        }
+    ).encode()
+    req = urllib.request.Request(  # noqa: S310 (trusted local host)
+        f"http://127.0.0.1:{port}/mcp",
+        data=body,
+        headers={
+            "Origin": "http://evil.example",
+            "Content-Type": "application/json",
+            "Accept": "application/json, text/event-stream",
+        },
+        method="POST",
+    )
+    with pytest.raises(urllib.error.HTTPError) as excinfo:
+        urllib.request.urlopen(req, timeout=10)  # noqa: S310 (trusted local host)
+    assert excinfo.value.code == 403
 
 
 @pytest.mark.e2e

@@ -210,6 +210,25 @@ Then point Claude Code at the running daemon (URL, not a command):
 claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
 ```
 
+**Migrating from the plugin (stdio)**: make sure only one `tfmod-search` server is registered.
+Disable the plugin (this removes its bundled stdio server — and its skills, which is the
+trade-off), then add the HTTP entry:
+```bash
+claude plugin disable tfmod-search
+claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
+```
+The HTTP daemon exposes the exact same four tools, so agent workflows keep working. To go back:
+`claude mcp remove tfmod-search` and re-enable the plugin.
+
+**Codex CLI**: the plugin stays stdio-only, but recent Codex CLI versions can connect to a
+streamable HTTP MCP server directly in `~/.codex/config.toml`:
+```toml
+[mcp_servers.tfmod-search]
+url = "http://127.0.0.1:8765/mcp"
+```
+(Check your Codex version supports HTTP MCP servers; remove the plugin's stdio entry first, same
+one-server rule as above.)
+
 **Readiness**: poll the health endpoint (no MCP handshake needed). The server loads the index
 and warms the embedding model *before* it starts listening, so expect connection-refused during
 startup, then 200 once the port is up:
@@ -229,8 +248,21 @@ defaults below):
 
 **Lifecycle ownership**: the operator owns the daemon — start it, keep it running (`--restart
 unless-stopped` / the compose healthcheck), and stop it. MCP clients never auto-start or manage
-it; if the daemon is down, clients simply fail to connect. That's the trade-off for sharing one
-instance across sessions.
+it; if the daemon is down, Claude Code shows the `tfmod-search` server as failed/disconnected and
+its tools disappear until the daemon is back. That's the trade-off for sharing one instance
+across sessions.
+
+**Managing the daemon**:
+```bash
+docker compose down                # stop (or: docker rm -f tfmodsearch-http)
+docker logs -f tfmodsearch-http    # server + uvicorn logs (READY line, warnings, tracebacks)
+# upgrade when a new release ships: bump the pinned tag in docker-compose.yml, then
+docker compose pull && docker compose up -d
+```
+The compose file mounts a named volume (`tfmodsearch-cache`) over `/home/app/.cache`, so the
+`grep_module_docs` registry-doc cache survives container recreates and image upgrades. Running
+the non-Docker variant as a daemon is on you (a terminal multiplexer, `nohup`, or a
+launchd/systemd unit) — the server itself is just a foreground process.
 
 > **Do not run both the plugin's stdio entry and the HTTP entry at the same time.** Two
 > `tfmod-search` MCP servers registered simultaneously present duplicate toolsets and confuse

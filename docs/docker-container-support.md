@@ -327,10 +327,17 @@ docker run -d --name tfmodsearch-http --restart unless-stopped \
 ```
 
 Or via the repo-root `docker-compose.yml` (service `tfmodsearch-http`, pinned image tag, loopback
-port mapping, `restart: unless-stopped`, and a healthcheck against `/health`):
+port mapping, `restart: unless-stopped`, a healthcheck against `/health`, and a named volume over
+`/home/app/.cache` so the `grep_module_docs` registry-doc cache survives recreates/upgrades):
 ```bash
 docker compose up -d
 ```
+
+**DNS-rebinding guard**: the server runs HTTP mode with FastMCP `host_origin_protection="auto"` —
+browser-initiated cross-origin requests to `/mcp` (a foreign `Origin` header) are rejected with
+403, so a malicious web page cannot script the loopback daemon. MCP SDK clients and curl send no
+`Origin` header and pass untouched. This is orthogonal to the no-auth stance: Origin validation
+is not authentication.
 
 **Why the container binds `0.0.0.0` and that is fine**: `--host 0.0.0.0` inside the recipe above
 looks like exactly the non-loopback bind the server warns about (`_is_loopback` logs a WARNING for

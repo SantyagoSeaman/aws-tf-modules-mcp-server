@@ -104,6 +104,11 @@ exactly one model resident (see §7).
 - If `--host` resolves to a non-loopback address, log a prominent WARNING (no auth — anyone
   routable can query). Binding `0.0.0.0` is intended only *inside* a container whose host port
   mapping restricts exposure (§5.2).
+- *(Added post-review)* **DNS-rebinding guard**: run HTTP mode with FastMCP
+  `host_origin_protection="auto"` — FastMCP 3.4.4 defaults this OFF, leaving `/mcp` scriptable
+  by any web page via browser `fetch` against loopback. With the kwarg, cross-origin requests
+  (foreign `Origin` header) get 403; SDK clients/curl send no Origin and pass. Found by the
+  blind review; verified empirically and guarded by an e2e test.
 
 ### 4.6 `/health` endpoint
 
