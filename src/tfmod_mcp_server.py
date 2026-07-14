@@ -13,6 +13,7 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 """
 
 import argparse
+import ipaddress
 import logging
 import os
 import re
@@ -28,6 +29,8 @@ import yaml
 from fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 from pydantic import BaseModel, Field, field_serializer
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 import tfmod_registry_docs
 from tfmod_doc_grep import grep_document
@@ -139,6 +142,16 @@ keywords, module_id, latest_version) when browsing is preferable to search.
   primary datastore" ⇒ memory-db, not the higher-familiarity elasticache)
 """,
 )
+
+
+@app.custom_route("/health", methods=["GET"])
+async def health(request: Request) -> JSONResponse:
+    """Liveness/readiness probe for the HTTP transport (no MCP handshake needed)."""
+    try:
+        state = ServerStateManager.get()
+    except RuntimeError:
+        return JSONResponse({"status": "initializing"}, status_code=503)
+    return JSONResponse({"status": "ok", "version": _SERVER_VERSION, "modules": len(state.index.docs)})
 
 
 # -----------------------------
@@ -1691,6 +1704,14 @@ def _env_default(name: str, fallback: str) -> str:
     return value if value else fallback
 
 
+def _is_loopback(host: str) -> bool:
+    """True when host is a loopback address or the literal localhost."""
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host.lower() == "localhost"
+
+
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
     """
     Parse and return command-line arguments.
@@ -1916,8 +1937,23 @@ def main() -> None:
         logger.info("MCP Server operational logging started")
 
         # Start FastMCP server
-        logger.info("Starting MCP server (stdio transport)")
-        app.run(transport="stdio")
+        if args.transport == "http":
+            if not _is_loopback(args.host):
+                logger.warning(
+                    f"Binding non-loopback host {args.host} with NO authentication - anyone who can "
+                    "reach this address can query the server. Intended only inside a container whose "
+                    "host port mapping restricts exposure (e.g. -p 127.0.0.1:8765:8765)."
+                )
+            # Warm once, BEFORE serving: the whole point of the shared instance is a
+            # single deterministic model load; stdio keeps its lazy load untouched.
+            logger.info("HTTP mode: warming up embedding model before serving")
+            warm = search_modules_impl("vpc networking", state)
+            logger.info(f"Warmup complete: test query returned {len(warm.results)} results")
+            logger.info(f"READY on http://{args.host}:{args.port}/mcp")
+            app.run(transport="http", host=args.host, port=args.port)
+        else:
+            logger.info("Starting MCP server (stdio transport)")
+            app.run(transport="stdio")
 
     except KeyboardInterrupt:
         if logger:

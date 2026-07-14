@@ -2,7 +2,7 @@
 
 import pytest
 
-from tfmod_mcp_server import parse_arguments
+from tfmod_mcp_server import _is_loopback, parse_arguments
 
 
 def test_default_transport_is_stdio(monkeypatch):
@@ -48,3 +48,16 @@ def test_invalid_env_transport_rejected(monkeypatch):
 def test_invalid_cli_transport_rejected():
     with pytest.raises(SystemExit):
         parse_arguments(["--transport", "sse"])
+
+
+def test_is_loopback_true_cases():
+    assert _is_loopback("127.0.0.1")
+    assert _is_loopback("::1")
+    assert _is_loopback("localhost")
+    assert _is_loopback("LOCALHOST")
+
+
+def test_is_loopback_false_cases():
+    assert not _is_loopback("0.0.0.0")
+    assert not _is_loopback("192.168.1.10")
+    assert not _is_loopback("example.com")
