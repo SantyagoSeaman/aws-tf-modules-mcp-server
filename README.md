@@ -272,7 +272,7 @@ day and surfaces what it finds through three channels — `curl /health` gains `
 `update_notice` field appears on `search_modules`/`modules_list`/`grep_module_docs` responses
 (absent entirely when there is nothing to report) so your agent can relay it directly. Nothing
 auto-updates — the operator still owns bumping the tag and running
-`docker compose pull && up -d`. Set `TFMODSEARCH_UPDATE_CHECK=0` to disable the check entirely
+`docker compose pull && docker compose up -d`. Set `TFMODSEARCH_UPDATE_CHECK=0` to disable the check entirely
 (air-gapped deployments).
 Privacy: the check is one anonymous GET to the public PyPI JSON API — nothing about you or your
 host is sent.

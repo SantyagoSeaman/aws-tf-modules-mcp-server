@@ -1787,7 +1787,7 @@ _UPDATE_CHECK_FALSY = {"", "0", "false", "no", "off"}
 _UPDATE_NOTICE_TEMPLATE = (
     "tfmodsearch {latest} is available (this shared daemon runs {current}). "
     "Ask the operator to update: bump the image tag in docker-compose.yml, "
-    "then docker compose pull && up -d."
+    "then docker compose pull && docker compose up -d."
 )
 # Replaced atomically (single assignment) by the checker thread; readers
 # (health route, tool wrappers) never see a torn value thanks to the GIL.

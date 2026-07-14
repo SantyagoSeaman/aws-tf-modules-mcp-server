@@ -355,7 +355,7 @@ the server itself checks PyPI once a day (HTTP mode only) and reports what it fi
 `GET /health` (`latest_version`/`update_available`), a `docker logs` WARNING once per cycle while
 stale, and an `update_notice` field on `search_modules`/`modules_list`/`grep_module_docs`
 responses that is absent entirely when there is nothing to report. There is no auto-update — the
-operator still bumps the tag and runs `docker compose pull && up -d`. Set
+operator still bumps the tag and runs `docker compose pull && docker compose up -d`. Set
 `TFMODSEARCH_UPDATE_CHECK=0` to disable the check for air-gapped deployments; the only network
 call it makes is one anonymous GET to the public PyPI JSON API.
 

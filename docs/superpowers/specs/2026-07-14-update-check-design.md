@@ -62,7 +62,7 @@ def is_newer_version(latest: str, current: str) -> bool
 - Result state: a module-level dict `_UPDATE_STATE = {"latest_version": None, "update_available": False}`
   replaced atomically on each check (single assignment, GIL-safe; readers never see a torn value).
   A successful check that finds a newer version logs one WARNING per cycle:
-  `Update available: tfmodsearch X.Y.Z (running A.B.C) — bump the image tag and docker compose pull && up -d`.
+  `Update available: tfmodsearch X.Y.Z (running A.B.C) — bump the image tag and docker compose pull && docker compose up -d`.
   Failures log at DEBUG and keep the previous state.
 
 ### 3.3 Kill switch
@@ -88,7 +88,7 @@ config.yaml key (YAGNI).
 3. **Agent-visible notice**: when `update_available` is true, the JSON-returning tools
    (`search_modules`, `modules_list`, `grep_module_docs`) add one top-level field:
    ```json
-   "update_notice": "tfmodsearch 0.18.0 is available (this shared daemon runs 0.17.0). Ask the operator to update: bump the image tag in docker-compose.yml, then docker compose pull && up -d."
+   "update_notice": "tfmodsearch 0.18.0 is available (this shared daemon runs 0.17.0). Ask the operator to update: bump the image tag in docker-compose.yml, then docker compose pull && docker compose up -d."
    ```
    The field is **absent entirely** when no update is known — zero noise in the common case.
    `get_module` (markdown output) is excluded: its output is a curated document and the
@@ -142,5 +142,5 @@ config.yaml key (YAGNI).
   stale-but-valid. The thread is `daemon=True` so it never blocks shutdown.
 - Version-parse fail-closed means a future non-numeric tag (e.g. `1.0.0rc1` on PyPI) produces no
   notice rather than a wrong one — acceptable: this project publishes plain `X.Y.Z`.
-- The notice text names the exact operator action (bump tag, `compose pull && up -d`) — kept in
+- The notice text names the exact operator action (bump tag, `compose pull && docker compose up -d`) — kept in
   one constant so docs and code cannot drift apart.
