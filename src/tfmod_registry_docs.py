@@ -190,8 +190,12 @@ def _write_cache_entry(path: Path, entry: dict[str, Any]) -> None:
     """
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}-{threading.get_ident()}")
-    tmp.write_text(json.dumps(entry))
-    os.replace(tmp, path)
+    try:
+        tmp.write_text(json.dumps(entry))
+        os.replace(tmp, path)
+    except OSError:
+        tmp.unlink(missing_ok=True)
+        raise
 
 
 def _is_latest_entry_fresh(entry: dict[str, Any], ttl_hours: int) -> bool:
