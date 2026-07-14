@@ -23,6 +23,7 @@ import math
 import pickle
 import re
 import sys
+import threading
 from collections import defaultdict
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
@@ -59,6 +60,12 @@ _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
 # Model cache to avoid reloading SentenceTransformer on every query
 _MODEL_CACHE: dict[str, SentenceTransformer] = {}
 
+# Serializes model construction AND SentenceTransformer.encode(), neither of
+# which is guaranteed thread-safe. Only matters for the HTTP transport, where
+# tool calls run concurrently; stdio never contends. Query encode is ~10 ms,
+# so contention is negligible.
+_MODEL_LOCK = threading.Lock()
+
 # Default embedding model
 DEFAULT_MODEL_NAME = "intfloat/e5-small-v2"
 
@@ -94,14 +101,15 @@ def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> Senten
         >>> model2 = _get_sentence_transformer("thenlper/gte-small", logger)
         >>> assert model is model2
     """
-    if model_name not in _MODEL_CACHE:
-        logger.debug(f"Loading SentenceTransformer model: {model_name} (not in cache)")
-        _MODEL_CACHE[model_name] = SentenceTransformer(model_name, device="cpu")
-        logger.debug(f"Model {model_name} loaded and cached")
-    else:
-        logger.debug(f"Using cached SentenceTransformer model: {model_name}")
+    with _MODEL_LOCK:
+        if model_name not in _MODEL_CACHE:
+            logger.debug(f"Loading SentenceTransformer model: {model_name} (not in cache)")
+            _MODEL_CACHE[model_name] = SentenceTransformer(model_name, device="cpu")
+            logger.debug(f"Model {model_name} loaded and cached")
+        else:
+            logger.debug(f"Using cached SentenceTransformer model: {model_name}")
 
-    return _MODEL_CACHE[model_name]
+        return _MODEL_CACHE[model_name]
 
 
 def initialize_nltk() -> None:
@@ -1003,12 +1011,13 @@ def compute_scores(
     # Use the same model as index (cached to avoid HTTP requests)
     model = _get_sentence_transformer(index.model_name, logger)
     # Use prompt parameter for optional query instruction (e.g., for BGE models)
-    q_vec = model.encode(
-        [q],
-        prompt=query_instruction,
-        convert_to_numpy=True,
-        normalize_embeddings=True,
-    )[0].astype(np.float32, copy=False)
+    with _MODEL_LOCK:
+        q_vec = model.encode(
+            [q],
+            prompt=query_instruction,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+        )[0].astype(np.float32, copy=False)
     cos_raw = cosine_sim_matrix(q_vec, index.doc_vectors)
     cos_raw = (cos_raw + 1.0) / 2.0  # Scale from [-1, 1] to [0, 1]
     cos = minmax(cos_raw)  # Normalize to spread small differences
