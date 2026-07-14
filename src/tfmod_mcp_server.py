@@ -19,6 +19,8 @@ import os
 import re
 import sys
 import threading
+import time
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
@@ -34,7 +36,7 @@ from starlette.responses import JSONResponse
 
 import tfmod_registry_docs
 from tfmod_doc_grep import grep_document
-from tfmod_registry_docs import get_assembled_docs
+from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
     BGE_QUERY_INSTRUCTION,
@@ -1710,6 +1712,60 @@ def _is_loopback(host: str) -> bool:
         return ipaddress.ip_address(host).is_loopback
     except ValueError:
         return host.lower() == "localhost"
+
+
+UPDATE_CHECK_INTERVAL_HOURS = 24
+_UPDATE_CHECK_FALSY = {"", "0", "false", "no", "off"}
+_UPDATE_NOTICE_TEMPLATE = (
+    "tfmodsearch {latest} is available (this shared daemon runs {current}). "
+    "Ask the operator to update: bump the image tag in docker-compose.yml, "
+    "then docker compose pull && up -d."
+)
+# Replaced atomically (single assignment) by the checker thread; readers
+# (health route, tool wrappers) never see a torn value thanks to the GIL.
+_UPDATE_STATE: dict[str, Any] = {"latest_version": None, "update_available": False}
+
+
+def _update_check_enabled(env: Mapping[str, str]) -> bool:
+    """Kill switch: TFMODSEARCH_UPDATE_CHECK in the falsy set disables the check."""
+    return env.get("TFMODSEARCH_UPDATE_CHECK", "1").strip().lower() not in _UPDATE_CHECK_FALSY
+
+
+def _run_update_check_once(fetcher: Any = None) -> None:
+    """One check cycle: fetch latest from PyPI, compare, publish state, log.
+
+    Failures leave the previous state untouched (fetch returns None).
+    """
+    global _UPDATE_STATE
+    logger = logging.getLogger(__name__)
+    latest = fetch_latest_pypi_version(fetcher=fetcher) if fetcher else fetch_latest_pypi_version()
+    if latest is None:
+        logger.debug("Update check failed; keeping previous state")
+        return
+    newer = is_newer_version(latest, _SERVER_VERSION)
+    _UPDATE_STATE = {"latest_version": latest, "update_available": newer}
+    if newer:
+        logger.warning(_UPDATE_NOTICE_TEMPLATE.format(latest=latest, current=_SERVER_VERSION))
+
+
+def _update_notice() -> str | None:
+    """Agent-facing notice string, or None when no update is known."""
+    if _UPDATE_STATE["update_available"]:
+        return _UPDATE_NOTICE_TEMPLATE.format(latest=_UPDATE_STATE["latest_version"], current=_SERVER_VERSION)
+    return None
+
+
+def _start_update_checker_thread() -> threading.Thread:
+    """Daily update check in a daemon thread (HTTP mode only; see main())."""
+
+    def _loop() -> None:
+        while True:
+            _run_update_check_once()
+            time.sleep(UPDATE_CHECK_INTERVAL_HOURS * 3600)
+
+    thread = threading.Thread(target=_loop, name="tfmodsearch-update-check", daemon=True)
+    thread.start()
+    return thread
 
 
 def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:

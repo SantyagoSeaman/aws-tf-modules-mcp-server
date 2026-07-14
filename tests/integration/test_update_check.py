@@ -1,5 +1,11 @@
 """Update check: PyPI latest-version fetch and version comparison."""
 
+import tfmod_mcp_server
+from tfmod_mcp_server import (
+    _run_update_check_once,
+    _update_check_enabled,
+    _update_notice,
+)
 from tfmod_registry_docs import fetch_latest_pypi_version, is_newer_version
 
 
@@ -36,3 +42,50 @@ class TestFetchLatestPypiVersion:
     def test_garbage_payload_returns_none(self):
         assert fetch_latest_pypi_version(fetcher=lambda u, t: {"unexpected": True}) is None
         assert fetch_latest_pypi_version(fetcher=lambda u, t: {"info": {}}) is None
+
+
+def _reset_state():
+    tfmod_mcp_server._UPDATE_STATE = {"latest_version": None, "update_available": False}
+
+
+class TestUpdateCheckCycle:
+    def test_newer_version_sets_state_and_notice(self, monkeypatch):
+        _reset_state()
+        monkeypatch.setattr(tfmod_mcp_server, "_SERVER_VERSION", "0.16.0")
+        _run_update_check_once(fetcher=lambda u, t: {"info": {"version": "0.17.0"}})
+        assert tfmod_mcp_server._UPDATE_STATE == {"latest_version": "0.17.0", "update_available": True}
+        notice = _update_notice()
+        assert "0.17.0" in notice and "0.16.0" in notice
+        assert "docker compose pull" in notice
+
+    def test_up_to_date_sets_state_no_notice(self, monkeypatch):
+        _reset_state()
+        monkeypatch.setattr(tfmod_mcp_server, "_SERVER_VERSION", "0.17.0")
+        _run_update_check_once(fetcher=lambda u, t: {"info": {"version": "0.17.0"}})
+        assert tfmod_mcp_server._UPDATE_STATE == {"latest_version": "0.17.0", "update_available": False}
+        assert _update_notice() is None
+
+    def test_failure_keeps_previous_state(self, monkeypatch):
+        _reset_state()
+        monkeypatch.setattr(tfmod_mcp_server, "_SERVER_VERSION", "0.16.0")
+        _run_update_check_once(fetcher=lambda u, t: {"info": {"version": "0.17.0"}})
+        before = dict(tfmod_mcp_server._UPDATE_STATE)
+
+        def failing(u, t):
+            raise OSError("down")
+
+        _run_update_check_once(fetcher=failing)
+        assert tfmod_mcp_server._UPDATE_STATE == before
+
+
+class TestKillSwitch:
+    def test_default_enabled(self):
+        assert _update_check_enabled({}) is True
+
+    def test_falsy_values_disable(self):
+        for v in ("0", "false", "no", "off", "FALSE", "Off", ""):
+            assert _update_check_enabled({"TFMODSEARCH_UPDATE_CHECK": v}) is False, v
+
+    def test_truthy_values_enable(self):
+        for v in ("1", "true", "yes", "on"):
+            assert _update_check_enabled({"TFMODSEARCH_UPDATE_CHECK": v}) is True, v
