@@ -13,7 +13,7 @@ dependencies = [
     "sentence-transformers>=5.2.0"
 ]
 authors = [
-    {name = "Alexander Makeev", email = "makeev.alex@gmail.com"},
+    {name = "Alexander Makeev", email = "3143242+SantyagoSeaman@users.noreply.github.com"},
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",
