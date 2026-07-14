@@ -178,12 +178,15 @@ and server).
   toolchain. If a python-free launcher is wanted, ship `sh` + a `.cmd` twin instead.
 - **Third mode (0.18.0): `TFMODSEARCH_URL`** — stdio proxy to a shared HTTP daemon. Set
   `TFMODSEARCH_URL=1` for the default `http://127.0.0.1:8765/mcp`, or a full URL for a custom
-  target. The launcher health-checks the daemon's `/health` endpoint first (3 second timeout); if
-  it does not respond, the launcher falls back to the normal local uvx/Docker path with a stderr
-  warning instead of failing the session. When set, this mode takes precedence over
-  `TFMODSEARCH_DOCKER`. Under the hood it execs `uvx tfmodsearch --proxy-url <url>`, which loads
-  no index and no embedding model — the daemon owns both. This is the recommended way for plugin
-  users to point at a shared daemon without losing the plugin's skills and subagents.
+  target (a bare origin like `http://127.0.0.1:8765` gets `/mcp` appended automatically). The
+  launcher checks that uvx is on PATH and health-checks the daemon's `/health` endpoint first
+  (3 second timeout); if either check fails, it falls back to the normal local uvx/Docker path
+  with a stderr warning instead of failing the session. When set, this mode takes precedence over
+  `TFMODSEARCH_DOCKER`. Under the hood it execs `uvx --from "tfmodsearch>=0.18.0" tfmodsearch
+  --proxy-url <url>` (version floor: older releases lack the flag), which dispatches through the
+  torch-free `tfmod_entry` path — no index, no embedding model, ~90 MB RSS and sub-second startup
+  per session; the daemon owns the heavy parts. This is the recommended way for plugin users to
+  point at a shared daemon without losing the plugin's skills and subagents.
 - README: document the default (local uvx, unchanged), the `TFMODSEARCH_DOCKER=1` opt-in, the
   `TFMODSEARCH_URL` proxy opt-in, the Docker prerequisite, and the offline / no-network-at-runtime
   property of the image.

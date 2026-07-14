@@ -252,6 +252,40 @@ pull-size complaint or the next natural window.
   verified in **both** modes + `--network none --warmup` + one real `search_modules` through
   HTTP; image size measured and recorded in the CHANGELOG entry.
 
+## Post-review addendum (blind review round, 2026-07-14)
+
+The blind persona review found three majors, all fixed before merge:
+
+1. **The proxy was not actually lightweight.** `--proxy-url` was handled inside
+   `tfmod_mcp_server.main()`, but that module's top-level imports pull the ML stack —
+   measured ~5-9 s and ~380-460 MB RSS per proxy process, versus the "sub-second, tens of MB"
+   this spec promised. Fix: the console entry point now goes through an import-light
+   dispatcher (`tfmod_entry`), which routes `--proxy-url` to `tfmod_proxy` +
+   `tfmod_server_args` (argument parsing moved there) without ever importing
+   `tfmod_mcp_server`/`tfmod_search_lib`. Measured after the fix: **~0.8 s, ~90 MB RSS**
+   (fastmcp itself is the floor). Guarded by a subprocess import test
+   (`tests/integration/test_proxy_light_imports.py`) and a dispatcher e2e with a 10 s
+   startup bound.
+2. **Bare-origin URL passed preflight, then died post-exec.** `TFMODSEARCH_URL=
+   http://127.0.0.1:8765` (no `/mcp` path) passed the `/health` preflight but the proxy then
+   failed against the root path, after the exec — past the fallback point. Fix: the launcher
+   defaults the path to `/mcp` for http(s) URLs with an empty path; other schemes still fail
+   the preflight and fall back gracefully.
+3. **No uvx-on-PATH guard.** The Docker path checks `shutil.which("docker")` but the proxy
+   path exec-ed uvx unguarded — a Docker-mode user without uv got a traceback and a dead
+   server. Fix: missing uvx now falls back to the local path with the same
+   warn-and-fall-back pattern.
+
+Also fixed from the spec-anchored (Opus) review: the `TFMODSEARCH_URL`-over-
+`TFMODSEARCH_DOCKER` precedence notice now prints only when the proxy actually launches
+(on fallback, `select_backend` genuinely honors `TFMODSEARCH_DOCKER`); plus a launcher
+version floor `uvx --from "tfmodsearch>=0.18.0"` so a stale uv cache cannot resolve a
+release that lacks `--proxy-url`.
+
+Accepted residual risks (documented in README, not mitigated): post-exec uv resolution
+failure (offline machine, PyPI outage) has no fallback; sessions started during the daemon's
+warm-up window fall back to a full local server for that session.
+
 ## Acceptance criteria
 
 1. Plugin user with a running daemon sets `TFMODSEARCH_URL=1`, restarts Claude Code: skills

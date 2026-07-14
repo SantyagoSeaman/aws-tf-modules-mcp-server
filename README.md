@@ -222,10 +222,16 @@ auto-search workflow all keep working, and the 600 MB model loads only once, in 
 { "env": { "TFMODSEARCH_URL": "http://127.0.0.1:9000/mcp" } }
 ```
 
-The launcher health-checks the daemon first (3 s): if it is not responding, it falls back to
-the normal local server with a stderr warning, so a stopped daemon never breaks the session.
-`TFMODSEARCH_URL` takes precedence over `TFMODSEARCH_DOCKER`. Rollback: unset the var.
-Any MCP client can use the same mode without the plugin: `tfmodsearch --proxy-url <url>`.
+The launcher health-checks the daemon first (3 s): if it is not responding — including while
+the daemon is still warming up after a restart — the session falls back to the normal local
+server with a stderr warning, so a stopped daemon never breaks the session (that fallback pays
+the full local model load; retry once the daemon reports healthy). A bare origin like
+`http://127.0.0.1:8765` works too — the `/mcp` path is added automatically. The proxy runs via
+`uvx --from "tfmodsearch>=0.18.0"`, so uv must be able to resolve that release (first use needs
+network or a warm uv cache). Point `TFMODSEARCH_URL` only at a daemon you trust: the proxy
+forwards every tool call there verbatim. `TFMODSEARCH_URL` takes precedence over
+`TFMODSEARCH_DOCKER`. Rollback: unset the var. Any MCP client can use the same mode without
+the plugin: `tfmodsearch --proxy-url <url>`.
 
 **Migrating from the plugin (plugin-less setups)**: if you do not want the plugin at all, make
 sure only one `tfmod-search` server is registered. Disable the plugin, then add the HTTP entry:
