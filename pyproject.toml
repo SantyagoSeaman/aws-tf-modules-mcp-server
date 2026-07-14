@@ -104,9 +104,10 @@ ignore = [
 known-first-party = ["tfmod_search_lib", "tfmod_mcp_server", "tfmod_search_cli", "tfmod_doc_grep", "tfmod_registry_docs"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests legitimately use assert (S101) and spawn the packaged server as a
-# subprocess in e2e checks (S603/S607).
-"tests/**" = ["S101", "S603", "S607"]
+# Tests legitimately use assert (S101), spawn the packaged server as a
+# subprocess in e2e checks (S603/S607), and exercise the non-loopback
+# --host/--transport http code paths with the literal 0.0.0.0 (S104).
+"tests/**" = ["S101", "S603", "S607", "S104"]
 
 [[tool.mypy.overrides]]
 module = "tests.*"
