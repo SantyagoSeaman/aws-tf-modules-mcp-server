@@ -129,10 +129,12 @@ config.yaml key (YAGNI).
 - **Integration**: checker cycle with injected fetcher — state transition, single-WARNING
   behavior, failure keeps previous state.
 - **E2E**: the existing HTTP e2e suite runs with `TFMODSEARCH_UPDATE_CHECK=0` so it stays
-  offline and deterministic. One new e2e asserts the no-first-result state: daemon up, checker
-  enabled but no successful check yet → `/health` shows `latest_version: null`,
-  `update_available: false`, and tool responses carry no `update_notice`. A live check against
-  real PyPI is opt-in under `RUN_REGISTRY_BENCHMARK=1`.
+  offline and deterministic; the same run asserts the disabled-state observables (`/health`
+  shows `latest_version: null` / `update_available: false`, tool responses carry no
+  `update_notice`) — covering AC-3 end to end. The enabled path is covered at the integration
+  level with an injected fetcher (deterministic; a real-network "no successful check yet" e2e
+  would race the first startup check). A live check against real PyPI is opt-in under
+  `RUN_REGISTRY_BENCHMARK=1`.
 
 ## 7. Risks / notes
 
