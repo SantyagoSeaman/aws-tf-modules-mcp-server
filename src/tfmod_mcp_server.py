@@ -2058,7 +2058,9 @@ def main() -> None:
             logger = setup_logging("startup.log", log_level=args.log_level)
             logger.info("=" * 80)
             logger.info(f"Proxy mode: forwarding stdio to {args.proxy_url}")
-            proxy = FastMCP.as_proxy(args.proxy_url)
+            from fastmcp.server import create_proxy
+
+            proxy = create_proxy(args.proxy_url)
             proxy.run(transport="stdio")
             return
 
