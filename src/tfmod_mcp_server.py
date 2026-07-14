@@ -35,12 +35,16 @@ from pydantic.json_schema import JsonSchemaValue
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
+# parse_arguments lives in the import-light tfmod_server_args module so the
+# proxy entry path (tfmod_entry) can use it without pulling the ML stack;
+# re-exported here for backward compatibility (tests and external callers).
+from tfmod_server_args import _env_default, parse_arguments  # noqa: E402, F401
+
 import tfmod_registry_docs
 from tfmod_doc_grep import grep_document
 from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
-    BGE_QUERY_INSTRUCTION,
     SearchIndex,
     compute_scores,
     extract_description,
@@ -1768,12 +1772,6 @@ def grep_module_docs(
 # -----------------------------
 
 
-def _env_default(name: str, fallback: str) -> str:
-    """Environment fallback for a CLI default (empty/unset -> fallback)."""
-    value = os.environ.get(name, "").strip()
-    return value if value else fallback
-
-
 def _is_loopback(host: str) -> bool:
     """True when host is a loopback address or the literal localhost."""
     try:
@@ -1840,75 +1838,6 @@ def _start_update_checker_thread() -> threading.Thread:
     thread = threading.Thread(target=_loop, name="tfmodsearch-update-check", daemon=True)
     thread.start()
     return thread
-
-
-def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
-    """
-    Parse and return command-line arguments.
-
-    Returns:
-        Parsed command-line arguments
-    """
-    parser = argparse.ArgumentParser(
-        description="TFModSearch MCP Server - Terraform module search over stdio",
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
-    )
-    parser.add_argument(
-        "--index_path",
-        type=str,
-        help="Path to the search index file (.pkl). Defaults to './model/tfmod_e5_small_index.pkl'",
-    )
-    parser.add_argument("--config", type=str, default="config.yaml", help="Path to YAML config file")
-    parser.add_argument(
-        "--log_level",
-        type=str,
-        default="INFO",
-        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default: INFO)",
-    )
-    parser.add_argument("--w_kw", type=float, help="Override weight for keyword matching")
-    parser.add_argument("--w_exact", type=float, help="Override weight for exact module name match")
-    parser.add_argument("--w_bm25", type=float, help="Override weight for BM25 text relevance")
-    parser.add_argument("--w_sem", type=float, help="Override weight for semantic similarity")
-    parser.add_argument(
-        "--query-instruction",
-        dest="query_instruction",
-        type=str,
-        default=None,
-        help=f"Optional query instruction prefix for BGE models. Use '{BGE_QUERY_INSTRUCTION}' for improved short query retrieval",
-    )
-    parser.add_argument(
-        "--warmup",
-        action="store_true",
-        help="Load the index and embedding model (downloading the model if needed), run a test query, and exit",
-    )
-    parser.add_argument(
-        "--transport",
-        type=str,
-        choices=["stdio", "http"],
-        default=_env_default("TFMODSEARCH_TRANSPORT", "stdio"),
-        help="MCP transport: stdio (default, one process per client) or http "
-        "(streamable HTTP shared instance at /mcp). Env fallback: TFMODSEARCH_TRANSPORT",
-    )
-    parser.add_argument(
-        "--host",
-        type=str,
-        default=_env_default("TFMODSEARCH_HOST", "127.0.0.1"),
-        help="Bind address for --transport http. Env fallback: TFMODSEARCH_HOST",
-    )
-    parser.add_argument(
-        "--port",
-        type=int,
-        default=_env_default("TFMODSEARCH_PORT", "8765"),
-        help="Bind port for --transport http. Env fallback: TFMODSEARCH_PORT",
-    )
-
-    args = parser.parse_args(argv)
-    # argparse does not validate string defaults against choices, so a bad
-    # TFMODSEARCH_TRANSPORT value would otherwise slip through silently.
-    if args.transport not in ("stdio", "http"):
-        parser.error(f"invalid transport {args.transport!r} (check TFMODSEARCH_TRANSPORT): choose stdio or http")
-    return args
 
 
 def resolve_config_path(config_arg: str) -> Path | None:
@@ -2028,11 +1957,22 @@ def main() -> None:
     """Main entry point for the MCP server."""
     logger = None
     try:
-        # Initialize NLTK before any operations
-        initialize_nltk()
-
-        # Parse command-line arguments first (needed for config path)
+        # Parse command-line arguments first (needed for config path, and so
+        # proxy mode can exit before any index/model/NLTK initialization).
         args = parse_arguments()
+
+        if args.proxy_url:
+            # Lightweight stdio->HTTP forwarder: no NLTK, no config, no index,
+            # no embedding model. The daemon at proxy_url owns all of that.
+            # (The truly light path is tfmod_entry, which dispatches here-equivalent
+            # logic without ever importing this module and its ML stack.)
+            from tfmod_proxy import run_proxy
+
+            run_proxy(args.proxy_url, log_level=args.log_level)
+            return
+
+        # Initialize NLTK before any search operations
+        initialize_nltk()
 
         # Load log level from config with CLI override
         config_path = Path(args.config) if args.config else None

@@ -9,7 +9,7 @@
 # container the server must bind 0.0.0.0 or the published port is unreachable.
 services:
   tfmodsearch-http:
-    image: ghcr.io/santyagoseaman/tfmodsearch:0.17.0
+    image: ghcr.io/santyagoseaman/tfmodsearch:0.18.0
     container_name: tfmodsearch-http
     restart: unless-stopped
     ports:

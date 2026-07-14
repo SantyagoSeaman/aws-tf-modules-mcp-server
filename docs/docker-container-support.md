@@ -156,7 +156,7 @@ revisit if/when Codex CLI fixes plugin-root interpolation.
 #!/usr/bin/env python3
 import os, sys
 if os.environ.get("TFMODSEARCH_DOCKER", "0") != "0":
-    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.17.0")
+    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.18.0")
     os.execvp("docker", ["docker", "run", "-i", "--rm", img])   # opt-in
 else:
     os.execvp("uvx", ["uvx", "tfmodsearch", *sys.argv[1:]])      # DEFAULT (local, unchanged)
@@ -176,8 +176,20 @@ and server).
 - **Portability:** python launcher chosen over a shell script so it works uniformly on
   macOS/Linux/Windows (no exec-bit / shebang / `.cmd` split). `python3` is already implied by the
   toolchain. If a python-free launcher is wanted, ship `sh` + a `.cmd` twin instead.
+- **Third mode (0.18.0): `TFMODSEARCH_URL`** — stdio proxy to a shared HTTP daemon. Set
+  `TFMODSEARCH_URL=1` for the default `http://127.0.0.1:8765/mcp`, or a full URL for a custom
+  target (a bare origin like `http://127.0.0.1:8765` gets `/mcp` appended automatically). The
+  launcher checks that uvx is on PATH and health-checks the daemon's `/health` endpoint first
+  (3 second timeout); if either check fails, it falls back to the normal local uvx/Docker path
+  with a stderr warning instead of failing the session. When set, this mode takes precedence over
+  `TFMODSEARCH_DOCKER`. Under the hood it execs `uvx --from "tfmodsearch>=0.18.0" tfmodsearch
+  --proxy-url <url>` (version floor: older releases lack the flag), which dispatches through the
+  torch-free `tfmod_entry` path — no index, no embedding model, ~90 MB RSS and sub-second startup
+  per session; the daemon owns the heavy parts. This is the recommended way for plugin users to
+  point at a shared daemon without losing the plugin's skills and subagents.
 - README: document the default (local uvx, unchanged), the `TFMODSEARCH_DOCKER=1` opt-in, the
-  Docker prerequisite, and the offline / no-network-at-runtime property of the image.
+  `TFMODSEARCH_URL` proxy opt-in, the Docker prerequisite, and the offline / no-network-at-runtime
+  property of the image.
 
 ## 5. Dockerfile skeleton (starting point — refine)
 
@@ -322,7 +334,7 @@ argv passed to the same `ENTRYPOINT ["tfmodsearch"]`.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.17.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.18.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -332,6 +344,10 @@ port mapping, `restart: unless-stopped`, a healthcheck against `/health`, and a 
 ```bash
 docker compose up -d
 ```
+
+**Plugin users**: do not disable the plugin to reach this daemon — set `TFMODSEARCH_URL=1` (see
+§4.6) and the plugin's bundled launcher becomes a stdio proxy to it, keeping the skills and
+subagents working.
 
 **DNS-rebinding guard**: the server runs HTTP mode with FastMCP `host_origin_protection="auto"` —
 browser-initiated cross-origin requests to `/mcp` (a foreign `Origin` header) are rejected with

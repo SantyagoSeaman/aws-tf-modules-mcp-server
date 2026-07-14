@@ -61,3 +61,32 @@ def test_is_loopback_false_cases():
     assert not _is_loopback("0.0.0.0")
     assert not _is_loopback("192.168.1.10")
     assert not _is_loopback("example.com")
+
+
+def test_proxy_url_default_is_none():
+    args = parse_arguments([])
+    assert args.proxy_url is None
+
+
+def test_proxy_url_accepted_and_forces_stdio():
+    args = parse_arguments(["--proxy-url", "http://127.0.0.1:8765/mcp"])
+    assert args.proxy_url == "http://127.0.0.1:8765/mcp"
+    assert args.transport == "stdio"
+
+
+def test_proxy_url_overrides_env_transport(monkeypatch):
+    # A globally exported TFMODSEARCH_TRANSPORT=http must not break proxy mode:
+    # the env fallback is ignored, only an EXPLICIT --transport http conflicts.
+    monkeypatch.setenv("TFMODSEARCH_TRANSPORT", "http")
+    args = parse_arguments(["--proxy-url", "http://127.0.0.1:8765/mcp"])
+    assert args.transport == "stdio"
+
+
+def test_proxy_url_conflicts_with_explicit_http_transport():
+    with pytest.raises(SystemExit):
+        parse_arguments(["--proxy-url", "http://127.0.0.1:8765/mcp", "--transport", "http"])
+
+
+def test_proxy_url_conflicts_with_warmup():
+    with pytest.raises(SystemExit):
+        parse_arguments(["--proxy-url", "http://127.0.0.1:8765/mcp", "--warmup"])
