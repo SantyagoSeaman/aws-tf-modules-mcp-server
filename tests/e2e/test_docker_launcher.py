@@ -138,3 +138,74 @@ def test_main_warns_and_falls_back_when_docker_missing(monkeypatch, capsys):
 
     assert calls == [("uvx", ["uvx", "tfmodsearch", "--warmup"])]
     assert "not on PATH" in capsys.readouterr().err
+
+
+# --- TFMODSEARCH_URL proxy mode (0.18.0) ---
+
+
+@pytest.mark.e2e
+def test_resolve_proxy_url_unset_and_falsy_return_none():
+    for env in ({}, {"TFMODSEARCH_URL": ""}, {"TFMODSEARCH_URL": "0"}, {"TFMODSEARCH_URL": "off"}):
+        assert launcher.resolve_proxy_url(env) is None
+
+
+@pytest.mark.e2e
+@pytest.mark.parametrize("value", ["1", "true", "True", "yes", "on", " 1 "])
+def test_resolve_proxy_url_truthy_shorthand_gives_default(value):
+    assert launcher.resolve_proxy_url({"TFMODSEARCH_URL": value}) == launcher.DEFAULT_PROXY_URL
+
+
+@pytest.mark.e2e
+def test_resolve_proxy_url_full_url_passes_through():
+    url = "http://127.0.0.1:9000/mcp"
+    assert launcher.resolve_proxy_url({"TFMODSEARCH_URL": url}) == url
+
+
+@pytest.mark.e2e
+def test_health_url_for_replaces_path():
+    assert launcher.health_url_for("http://127.0.0.1:9000/mcp") == "http://127.0.0.1:9000/health"
+    assert launcher.health_url_for(launcher.DEFAULT_PROXY_URL) == "http://127.0.0.1:8765/health"
+
+
+@pytest.mark.e2e
+def test_daemon_healthy_true_on_200_false_otherwise():
+    assert launcher.daemon_healthy("http://x/health", fetcher=lambda u, t: 200) is True
+    assert launcher.daemon_healthy("http://x/health", fetcher=lambda u, t: 503) is False
+
+    def boom(u, t):
+        raise OSError("refused")
+
+    assert launcher.daemon_healthy("http://x/health", fetcher=boom) is False
+
+
+@pytest.mark.e2e
+def test_main_proxy_healthy_execs_proxy(monkeypatch):
+    calls = []
+    monkeypatch.setattr(launcher.os, "execvp", lambda cmd, argv: calls.append((cmd, argv)))
+    monkeypatch.setattr(launcher, "daemon_healthy", lambda url: True)
+    monkeypatch.setattr(launcher.sys, "argv", ["tfmodsearch_launch.py"])
+    launcher.main(env={"TFMODSEARCH_URL": "1"})
+    assert calls == [("uvx", ["uvx", "tfmodsearch", "--proxy-url", launcher.DEFAULT_PROXY_URL])]
+
+
+@pytest.mark.e2e
+def test_main_proxy_precedence_notice_over_docker(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(launcher.os, "execvp", lambda cmd, argv: calls.append((cmd, argv)))
+    monkeypatch.setattr(launcher, "daemon_healthy", lambda url: True)
+    monkeypatch.setattr(launcher.sys, "argv", ["tfmodsearch_launch.py"])
+    launcher.main(env={"TFMODSEARCH_URL": "1", "TFMODSEARCH_DOCKER": "1"})
+    assert "TFMODSEARCH_URL takes precedence" in capsys.readouterr().err
+    assert calls[0][0] == "uvx"
+    assert "--proxy-url" in calls[0][1]
+
+
+@pytest.mark.e2e
+def test_main_proxy_unhealthy_falls_back_to_local(monkeypatch, capsys):
+    calls = []
+    monkeypatch.setattr(launcher.os, "execvp", lambda cmd, argv: calls.append((cmd, argv)))
+    monkeypatch.setattr(launcher, "daemon_healthy", lambda url: False)
+    monkeypatch.setattr(launcher.sys, "argv", ["tfmodsearch_launch.py"])
+    launcher.main(env={"TFMODSEARCH_URL": "http://127.0.0.1:9999/mcp"})
+    assert "not responding" in capsys.readouterr().err
+    assert calls == [("uvx", ["uvx", "tfmodsearch"])]
