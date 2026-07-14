@@ -1902,12 +1902,32 @@ def parse_arguments(argv: list[str] | None = None) -> argparse.Namespace:
         default=_env_default("TFMODSEARCH_PORT", "8765"),
         help="Bind port for --transport http. Env fallback: TFMODSEARCH_PORT",
     )
+    parser.add_argument(
+        "--proxy-url",
+        dest="proxy_url",
+        type=str,
+        default=None,
+        help="Run as a stdio proxy forwarding to a remote streamable HTTP MCP server "
+        "(e.g. http://127.0.0.1:8765/mcp). Implies stdio; loads no index and no "
+        "embedding model. Index/weight flags are accepted but ignored in this mode.",
+    )
 
     args = parser.parse_args(argv)
     # argparse does not validate string defaults against choices, so a bad
     # TFMODSEARCH_TRANSPORT value would otherwise slip through silently.
     if args.transport not in ("stdio", "http"):
         parser.error(f"invalid transport {args.transport!r} (check TFMODSEARCH_TRANSPORT): choose stdio or http")
+    if args.proxy_url:
+        # Only an explicit CLI --transport http is a real conflict; an env-derived
+        # http fallback (TFMODSEARCH_TRANSPORT exported globally) is silently
+        # overridden because the proxy is by definition a stdio-side helper.
+        cli_argv = sys.argv[1:] if argv is None else argv
+        transport_given_explicitly = any(a == "--transport" or a.startswith("--transport=") for a in cli_argv)
+        if transport_given_explicitly and args.transport == "http":
+            parser.error("--proxy-url runs a stdio-side proxy and cannot be combined with --transport http")
+        if args.warmup:
+            parser.error("--proxy-url loads no model, so there is nothing to warm up; drop --warmup")
+        args.transport = "stdio"
     return args
 
 
@@ -2028,11 +2048,22 @@ def main() -> None:
     """Main entry point for the MCP server."""
     logger = None
     try:
-        # Initialize NLTK before any operations
-        initialize_nltk()
-
-        # Parse command-line arguments first (needed for config path)
+        # Parse command-line arguments first (needed for config path, and so
+        # proxy mode can exit before any index/model/NLTK initialization).
         args = parse_arguments()
+
+        if args.proxy_url:
+            # Lightweight stdio->HTTP forwarder: no NLTK, no config, no index,
+            # no embedding model. The daemon at proxy_url owns all of that.
+            logger = setup_logging("startup.log", log_level=args.log_level)
+            logger.info("=" * 80)
+            logger.info(f"Proxy mode: forwarding stdio to {args.proxy_url}")
+            proxy = FastMCP.as_proxy(args.proxy_url)
+            proxy.run(transport="stdio")
+            return
+
+        # Initialize NLTK before any search operations
+        initialize_nltk()
 
         # Load log level from config with CLI override
         config_path = Path(args.config) if args.config else None
