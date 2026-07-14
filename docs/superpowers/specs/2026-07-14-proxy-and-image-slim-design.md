@@ -191,8 +191,11 @@ Root causes, in order of leverage:
    `COPY --from=builder --chown=app:app`. (The `mkdir` + `chown` for the two writable dirs
    `site-packages/nltk_data` and `logs` stays — those are empty, cost nothing.)
    **Saves 150 MB.**
-2. In the builder stage, after `pip install`, delete `torch/test`, `torch/include`,
-   `torch/bin` (and re-run the existing `__pycache__` sweep). **Saves ~200 MB.**
+2. In the builder stage, after `pip install`, delete `torch/test` and `torch/include`
+   (and re-run the existing `__pycache__` sweep). **Saves ~150 MB.**
+   *(Implementation finding: `torch/bin` is NOT removable — `torch/__init__.py`
+   unconditionally resolves `torch/bin/torch_shm_manager` at import time and raises
+   `RuntimeError` without it. The original ~200 MB estimate included it.)*
    Guard: the release gate already runs `docker run --network none -i --rm <rc> --warmup`
    plus a real HTTP-mode tool call — both would catch a missing-file import error. Add one
    explicit smoke assertion to the checklist: a `search_modules` call against the slimmed rc
@@ -201,7 +204,8 @@ Root causes, in order of leverage:
    dependencies with plausible import-time coupling; savings (~200 MB) do not justify the
    fragility without the Tier 2 restructuring.
 
-Expected result: **~1.69 → ~1.34 GB uncompressed; pull ~600 → ~450-480 MB.**
+Expected result: **~1.69 → 1.42 GB uncompressed (measured on the rc build); pull
+~600 → ~430-500 MB (estimate, verified at release).**
 
 ### Tier 2 — investigate separately (not in 0.18.0): ONNX encode path
 
@@ -259,5 +263,6 @@ pull-size complaint or the next natural window.
    without the plugin.
 4. `--proxy-url --transport http` and `--proxy-url --warmup` fail fast with clear errors.
 5. Image: both transports work from the slimmed image; offline warmup passes; uncompressed
-   size ≤ 1.4 GB and pull size ≤ 500 MB on both architectures.
+   size ≤ 1.45 GB and pull size ≤ 500 MB on both architectures (revised from 1.4 GB after
+   the torch/bin finding above).
 6. stdio default path (no env vars set) remains byte-identical in behavior to 0.17.0.
