@@ -153,13 +153,14 @@ async def health(request: Request) -> JSONResponse:
         state = ServerStateManager.get()
     except RuntimeError:
         return JSONResponse({"status": "initializing"}, status_code=503)
+    update_state = _UPDATE_STATE  # local snapshot: both keys come from one consistent dict
     return JSONResponse(
         {
             "status": "ok",
             "version": _SERVER_VERSION,
             "modules": len(state.index.docs),
-            "latest_version": _UPDATE_STATE["latest_version"],
-            "update_available": _UPDATE_STATE["update_available"],
+            "latest_version": update_state["latest_version"],
+            "update_available": update_state["update_available"],
         }
     )
 
@@ -1785,8 +1786,9 @@ def _run_update_check_once(fetcher: Any = None) -> None:
 
 def _update_notice() -> str | None:
     """Agent-facing notice string, or None when no update is known."""
-    if _UPDATE_STATE["update_available"]:
-        return _UPDATE_NOTICE_TEMPLATE.format(latest=_UPDATE_STATE["latest_version"], current=_SERVER_VERSION)
+    state = _UPDATE_STATE  # local snapshot: both keys come from one consistent dict
+    if state["update_available"]:
+        return _UPDATE_NOTICE_TEMPLATE.format(latest=state["latest_version"], current=_SERVER_VERSION)
     return None
 
 
@@ -1795,7 +1797,12 @@ def _start_update_checker_thread() -> threading.Thread:
 
     def _loop() -> None:
         while True:
-            _run_update_check_once()
+            try:
+                _run_update_check_once()
+            except Exception:
+                # The check must never kill the thread for the daemon lifetime;
+                # a failed cycle is retried on the next one.
+                logging.getLogger(__name__).debug("Update check cycle failed", exc_info=True)
             time.sleep(UPDATE_CHECK_INTERVAL_HOURS * 3600)
 
     thread = threading.Thread(target=_loop, name="tfmodsearch-update-check", daemon=True)
