@@ -67,3 +67,15 @@ def test_http_fetch_rejects_non_https(monkeypatch):
     monkeypatch.setattr(rd, "REGISTRY_API_BASE", "http://insecure.example/v1/modules")
     with pytest.raises(ValueError, match="non-https"):
         rd._http_fetch("terraform-aws-modules", "vpc", "aws", None)
+
+
+def test_write_cache_entry_is_atomic_and_leaves_no_tmp(tmp_path):
+    from tfmod_registry_docs import _write_cache_entry
+
+    target = tmp_path / "ns--name--prov--1.0.0.json"
+    _write_cache_entry(target, {"document": "x", "fetched_at": 0})
+
+    assert target.exists()
+    assert json.loads(target.read_text())["document"] == "x"
+    leftovers = [p for p in tmp_path.iterdir() if p.name != target.name]
+    assert leftovers == [], f"temp files left behind: {leftovers}"
