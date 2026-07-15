@@ -1092,7 +1092,7 @@ def filter_module_sections(
                 if _extract_interface_h3(block, {key}):
                     fallback_keys.add(key)
                     matched = True
-        if not matched:
+        if not matched and key not in silent_keys:
             unmatched.append(entry)
 
     parts = [preamble.rstrip()] if preamble.strip() else []

@@ -473,6 +473,20 @@ def test_inputs_root_scope_excludes_submodule():
     assert "root_out" not in out
 
 
+def test_silent_keys_suppress_not_found():
+    doc = (
+        "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+        "## Description\n\nd\n\n## Submodule 1: only\n\n### Main Input Variables\n\n| V | T |\n|---|---|\n| `a` | `s` |\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    # 'features' absent here; as a silent key it must not appear in "not found"
+    out = filter_module_sections(doc, ["features"], silent_keys=frozenset({"features"}))
+    assert "Requested sections not found" not in out
+    # without silent_keys, it IS reported
+    out2 = filter_module_sections(doc, ["features"])
+    assert "Requested sections not found: features" in out2
+
+
 class TestSubmoduleAddress:
     """A3: get_module accepts a submodule address and returns a scoped head."""
 
