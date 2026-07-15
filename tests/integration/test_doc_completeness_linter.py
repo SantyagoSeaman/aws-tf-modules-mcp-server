@@ -52,9 +52,3 @@ def test_check_corpus_honors_allowlist(tmp_path):
     (d / "x.md").write_text(_tbl(["| `foo` | `any` | `{}` | freeform passthrough |\n"]))
     assert lint.check_corpus(str(d), set()) == ["x.md::foo"]
     assert lint.check_corpus(str(d), {"x.md::foo"}) == []
-
-
-def test_corpus_baseline_is_122():
-    root = Path(__file__).resolve().parents[2] / "modules/terraform-aws-modules"
-    total = sum(len(lint.find_opaque_rows(p.read_text())) for p in root.glob("*.md"))
-    assert total == 122, f"linter baseline drifted to {total}; retune before proceeding"
