@@ -20,20 +20,22 @@ Exports:
 
 import logging
 import math
+import os
 import pickle
 import re
 import sys
 import threading
 from collections import defaultdict
+from collections.abc import Mapping
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any
 
 import nltk
 import numpy as np
 from nltk.tokenize import word_tokenize
 from rank_bm25 import BM25Okapi
-from sentence_transformers import SentenceTransformer
 
 
 # Project root detection: handles both development (src/) and installed package layouts
@@ -57,8 +59,11 @@ def _detect_project_root() -> Path:
 _PROJECT_ROOT = _detect_project_root()
 _NLTK_DATA_DIR = _PROJECT_ROOT / "nltk_data"
 
-# Model cache to avoid reloading SentenceTransformer on every query
-_MODEL_CACHE: dict[str, SentenceTransformer] = {}
+# Model cache to avoid reloading the embedding model on every query.
+# Values are SentenceTransformer instances (torch backend) or Encoder-protocol
+# instances (torch/onnx via _get_encoder); typed loosely so this module imports
+# cleanly without sentence_transformers installed.
+_MODEL_CACHE: dict[str, Any] = {}
 
 # Serializes model construction AND SentenceTransformer.encode(), neither of
 # which is guaranteed thread-safe. Only matters for the HTTP transport, where
@@ -74,7 +79,7 @@ DEFAULT_MODEL_NAME = "intfloat/e5-small-v2"
 BGE_QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 
 
-def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> SentenceTransformer:
+def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> Any:
     """
     Get or load a SentenceTransformer model with caching.
 
@@ -103,6 +108,8 @@ def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> Senten
     """
     with _MODEL_LOCK:
         if model_name not in _MODEL_CACHE:
+            from sentence_transformers import SentenceTransformer  # lazy: keeps this module importable without torch
+
             logger.debug(f"Loading SentenceTransformer model: {model_name} (not in cache)")
             _MODEL_CACHE[model_name] = SentenceTransformer(model_name, device="cpu")
             logger.debug(f"Model {model_name} loaded and cached")
@@ -110,6 +117,66 @@ def _get_sentence_transformer(model_name: str, logger: logging.Logger) -> Senten
             logger.debug(f"Using cached SentenceTransformer model: {model_name}")
 
         return _MODEL_CACHE[model_name]
+
+
+def _resolve_backend(env: Mapping[str, str] | None = None) -> str:
+    """Pick the embedding backend: TFMODSEARCH_EMBED_BACKEND = auto|torch|onnx."""
+    if env is None:
+        env = os.environ
+    backend = env.get("TFMODSEARCH_EMBED_BACKEND", "auto").strip().lower() or "auto"
+    if backend not in ("auto", "torch", "onnx"):
+        raise ValueError(f"invalid TFMODSEARCH_EMBED_BACKEND {backend!r}: choose auto, torch, or onnx")
+    if backend != "auto":
+        return backend
+    try:
+        import sentence_transformers  # noqa: F401
+
+        return "torch"
+    except ImportError:
+        pass
+    from tfmod_onnx_encoder import resolve_onnx_model_dir
+
+    if resolve_onnx_model_dir(project_root=_PROJECT_ROOT) is not None:
+        return "onnx"
+    raise RuntimeError(
+        "No embedding backend available: install sentence-transformers (torch backend) "
+        "or install tfmodsearch[onnx] and provide ONNX assets via TFMODSEARCH_ONNX_MODEL_DIR"
+    )
+
+
+class _TorchEncoder:
+    """Adapter giving SentenceTransformer the minimal Encoder interface."""
+
+    def __init__(self, model: Any):
+        self._model = model
+
+    def encode(self, texts: list[str], prompt: str | None = None) -> np.ndarray:
+        return self._model.encode(
+            texts, prompt=prompt, batch_size=64, convert_to_numpy=True, normalize_embeddings=True
+        ).astype(np.float32, copy=False)
+
+
+def _get_encoder(model_name: str, logger: logging.Logger) -> Any:
+    """Get a cached Encoder (torch or onnx, per TFMODSEARCH_EMBED_BACKEND) for model_name."""
+    backend = _resolve_backend()
+    cache_key = f"{backend}:{model_name}"
+    if backend == "torch":
+        if cache_key not in _MODEL_CACHE:
+            _MODEL_CACHE[cache_key] = _TorchEncoder(_get_sentence_transformer(model_name, logger))
+        return _MODEL_CACHE[cache_key]
+    with _MODEL_LOCK:
+        if cache_key not in _MODEL_CACHE:
+            from tfmod_onnx_encoder import OnnxEncoder, resolve_onnx_model_dir
+
+            model_dir = resolve_onnx_model_dir(project_root=_PROJECT_ROOT)
+            if model_dir is None:
+                raise RuntimeError(
+                    "TFMODSEARCH_EMBED_BACKEND=onnx but no ONNX assets found: set "
+                    "TFMODSEARCH_ONNX_MODEL_DIR to a dir containing model.onnx + tokenizer.json"
+                )
+            logger.info(f"Loading ONNX encoder from {model_dir}")
+            _MODEL_CACHE[cache_key] = OnnxEncoder(model_dir)
+        return _MODEL_CACHE[cache_key]
 
 
 def initialize_nltk() -> None:
@@ -801,13 +868,11 @@ def build_index(
     kw_idf = compute_kw_idf(docs)
     logger.info(f"Computed IDF for {len(kw_idf)} unique keywords")
 
-    logger.info(f"Loading sentence transformer model: {model_name}")
-    model = _get_sentence_transformer(model_name, logger)
+    logger.info(f"Loading embedding model: {model_name}")
+    encoder = _get_encoder(model_name, logger)
 
     logger.info(f"Generating semantic embeddings for {len(docs)} documents (this may take a few minutes)...")
-    doc_vecs = model.encode(
-        [d.text for d in docs], batch_size=64, convert_to_numpy=True, normalize_embeddings=True
-    ).astype(np.float32, copy=False)
+    doc_vecs = encoder.encode([d.text for d in docs])
     logger.info(f"Generated embeddings with shape {doc_vecs.shape}")
 
     module_names = [d.module_name for d in docs]
@@ -1008,16 +1073,14 @@ def compute_scores(
     bm = minmax(bm_raw)
 
     logger.debug("Generating query embedding and computing semantic similarity...")
-    # Use the same model as index (cached to avoid HTTP requests)
-    model = _get_sentence_transformer(index.model_name, logger)
+    # Use the same model as index (cached to avoid HTTP requests). Construction
+    # (if any) happens inside _get_encoder before this lock is taken, so the
+    # encode() call below is the only thing serialized here - no nested
+    # _MODEL_LOCK acquisition.
+    encoder = _get_encoder(index.model_name, logger)
     # Use prompt parameter for optional query instruction (e.g., for BGE models)
     with _MODEL_LOCK:
-        q_vec = model.encode(
-            [q],
-            prompt=query_instruction,
-            convert_to_numpy=True,
-            normalize_embeddings=True,
-        )[0].astype(np.float32, copy=False)
+        q_vec = encoder.encode([q], prompt=query_instruction)[0].astype(np.float32, copy=False)
     cos_raw = cosine_sim_matrix(q_vec, index.doc_vectors)
     cos_raw = (cos_raw + 1.0) / 2.0  # Scale from [-1, 1] to [0, 1]
     cos = minmax(cos_raw)  # Normalize to spread small differences
