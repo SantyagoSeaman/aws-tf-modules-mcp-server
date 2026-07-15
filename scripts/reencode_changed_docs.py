@@ -22,6 +22,7 @@ from tfmod_search_lib import (  # noqa: E402 -- sys.path must be set up first
     BM25Okapi,
     _get_encoder,
     compute_kw_idf,
+    initialize_nltk,
     load_index,
     parse_markdown_file,
     save_index,
@@ -35,6 +36,10 @@ def reencode(index_path: str, changed_paths: list[str], logger: logging.Logger) 
     Unchanged docs' `doc_vectors` rows are left byte-identical: this function
     never re-encodes or overwrites a row it did not match.
     """
+    # tokenize() needs the punkt_tab resource; prepend the project nltk_data to
+    # NLTK's search path exactly as the CLI/build path does, so this runs
+    # standalone (not only under a pytest session that already initialized it).
+    initialize_nltk()
     index = load_index(index_path, logger)
 
     changed_resolved = {Path(p).resolve() for p in changed_paths}

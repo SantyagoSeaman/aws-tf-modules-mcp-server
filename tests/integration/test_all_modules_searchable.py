@@ -76,7 +76,10 @@ MODULE_TEST_DATA = [
     ModuleTestCase("ecs", "elastic container service", "deploy containers using serverless"),
     ModuleTestCase("eks", "kubernetes", "managed kubernetes cluster"),
     ModuleTestCase("eks-pod-identity", "pod-identity", "eks pod iam roles"),
-    ModuleTestCase("lambda", "serverless", "serverless function execution"),
+    # "serverless" is a keyword shared by 5 modules (step-functions, sqs, app-runner,
+    # lambda, msk-kafka-cluster) and is a weak discriminator for lambda specifically;
+    # "faas" is lambda-specific. The natural-language query keeps "serverless".
+    ModuleTestCase("lambda", "faas", "serverless function execution"),
     # Networking - 7 modules
     ModuleTestCase("alb", "application-load-balancer", "layer 7 load balancing"),
     ModuleTestCase("customer-gateway", "vpn customer gateway", "site-to-site vpn connection"),
