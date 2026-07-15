@@ -23,7 +23,7 @@ faster query encoding; PyPI/uvx installs are unaffected and keep torch by defaul
 
 - **PyPI dependency set is unchanged** — `uvx tfmodsearch` and any pip/PyPI install keep sentence-transformers/torch as the default backend; nothing to opt into for a normal local install.
 - **The pickled search index is not rebuilt.** ONNX queries the same torch-produced embeddings the index has always had — validated at cosine ≥ 0.99999988 (max elementwise diff 4.06e-07) against sentence-transformers across all 162 golden queries.
-- **Golden set is 100% on both backends**: 172/172 queries against the untouched index pickle, torch and ONNX alike.
+- **Golden set is 100% on both backends**: 172/172 tests against the untouched index pickle, torch and ONNX alike. (172 is the full current searchable suite over 55 modules; the 162 above is the 54-module x 3-query embedding-parity scope measured at spike time.)
 - **Transports, tools, and the plugin are untouched.** stdio/HTTP transport behavior, the four MCP tools, the shared-HTTP-daemon and proxy modes, and the plugin's default `uvx` launch path are all unaffected.
 
 ## [0.18.0] - 2026-07-14

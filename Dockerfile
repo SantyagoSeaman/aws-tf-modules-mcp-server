@@ -21,7 +21,12 @@
 # still needs real network when called -- that is by design, not a gap in this offline setup.
 
 # --- builder ---
-FROM python:3.12-slim AS builder
+# --platform=$BUILDPLATFORM: run the builder natively even when cross-building the
+# arm64 image. Everything copied out of it is architecture-independent (pure-python
+# wheel, model.onnx, nltk_data), and the torch->ONNX export would be 10-30x slower
+# under QEMU -- and would produce a separately exported, never parity-checked model
+# per architecture. Exporting once natively gives both images identical assets.
+FROM --platform=$BUILDPLATFORM python:3.12-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
     NLTK_DATA=/opt/nltk_data

@@ -111,3 +111,33 @@ def test_compute_scores_with_onnx_backend(monkeypatch):
     top_score, top_idx = results[0]
     assert index.docs[top_idx].module_name == "s3-bucket"
     lib._MODEL_CACHE.clear()
+
+
+def test_resolve_backend_auto_falls_back_to_onnx(monkeypatch, tmp_path):
+    # auto with sentence_transformers unimportable and ONNX assets present -> onnx
+    d = tmp_path / "onnx" / "e5-small-v2"
+    d.mkdir(parents=True)
+    (d / "model.onnx").write_bytes(b"x")
+    (d / "tokenizer.json").write_bytes(b"{}")
+    monkeypatch.setitem(sys.modules, "sentence_transformers", None)
+    monkeypatch.setenv("TFMODSEARCH_ONNX_MODEL_DIR", str(d))
+    assert lib._resolve_backend({}) == "onnx"
+
+
+def test_resolve_backend_auto_errors_when_neither_available(monkeypatch):
+    monkeypatch.setitem(sys.modules, "sentence_transformers", None)
+    monkeypatch.delenv("TFMODSEARCH_ONNX_MODEL_DIR", raising=False)
+    with pytest.raises(RuntimeError, match="No embedding backend available"):
+        lib._resolve_backend({})
+
+
+def test_resolve_onnx_model_dir_set_but_invalid_raises(monkeypatch, tmp_path):
+    monkeypatch.setenv("TFMODSEARCH_ONNX_MODEL_DIR", str(tmp_path / "nope"))
+    with pytest.raises(ValueError, match="does not exist"):
+        resolve_onnx_model_dir()
+    incomplete = tmp_path / "incomplete"
+    incomplete.mkdir()
+    (incomplete / "model.onnx").write_bytes(b"x")
+    monkeypatch.setenv("TFMODSEARCH_ONNX_MODEL_DIR", str(incomplete))
+    with pytest.raises(ValueError, match="tokenizer.json"):
+        resolve_onnx_model_dir()

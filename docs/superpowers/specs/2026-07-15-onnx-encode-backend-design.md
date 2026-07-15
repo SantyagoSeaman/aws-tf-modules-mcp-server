@@ -141,6 +141,33 @@ not in pyproject (torch-side tooling stays out of the package metadata).
   (ORT ships manylinux aarch64 wheels); the GHCR arm64 leg builds under QEMU as today.
 - **ST `prompt` semantics mismatch** → replicated and unit-tested (prefix concatenation).
 
+## Post-review addendum (2026-07-15)
+
+Review rounds before merge — findings fixed on the branch:
+
+- **Blind review MAJOR (fixed)**: the multi-arch release build would have run the full
+  torch→ONNX export under QEMU on the arm64 leg (10-30x slower) AND shipped a separately
+  exported, never parity-checked model.onnx per architecture. Fix: builder stage is now
+  `FROM --platform=$BUILDPLATFORM` — every artifact it produces (pure-python wheel,
+  model.onnx, nltk_data) is architecture-independent, so it runs once natively and both
+  target images share identical assets.
+- **Blind review empirical verdict**: adversarial parity probes (empty/whitespace/emoji/
+  Cyrillic/CJK/>512-token/control chars) — worst cosine 0.99999988; ranking-divergence
+  probe on the real index across 10 tricky queries — 0/10 divergences, identical top-5
+  order. Persona E (search-quality skeptic) satisfied.
+- Fixed minors: stale `uv.lock` re-locked (the extra had not been locked); set-but-invalid
+  `TFMODSEARCH_ONNX_MODEL_DIR` now raises a precise ValueError instead of falling through
+  to a misleading "set the variable" message; embedding-dimension guard added at the query
+  site (wrong-model ONNX assets now fail loudly instead of shape-erroring or silently
+  mis-ranking same-dim models); the two spec-promised auto-branch tests
+  (auto→onnx fallback, auto→error) added; README now states explicitly that the `[onnx]`
+  extra cannot remove torch from a pip install (the torch-free footprint is
+  Docker-image-only) and that the export script requires a repo clone.
+- **Accepted (unchanged)**: no ONNX coverage in CI (assets absent; cached-assets CI job is
+  the agreed follow-up — Opus MAJOR-1); builder parity-check skip (gate covers it);
+  first-tool-call latency shift from the lazy ST import (stdio handshake faster, first
+  query pays the import; total time-to-first-result unchanged).
+
 ## Rollout
 
 Standard release process per CLAUDE.md: version bump list, Sonnet subagent implementation

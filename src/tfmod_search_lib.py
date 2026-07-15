@@ -1081,6 +1081,12 @@ def compute_scores(
     # Use prompt parameter for optional query instruction (e.g., for BGE models)
     with _MODEL_LOCK:
         q_vec = encoder.encode([q], prompt=query_instruction)[0].astype(np.float32, copy=False)
+    if q_vec.shape[0] != index.doc_vectors.shape[1]:
+        raise RuntimeError(
+            f"embedding dimension mismatch: query encoder produced {q_vec.shape[0]}-dim vectors "
+            f"but the index was built with {index.doc_vectors.shape[1]}-dim embeddings "
+            f"({index.model_name}) - the active backend is serving a different model"
+        )
     cos_raw = cosine_sim_matrix(q_vec, index.doc_vectors)
     cos_raw = (cos_raw + 1.0) / 2.0  # Scale from [-1, 1] to [0, 1]
     cos = minmax(cos_raw)  # Normalize to spread small differences

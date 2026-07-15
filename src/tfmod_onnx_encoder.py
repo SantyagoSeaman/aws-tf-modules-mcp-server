@@ -15,11 +15,19 @@ DEFAULT_MAX_SEQ_LENGTH = 512
 
 
 def resolve_onnx_model_dir(project_root: Path | None = None) -> Path | None:
-    """Locate ONNX assets: env var first, then <project_root>/onnx/e5-small-v2."""
+    """Locate ONNX assets: env var first, then <project_root>/onnx/e5-small-v2.
+
+    A SET but invalid TFMODSEARCH_ONNX_MODEL_DIR raises instead of returning
+    None: silently falling through would mask the typo and produce an error
+    telling the user to set the variable they already set.
+    """
     env = os.environ.get("TFMODSEARCH_ONNX_MODEL_DIR", "").strip()
     if env:
         p = Path(env)
-        return p if (p / "model.onnx").is_file() else None
+        for required in ("model.onnx", "tokenizer.json"):
+            if not (p / required).is_file():
+                raise ValueError(f"TFMODSEARCH_ONNX_MODEL_DIR is set to {p} but {p / required} does not exist")
+        return p
     if project_root is not None:
         p = project_root / "onnx" / "e5-small-v2"
         if (p / "model.onnx").is_file():
