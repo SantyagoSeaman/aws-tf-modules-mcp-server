@@ -409,6 +409,31 @@ class TestGetModuleSections:
         text = "# Title\n\nJust a paragraph, no sections.\n"
         assert filter_module_sections(text, ["inputs"]) == text
 
+    @pytest.mark.parametrize("mod", ["s3-bucket", "ecr", "lambda"])
+    def test_sections_inputs_examples_no_overfetch_real_docs(self, server_state, mod):
+        """BUG-1 repros: requesting inputs+examples must not drag in whole combined bundles."""
+        out = get_module_impl(mod, server_state, sections=["inputs", "examples"])
+        assert "Requested sections not found" not in out
+        # not the whole bundle: a root/submodule ### Main Outputs sub-section must not be
+        # dragged in alongside the requested inputs/examples H3s
+        assert "### Main Outputs" not in out
+        full = get_module_impl(mod, server_state, sections=["all"])
+        assert len(out) < len(full)
+
+    @pytest.mark.parametrize("mod", ["vpc", "redshift"])
+    def test_default_head_has_root_inputs_real_docs(self, server_state, mod):
+        """Default orientation head inlines root inputs for both combined (vpc) and
+        split-toplevel (redshift) interface schemes."""
+        out = get_module_impl(mod, server_state)
+        assert "Main Input Variables" in out
+        assert "Requested sections not found" not in out
+
+    def test_collection_head_no_inputs_noise_real_doc(self, server_state):
+        """iam is a pure submodule-collection doc (no Root/Main Module bundle); the default
+        head must not report a spurious 'not found' for the silently-requested inputs key."""
+        out = get_module_impl("iam", server_state)
+        assert "Requested sections not found" not in out
+
 
 def test_extract_interface_h3_inputs_only():
     block = (
