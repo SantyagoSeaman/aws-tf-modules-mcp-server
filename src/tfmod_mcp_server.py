@@ -657,11 +657,13 @@ class SearchHit(BaseModel):
 class UpdateNoticeMixin(BaseModel):
     """Adds an optional update_notice that vanishes from output when None.
 
-    Also drops any other field named `hint` when falsy (None or empty string)
-    for the same reason -- SearchOutput.hint (L2/L7/L8 confidence signal) is
-    only meaningful for low/tie verdicts; a high-confidence result should not
-    carry a null hint key. Only SearchOutput currently defines `hint`, so this
-    is a harmless no-op on every other model built on this mixin.
+    Also drops any other field named `hint` or `top_module_doc` when falsy
+    (None or empty string) for the same reason -- SearchOutput.hint (L2/L7/L8
+    confidence signal) is only meaningful for low/tie verdicts, and
+    SearchOutput.top_module_doc (L3 expand_top) is only populated on an
+    opted-in, high-confidence search. Only SearchOutput currently defines
+    these fields, so this is a harmless no-op on every other model built on
+    this mixin.
 
     FastMCP serializes pydantic None fields as JSON null; the spec requires
     the field to be entirely absent when no update is known, hence the
@@ -701,6 +703,8 @@ class UpdateNoticeMixin(BaseModel):
                 data.pop("update_notice", None)
             if not data.get("hint"):
                 data.pop("hint", None)
+            if not data.get("top_module_doc"):
+                data.pop("top_module_doc", None)
         return data
 
     @classmethod
@@ -727,6 +731,13 @@ class SearchOutput(UpdateNoticeMixin):
         default=None,
         description="Actionable follow-up guidance, present only when confidence is "
         "'low' or 'tie'; absent entirely (not null) when confidence is 'high'.",
+    )
+    top_module_doc: str | None = Field(
+        default=None,
+        description="The top-1 module orientation head (L3), present only when the "
+        "caller passed expand_top=True AND confidence is 'high' -- collapses the "
+        "confident search->get_module pair into one call. Absent entirely (not "
+        "null) otherwise.",
     )
 
 
@@ -1340,7 +1351,7 @@ def _classify_confidence(hits: list[ScoredHit]) -> tuple[str, float]:
     return "high", ratio
 
 
-def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> SearchOutput:
+def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_top: bool = False) -> SearchOutput:
     """
     Helper function to search for modules.
 
@@ -1351,13 +1362,22 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
         query: Search query string
         state: Server state containing index and configuration
         top_k: Number of results to return (clamped to 1..10, default 3)
+        expand_top: When True AND the search is high confidence, inline the
+            top-1 module orientation head into the response (L3) -- collapses
+            a confident search->get_module pair into one call. Default False
+            so ordinary searches never carry the extra payload (fighting the
+            re-bill lever this release targets). Never inlined on a "tie" or
+            "low" verdict, since expand_top only pays off when the top hit is
+            the module the caller actually wants.
 
     Returns:
         SearchOutput with top-k ranked results plus a confidence verdict
         (L2/L7/L8): "high" (trust the top hit), "tie" (top-1 and top-2 are
         close, fetch both), or "low" (no confident catalog match). A hint
         accompanies low/tie verdicts and is absent from the JSON output when
-        confidence is "high".
+        confidence is "high". top_module_doc (L3) is populated only when
+        expand_top=True and confidence == "high"; absent from the JSON output
+        otherwise.
 
     See search_modules() tool documentation for full details.
     """
@@ -1400,6 +1420,14 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
                 f"{hits[1].score:.1f}, ratio {ratio:.1f}). Fetch both with get_module before committing."
             )
 
+    # L3: opt-in one-shot resolve. Only inline the top-1 orientation head when
+    # the caller asked for it AND the search is high confidence -- a tie or
+    # low verdict means the top hit is not (confidently) the module the
+    # caller wants, so inlining it would waste tokens on the wrong doc.
+    top_module_doc: str | None = None
+    if expand_top and confidence == "high" and hits:
+        top_module_doc = orientation_head(state.index.docs[hits[0].doc_index].text)
+
     results = hits[:top_k]
 
     out: list[SearchHit] = []
@@ -1429,7 +1457,7 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
         )
 
     state.logger.debug(f"Search for '{query}' returned {len(out)} results (confidence={confidence})")
-    return SearchOutput(results=out, confidence=confidence, hint=hint)
+    return SearchOutput(results=out, confidence=confidence, hint=hint, top_module_doc=top_module_doc)
 
 
 _INPUT_TABLE_HEADING_RE = re.compile(r"^### Main Input Variables[ \t]*$", re.MULTILINE)
@@ -1836,8 +1864,10 @@ def modules_list(detail: str = "compact") -> ModulesListOutput:
     description=(
         "Search for Terraform AWS modules by keywords, exact name, or free-text query. "
         "Returns top-ranked results (top_k, default 3) with module name, path, keywords, "
-        "description, and relevance score. "
-        "After finding modules, use get_module tool to retrieve brief documentation."
+        "description, relevance score, and a confidence verdict (high/tie/low). "
+        "After finding modules, use get_module tool to retrieve brief documentation -- or "
+        "pass expand_top=True to inline the top-1 orientation head in this same call when "
+        "you intend to fetch it immediately and the search is high confidence."
     ),
     tags={"search", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="Search for Terraform AWS modules by keywords, exact name, or free-text query."),
@@ -1859,6 +1889,16 @@ def search_modules(
             "raise it for ambiguous queries like 'iam'.",
         ),
     ] = 3,
+    expand_top: Annotated[
+        bool,
+        Field(
+            description="When True AND the search is high confidence, inline the top-1 "
+            "module orientation head into the response (top_module_doc) -- collapses a "
+            "confident search->get_module pair into one call. Pass this when you intend "
+            "to immediately fetch the top hit. Default False so ordinary searches stay "
+            "small; never inlined on a 'tie' or 'low' confidence verdict.",
+        ),
+    ] = False,
 ) -> SearchOutput:
     """
     Search for Terraform AWS modules using hybrid search.
@@ -1879,14 +1919,24 @@ def search_modules(
                keywords (e.g., "s3 encryption"), module names (e.g., "vpc"),
                or natural language descriptions (e.g., "object storage with versioning").
         top_k: Number of results to return (1-10, default 3).
+        expand_top: When True and the search is high confidence, inline the
+               top-1 module orientation head into top_module_doc (L3) -- one
+               call instead of search then get_module. Default False. Never
+               populated on a "tie" or "low" verdict.
 
     Returns:
-        SearchOutput: Container with top-k ranked results. Each result includes:
+        SearchOutput: Container with top-k ranked results plus a confidence
+            verdict. Each result includes:
             - module_name: Normalized module identifier (e.g., "s3-bucket", "eks")
             - path: Relative path to module documentation file
             - keywords: List of extracted module keywords/tags
             - description: Extracted module description (up to 200 chars)
             - score: Combined relevance score (higher = more relevant)
+            Plus on the container itself:
+            - confidence: "high" / "tie" / "low" -- always present
+            - hint: actionable follow-up guidance, present only for "tie"/"low"
+            - top_module_doc: the top-1 orientation head, present only when
+              expand_top=True and confidence == "high"
 
     Raises:
         RuntimeError: If server state is not initialized.
@@ -1911,7 +1961,7 @@ def search_modules(
         - Empty queries return empty results
     """
     state = ServerStateManager.get()
-    result = search_modules_impl(query, state, top_k=top_k)
+    result = search_modules_impl(query, state, top_k=top_k, expand_top=expand_top)
     result.update_notice = _update_notice()
     return result
 

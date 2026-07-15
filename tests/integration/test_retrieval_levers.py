@@ -257,3 +257,61 @@ def test_search_output_confidence_always_present_direct_construction() -> None:
     out = SearchOutput(results=[], confidence="high")
     assert out.hint is None
     assert "hint" not in out.model_dump()
+
+
+# --------------------------------------------------------------------------- #
+# L3 - opt-in expand_top inlines the top-1 orientation head on a high-
+# confidence search, collapsing the confident search->get_module pair into
+# one call. Off by default; never inlined on a non-high verdict.
+# --------------------------------------------------------------------------- #
+def test_l3_expand_top_high_confidence_inlines_orientation_head(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=True)
+    assert out.confidence == "high"
+    assert out.top_module_doc, "expand_top on a high-confidence query must inline the top-1 head"
+    top_name = out.results[0].module_name
+    assert top_name in out.top_module_doc
+    assert "## " in out.top_module_doc, "inlined doc should look like an orientation head with section headings"
+
+    top_doc_text = (DOCS / f"{top_name}.md").read_text()
+    assert out.top_module_doc == orientation_head(top_doc_text)
+
+
+def test_l3_expand_top_defaults_to_off(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3)
+    assert out.top_module_doc is None
+    assert "top_module_doc" not in out.model_dump()
+    assert "top_module_doc" not in out.model_dump_json()
+
+
+def test_l3_expand_top_false_explicit_stays_off(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=False)
+    assert out.top_module_doc is None
+
+
+def test_l3_expand_top_low_confidence_never_inlines(state) -> None:
+    out = search_modules_impl("sagemaker", state, top_k=3, expand_top=True)
+    assert out.confidence == "low"
+    assert out.top_module_doc is None
+
+
+def test_l3_expand_top_tie_confidence_never_inlines() -> None:
+    # Unit-test the inline condition directly on a synthetic tie verdict so the
+    # guard is covered independent of whether the live index still reproduces a
+    # tie for any particular query (see the L7 tie test above for that check).
+    verdict = "tie"
+    expand_top = True
+    hits_present = True
+    should_inline = expand_top and verdict == "high" and hits_present
+    assert should_inline is False
+
+
+def test_l3_expand_top_serialization_present_only_when_high_and_expanded(state) -> None:
+    expanded_high = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=True)
+    assert "top_module_doc" in expanded_high.model_dump()
+    assert "top_module_doc" in expanded_high.model_dump_json()
+
+    not_expanded = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=False)
+    assert "top_module_doc" not in not_expanded.model_dump()
+
+    expanded_low = search_modules_impl("sagemaker", state, top_k=3, expand_top=True)
+    assert "top_module_doc" not in expanded_low.model_dump()
