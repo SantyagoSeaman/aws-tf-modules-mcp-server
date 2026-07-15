@@ -1,5 +1,29 @@
 # Changelog
 
+## [0.22.0] - 2026-07-16
+
+[0.22.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.22.0
+
+Retrieval token-cost levers from the tfmodsearch-improvements-2 re-measurement against the shipped 0.21.0. The finding: ~99% of billed tokens are retrieval-side and the real multiplier is cache re-billing — a fetched doc is re-read on every later turn — so every byte removed from a tool response is multiplied by residency. This release trims the three curated tools and adds a search confidence signal so an agent can stop early on a genuine catalog gap. All changes are server-side response shaping; the search index and the module docs corpus are untouched, so search ranking is byte-identical to 0.21.0.
+
+### Added
+
+- **`search_modules` now returns a `confidence` verdict** — `"high"` (trust the top hit), `"tie"` (top-1 and top-2 are contested, fetch both), or `"low"` (no confident catalog match) — plus a `hint` string on tie/low (absent from JSON on high). The classifier uses two signals, because a single top1/top2 ratio conflates absent with contested: whether the top hit earned a lexical component (exact module-name match or keyword overlap) and the top1/top2 combined-score ratio against a 2.5 near-tie threshold. Lets an agent conclude absence without dumping the full catalog (`compute_scores_detailed`/`ScoredHit` in `tfmod_search_lib.py`, `_classify_confidence`/`SEARCH_NEAR_TIE_RATIO` in `tfmod_mcp_server.py`).
+- **`search_modules(expand_top=True)`** — opt-in one-shot resolve. On a `high`-confidence query it inlines the top-1 orientation head into `top_module_doc`, collapsing the confident search→get_module pair into one call. Off by default so it never bloats normal search responses; never inlined on tie/low.
+- **`modules_list(detail="full")`** — restores the pre-0.22.0 full catalog (path, full description, keyword arrays) on demand.
+
+### Changed
+
+- **`modules_list` is compact by default** (breaking shape change): each entry carries the module name, a clipped one-line purpose, and the registry coordinates (`module_id`, `latest_version`) used to chain into `grep_module_docs`. The 12–18-item keyword arrays and long descriptions that made up the bulk of the byte-identical ~31,516-char dump move behind `detail="full"`.
+- **The default `get_module` orientation head caps its inlined input table to the required rows** (inputs with no default), appending a `(+N optional inputs → get_module(sections=["inputs"]))` pointer. Claws back the +31% head growth the 0.20.0 double-fetch fix introduced — measured 11.6–19.8% smaller heads on s3-bucket/vpc/elasticache/apigateway-v2/opensearch. The full table stays one `sections=["inputs"]` call away; modules with no required inputs keep the first rows so the head table is never empty.
+- **`search_modules` trims metadata on non-top-1 hits**: only `results[0]` carries its full keyword array and description; rank ≥ 2 hits return an empty keyword list and a first-sentence-clipped blurb. Nothing reads a non-top-1 keyword array.
+- **The `submodules` section key returns only the compact `## Submodules` inventory**, not the numbered `## Submodule N:` deep-dives. `get_module(sections=["submodules","inputs"])` on vpc drops from 18,972 to 10,707 chars with no deep-dive bundle. A specific submodule stays reachable by heading substring or the `<name>//modules/<sub>` address; the default head still inlines the inventory; bare `sections=["inputs"]` on collection docs is unaffected.
+
+### Unchanged
+
+- **The search index is not rebuilt and no module doc changed** — search ranking and results are byte-identical to 0.21.0; `compute_scores` is a thin wrapper over the new `compute_scores_detailed`, so every existing caller (CLI, tests) is unaffected.
+- **No network, no new dependency, no tool-schema regression.** All changes are in `tfmod_search_lib.py`/`tfmod_mcp_server.py` response shaping plus tests; `get_module`'s full-document and `sections=["all"]` paths, core sections, transports, ONNX/torch backends, shared-HTTP-daemon and proxy modes, and the Docker build are all unaffected.
+
 ## [0.21.0] - 2026-07-15
 
 [0.21.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.21.0
