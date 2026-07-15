@@ -1279,8 +1279,18 @@ def orientation_head(text: str) -> str:
     single orientation call surfaces which submodule to reach for — without
     expanding the far larger ``## Submodule N:`` deep-dive sections (request one
     by name, or via ``get_module("<name>//modules/<sub>")``).
+
+    Also inlines the root module's compact ``### Main Input Variables`` H3 (when
+    the doc has one), scoped to the root/main bundle only — submodule inputs stay
+    out of the head so a collection doc with no root inputs gets no extra noise.
     """
-    body = filter_module_sections(text, list(_ORIENTATION_KEYS), extra_exact_titles=("Submodules",))
+    body = filter_module_sections(
+        text,
+        [*_ORIENTATION_KEYS, "inputs"],
+        extra_exact_titles=("Submodules",),
+        interface_scope="root",
+        silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
+    )
     hint = _version_pin_hint(text)
     return f"{hint}\n\n{body}" if hint else body
 

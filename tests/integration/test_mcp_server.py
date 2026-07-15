@@ -25,6 +25,7 @@ from tfmod_mcp_server import (
     get_module_documentation,
     get_module_impl,
     modules_list_impl,
+    orientation_head,
     search_modules_impl,
 )
 from tfmod_search_lib import load_index
@@ -485,6 +486,27 @@ def test_silent_keys_suppress_not_found():
     # without silent_keys, it IS reported
     out2 = filter_module_sections(doc, ["features"])
     assert "Requested sections not found: features" in out2
+
+
+def test_head_inlines_root_inputs_combined():
+    out = orientation_head(_combined_doc())  # helper from Task 2 test
+    assert "### Main Input Variables" in out
+    assert "`root_in`" in out
+    assert "`sub_in`" not in out  # submodule inputs stay out of the head
+    assert "Requested sections not found" not in out
+
+
+def test_head_no_inputs_noise_for_collection_doc():
+    # collection doc: only a submodule bundle, no root inputs
+    doc = (
+        "---\nm: coll\n---\n\n## Module Information\n\n- **Module ID**: x/coll/aws\n\n"
+        "## Description\n\nd\n\n## Key Features\n\n- f\n\n## Main Use Cases\n\n- u\n\n"
+        "## Submodule 1: only\n\n### Main Input Variables\n\n| V | T |\n|---|---|\n| `a` | `s` |\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    out = orientation_head(doc)
+    assert "Requested sections not found" not in out
+    assert "`a`" not in out  # submodule inputs not inlined in a collection head
 
 
 class TestSubmoduleAddress:
