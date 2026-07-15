@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible problem with the MCP server, CLI, plugin, or Docker image.
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. Please fill in the fields below so the problem can be reproduced. Issues with no reproduction detail may be closed.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Which tfmodsearch version (e.g. 0.20.0)? Run `tfmodsearch --version` or check the image tag.
+      placeholder: "0.20.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which part of TFModSearch is affected?
+      options:
+        - MCP server (stdio)
+        - MCP server (HTTP transport)
+        - CLI (tfmodsearch-cli)
+        - Claude Code / Codex plugin
+        - Docker image
+        - Search relevance / results
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: A clear description of the bug, including the exact tool call or command and any error output.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Minimal, exact steps (commands, queries, config) that reproduce the problem.
+      placeholder: |
+        1. Run ...
+        2. Call tool ... with ...
+        3. See ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: What you expected to happen instead.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment and logs
+      description: OS, Python version, install method (uvx / pip / Docker), and any relevant logs. Redact secrets.
+    validations:
+      required: false
