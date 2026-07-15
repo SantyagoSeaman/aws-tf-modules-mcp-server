@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.19.0] - 2026-07-15
+
+[0.19.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.19.0
+
+Adds a selectable ONNX encode backend and switches the official Docker image to it, cutting the
+image from 1.42 GB to 559 MB uncompressed with numerically interchangeable search results and
+faster query encoding; PyPI/uvx installs are unaffected and keep torch by default.
+
+### Added
+
+- **Encoder backend seam** (`src/tfmod_search_lib.py`): index-build and query encode calls now go through `_get_encoder`, which dispatches on `TFMODSEARCH_EMBED_BACKEND` (`auto` default, `torch`, or `onnx`). `auto` uses the torch/sentence-transformers backend when it is importable, else the ONNX backend when ONNX assets are found, else a RuntimeError naming both options. The `sentence-transformers` import is now lazy (moved out of module top-level into the torch loader) so the library imports cleanly without torch installed. Model/encoder caching and the existing concurrency lock are preserved for both backends.
+- **New module `src/tfmod_onnx_encoder.py`**: `OnnxEncoder` — a `tokenizers` tokenizer (truncation at 512 tokens) plus an `onnxruntime` CPU session, replicating sentence-transformers attention-masked mean pooling and L2 normalization for `intfloat/e5-small-v2`. `resolve_onnx_model_dir()` locates assets via `TFMODSEARCH_ONNX_MODEL_DIR` or `<project_root>/onnx/e5-small-v2`.
+- **New optional extra `tfmodsearch[onnx]`**: `onnxruntime>=1.20`, `tokenizers>=0.21`. Core dependencies are unchanged — this is opt-in.
+- **New env vars**: `TFMODSEARCH_EMBED_BACKEND` (`auto`/`torch`/`onnx`) and `TFMODSEARCH_ONNX_MODEL_DIR`.
+- **Export script** `scripts/export_onnx_model.py` (not shipped in the wheel): exports `intfloat/e5-small-v2` to ONNX via `optimum-cli`, then runs a parity check against sentence-transformers when both are installed. Used by the Dockerfile builder stage and by developers regenerating assets.
+- **Docker image now runs the ONNX backend**: the builder stage exports ONNX assets and builds the wheel; the runtime stage installs the wheel with `--no-deps` plus an explicit torch-free dependency list (core deps minus `sentence-transformers`, plus `onnxruntime`/`tokenizers`), and sets `TFMODSEARCH_EMBED_BACKEND=onnx` / `TFMODSEARCH_ONNX_MODEL_DIR=/opt/onnx/e5-small-v2`. `HF_HUB_OFFLINE`/`TRANSFORMERS_OFFLINE`/`HF_HOME` are gone from the runtime image — nothing imports Hugging Face at runtime anymore. **Measured: 1.42 GB to 559 MB uncompressed** (pull size verified post-release), offline `--warmup` and a real HTTP `search_modules` call both verified against the rc image.
+- Design + plan committed under `docs/superpowers/{specs,plans}/2026-07-15-onnx-encode-backend-*`.
+- README documents the new "Embedding backends" configuration and the Docker image's backend switch; `docs/docker-container-support.md` gains a new section 10 describing the image internals change, with the pre-0.19.0 torch/HF-cache description in sections 4.2-4.5 kept for history.
+
+### Unchanged
+
+- **PyPI dependency set is unchanged** — `uvx tfmodsearch` and any pip/PyPI install keep sentence-transformers/torch as the default backend; nothing to opt into for a normal local install.
+- **The pickled search index is not rebuilt.** ONNX queries the same torch-produced embeddings the index has always had — validated at cosine ≥ 0.99999988 (max elementwise diff 4.06e-07) against sentence-transformers across all 162 golden queries.
+- **Golden set is 100% on both backends**: 172/172 tests against the untouched index pickle, torch and ONNX alike. (172 is the full current searchable suite over 55 modules; the 162 above is the 54-module x 3-query embedding-parity scope measured at spike time.)
+- **Transports, tools, and the plugin are untouched.** stdio/HTTP transport behavior, the four MCP tools, the shared-HTTP-daemon and proxy modes, and the plugin's default `uvx` launch path are all unaffected.
+
 ## [0.18.0] - 2026-07-14
 
 [0.18.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.18.0

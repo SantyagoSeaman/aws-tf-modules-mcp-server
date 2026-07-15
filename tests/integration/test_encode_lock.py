@@ -27,7 +27,14 @@ class _SlowFakeModel:
 
 
 def test_concurrent_get_model_loads_once(monkeypatch):
-    monkeypatch.setattr(tfmod_search_lib, "SentenceTransformer", _SlowFakeModel)
+    # sentence_transformers.SentenceTransformer is imported lazily inside
+    # _get_sentence_transformer (see tfmod_search_lib), so there is no
+    # module-level attribute on tfmod_search_lib to patch anymore; patch the
+    # source module instead, which the lazy `from ... import` resolves at
+    # call time.
+    import sentence_transformers
+
+    monkeypatch.setattr(sentence_transformers, "SentenceTransformer", _SlowFakeModel)
     monkeypatch.setattr(tfmod_search_lib, "_MODEL_CACHE", {})
     _SlowFakeModel.constructions = 0
 
