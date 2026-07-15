@@ -78,10 +78,10 @@ This module does not include submodules (registry shows "No modules" under Modul
 | `private_ip` | `string` | `null` | Private IP address to assign in a VPC |
 | `user_data` / `user_data_base64` | `string` | `null` | Instance boot/user-data script (plain or base64) |
 | `user_data_replace_on_change` | `bool` | `null` | Destroy/recreate instance when user data changes |
-| `metadata_options` | `object` | `{http_endpoint="enabled", http_put_response_hop_limit=1, http_tokens="required"}` | IMDS options; IMDSv2 required by default |
+| `metadata_options` | `object` | `{http_endpoint="enabled", http_put_response_hop_limit=1, http_tokens="required"}` | IMDS options; IMDSv2 required by default — fields: `http_endpoint`, `http_protocol_ipv6`, `http_put_response_hop_limit`, `http_tokens`, `instance_metadata_tags` |
 | `root_block_device` | `object` | `null` | Root volume config: size, type, IOPS, throughput, `encrypted`, `kms_key_id`, `delete_on_termination`, `tags` |
-| `ebs_volumes` | `map(object)` | `null` | Additional EBS volumes keyed by name/device, with attachment options |
-| `ephemeral_block_device` | `map(object)` | `null` | Instance-store (ephemeral) volume mappings |
+| `ebs_volumes` | `map(object)` | `null` | Additional EBS volumes keyed by name/device, with attachment options — fields: `encrypted`, `final_snapshot`, `iops`, `kms_key_id`, `multi_attach_enabled`, `outpost_arn`, `size`, `snapshot_id`, … (8 shown; see grep_module_docs) |
+| `ephemeral_block_device` | `map(object)` | `null` | Instance-store (ephemeral) volume mappings — fields: `device_name`, `no_device`, `virtual_name` |
 | `enable_volume_tags` | `bool` | `true` | Enable volume tags (conflicts with tags set directly in `root_block_device`) |
 | `disable_api_termination` | `bool` | `null` | Enable EC2 termination protection |
 | `disable_api_stop` | `bool` | `null` | Enable EC2 stop protection |
@@ -94,11 +94,11 @@ This module does not include submodules (registry shows "No modules" under Modul
 | `tenancy` | `string` | `null` | `default`, `dedicated`, or `host` |
 | `host_id` / `host_resource_group_arn` | `string` | `null` | Target a specific dedicated host or host resource group |
 | `placement_group` / `placement_group_id` / `placement_partition_number` | `string`/`number` | `null` | Placement group targeting |
-| `capacity_reservation_specification` | `object` | `null` | Target an open or specific On-Demand Capacity Reservation |
+| `capacity_reservation_specification` | `object` | `null` | Target an open or specific On-Demand Capacity Reservation — fields: `capacity_reservation_preference`, `capacity_reservation_target` |
 | `launch_template` | `object({id, name, version})` | `null` | Associate a Launch Template; module-set args override its values |
 | `instance_market_options` | `object` | `null` | Full market/spot options; overrides `create_spot_instance` when set |
 | `network_interface` | `map(object)` | `null` | Custom NIC attachments (mutually exclusive with `subnet_id`/`vpc_security_group_ids`/`associate_public_ip_address`) |
-| `secondary_network_interface` | `map(object)` | `null` | Additional secondary ENIs on separate network cards |
+| `secondary_network_interface` | `map(object)` | `null` | Additional secondary ENIs on separate network cards — fields: `delete_on_termination`, `device_index`, `interface_type`, `network_card_index`, `private_ip_address_count`, `private_ip_addresses`, `secondary_subnet_id` |
 | `enable_primary_ipv6` | `bool` | `null` | Assign a primary IPv6 GUA in a dual-stack/IPv6-only subnet |
 | `region` | `string` | `null` | AWS region override (defaults to provider region) |
 | `tags` | `map(string)` | `{}` | Tags applied to all resources created by the module |
@@ -133,8 +133,8 @@ This module does not include submodules (registry shows "No modules" under Modul
 | `create_security_group` | `bool` | `true` | Create a security group for the instance |
 | `security_group_name` | `string` | `null` | Name (used as prefix by default) |
 | `security_group_vpc_id` | `string` | `null` | VPC ID (defaults to the default VPC if unset) |
-| `security_group_ingress_rules` | `map(object)` | `null` | Ingress rules (cidr/prefix-list/referenced-SG, port range, protocol) |
-| `security_group_egress_rules` | `map(object)` | allow-all IPv4 + IPv6 | Egress rules; **override to restrict outbound traffic** |
+| `security_group_ingress_rules` | `map(object)` | `null` | Ingress rules (cidr/prefix-list/referenced-SG, port range, protocol) — fields: `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, `tags`, … (8 shown; see grep_module_docs) |
+| `security_group_egress_rules` | `map(object)` | allow-all IPv4 + IPv6 | Egress rules; **override to restrict outbound traffic** — fields: `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, `tags`, … (8 shown; see grep_module_docs) |
 
 **Elastic IP Variables**:
 

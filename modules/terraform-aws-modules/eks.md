@@ -130,9 +130,9 @@ Creates an EKS managed node group along with its IAM role, an optional dedicated
 | `capacity_type` | `string` | `"ON_DEMAND"` | `ON_DEMAND` or `SPOT` |
 | `ami_type` | `string` | `"AL2023_x86_64_STANDARD"` | AMI family/type |
 | `labels` | `map(string)` | `null` | Kubernetes node labels |
-| `taints` | `map(object)` | `null` | Kubernetes taints (map keyed by taint name) |
-| `node_repair_config` | `object` | `null` | Enable/tune automatic unhealthy node replacement |
-| `block_device_mappings` | `map(object)` | `null` | EBS volume configuration |
+| `taints` | `map(object)` | `null` | Kubernetes taints (map keyed by taint name) — fields: `key`, `value`, `effect` |
+| `node_repair_config` | `object` | `null` | Enable/tune automatic unhealthy node replacement — fields: `enabled`, `max_parallel_nodes_repaired_count`, `max_parallel_nodes_repaired_percentage`, `max_unhealthy_node_threshold_count`, `max_unhealthy_node_threshold_percentage`, `node_repair_config_overrides` |
+| `block_device_mappings` | `map(object)` | `null` | EBS volume configuration — fields: `device_name`, `ebs`, `no_device`, `virtual_name` |
 
 ### Main Outputs
 
@@ -652,7 +652,7 @@ Creates an `aws_eks_capability` resource — an AWS-managed operator/controller 
 | `type` | `string` | `""` | Capability type: `ACK`, `ARGOCD`, or `KRO` |
 | `configuration` | `object` | `null` | Type-specific configuration (e.g. `argo_cd.aws_idc`, `argo_cd.rbac_role_mapping`) |
 | `iam_role_policies` | `map(string)` | `{}` | Managed policy ARNs to attach to the capability's IAM role |
-| `iam_policy_statements` | `map(object)` | `null` | Inline IAM policy statements for the capability's IAM role |
+| `iam_policy_statements` | `map(object)` | `null` | Inline IAM policy statements for the capability's IAM role — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 
 ### Main Outputs
 
@@ -734,7 +734,7 @@ The root module manages the complete EKS cluster lifecycle: control plane creati
 | `endpoint_private_access` | `bool` | `true` | Enable the private API endpoint |
 | `enable_cluster_creator_admin_permissions` | `bool` | `false` | Grant the Terraform caller identity cluster-admin via access entry |
 | `authentication_mode` | `string` | `"API_AND_CONFIG_MAP"` | `API`, `CONFIG_MAP`, or `API_AND_CONFIG_MAP` |
-| `access_entries` | `map(object)` | `{}` | Map of access entries + policy associations for cluster access |
+| `access_entries` | `map(object)` | `{}` | Map of access entries + policy associations for cluster access — fields: `kubernetes_groups`, `principal_arn`, `type`, `user_name`, `tags`, `policy_associations` |
 | `create_kms_key` | `bool` | `true` | Create a customer-managed KMS key for secret encryption |
 | `encryption_config` | `object` | `{}` | `{}` uses/creates a customer KMS key; `null` uses AWS's default managed key; set `provider_key_arn` to BYO key |
 | `enabled_log_types` | `list(string)` | `["audit","api","authenticator"]` | Control plane log types (**renamed from `cluster_enabled_log_types`**) |
@@ -745,7 +745,7 @@ The root module manages the complete EKS cluster lifecycle: control plane creati
 | `eks_managed_node_groups` | `map(object)` | `null` | Map of `eks-managed-node-group` submodule invocations |
 | `self_managed_node_groups` | `map(object)` | `null` | Map of `self-managed-node-group` submodule invocations |
 | `fargate_profiles` | `map(object)` | `null` | Map of `fargate-profile` submodule invocations |
-| `remote_network_config` | `object` | `null` | Remote node/pod CIDR config for hybrid nodes |
+| `remote_network_config` | `object` | `null` | Remote node/pod CIDR config for hybrid nodes — fields: `remote_node_networks`, `remote_pod_networks` |
 
 ### Main Outputs
 

@@ -78,7 +78,7 @@ The main module (root of the source) creates and manages an AWS Lambda Function 
 | `function_name` | `string` | `""` | Unique name for the Lambda function |
 | `handler` | `string` | `""` | Function entry point (e.g., `index.handler`) |
 | `runtime` | `string` | `""` | Lambda runtime (e.g., `python3.12`, `nodejs20.x`) |
-| `source_path` | `any` | `null` | Path (or list of paths/build configs) to function source code |
+| `source_path` | `any` | `null` | Path (or list of paths/build configs) to function source code — keys (from examples): `path`, `pip_requirements`, `patterns` |
 | `create` | `bool` | `true` | Master switch for all resources created by the module |
 | `create_function` | `bool` | `true` | Whether to create the Lambda Function |
 | `create_layer` | `bool` | `false` | Whether to create a Lambda Layer instead of/alongside a function |
@@ -103,8 +103,8 @@ The main module (root of the source) creates and manages an AWS Lambda Function 
 | `create_lambda_function_url` | `bool` | `false` | Whether to create a Lambda Function URL |
 | `authorization_type` / `cors` / `invoke_mode` | `string` / `any` / `string` | `"NONE"` / `{}` / `null` | Function URL auth, CORS, and invoke mode (`BUFFERED`/`RESPONSE_STREAM`) |
 | `tracing_mode` | `string` | `null` | X-Ray tracing mode (`Active` or `PassThrough`) |
-| `event_source_mapping` | `any` | `{}` | Map of event source mapping configurations (SQS, Kinesis, DynamoDB Streams, etc.) |
-| `allowed_triggers` | `map(any)` | `{}` | Map of Lambda permissions for invoking services/principals |
+| `event_source_mapping` | `any` | `{}` | Map of event source mapping configurations (SQS, Kinesis, DynamoDB Streams, etc.) — keys (from examples): `event_source_arn`, `starting_position`, `batch_size`, `maximum_batching_window_in_seconds` |
+| `allowed_triggers` | `map(any)` | `{}` | Map of Lambda permissions for invoking services/principals — keys (from examples): `principal`, `source_arn` |
 | `dead_letter_target_arn` | `string` | `null` | SNS topic/SQS queue ARN for failed async invocations |
 | `snap_start` | `bool` | `false` | Enable SnapStart for supported runtimes |
 | `tenant_isolation_mode` | `bool` | `false` | Enable tenant isolation mode |

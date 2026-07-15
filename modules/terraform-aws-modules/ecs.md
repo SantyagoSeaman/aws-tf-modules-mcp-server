@@ -99,7 +99,7 @@ The root module (`terraform-aws-modules/ecs/aws`) wraps `modules/cluster` and `m
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Determines whether resources will be created (affects all resources) |
 | `cluster_name` | `string` | `""` | Name of the cluster (up to 255 letters, numbers, hyphens, underscores) |
-| `cluster_configuration` | `object` | execute-command logging enabled | Execute-command and managed-storage configuration for the cluster |
+| `cluster_configuration` | `object` | execute-command logging enabled | Execute-command and managed-storage configuration for the cluster — fields: `execute_command_configuration`, `managed_storage_configuration` |
 | `cluster_setting` | `list(object({name,value}))` | `[{name="containerInsights", value="enabled"}]` | Cluster settings block; commonly used to toggle Container Insights |
 | `capacity_providers` | `map(object)` | `null` | Map of capacity provider definitions (`auto_scaling_group_provider` or `managed_instances_provider`) to create for the cluster |
 | `cluster_capacity_providers` | `list(string)` | `[]` | Capacity provider names to associate with the cluster (e.g. `["FARGATE", "FARGATE_SPOT"]`); providers created above are auto-added |
@@ -108,7 +108,7 @@ The root module (`terraform-aws-modules/ecs/aws`) wraps `modules/cluster` and `m
 | `cloudwatch_log_group_retention_in_days` | `number` | `90` | Retention for the cluster log group |
 | `services` | `map(object)` | `null` | Map of service definitions to create; each value mirrors the `service` submodule's inputs (see below) |
 | `vpc_id` | `string` | `null` | VPC ID for the (cluster-level, Managed Instances) security group |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | egress: allow-all | Security group rules for the cluster-level security group |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | egress: allow-all | Security group rules for the cluster-level security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
 | `create_task_exec_iam_role` | `bool` | `false` (root) | Whether to create a shared task execution IAM role at the cluster level (per-service roles are created by default instead) |
 | `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
@@ -230,7 +230,7 @@ Creates the `aws_ecs_cluster` resource plus capacity providers, the cluster's ex
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `name` | `string` | `""` | Name of the cluster (up to 255 letters, numbers, hyphens, underscores) |
-| `configuration` | `object` | execute-command logging enabled | Execute-command and managed-storage configuration for the cluster |
+| `configuration` | `object` | execute-command logging enabled | Execute-command and managed-storage configuration for the cluster — fields: `execute_command_configuration`, `managed_storage_configuration` |
 | `setting` | `list(object({name,value}))` | `[{name="containerInsights", value="enabled"}]` | Cluster settings (Container Insights, etc.) |
 | `capacity_providers` | `map(object)` | `null` | Map of capacity provider definitions (`auto_scaling_group_provider` / `managed_instances_provider`) to create |
 | `cluster_capacity_providers` | `list(string)` | `[]` | Capacity provider names associated with the cluster (e.g. Fargate/Fargate Spot) |
@@ -364,17 +364,17 @@ Creates an ECS service, its task definition (or task set, for external deploymen
 | `desired_count` | `number` | `1` | Ignored in favor of autoscaling unless `enable_autoscaling = false` |
 | `enable_autoscaling` | `bool` | `true` | Whether to create Application Auto Scaling target/policies |
 | `autoscaling_min_capacity` / `autoscaling_max_capacity` | `number` | `1` / `10` | Task count bounds for autoscaling |
-| `autoscaling_policies` | `map(object)` | CPU + memory target tracking | Autoscaling policies (target tracking, step, or predictive scaling) |
-| `load_balancer` | `map(object)` | `null` | Target group / container / port mappings for the service |
-| `service_connect_configuration` | `object` | `null` | Service Connect namespace/client-alias configuration |
+| `autoscaling_policies` | `map(object)` | CPU + memory target tracking | Autoscaling policies (target tracking, step, or predictive scaling) — fields: `name`, `policy_type`, `predictive_scaling_policy_configuration`, `step_scaling_policy_configuration`, `target_tracking_scaling_policy_configuration` |
+| `load_balancer` | `map(object)` | `null` | Target group / container / port mappings for the service — fields: `container_name`, `container_port`, `elb_name`, `target_group_arn`, `advanced_configuration` |
+| `service_connect_configuration` | `object` | `null` | Service Connect namespace/client-alias configuration — fields: `enabled`, `access_log_configuration`, `log_configuration`, `namespace`, `service` |
 | `deployment_circuit_breaker` | `object({enable,rollback})` | `null` | Automatic rollback on failed deployments |
 | `deployment_minimum_healthy_percent` / `deployment_maximum_percent` | `number` | `66` / `200` | Rolling deployment bounds |
 | `subnet_ids` | `list(string)` | `[]` | Subnets for `awsvpc` network mode |
 | `security_group_ids` | `list(string)` | `[]` | Additional security groups; module also creates its own by default |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` / allow-all | Rules for the service's security group |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` / allow-all | Rules for the service's security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
 | `assign_public_ip` | `bool` | `false` | Assign a public IP to the task ENI (Fargate) |
 | `enable_execute_command` | `bool` | `false` | Enable ECS Exec for interactive debugging |
-| `volume` | `map(object)` | `null` | Volume definitions (Docker/EFS/FSx/managed EBS) attached to the task |
+| `volume` | `map(object)` | `null` | Volume definitions (Docker/EFS/FSx/managed EBS) attached to the task — fields: `configure_at_launch`, `docker_volume_configuration`, `efs_volume_configuration`, `fsx_windows_file_server_volume_configuration`, `host_path`, `name` |
 | `create_task_exec_iam_role` / `create_tasks_iam_role` | `bool` | `true` | Toggle creation of task execution / task IAM roles |
 | `task_exec_iam_role_policies` / `tasks_iam_role_policies` | `map(string)` | `{}` | Extra managed policy ARNs to attach to those roles |
 | `task_exec_secret_arns` / `task_exec_ssm_param_arns` | `list(string)` | `[]` | Secrets Manager / SSM ARNs the execution role may read |
@@ -584,13 +584,13 @@ Renders a single ECS container definition (and, by default, its own CloudWatch l
 | `image` | `string` | `null` | Docker image URI (`repository-url/image:tag` or `@digest`) |
 | `cpu` / `memory` / `memoryReservation` | `number` | `null` | Resource allocation for the container |
 | `essential` | `bool` | `null` | If `true` and the container fails, all other containers in the task stop |
-| `portMappings` | `list(object)` | `null` | Port exposure configuration |
+| `portMappings` | `list(object)` | `null` | Port exposure configuration — fields: `appProtocol`, `containerPort`, `containerPortRange`, `hostPort`, `name`, `protocol` |
 | `environment` | `list(object({name,value}))` | `null` | Environment variables |
 | `secrets` | `list(object({name,valueFrom}))` | `null` | Secrets Manager/SSM references injected as env vars |
 | `readonlyRootFilesystem` | `bool` | `true` | Read-only root filesystem |
-| `logConfiguration` | `object` | `{}` | Log driver configuration (defaults to CloudWatch when logging is enabled) |
-| `healthCheck` | `object` | `null` | Container health check command/interval/retries |
-| `firelensConfiguration` | `object` | `null` | FireLens log router configuration |
+| `logConfiguration` | `object` | `{}` | Log driver configuration (defaults to CloudWatch when logging is enabled) — fields: `logDriver`, `options`, `secretOptions` |
+| `healthCheck` | `object` | `null` | Container health check command/interval/retries — fields: `command`, `interval`, `retries`, `startPeriod`, `timeout` |
+| `firelensConfiguration` | `object` | `null` | FireLens log router configuration — fields: `options`, `type` |
 | `enable_cloudwatch_logging` | `bool` | `true` | Set `false` when using FireLens or another log driver |
 | `cloudwatch_log_group_retention_in_days` | `number` | `14` | Log retention period |
 
@@ -690,7 +690,7 @@ Deploys an `aws_ecs_express_gateway_service` — a simplified ECS service type t
 | `scaling_target` | `object({auto_scaling_metric,auto_scaling_target_value,min_task_count,max_task_count})` | `null` | Autoscaling target configuration |
 | `health_check_path` | `string` | `null` (`/ping`) | Path used for the service's health check |
 | `vpc_id` | `string` | `null` | VPC ID for the security group |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Security group rule maps |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Security group rule maps — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
 | `create_execution_iam_role` / `create_task_iam_role` / `create_infrastructure_iam_role` | `bool` | `true` | Toggle creation of each IAM role |
 
 ### Key Outputs

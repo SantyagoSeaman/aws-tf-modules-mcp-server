@@ -76,7 +76,16 @@ MODULE_TEST_DATA = [
     ModuleTestCase("ecs", "elastic container service", "deploy containers using serverless"),
     ModuleTestCase("eks", "kubernetes", "managed kubernetes cluster"),
     ModuleTestCase("eks-pod-identity", "pod-identity", "eks pod iam roles"),
-    ModuleTestCase("lambda", "serverless", "serverless function execution"),
+    # "serverless" is a keyword shared by 5 modules (step-functions, sqs, app-runner,
+    # lambda, msk-kafka-cluster) and is a weak discriminator for lambda specifically.
+    # The 0.21.0 completeness pass grew 26 docs; the aggregate BM25 shift moved this
+    # tight cluster and dropped lambda from rank 3 to 4 for the bare word "serverless".
+    # Per-doc minimization was shown ineffective (the shift is aggregate corpus growth,
+    # not one doc), so this was escalated per the drift procedure and the maintainer
+    # approved retargeting to the lambda-specific keyword "faas" (rank 1) rather than
+    # degrading the completeness content. lambda stays findable by name and by the
+    # natural-language query "serverless function execution" (rank 2).
+    ModuleTestCase("lambda", "faas", "serverless function execution"),
     # Networking - 7 modules
     ModuleTestCase("alb", "application-load-balancer", "layer 7 load balancing"),
     ModuleTestCase("customer-gateway", "vpn customer gateway", "site-to-site vpn connection"),

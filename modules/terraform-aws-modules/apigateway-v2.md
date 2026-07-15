@@ -69,7 +69,7 @@ Every resource group (API, domain name, domain records, certificate, routes/inte
 | `description` | `string` | `null` | API description (max 1024 chars) |
 | `body` | `string` | `null` | OpenAPI spec defining routes/integrations (HTTP APIs only) |
 | `target` / `route_key` | `string` | `null` | Quick-create: single integration URI + catch-all route |
-| `cors_configuration` | `object` | `null` | CORS settings: allow_origins, allow_methods, allow_headers, allow_credentials, max_age (HTTP APIs only) |
+| `cors_configuration` | `object` | `null` | CORS settings: allow_origins, allow_methods, allow_headers, allow_credentials, max_age (HTTP APIs only) — fields: `allow_credentials`, `allow_headers`, `allow_methods`, `allow_origins`, `expose_headers`, `max_age` |
 | `authorizers` | `map(object)` | `{}` | Map of `JWT`/`REQUEST` authorizers (`authorizer_type`, `identity_sources`, `jwt_configuration`, `authorizer_uri`) |
 | `routes` | `map(object)` | `{}` | Map of `"{METHOD} {path}"` keys to route + integration config |
 | `vpc_links` | `map(object)` | `{}` | VPC Link definitions (`name`, `security_group_ids`, `subnet_ids`) for private integrations |

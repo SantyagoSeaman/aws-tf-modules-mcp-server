@@ -20,7 +20,7 @@ import shutil
 import sys
 from collections.abc import Mapping
 
-DEFAULT_IMAGE = "ghcr.io/santyagoseaman/tfmodsearch:0.20.0"
+DEFAULT_IMAGE = "ghcr.io/santyagoseaman/tfmodsearch:0.21.0"
 _FALSY = {"", "0", "false", "no", "off"}
 DEFAULT_PROXY_URL = "http://127.0.0.1:8765/mcp"
 # --proxy-url exists only since 0.18.0; without this floor a stale uvx cache could

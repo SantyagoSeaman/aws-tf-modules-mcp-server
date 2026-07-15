@@ -1,5 +1,30 @@
 # Changelog
 
+## [0.21.0] - 2026-07-15
+
+[0.21.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.21.0
+
+Corpus completeness pass: every collapsed/opaque-typed input row across the module docs now names its field shape, so an agent orienting on a composite input (`object`/`map(object)`/`any`) sees the top-level fields, not just a purpose sentence. Shapes come from the live registry type or the module's own examples (answer-agnostic), a `scripts/` linter plus a CI guard keep the corpus complete, and the changed docs are re-encoded drift-safely with the golden set held at 172/172 on both backends. No server or tool code changed.
+
+### Added
+
+- **`scripts/lint_doc_completeness.py`** — flags input-table rows whose type is opaque (`any`/`object`/`map(object)`/…) and whose description does not name the shape. Offline `--check` mode (CI guard, allowlist-aware) and an online `--suggest <module>` authoring mode that fetches the live registry type and prints the exact field roster to append.
+- **`tests/integration/test_doc_completeness.py`** + **`tests/fixtures/doc_completeness_allowlist.txt`** — a guard that fails on any opaque row that is neither shape-expanded nor allowlisted (and on stale allowlist entries). 15 rows are allowlisted as genuine freeform `any` inputs with no stable field set (reasons inline).
+- **`scripts/reencode_changed_docs.py`** — drift-safe re-encode of only the changed docs (unchanged docs' embeddings stay byte-identical), used to update the index after the doc edits.
+
+### Changed
+
+- **107 collapsed input rows across 26 docs now carry a top-level field roster** appended to the Description (from the live registry `type` for real `object` types, or example-derived keys / a typed-submodule cross-reference for genuine `any` types). Top-level fields only, capped at 8 with a `grep_module_docs` pointer for the large ones.
+- **redshift**: the "Notes for AI Agents" bullet now states that `pause_cluster`/`resume_cluster` are bare booleans (`= true`) and only `resize_cluster` takes a nested object (grounded in the doc's own examples).
+- **wafv2**: a new gotcha documents that `override_action` (managed-rule-group / rule-group-reference statements) and `action` (standalone match statements) are mutually exclusive.
+- The `lambda` keyword search test targets the lambda-specific keyword `faas` instead of the 5-way-shared `serverless` (a weak discriminator across step-functions/sqs/app-runner/lambda/msk); lambda remains findable by name and by natural-language query.
+
+### Unchanged
+
+- **No server or tool code changed** — `search_modules`/`get_module`/`modules_list`/`grep_module_docs` behavior is exactly as in 0.20.0; the linter lives in `scripts/` (not shipped in the wheel).
+- **The index is re-encoded, not rebuilt** — only the 26 edited docs' vectors changed; every unchanged doc's embedding is byte-identical. Golden set 172/172 on both torch and onnx backends.
+- No new runtime dependency; transports, backends, plugin, and Docker build are unaffected.
+
 ## [0.20.0] - 2026-07-15
 
 [0.20.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.20.0

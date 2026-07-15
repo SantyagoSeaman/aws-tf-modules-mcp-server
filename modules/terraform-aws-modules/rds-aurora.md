@@ -192,7 +192,7 @@ module "dsql_single_region" {
 | `enabled_cloudwatch_logs_exports` | `list(string)` | `[]` | Log types: `audit`, `error`, `general`, `slowquery`, `postgresql` |
 | `cluster_monitoring_interval` | `number` | `0` | Enhanced monitoring frequency at the cluster level (0=disabled; 1, 5, 10, 15, 30, 60 seconds) |
 | `vpc_security_group_ids` | `list(string)` | `[]` | List of existing VPC security groups to associate, in addition to any created |
-| `security_group_ingress_rules` | `map(object)` | `{}` | Map of ingress rules for the auto-created security group |
+| `security_group_ingress_rules` | `map(object)` | `{}` | Map of ingress rules for the auto-created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
 | `iam_database_authentication_enabled` | `bool` | `null` | Enable IAM database authentication |
 | `endpoints` | `map(object)` | `{}` | Additional cluster endpoints (`READER`/`ANY`) with `static_members`/`excluded_members` for workload routing |
 | `create` | `bool` | `true` | Whether to create cluster resources at all |
@@ -201,7 +201,7 @@ module "dsql_single_region" {
 | `apply_immediately` | `bool` | `null` | Apply changes immediately or during the next maintenance window |
 | `allow_major_version_upgrade` | `bool` | `false` | Allow major engine version upgrades when changing `engine_version` |
 | `auto_minor_version_upgrade` | `bool` | `null` | Apply minor engine upgrades automatically during the maintenance window |
-| `s3_import` | `object` | `null` | Restore a MySQL cluster from a Percona Xtrabackup stored in S3 |
+| `s3_import` | `object` | `null` | Restore a MySQL cluster from a Percona Xtrabackup stored in S3 — fields: `bucket_name`, `bucket_prefix`, `ingestion_role`, `source_engine_version` |
 | `tags` | `map(string)` | `{}` | Map of tags to assign to all resources |
 
 ## Main Outputs

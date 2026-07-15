@@ -67,7 +67,7 @@ Note: `name` and `schema` default to `""` (not marked `required` by terraform-do
 | `schema` | `string` | `""` | GraphQL SDL schema definition (e.g. `file("schema.graphql")`) — set this |
 | `create_graphql_api` | `bool` | `true` | Set `false` to disable every resource in the module |
 | `authentication_type` | `string` | `"API_KEY"` | Primary auth type: `API_KEY`, `AWS_IAM`, `OPENID_CONNECT`, `AMAZON_COGNITO_USER_POOLS`, `AWS_LAMBDA` |
-| `additional_authentication_provider` | `any` | `{}` | Map of extra auth providers (max 4) with their own OIDC/Cognito/Lambda config |
+| `additional_authentication_provider` | `any` | `{}` | Map of extra auth providers (max 4) with their own OIDC/Cognito/Lambda config — keys (from examples): `authentication_type` |
 | `visibility` | `string` | `null` | `GLOBAL` or `PRIVATE` |
 | `api_keys` | `map(string)` | `{}` | Map of API key description → expiry date (or `null` for the default 7-day expiry) |
 | `user_pool_config`, `openid_connect_config`, `lambda_authorizer_config` | `map(string)` | `{}` | Config for the corresponding primary auth type |

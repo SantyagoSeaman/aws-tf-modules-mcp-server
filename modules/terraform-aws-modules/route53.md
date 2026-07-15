@@ -98,7 +98,7 @@ The root module creates (or looks up) an AWS Route53 hosted zone and manages its
 | `dnssec_key_signing_key_name` | `string` | `null` | Name of the KSK; defaults to the zone name (useful for importing/adopting an existing KSK) |
 | `enable_accelerated_recovery` | `bool` | `null` | Enable Route 53 Accelerated Recovery (60-min RTO) for public zones |
 | `force_destroy` | `bool` | `null` | Delete all records (including externally managed ones) when destroying the zone |
-| `timeouts` | `object` | `null` | Create/update/delete timeouts for the zone |
+| `timeouts` | `object` | `null` | Create/update/delete timeouts for the zone — fields: `create`, `update`, `delete` |
 | `tags` | `map(string)` | `{}` | Tags applied to all created resources |
 
 ### Main Outputs
@@ -339,7 +339,7 @@ Creates a Route53 Resolver endpoint (inbound or outbound) along with a security 
 | `ip_address` | `list(object({subnet_id, ip, ipv6}))` | `[]` | Subnets (and optional static IPs) the endpoint uses |
 | `vpc_id` | `string` | `null` | VPC ID for the auto-created security group |
 | `create_security_group` | `bool` | `true` | Whether to create the security group |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Port-53 TCP/UDP rules added to the created security group |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Port-53 TCP/UDP rules added to the created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `prefix_list_id`, `referenced_security_group_id`, `tags` |
 | `security_group_ids` | `list(string)` | `[]` | Existing security group IDs to use instead of creating one |
 | `rules` | `map(object({domain_name, rule_type, target_ip, vpc_id, ...}))` | `{}` | Resolver rules and their VPC associations (outbound only) |
 | `name` | `string` | `null` | Endpoint name |

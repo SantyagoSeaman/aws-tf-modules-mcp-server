@@ -83,7 +83,7 @@ The module also emits static ARN outputs (`queue_arn_static`, `dead_letter_queue
 | `create_dlq_redrive_allow_policy` | `bool` | `true` | Create a redrive-allow policy scoping the DLQ to only accept redrives from this source queue |
 | `dlq_name`, `dlq_tags`, `dlq_kms_master_key_id`, `dlq_visibility_timeout_seconds`, `dlq_message_retention_seconds`, etc. | various | `null` | Per-attribute overrides for the DLQ; each falls back to the matching source-queue value (e.g. `visibility_timeout_seconds`) when unset |
 | `create_queue_policy` / `create_dlq_queue_policy` | `bool` | `false` | Create an IAM queue policy for the primary queue / DLQ |
-| `queue_policy_statements` / `dlq_queue_policy_statements` | `map(object)` | `null` | Structured IAM policy statements (sid, actions, principals, conditions) for the queue / DLQ |
+| `queue_policy_statements` / `dlq_queue_policy_statements` | `map(object)` | `null` | Structured IAM policy statements (sid, actions, principals, conditions) for the queue / DLQ — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `region` | `string` | `null` | AWS region for the resources; defaults to the provider's configured region |
 | `tags` | `map(string)` | `{}` | Tags applied to the primary queue (and DLQ, merged with `dlq_tags`) |
 

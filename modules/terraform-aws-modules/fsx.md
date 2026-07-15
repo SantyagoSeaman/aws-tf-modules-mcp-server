@@ -112,11 +112,11 @@ Creates an `aws_fsx_lustre_file_system` (and, optionally, an `aws_fsx_file_cache
 | `data_compression_type` | `string` | `null` | `LZ4` or `NONE` |
 | `efa_enabled` | `bool` | `null` | Enable EFA/GPUDirect Storage (PERSISTENT_2 only) |
 | `automatic_backup_retention_days` | `number` | `null` | Backup retention 0–90 days (PERSISTENT only) |
-| `data_repository_associations` | `any` | `{}` | Map of S3 data repository association configurations |
-| `root_squash_configuration` | `any` | `{}` | Root squash settings to restrict client root access |
+| `data_repository_associations` | `any` | `{}` | Map of S3 data repository association configurations — keys (from examples): `data_repository_path`, `file_system_path`, `s3` |
+| `root_squash_configuration` | `any` | `{}` | Root squash settings to restrict client root access — keys (from examples): `root_squash` |
 | `create_file_cache` | `bool` | `false` | Whether to create an Amazon File Cache instead of/alongside a file system |
 | `log_configuration` | `map(string)` | `{level = "WARN_ERROR"}` | CloudWatch log level configuration |
-| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default — clients cannot connect until set) |
+| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default — clients cannot connect until set) — keys (from examples): `cidr_ipv4`, `description`, `from_port`, `to_port`, `ip_protocol` |
 
 ### Main Outputs
 
@@ -211,7 +211,7 @@ Creates an `aws_fsx_ontap_file_system` along with one or more `aws_fsx_ontap_sto
 | `fsx_admin_password` | `string` | `null` | ONTAP `fsxadmin` password (sensitive) |
 | `automatic_backup_retention_days` | `number` | `null` | Backup retention (0–90 days) |
 | `storage_virtual_machines` | `any` | `{}` | Map of SVM definitions, each with nested `volumes` |
-| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) |
+| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) — keys (from examples): `cidr_ipv4`, `description`, `from_port`, `to_port`, `ip_protocol` |
 
 ### Main Outputs
 
@@ -304,10 +304,10 @@ Creates an `aws_fsx_openzfs_file_system`, its root volume configuration, optiona
 | `preferred_subnet_id` | `string` | `null` | Primary subnet (required for `MULTI_AZ_1`) |
 | `route_table_ids` | `list(string)` | `[]` | Route tables for Multi-AZ endpoint routing |
 | `disk_iops_configuration` | `map(string)` | `{}` | IOPS `mode` (`AUTOMATIC`/`USER_PROVISIONED`) and `iops` value |
-| `root_volume_configuration` | `any` | `{}` | Root volume settings: compression, quotas, NFS exports, record size |
-| `volumes` | `any` | `{}` | Map of child volume configurations |
+| `root_volume_configuration` | `any` | `{}` | Root volume settings: compression, quotas, NFS exports, record size — keys (from examples): `data_compression_type`, `record_size_kib`, `nfs_exports` |
+| `volumes` | `any` | `{}` | Map of child volume configurations — keys (from examples): `name`, `user_and_group_quotas` |
 | `automatic_backup_retention_days` | `number` | `null` | Backup retention (0–90 days) |
-| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) |
+| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) — keys (from examples): `cidr_ipv4`, `description`, `from_port`, `to_port`, `ip_protocol` |
 
 ### Main Outputs
 
@@ -412,9 +412,9 @@ Creates an `aws_fsx_windows_file_system`, a dedicated security group, and an opt
 | `active_directory_id` | `string` | `null` | AWS Managed Microsoft AD directory ID |
 | `self_managed_active_directory` | `any` | `{}` | On-premises/self-managed AD join configuration |
 | `automatic_backup_retention_days` | `number` | `null` | Backup retention 0–90 days (AWS default 7 if unset) |
-| `audit_log_configuration` | `any` | `{file_access_audit_log_level = "FAILURE_ONLY", file_share_access_audit_log_level = "FAILURE_ONLY"}` | Audit logging levels |
+| `audit_log_configuration` | `any` | `{file_access_audit_log_level = "FAILURE_ONLY", file_share_access_audit_log_level = "FAILURE_ONLY"}` | Audit logging levels — keys (from examples): `file_access_audit_log_level`, `file_share_access_audit_log_level` |
 | `aliases` | `list(string)` | `[]` | DNS aliases for file system access |
-| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) |
+| `security_group_ingress_rules` | `any` | `{}` | Ingress rules for the created security group (empty by default) — keys (from examples): `cidr_ipv4`, `description`, `from_port`, `to_port`, `ip_protocol` |
 
 ### Main Outputs
 
