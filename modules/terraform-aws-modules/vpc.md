@@ -90,10 +90,10 @@ Creates `aws_vpc_endpoint` resources (Interface, backed by AWS PrivateLink, or G
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `vpc_id` | `string` | `null` | VPC ID where endpoints will be created |
-| `endpoints` | `any` | `{}` | Map of endpoint definitions (service, service_type, subnet_ids, security_group_ids, policy, tags, etc.) |
+| `endpoints` | `any` | `{}` | Map of endpoint definitions (service, service_type, subnet_ids, security_group_ids, policy, tags, etc.) — keys (from examples): `service`, `service_type`, `route_table_ids`, `tags`, `private_dns_enabled`, `subnet_ids` |
 | `create_security_group` | `bool` | `false` | Whether to create a shared security group for Interface endpoints |
 | `security_group_ids` | `list(string)` | `[]` | Default security group IDs to attach to endpoints that don't specify their own |
-| `security_group_rules` | `any` | `{}` | Rules to add to the created security group |
+| `security_group_rules` | `any` | `{}` | Rules to add to the created security group — keys (from examples): `description`, `cidr_blocks` |
 | `subnet_ids` | `list(string)` | `[]` | Default subnet IDs for Interface endpoints that don't specify their own |
 | `create` | `bool` | `true` | Whether to create VPC endpoint resources |
 | `tags` | `map(string)` | `{}` | Tags applied to all endpoint resources |

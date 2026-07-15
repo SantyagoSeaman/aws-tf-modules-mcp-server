@@ -192,18 +192,18 @@ module "waf" {
 | `name_prefix` | `string` | `null` | Creates a unique name beginning with this prefix |
 | `scope` | `string` | `"REGIONAL"` | `REGIONAL` (ALB/API Gateway/AppSync/Cognito) or `CLOUDFRONT` (global edge; provision in us-east-1) |
 | `default_action` | `any` | `"allow"` | Action when no rule matches: `allow` or `block` |
-| `rules` | `any` | `{}` | Map of rule configurations keyed by rule name (priority, action, statement, visibility) |
+| `rules` | `any` | `{}` | Map of rule configurations keyed by rule name (priority, action, statement, visibility) — see the `web-acl-rule` submodule for the typed shape |
 | `rule_json` | `string` | `null` | Escape hatch: raw JSON string of WAF rules for complex/generated configurations |
-| `visibility_config` | `object` | `{}` | CloudWatch metrics + sampled-requests configuration for the Web ACL |
-| `custom_response_bodies` | `map(object)` | `{}` | Map of custom response body configurations referenced by blocking rules |
-| `captcha_config` | `object` | `null` | CAPTCHA immunity-time configuration for the Web ACL |
-| `challenge_config` | `object` | `null` | Challenge immunity-time configuration for the Web ACL |
+| `visibility_config` | `object` | `{}` | CloudWatch metrics + sampled-requests configuration for the Web ACL — fields: `cloudwatch_metrics_enabled`, `metric_name`, `sampled_requests_enabled` |
+| `custom_response_bodies` | `map(object)` | `{}` | Map of custom response body configurations referenced by blocking rules — fields: `content`, `content_type` |
+| `captcha_config` | `object` | `null` | CAPTCHA immunity-time configuration for the Web ACL — fields: `immunity_time_property` |
+| `challenge_config` | `object` | `null` | Challenge immunity-time configuration for the Web ACL — fields: `immunity_time_property` |
 | `association_config` | `map(object)` | `{}` | Per-resource-type request body inspection size limits |
 | `token_domains` | `list(string)` | `[]` | Domains AWS WAF should accept in challenge/CAPTCHA request tokens |
 | `association_resource_arns` | `map(string)` | `{}` | Map of resource ARNs (ALB, API Gateway, etc.) to associate with the Web ACL |
 | `create_logging_configuration` | `bool` | `false` | Controls creation of the Web ACL logging configuration |
 | `logging_log_destination_configs` | `list(string)` | `[]` | Kinesis Firehose, CloudWatch Log Group, or S3 bucket ARNs for request logging |
-| `logging_filter` | `object` | `null` | Filter specifying which requests are kept in the logs |
+| `logging_filter` | `object` | `null` | Filter specifying which requests are kept in the logs — fields: `default_behavior`, `filters` |
 | `logging_redacted_fields` | `list(object)` | `[]` | Request fields to keep out of the logs |
 | `data_protection_config` | `any` | `null` | Data protection configuration for sensitive logged fields |
 | `description` | `string` | `null` | Friendly description of the Web ACL |
@@ -345,3 +345,4 @@ When using this module in automated workflows:
 8. **Use Challenge/CAPTCHA for Bots**: Prefer `challenge` or `captcha` actions over hard blocks to reduce false-positive impact on legitimate users.
 9. **Verify Managed Rule Names**: Confirm exact managed rule group names and vendor via `grep_module_docs` or the AWS managed-rules documentation before pinning them in rules.
 10. **Pin the Module Version**: Use an explicit `version = "~> 2.0"` (latest `2.1.0`) constraint for reproducible deployments.
+11. **`override_action` vs `action` Are Mutually Exclusive**: a rule whose `statement` is a `managed_rule_group_statement` or a `rule_group_reference_statement` takes `override_action` (`"none"` or `"count"` — see the `aws-common` rule in Example 1, which sets `override_action = "none"` on a `managed_rule_group_statement`); a rule with a standalone match statement (`rate_based_statement`, `ip_set_reference_statement`, byte-match, geo-match, etc.) takes `action` instead (`"allow"`/`"block"`/`"count"`/`"captcha"`/`"challenge"` — see `rate-limit` in Example 1 and `block-ips` in Example 2, both of which set `action` on a non-rule-group statement). Setting both, or setting the wrong one for the statement type, is rejected by the WAF v2 API.

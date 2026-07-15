@@ -108,11 +108,11 @@ The root module creates the S3 bucket itself (standard or S3 Express directory b
 | `server_side_encryption_configuration` | `any` | `{}` | SSE-S3 / SSE-KMS / dual-layer encryption rule, `bucket_key_enabled` |
 | `object_lock_enabled` | `bool` | `false` | Enable Object Lock (requires versioning) |
 | `object_lock_configuration` | `any` | `{}` | Default retention mode (`GOVERNANCE`/`COMPLIANCE`) and period |
-| `lifecycle_rule` | `any` | `[]` | List of lifecycle rules (transitions, expirations, abort incomplete uploads) |
-| `replication_configuration` | `any` | `{}` | Cross-region/same-region replication rules, role, RTC, metrics |
-| `website` | `any` | `{}` | Static website hosting (index/error documents, redirects) |
+| `lifecycle_rule` | `any` | `[]` | List of lifecycle rules (transitions, expirations, abort incomplete uploads) — keys (from examples): `id`, `status`, `transition`, `expiration`, `abort_incomplete_multipart_upload` |
+| `replication_configuration` | `any` | `{}` | Cross-region/same-region replication rules, role, RTC, metrics — keys (from examples): `role`, `rules` |
+| `website` | `any` | `{}` | Static website hosting (index/error documents, redirects) — keys (from examples): `index_document`, `error_document` |
 | `logging` | `any` | `{}` | Server access logging target bucket/prefix |
-| `cors_rule` | `any` | `[]` | Cross-origin resource sharing rules |
+| `cors_rule` | `any` | `[]` | Cross-origin resource sharing rules — keys (from examples): `allowed_methods`, `allowed_origins`, `allowed_headers`, `expose_headers`, `max_age_seconds` |
 | `block_public_acls` / `block_public_policy` / `ignore_public_acls` / `restrict_public_buckets` | `bool` | `true` | Bucket-level public access block (secure by default) |
 | `control_object_ownership` | `bool` | `false` | Whether to manage Object Ownership Controls |
 | `object_ownership` | `string` | `"BucketOwnerEnforced"` | `BucketOwnerEnforced` (ACLs disabled), `BucketOwnerPreferred`, or `ObjectWriter` |
@@ -592,8 +592,8 @@ Creates S3 Table Buckets and Tables (Apache Iceberg format) for analytics worklo
 | `create` | `bool` | `true` | Whether to create table bucket resources |
 | `table_bucket_name` | `string` | `null` | Name of the table bucket (3-63 characters) |
 | `tables` | `any` | `{}` | Map of table configurations (`name`, `namespace`, `format`, `metadata`) |
-| `encryption_configuration` | `any` | `null` | Encryption configuration for the table bucket |
-| `maintenance_configuration` | `any` | `null` | Maintenance/compaction configuration |
+| `encryption_configuration` | `any` | `null` | Encryption configuration for the table bucket — keys (from examples): `sse_s3` |
+| `maintenance_configuration` | `any` | `null` | Maintenance/compaction configuration — keys (from examples): `iceberg_compaction` |
 | `table_bucket_policy` | `string` | `null` | Resource-based JSON policy for the table bucket |
 
 ### Main Outputs
