@@ -879,6 +879,19 @@ _LATEST_VERSION_RE = re.compile(r"^\s*[-*]\s*\*\*Latest Version\*\*:\s*`?([^`\s]
 
 _H2_RE = re.compile(r"^## .+$", re.MULTILINE)
 
+# Interface key -> lowercase H3 sub-heading prefixes to extract from a combined
+# "## Root Module:"/"## Submodule N:" bundle. Prefix (startswith) match absorbs
+# singular/plural ("Usage Example"/"Usage Examples") and the "Main ..." phrasing.
+_INTERFACE_H3_PREFIXES: dict[str, tuple[str, ...]] = {
+    "inputs": ("main input variables",),
+    "variables": ("main input variables",),
+    "outputs": ("main output",),
+    "examples": ("usage example",),
+    "usage": ("usage example",),
+}
+
+_H3_RE = re.compile(r"^### .+$", re.MULTILINE)
+
 
 def _matches_combined_interface(title_lower: str) -> bool:
     """True for headings that carry the interface outside the split scheme."""
@@ -968,6 +981,37 @@ def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
         title = m.group(0)[3:].strip()
         sections.append((title, text[m.start() : end]))
     return preamble, sections
+
+
+def _extract_interface_h3(block: str, keys: set[str]) -> str:
+    """
+    From one combined H2 bundle, return its heading line plus only the H3
+    sub-sections whose title matches the requested interface keys.
+
+    Args:
+        block: A single "## Root Module:"/"## Submodule N:" bundle (heading + body).
+        keys: Interface keys (subset of _INTERFACE_H3_PREFIXES).
+
+    Returns:
+        The H2 heading line followed by the matching "### ..." sub-blocks in
+        document order, or "" when no sub-section matches.
+    """
+    prefixes = tuple(p for k in keys for p in _INTERFACE_H3_PREFIXES.get(k, ()))
+    if not prefixes:
+        return ""
+    matches = list(_H3_RE.finditer(block))
+    if not matches:
+        return ""
+    heading_line = block[: matches[0].start()].splitlines()[0] if block.strip() else ""
+    kept: list[str] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(block)
+        title = m.group(0)[4:].strip().lower()
+        if title.startswith(prefixes):
+            kept.append(block[m.start() : end].rstrip())
+    if not kept:
+        return ""
+    return heading_line.rstrip() + "\n\n" + "\n\n".join(kept)
 
 
 def filter_module_sections(text: str, requested: list[str], *, extra_exact_titles: tuple[str, ...] = ()) -> str:

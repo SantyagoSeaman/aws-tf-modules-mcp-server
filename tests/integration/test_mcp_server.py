@@ -19,6 +19,7 @@ from tfmod_mcp_server import (
     SearchWeights,
     ServerState,
     ServerStateManager,
+    _extract_interface_h3,
     _parse_submodule_address,
     filter_module_sections,
     get_module_documentation,
@@ -406,6 +407,41 @@ class TestGetModuleSections:
         """Test that documents without H2 sections pass through unfiltered."""
         text = "# Title\n\nJust a paragraph, no sections.\n"
         assert filter_module_sections(text, ["inputs"]) == text
+
+
+def test_extract_interface_h3_inputs_only():
+    block = (
+        "## Root Module: S3 Bucket\n\n"
+        "### Description\n\nThe root module.\n\n"
+        "### Main Input Variables\n\n| Variable | Type |\n|---|---|\n| `bucket` | `string` |\n\n"
+        "### Main Outputs\n\n| Output | Description |\n|---|---|\n| `s3_bucket_id` | id |\n\n"
+        "### Usage Examples\n\n#### Example 1\n\n```hcl\nx = 1\n```\n"
+    )
+    out = _extract_interface_h3(block, {"inputs"})
+    assert "## Root Module: S3 Bucket" in out
+    assert "### Main Input Variables" in out
+    assert "`bucket`" in out
+    assert "### Main Outputs" not in out
+    assert "### Description" not in out
+    assert "### Usage Examples" not in out
+
+
+def test_extract_interface_h3_examples_matches_singular_and_carries_children():
+    block = (
+        "## Submodule 1: notification\n\n"
+        "### Main Input Variables\n\n| Variable | Type |\n|---|---|\n| `bucket_id` | `string` |\n\n"
+        "### Usage Example\n\n#### Example A\n\n```hcl\ny = 2\n```\n"
+    )
+    out = _extract_interface_h3(block, {"examples"})
+    assert "### Usage Example" in out
+    assert "#### Example A" in out
+    assert "y = 2" in out
+    assert "### Main Input Variables" not in out
+
+
+def test_extract_interface_h3_no_match_returns_empty():
+    block = "## Root Module: X\n\n### Description\n\nnothing here.\n"
+    assert _extract_interface_h3(block, {"inputs"}) == ""
 
 
 class TestSubmoduleAddress:
