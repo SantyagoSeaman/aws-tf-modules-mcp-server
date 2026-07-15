@@ -30,7 +30,7 @@ def resolve_onnx_model_dir(project_root: Path | None = None) -> Path | None:
         return p
     if project_root is not None:
         p = project_root / "onnx" / "e5-small-v2"
-        if (p / "model.onnx").is_file():
+        if (p / "model.onnx").is_file() and (p / "tokenizer.json").is_file():
             return p
     return None
 

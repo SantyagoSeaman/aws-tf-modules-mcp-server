@@ -47,6 +47,9 @@ def test_resolve_onnx_model_dir_env_and_missing(tmp_path):
     d = tmp_path / "onnx" / "e5-small-v2"
     d.mkdir(parents=True)
     (d / "model.onnx").write_bytes(b"x")
+    # model.onnx alone is not enough: the fallback requires the tokenizer too
+    assert resolve_onnx_model_dir(project_root=tmp_path) is None
+    (d / "tokenizer.json").write_bytes(b"{}")
     assert resolve_onnx_model_dir(project_root=tmp_path) == d
 
 

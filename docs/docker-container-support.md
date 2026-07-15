@@ -5,7 +5,7 @@ from the skeleton below); the shared HTTP daemon mode described in section 9 shi
 in 0.16.0 (see `docs/superpowers/specs/2026-07-14-http-transport-design.md`); the image switched
 its encode backend from torch/sentence-transformers to ONNX in 0.19.0, which supersedes the
 torch/HF-cache internals described in sections 4.2-4.5 for the current image — see section 10
-(see `docs/superpowers/specs/2026-07-15-onnx-encode-backend-design.md`)
+and `docs/superpowers/specs/2026-07-15-onnx-encode-backend-design.md`.
 Audience: maintainers of this repository (GitHub: `SantyagoSeaman/tfmodsearch`)
 
 ---
