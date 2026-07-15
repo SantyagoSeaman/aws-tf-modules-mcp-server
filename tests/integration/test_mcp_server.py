@@ -315,6 +315,15 @@ class TestGetModuleSections:
             assert "COMPLETE inputs/outputs" in resp, "Response must flag that it is a curated subset"
             assert "module source" in resp, "Response must name source as the creation-condition tier"
 
+    def test_footer_grep_hint_mentions_shapes(self):
+        """Footer broadens the grep pointer from names to names AND type/shape verification."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        assert "TYPE/SHAPE" in out, "Footer must carry the explicit type/shape verification phrase"
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)

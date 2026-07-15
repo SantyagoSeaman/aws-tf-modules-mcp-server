@@ -1126,7 +1126,10 @@ def filter_module_sections(
         "using the Module ID above. Resource-creation conditions (whether an input gates a "
         "`count`/`for_each` resource) live in the module source, not the rendered doc. Do "
         "not assert an exact default, type, or that an input exists from this summary or from "
-        "memory when a wrong value would break `apply` — confirm it in the full doc first.",
+        "memory when a wrong value would break `apply` — confirm it in the full doc first. "
+        "Use `grep_module_docs` not only to confirm resource/variable NAMES but to verify the "
+        "exact TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure) "
+        "before writing it.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -1799,6 +1802,10 @@ def grep_module_docs(
     deterministic, section-marked text, caches it on disk, and runs a regex grep
     over it — returning only matching lines with surrounding context rather than
     the whole (often 10k+ token) document.
+
+    Use this not only to confirm resource/variable NAMES but to verify the exact
+    TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure)
+    before writing it — the curated doc's table often abbreviates these.
 
     Args:
         module_id: Terraform Registry coordinates "namespace/name/provider".
