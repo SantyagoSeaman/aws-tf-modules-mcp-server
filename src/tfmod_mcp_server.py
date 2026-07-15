@@ -45,8 +45,10 @@ from tfmod_doc_grep import grep_document
 from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
+    ScoredHit,
     SearchIndex,
     compute_scores,
+    compute_scores_detailed,
     extract_description,
     extract_purpose,
     initialize_nltk,
@@ -655,6 +657,12 @@ class SearchHit(BaseModel):
 class UpdateNoticeMixin(BaseModel):
     """Adds an optional update_notice that vanishes from output when None.
 
+    Also drops any other field named `hint` when falsy (None or empty string)
+    for the same reason -- SearchOutput.hint (L2/L7/L8 confidence signal) is
+    only meaningful for low/tie verdicts; a high-confidence result should not
+    carry a null hint key. Only SearchOutput currently defines `hint`, so this
+    is a harmless no-op on every other model built on this mixin.
+
     FastMCP serializes pydantic None fields as JSON null; the spec requires
     the field to be entirely absent when no update is known, hence the
     wrap-mode serializer (verified against FastMCP 3.4.4).
@@ -688,8 +696,11 @@ class UpdateNoticeMixin(BaseModel):
     @model_serializer(mode="wrap")
     def _drop_none_notice(self, handler: Any) -> Any:
         data = handler(self)
-        if isinstance(data, dict) and data.get("update_notice") is None:
-            data.pop("update_notice", None)
+        if isinstance(data, dict):
+            if data.get("update_notice") is None:
+                data.pop("update_notice", None)
+            if not data.get("hint"):
+                data.pop("hint", None)
         return data
 
     @classmethod
@@ -706,6 +717,17 @@ class UpdateNoticeMixin(BaseModel):
 
 class SearchOutput(UpdateNoticeMixin):
     results: list[SearchHit] = Field(..., description="Top-ranked Terraform modules matching the query.")
+    confidence: str = Field(
+        ...,
+        description="Search confidence verdict: 'high' (trust the top hit), 'tie' "
+        "(top-1 and top-2 are close, fetch both before committing), or 'low' "
+        "(no confident catalog match -- likely absent). Always present.",
+    )
+    hint: str | None = Field(
+        default=None,
+        description="Actionable follow-up guidance, present only when confidence is "
+        "'low' or 'tie'; absent entirely (not null) when confidence is 'high'.",
+    )
 
 
 class ModuleListItem(BaseModel):
@@ -1268,6 +1290,56 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
     return text[: max_length - 1].rstrip() + "…"
 
 
+# L2/L7/L8: threshold on the top1/top2 combined-score ratio below which two
+# hits are treated as contested rather than one confidently winning. Indicative
+# (N=3 report: elasticache 11.32 vs memory-db 4.90 = 2.3x flags tie; clean
+# queries clear 3x+ and stay high) -- validated by the morning A/B run.
+SEARCH_NEAR_TIE_RATIO = 2.5
+
+
+def _classify_confidence(hits: list[ScoredHit]) -> tuple[str, float]:
+    """Classify a ranked hit list into a search-confidence verdict.
+
+    Two signals, because a single top1/top2 ratio conflates "absent" with
+    "contested":
+    1. Whether the top hit earned a lexical component (exact module-name match
+       OR any keyword-IDF overlap) -- a real match exists vs a semantic-only
+       ceiling (the query is likely not covered by the catalog at all).
+    2. The top1/top2 combined-score ratio -- a wide gap means the top hit
+       confidently beat the field; a narrow gap means two hits are contested.
+
+    Verdict:
+    - "low": top-1 has no lexical component at all. Ratio is irrelevant here
+      (even a wide gap over noise is not a confident match).
+    - "tie": top-1 is lexical but the top1/top2 ratio is below
+      SEARCH_NEAR_TIE_RATIO -- two real candidates, pick between them.
+    - "high": top-1 is lexical and clearly ahead of rank 2.
+
+    An empty or single-hit list is treated as "high" confidence with an
+    infinite ratio (nothing to contest it) per the documented empty/single-
+    result behavior.
+
+    Returns:
+        (verdict, ratio) -- ratio is float("inf") when there is no rank-2 hit
+        or its score is <= 0.
+    """
+    if not hits:
+        return "high", float("inf")
+
+    top1 = hits[0]
+    if len(hits) < 2 or hits[1].score <= 0:
+        ratio = float("inf")
+    else:
+        ratio = top1.score / hits[1].score
+
+    top1_lexical = top1.exact_hit or top1.kw_overlap
+    if not top1_lexical:
+        return "low", ratio
+    if ratio < SEARCH_NEAR_TIE_RATIO:
+        return "tie", ratio
+    return "high", ratio
+
+
 def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> SearchOutput:
     """
     Helper function to search for modules.
@@ -1281,7 +1353,11 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
         top_k: Number of results to return (clamped to 1..10, default 3)
 
     Returns:
-        SearchOutput with top-k ranked results
+        SearchOutput with top-k ranked results plus a confidence verdict
+        (L2/L7/L8): "high" (trust the top hit), "tie" (top-1 and top-2 are
+        close, fetch both), or "low" (no confident catalog match). A hint
+        accompanies low/tie verdicts and is absent from the JSON output when
+        confidence is "high".
 
     See search_modules() tool documentation for full details.
     """
@@ -1291,20 +1367,44 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
 
     # Use configured weights from state
     weights = state.weights
-    results = compute_scores(
+    # Always fetch at least 2 hits internally so the confidence classifier can
+    # see rank-2 even when the caller asked for top_k=1 -- otherwise a real
+    # near-tie would be silently masked into a false "high" verdict.
+    fetch_k = max(top_k, 2)
+    hits = compute_scores_detailed(
         state.index,
         query,
         w_kw=weights.w_kw,
         w_exact=weights.w_exact,
         w_bm25=weights.w_bm25,
         w_sem=weights.w_sem,
-        top_k=top_k,
+        top_k=fetch_k,
         query_instruction=state.query_instruction,
         logger=state.logger,
     )
 
+    confidence, ratio = _classify_confidence(hits)
+    hint: str | None = None
+    if hits:
+        top1_name = state.index.docs[hits[0].doc_index].module_name or "?"
+        if confidence == "low":
+            hint = (
+                f"No confident catalog match (top score {hits[0].score:.1f}). Confirm absence with "
+                f"modules_list, or try grep_module_docs on the nearest module '{top1_name}' for the "
+                f"capability keyword."
+            )
+        elif confidence == "tie":
+            top2_name = state.index.docs[hits[1].doc_index].module_name or "?"
+            hint = (
+                f"Contested top match: '{top1_name}' vs '{top2_name}' (scores {hits[0].score:.1f} / "
+                f"{hits[1].score:.1f}, ratio {ratio:.1f}). Fetch both with get_module before committing."
+            )
+
+    results = hits[:top_k]
+
     out: list[SearchHit] = []
-    for rank, (score, i) in enumerate(results):
+    for rank, hit in enumerate(results):
+        score, i = hit.score, hit.doc_index
         d = state.index.docs[i]
         # L6: only the top hit carries the full keyword array and description.
         # Lower ranks re-bill on every later turn but nothing reads their keyword
@@ -1328,8 +1428,8 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
             )
         )
 
-    state.logger.debug(f"Search for '{query}' returned {len(out)} results")
-    return SearchOutput(results=out)
+    state.logger.debug(f"Search for '{query}' returned {len(out)} results (confidence={confidence})")
+    return SearchOutput(results=out, confidence=confidence, hint=hint)
 
 
 _INPUT_TABLE_HEADING_RE = re.compile(r"^### Main Input Variables[ \t]*$", re.MULTILINE)

@@ -168,14 +168,20 @@ def test_repro5_score_band_separates_real_from_absent_capability(_repro_state) -
     ), f"absent-capability query 'cognito' unexpectedly high: {absent.results[0].score}"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="Repro 5 / lever 3 OPEN: search_modules has no confidence/no-match "
-    "signal yet. Remove this marker when the confidence field lands.",
-)
 def test_repro5_search_exposes_confidence_signal(_repro_state) -> None:
-    """Desired API: a low-confidence query surfaces a machine-readable signal so
-    the agent need not dump modules_list to prove a capability is absent."""
+    """Desired API: a non-confident query surfaces a machine-readable signal so
+    the agent need not dump modules_list to prove a capability is absent.
+
+    NOTE on "cognito" specifically: several unrelated modules (alb, appsync,
+    opensearch) list "cognito" as a related-service keyword in their curated
+    metadata (e.g. ALB supports Cognito authentication actions), so the query
+    earns a real (if incidental) keyword-overlap component on its top hit. The
+    two-signal classifier (L2/L7/L8) therefore reports "tie" here rather than
+    "low" -- top-1 and top-2 are both weak, contested matches, not a single
+    confident-but-wrong one. Either verdict is a correct "do not trust this
+    blindly" signal; see test_retrieval_levers.py for an unambiguous "low"
+    example (a query with neither an exact-name nor a keyword match)."""
     result = search_modules_impl("cognito", _repro_state, top_k=3)
     assert hasattr(result, "confidence"), "SearchOutput should carry a confidence signal"
-    assert result.confidence in {"low", "none"}
+    assert result.confidence in {"low", "tie"}
+    assert result.hint, "a non-confident verdict must carry a non-empty hint"

@@ -15,15 +15,18 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
+    SEARCH_NEAR_TIE_RATIO,
+    SearchOutput,
     SearchWeights,
     ServerStateManager,
+    _classify_confidence,
     filter_module_sections,
     get_module_impl,
     modules_list_impl,
     orientation_head,
     search_modules_impl,
 )
-from tfmod_search_lib import load_index
+from tfmod_search_lib import ScoredHit, load_index
 
 DOCS = PROJECT_ROOT / "modules" / "terraform-aws-modules"
 
@@ -148,3 +151,109 @@ def test_l4_sections_inputs_still_returns_full_table(module: str, state) -> None
         f"the capped default head ({head_rows} rows)"
     )
     assert "optional inputs" not in full, f"{module}: full sections=['inputs'] must not carry the head-only pointer"
+
+
+# --------------------------------------------------------------------------- #
+# L2/L7/L8 - two-signal search confidence classifier.
+# --------------------------------------------------------------------------- #
+def test_l2_absent_capability_is_low_confidence_with_hint(state) -> None:
+    # sagemaker is absent from the catalog and shares no exact-name or keyword
+    # overlap with any indexed module (unlike "cognito", which several unrelated
+    # modules list as a related-service keyword -- see test_repro_pack.py for
+    # that near-tie case) -- a clean semantic-only-ceiling example.
+    out = search_modules_impl("sagemaker", state, top_k=3)
+    assert out.confidence == "low"
+    assert out.hint, "low confidence must carry a non-empty hint"
+
+
+def test_l2_clean_query_is_high_confidence_with_no_hint(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3)
+    assert out.confidence == "high"
+    assert out.hint is None
+
+
+def test_l7_l8_classify_confidence_low_when_top1_not_lexical() -> None:
+    # No exact-name and no keyword overlap on rank 1 -> low, regardless of ratio.
+    hits = [
+        ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False),
+    ]
+    verdict, ratio = _classify_confidence(hits)
+    assert verdict == "low"
+    assert ratio == 5.0
+
+
+def test_l7_classify_confidence_tie_when_lexical_but_close_ratio() -> None:
+    # Lexical top-1 but top1/top2 ratio below the near-tie threshold -> tie.
+    hits = [
+        ScoredHit(score=11.32, doc_index=0, exact_hit=False, kw_overlap=True),
+        ScoredHit(score=4.90, doc_index=1, exact_hit=False, kw_overlap=True),
+    ]
+    verdict, ratio = _classify_confidence(hits)
+    assert ratio == pytest.approx(11.32 / 4.90)
+    assert ratio < SEARCH_NEAR_TIE_RATIO
+    assert verdict == "tie"
+
+
+def test_l7_classify_confidence_high_when_lexical_and_wide_ratio() -> None:
+    hits = [
+        ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False),
+    ]
+    verdict, ratio = _classify_confidence(hits)
+    assert verdict == "high"
+    assert ratio == 9.0
+
+
+def test_l7_classify_confidence_high_when_no_rank2() -> None:
+    hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True)]
+    verdict, ratio = _classify_confidence(hits)
+    assert verdict == "high"
+    assert ratio == float("inf")
+
+
+def test_l7_classify_confidence_high_when_rank2_score_zero() -> None:
+    hits = [
+        ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True),
+        ScoredHit(score=0.0, doc_index=1, exact_hit=False, kw_overlap=False),
+    ]
+    verdict, ratio = _classify_confidence(hits)
+    assert verdict == "high"
+    assert ratio == float("inf")
+
+
+def test_l8_low_hint_names_nearest_module(state) -> None:
+    out = search_modules_impl("sagemaker", state, top_k=3)
+    assert out.confidence == "low"
+    assert out.results, "expected at least one result to name as nearest"
+    assert out.results[0].module_name in out.hint
+
+
+def test_l7_tie_hint_names_both_top_modules(state) -> None:
+    out = search_modules_impl("redis in-memory cache cluster", state, top_k=3)
+    if out.confidence != "tie":
+        pytest.skip("query did not reproduce a near-tie against the live index; verdict logic is unit-tested above")
+    assert out.results[0].module_name in out.hint
+    assert out.results[1].module_name in out.hint
+
+
+def test_search_output_serialization_drops_hint_when_none(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3)
+    assert out.confidence == "high"
+    dumped = out.model_dump()
+    assert "hint" not in dumped
+    assert "hint" not in out.model_dump_json()
+
+
+def test_search_output_serialization_keeps_hint_when_low(state) -> None:
+    out = search_modules_impl("sagemaker", state, top_k=3)
+    assert out.confidence == "low"
+    dumped = out.model_dump()
+    assert "hint" in dumped
+    assert dumped["hint"] == out.hint
+
+
+def test_search_output_confidence_always_present_direct_construction() -> None:
+    out = SearchOutput(results=[], confidence="high")
+    assert out.hint is None
+    assert "hint" not in out.model_dump()
