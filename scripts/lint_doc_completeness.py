@@ -39,7 +39,9 @@ OPAQUE_RE = re.compile(
 )
 EXPANDED_RE = re.compile(r"object\(\{", re.IGNORECASE)
 HINT_RE = re.compile(
-    r"`[^`]+`|[{}\[\]]|\b(shape|keys?|fields?|nest\w*|each|per-|see|submodule|example)\b",
+    # `per-\w` is its own alternative: a word boundary cannot follow the hyphen,
+    # so `\bper-\b` would never match a phrase like "per-resource".
+    r"`[^`]+`|[{}\[\]]|\bper-\w|\b(shape|keys?|fields?|nest\w*|each|see|submodule|example)\b",
     re.IGNORECASE,
 )
 SEPARATOR_RE = re.compile(r"^:?-+:?$")
