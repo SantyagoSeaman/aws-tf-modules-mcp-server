@@ -19,7 +19,7 @@
 - Default behavior with no new env vars set must be identical to 0.18.0 (torch path).
 - Commit messages: plain content-only, NO apostrophes/contractions, no attribution trailers.
 - Venv: `source .venv/bin/activate` (onnxruntime + tokenizers already installed there for the spike).
-- Local ONNX assets for tests/gate: `/private/tmp/claude-501/-Users-alexandermakeev-Work-aws-tf-modules-mcp-server/df34f2bc-ab98-4a73-97b9-a8c6d4842cb6/scratchpad/e5-small-v2-onnx` (exported during the spike; contains model.onnx + tokenizer.json).
+- Local ONNX assets for tests/gate: `<scratchpad>/e5-small-v2-onnx` (exported during the spike; contains model.onnx + tokenizer.json).
 
 ---
 

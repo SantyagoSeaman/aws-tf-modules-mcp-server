@@ -231,8 +231,7 @@ Only the latest published minor release receives security fixes.
 
 Please report suspected vulnerabilities privately — do **not** open a public issue.
 
-- **Preferred:** use GitHub's [Private Vulnerability Reporting](https://github.com/SantyagoSeaman/tfmodsearch/security/advisories/new) ("Report a vulnerability" on the repository's Security tab).
-- **Fallback:** email makeev.alex@gmail.com.
+- Use GitHub's [Private Vulnerability Reporting](https://github.com/SantyagoSeaman/tfmodsearch/security/advisories/new) ("Report a vulnerability" on the repository's Security tab).
 
 You can expect an acknowledgement within a few days. This is a volunteer-maintained
 open-source project, so fixes are best-effort; we will keep you informed of progress
