@@ -60,7 +60,7 @@ The module encodes several AWS-side defaults that matter for correct usage: it c
 | `retention_period_in_days` | `number` | `null` | Metric retention; only takes effect when `limits_per_label_set` is also non-null |
 | `limits_per_label_set` | `list(object)` | `null` | Per-label-set cardinality limits (`label_set`, `limits.max_series`); non-null (even `[]`) is required to create the workspace configuration resource |
 | `create_resource_policy` | `bool` | `true` | Create an IAM resource policy for the workspace (new workspaces only) |
-| `resource_policy_statements` | `map(object)` | `null` | Custom IAM statements; overrides the module's default statements |
+| `resource_policy_statements` | `map(object)` | `null` | Custom IAM statements; overrides the module's default statements — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `cloudwatch_log_group_name` | `string` | `null` | Custom log group name; defaults to `/aws/prometheus/<workspace_alias>` |
 | `cloudwatch_log_group_use_name_prefix` | `bool` | `false` | Use `cloudwatch_log_group_name` as a name prefix instead of exact name |
 | `cloudwatch_log_group_class` | `string` | `null` | `STANDARD` or `INFREQUENT_ACCESS` |

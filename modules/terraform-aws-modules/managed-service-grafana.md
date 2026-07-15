@@ -84,10 +84,10 @@ The module is a single, flat module with no submodules; every resource group it 
 | `iam_role_max_session_duration` | `number` | `null` | Max session duration (seconds) for the IAM role |
 | `enable_alerts` | `bool` | `false` | Grant IAM permissions required for Grafana-managed alerting |
 | `create_security_group` | `bool` | `true` | Whether to create a security group for the workspace |
-| `security_group_rules` | `any` | `{}` | Ingress/egress rules to add to the created security group |
+| `security_group_rules` | `any` | `{}` | Ingress/egress rules to add to the created security group — keys (from examples): `description`, `from_port`, `to_port`, `protocol`, `cidr_blocks` |
 | `workspace_api_keys` | `any` | `{}` | Map of API keys to create (`VIEWER`/`EDITOR`/`ADMIN`) |
-| `workspace_service_accounts` | `any` | `{}` | Map of service accounts to create |
-| `workspace_service_account_tokens` | `any` | `{}` | Map of tokens to create for service accounts |
+| `workspace_service_accounts` | `any` | `{}` | Map of service accounts to create — keys (from examples): `name`, `grafana_role` |
+| `workspace_service_account_tokens` | `any` | `{}` | Map of tokens to create for service accounts — keys (from examples): `service_account_key`, `name`, `seconds_to_live` |
 | `create_saml_configuration` | `bool` | `true` | Whether to create the SAML configuration resource |
 | `saml_idp_metadata_url` | `string` | `null` | SAML IdP metadata URL (mutually exclusive with `saml_idp_metadata_xml`) |
 | `saml_admin_role_values` / `saml_editor_role_values` | `list(string)` | `[]` | SAML assertion values mapped to Admin/Editor roles |

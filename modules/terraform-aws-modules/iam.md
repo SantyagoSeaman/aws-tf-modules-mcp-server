@@ -192,7 +192,7 @@ Creates an individual IAM user with a login profile, access key, SSH public key 
 | `create_access_key` | `bool` | `true` | Create access key |
 | `create_ssh_key` | `bool` | `false` | Upload SSH public key |
 | `create_inline_policy` | `bool` | `false` | Create inline policy |
-| `inline_policy_permissions` | `map(object)` | `null` | Inline policy statements (actions, resources, effect, principals, conditions) |
+| `inline_policy_permissions` | `map(object)` | `null` | Inline policy statements (actions, resources, effect, principals, conditions) — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `pgp_key` | `string` | `null` | PGP key (`keybase:username` or base64-encoded) |
 | `password_reset_required` | `bool` | `true` | Require password reset on first login |
 | `force_destroy` | `bool` | `false` | Destroy even with non-Terraform-managed keys/profile |
@@ -268,7 +268,7 @@ Creates an IAM group for organizing users and managing permissions at scale. Sup
 | `users` | `list(string)` | `[]` | IAM users to add to the group |
 | `users_account_id` | `string` | `null` | Alternate AWS account ID where the users reside |
 | `create_policy` | `bool` | `true` | Create an IAM policy for the group |
-| `permissions` | `map(object)` | `null` | Custom policy statements (actions, resources, effect, principals, conditions) |
+| `permissions` | `map(object)` | `null` | Custom policy statements (actions, resources, effect, principals, conditions) — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `policies` | `map(string)` | `{}` | Managed/custom policy ARNs to attach, `{name = arn}` |
 | `enable_self_management_permissions` | `bool` | `true` | Allow credential/MFA self-management |
 | `enable_mfa_enforcement` | `bool` | `true` | Require MFA for actions |
@@ -338,8 +338,8 @@ Creates a single IAM role with a fully customizable trust policy and an optional
 |----------|------|---------|-------------|
 | `name` | `string` | `null` | Role name |
 | `use_name_prefix` | `bool` | `true` | Use `name` as a prefix (adds a random suffix) rather than an exact name |
-| `trust_policy_permissions` | `map(object)` | `null` | Custom trust policy statements (actions, principals, conditions) |
-| `trust_policy_conditions` | `list(object)` | `[]` | Additional conditions applied to all enabled trust statements |
+| `trust_policy_permissions` | `map(object)` | `null` | Custom trust policy statements (actions, principals, conditions) — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
+| `trust_policy_conditions` | `list(object)` | `[]` | Additional conditions applied to all enabled trust statements — fields: `test`, `variable`, `values` |
 | `enable_github_oidc` | `bool` | `false` | Enable GitHub Actions OIDC trust |
 | `oidc_wildcard_subjects` | `list(string)` | `[]` | GitHub repo/branch subjects with wildcards (e.g. `"org/repo:*"`) |
 | `enable_bitbucket_oidc` | `bool` | `false` | Enable Bitbucket Pipelines OIDC trust |
