@@ -138,6 +138,14 @@ so **`search_modules`, `get_module`, and `modules_list` make zero network calls 
 (`grep_module_docs` is the one tool designed to reach the live Terraform Registry — that still
 needs real network; only a `--network none` warmup, which never calls it, is fully offline.)
 
+> **Since 0.19.0, the image runs the ONNX encode backend instead of torch**: `model.onnx` +
+> `tokenizer.json` are baked in at build time (see "Embedding backends" below) instead of the
+> torch/sentence-transformers stack and its HF model cache. Measured: **1.42 GB → 559 MB
+> uncompressed** (pull size verified post-release), same search results — validated at cosine
+> ≥ 0.99999988 (max elementwise diff 4.06e-07) against sentence-transformers across all 162
+> golden queries, plus ~5x faster query encoding on CPU. `uvx tfmodsearch` / PyPI installs are
+> unaffected — they keep torch by default.
+
 **Any MCP client**, launch the image directly (never add `-t`/`--tty` — it corrupts the stdio
 JSON-RPC stream):
 ```json
@@ -145,7 +153,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.18.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.19.0"]
     }
   }
 }
@@ -157,7 +165,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.18.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.19.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -171,7 +179,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.18.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.19.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -191,7 +199,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.18.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.19.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -256,7 +264,7 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.18.0", "modules": 55,
+# {"status": "ok", "version": "0.19.0", "modules": 55,
 #  "latest_version": null, "update_available": false}
 ```
 
@@ -740,6 +748,20 @@ search_weights:
 1. CLI arguments (`--w_kw`, `--w_exact`, `--query-instruction`, etc.)
 2. `config.yaml` file
 3. Built-in defaults
+
+### Embedding backends
+
+Query and index encoding go through a small backend seam, selected via `TFMODSEARCH_EMBED_BACKEND`:
+
+| Value | Behavior |
+|---|---|
+| `auto` (default) | Use the torch/sentence-transformers backend if `sentence-transformers` is importable; otherwise fall back to the ONNX backend if ONNX assets are found; otherwise a clear error naming both options. |
+| `torch` | Force the sentence-transformers path (unchanged since prior releases). |
+| `onnx` | Force the ONNX path: a `tokenizers` tokenizer plus an `onnxruntime` CPU session, replicating sentence-transformers mean pooling + L2 normalization for `intfloat/e5-small-v2`. Validated at cosine ≥ 0.99999988 (max elementwise diff 4.06e-07) against sentence-transformers across all 162 golden queries, and ~5x faster to encode a query on CPU. |
+
+`TFMODSEARCH_ONNX_MODEL_DIR` points the ONNX backend at a directory containing `model.onnx` + `tokenizer.json` (defaults to `<project_root>/onnx/e5-small-v2` if unset, which is where the official Docker image bakes them).
+
+**`uvx tfmodsearch` / PyPI installs keep torch** — the core dependency set is unchanged, so nothing to opt into for a normal local install. The ONNX bits are an optional extra: `pip install "tfmodsearch[onnx]"` (adds `onnxruntime>=1.20` and `tokenizers>=0.21`), plus ONNX assets — `python scripts/export_onnx_model.py <output_dir>` exports `intfloat/e5-small-v2` (requires `optimum-onnx`/torch at export time only) and prints a parity check against sentence-transformers when both are installed. This is opt-in and mainly useful if you want the ONNX path outside the official Docker image (see below, which already ships it baked in).
 
 ### Module Documentation Format
 

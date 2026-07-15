@@ -2,7 +2,10 @@
 
 Status: implemented, shipped in 0.15.0 (see section 8 for implementation notes and deviations
 from the skeleton below); the shared HTTP daemon mode described in section 9 shipped separately
-in 0.16.0 (see `docs/superpowers/specs/2026-07-14-http-transport-design.md`)
+in 0.16.0 (see `docs/superpowers/specs/2026-07-14-http-transport-design.md`); the image switched
+its encode backend from torch/sentence-transformers to ONNX in 0.19.0, which supersedes the
+torch/HF-cache internals described in sections 4.2-4.5 for the current image — see section 10
+(see `docs/superpowers/specs/2026-07-15-onnx-encode-backend-design.md`)
 Audience: maintainers of this repository (GitHub: `SantyagoSeaman/tfmodsearch`)
 
 ---
@@ -156,7 +159,7 @@ revisit if/when Codex CLI fixes plugin-root interpolation.
 #!/usr/bin/env python3
 import os, sys
 if os.environ.get("TFMODSEARCH_DOCKER", "0") != "0":
-    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.18.0")
+    img = os.environ.get("TFMODSEARCH_IMAGE", "ghcr.io/santyagoseaman/tfmodsearch:0.19.0")
     os.execvp("docker", ["docker", "run", "-i", "--rm", img])   # opt-in
 else:
     os.execvp("uvx", ["uvx", "tfmodsearch", *sys.argv[1:]])      # DEFAULT (local, unchanged)
@@ -334,7 +337,7 @@ argv passed to the same `ENTRYPOINT ["tfmodsearch"]`.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.18.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.19.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -374,6 +377,46 @@ responses that is absent entirely when there is nothing to report. There is no a
 operator still bumps the tag and runs `docker compose pull && docker compose up -d`. Set
 `TFMODSEARCH_UPDATE_CHECK=0` to disable the check for air-gapped deployments; the only network
 call it makes is one anonymous GET to the public PyPI JSON API.
+
+## 10. ONNX encode backend (image switch, 0.19.0)
+
+Same entrypoint, same tools, different internals: shipped in 0.19.0 (design:
+`docs/superpowers/specs/2026-07-15-onnx-encode-backend-design.md`). The runtime image no longer
+ships torch/sentence-transformers or a baked Hugging Face model cache. It bakes `model.onnx` +
+`tokenizer.json` (exported at build time by `scripts/export_onnx_model.py`) and runs queries
+through `onnxruntime` + `tokenizers` instead — this **supersedes** the "Bake in every asset" /
+"Env baked into the image" / Dockerfile-skeleton descriptions in sections 4.2-4.5 and 5 above,
+which describe the pre-0.19.0 (torch) image and are kept as-is for history.
+
+**What changed in the image**:
+- Builder stage: still installs CPU-only torch, but only to run the export tooling
+  (`optimum-onnx`) that produces `/opt/onnx/e5-small-v2/{model.onnx,tokenizer.json}`; torch itself
+  is not carried into the runtime stage.
+- Runtime stage: `pip install --no-deps` on the built wheel plus an explicit torch-free
+  dependency list (core deps minus `sentence-transformers`, plus `onnxruntime`/`tokenizers`).
+  `HF_HUB_OFFLINE`, `TRANSFORMERS_OFFLINE`, and `HF_HOME` are gone — nothing imports Hugging Face
+  at runtime anymore. In their place: `TFMODSEARCH_EMBED_BACKEND=onnx` and
+  `TFMODSEARCH_ONNX_MODEL_DIR=/opt/onnx/e5-small-v2`.
+- The offline guarantee (`docker run --network none -i --rm <image> --warmup`) is unchanged in
+  spirit — it now proves the ONNX path loads and encodes fully offline instead of the HF-cache
+  path.
+
+**Measured** (golden set: all 162 queries, 54-module catalog at spike time):
+- Image size: **1.42 GB → 559 MB uncompressed** (pull size verified post-release).
+- Parity vs. the previous torch/sentence-transformers backend: min cosine **0.99999988**, max
+  elementwise diff **4.06e-07**.
+- Query encode: ~5x faster than torch on CPU.
+- Golden set: 172/172 on both backends against the untouched index pickle (the index is not
+  rebuilt — the standing index-drift policy in `CLAUDE.md` applies; ONNX queries the same
+  torch-produced embeddings the pickle always had).
+
+**Unaffected**: `uvx tfmodsearch` / PyPI installs — the core dependency set is unchanged and still
+defaults to torch (`TFMODSEARCH_EMBED_BACKEND=auto` picks torch whenever
+`sentence-transformers` is importable). The ONNX backend is available there too as the opt-in
+`tfmodsearch[onnx]` extra, but nothing changes for an install that does not ask for it. Transports,
+tools, the plugin, and the shared-HTTP-daemon mode in section 9 are all unaffected — `--transport
+http` is still just an argv to the same `ENTRYPOINT ["tfmodsearch"]`, now running on top of the
+ONNX backend instead of torch when using the official image.
 
 ---
 
