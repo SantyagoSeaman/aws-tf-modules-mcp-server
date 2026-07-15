@@ -8,11 +8,15 @@
 # one embedding-model load, many clients over http://host:8765/mcp (see docker-compose.yml and
 # README's "Shared HTTP instance" section for the run recipe).
 #
-# Every asset that would otherwise trigger a runtime network call is baked in at build time:
-# the intfloat/e5-small-v2 embedding model, the NLTK punkt_tab tokenizer, the prebuilt search
-# index, and the module docs corpus (the last two are already force-included in the wheel).
-# Runtime env below (HF_HUB_OFFLINE/TRANSFORMERS_OFFLINE/NLTK_DATA) makes search_modules/
-# get_module/modules_list fully offline; verify with `docker run --network none -i --rm <image>
+# Since 0.19.0 this image runs the ONNX encode backend instead of torch/sentence-transformers:
+# the embedding model is exported to ONNX at build time and queried with onnxruntime + tokenizers,
+# numerically interchangeable with the torch path (min cosine 0.99999988 across the full 162-query
+# golden set — see docs/superpowers/specs/2026-07-15-onnx-encode-backend-design.md). There is no
+# HF cache and no HF_HUB_OFFLINE/TRANSFORMERS_OFFLINE env at runtime: nothing imports HuggingFace
+# code at runtime, so those knobs no longer apply. Every asset that would otherwise trigger a
+# runtime network call is still baked in at build time: the ONNX model + tokenizer, the NLTK
+# punkt_tab tokenizer, the prebuilt search index, and the module docs corpus (the last two are
+# already force-included in the wheel). Verify with `docker run --network none -i --rm <image>
 # --warmup`. grep_module_docs is the one tool designed to reach the live Terraform Registry and
 # still needs real network when called -- that is by design, not a gap in this offline setup.
 
@@ -20,34 +24,34 @@
 FROM python:3.12-slim AS builder
 
 ENV PIP_NO_CACHE_DIR=1 \
-    HF_HOME=/opt/hf \
     NLTK_DATA=/opt/nltk_data
 
 WORKDIR /build
 
-# CPU-only torch first, so sentence-transformers reuses it instead of pulling the CUDA wheel
-# (multi-GB vs a few hundred MB — the single biggest image-size lever).
+# CPU-only torch first, so the ONNX export tooling below (which needs torch to trace the model)
+# does not pull the CUDA wheel (multi-GB vs a few hundred MB). Builder-only: this layer is not
+# copied to the runtime stage.
 RUN pip install torch --index-url https://download.pytorch.org/whl/cpu
+
+# Export tooling (builder-only; version pinned for reproducible exports) + nltk for punkt_tab,
+# plus hatchling/build to build the wheel in this same stage.
+RUN pip install "optimum-onnx[onnxruntime]==0.1.0" "nltk>=3.9.4" hatchling build
 
 COPY pyproject.toml README.md ./
 COPY src/ src/
 COPY config.yaml ./
 COPY model/ model/
 COPY modules/ modules/
+COPY scripts/ scripts/
 
-RUN pip install .
+# Export the embedding model to ONNX -- this is what replaces torch at runtime. The parity check
+# inside the script is skipped here (sentence-transformers is not installed in this stage); parity
+# is already gated by the release process against the real golden set (see the spec).
+RUN python scripts/export_onnx_model.py /opt/onnx/e5-small-v2
 
-# The CPU torch wheel ships dead weight that inference never touches: its own test
-# suite and C++ headers. NOTE: torch/bin is NOT dead weight -- torch/__init__.py
-# unconditionally resolves torch/bin/torch_shm_manager at import time (shared-memory
-# manager init) and raises RuntimeError if it is missing, so it must stay. Verified
-# safe by the release gate (offline --warmup + a real search_modules call exercise
-# the full encode path).
-RUN rm -rf /usr/local/lib/python3.12/site-packages/torch/test \
-           /usr/local/lib/python3.12/site-packages/torch/include
-
-# Pre-download the embedding model into the HF cache baked into the image.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/e5-small-v2')"
+# Build the wheel (contains src modules + index + docs corpus + config). --no-isolation reuses the
+# hatchling/build already installed above instead of re-downloading a build venv.
+RUN python -m build --wheel --outdir /build/dist --no-isolation
 
 # Pre-fetch only punkt_tab (a few MB) into a slim nltk_data dir, not the repo's full nltk_data/.
 # nltk.download() returns False (not an exception) on failure, so assert it explicitly —
@@ -61,14 +65,23 @@ FROM python:3.12-slim
 
 RUN useradd --create-home --home-dir /home/app app
 
-ENV HF_HUB_OFFLINE=1 \
-    TRANSFORMERS_OFFLINE=1 \
-    HF_HOME=/opt/hf \
-    NLTK_DATA=/opt/nltk_data
+# ONNX backend only: no torch, no sentence-transformers, no HF cache, no HF offline env
+# (nothing imports HuggingFace code at runtime anymore).
+ENV TFMODSEARCH_EMBED_BACKEND=onnx \
+    TFMODSEARCH_ONNX_MODEL_DIR=/opt/onnx/e5-small-v2 \
+    NLTK_DATA=/opt/nltk_data \
+    PIP_NO_CACHE_DIR=1
 
-COPY --from=builder /usr/local/lib/python3.12/site-packages /usr/local/lib/python3.12/site-packages
-COPY --from=builder /usr/local/bin/tfmodsearch /usr/local/bin/tfmodsearch
-COPY --from=builder --chown=app:app /opt/hf /opt/hf
+# Explicit torch-free dependency list: core deps from pyproject minus sentence-transformers, plus
+# the [onnx] extra (onnxruntime, tokenizers). A documented duplication of pyproject -- the release
+# gate (offline warmup + real queries) exercises every import so drift cannot silently ship.
+RUN pip install "fastmcp>=3.2.0,<4" "nltk>=3.9.4" "numpy>=2.4.1" "pyyaml>=6.0.3" \
+    "rank-bm25>=0.2.2" "onnxruntime>=1.20" "tokenizers>=0.21"
+
+COPY --from=builder /build/dist/*.whl /tmp/
+RUN pip install --no-deps /tmp/*.whl && rm /tmp/*.whl
+
+COPY --from=builder --chown=app:app /opt/onnx /opt/onnx
 COPY --from=builder --chown=app:app /opt/nltk_data /opt/nltk_data
 
 # Two of the server's paths are computed relative to tfmod_search_lib.py's own location
@@ -83,10 +96,7 @@ COPY --from=builder --chown=app:app /opt/nltk_data /opt/nltk_data
 RUN mkdir -p /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs && \
     chown app:app /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs
 
-# pip/setuptools and bytecode caches aren't needed at runtime; trim what's cheap to trim (the
-# CPU-only torch wheel, now stripped of its test/include dirs above, is still the size floor
-# here — the remainder is not on the table without swapping the embedding backend, which is out
-# of scope).
+# pip/setuptools and bytecode caches aren't needed at runtime; trim what's cheap to trim.
 RUN rm -rf /usr/local/lib/python3.12/site-packages/pip \
            /usr/local/lib/python3.12/site-packages/setuptools \
            /usr/local/lib/python3.12/site-packages/pip-*.dist-info \
