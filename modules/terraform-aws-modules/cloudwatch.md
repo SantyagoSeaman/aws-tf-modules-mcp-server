@@ -346,7 +346,7 @@ Creates a single CloudWatch metric alarm that monitors a metric (or a metric-mat
 | `namespace` | `string` | `null` | Metric namespace |
 | `period` | `string` | `null` | Period (seconds) over which the statistic applies |
 | `statistic` | `string` | `null` | `SampleCount`, `Average`, `Sum`, `Minimum`, `Maximum` |
-| `dimensions` | `any` | `null` | Metric dimensions |
+| `dimensions` | `any` | `null` | Metric dimensions — keys (from examples): `InstanceId`, `FunctionName` |
 | `alarm_description` | `string` | `null` | Description shown in the console |
 | `alarm_actions` | `list(string)` | `null` | ARNs notified on transition to `ALARM` |
 | `ok_actions` | `list(string)` | `null` | ARNs notified on transition to `OK` |

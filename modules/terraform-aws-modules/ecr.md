@@ -88,11 +88,11 @@ Creates an `aws_ecr_repository_creation_template` that tells ECR how to configur
 | `custom_role_arn` | `string` | `null` | Custom IAM role ARN for repository creation (required if using tags or KMS without `create_iam_role`) |
 | `create_iam_role` | `bool` | `true` | Whether to create the ECR service IAM role for repository creation |
 | `image_tag_mutability` | `string` | `"IMMUTABLE"` | `MUTABLE`, `IMMUTABLE`, `MUTABLE_WITH_EXCLUSION`, or `IMMUTABLE_WITH_EXCLUSION` |
-| `image_tag_mutability_exclusion_filter` | `list(object)` | `null` | Filters for tags exempt from the default mutability setting |
+| `image_tag_mutability_exclusion_filter` | `list(object)` | `null` | Filters for tags exempt from the default mutability setting — fields: `filter`, `filter_type` |
 | `encryption_type` | `string` | `"AES256"` | `AES256` or `KMS` for repositories created from this template |
 | `kms_key_arn` | `string` | `null` | KMS key ARN used when `encryption_type = "KMS"` |
 | `lifecycle_policy` | `string` | `null` | Lifecycle policy JSON applied to created repositories |
-| `repository_policy_statements` | `map(object)` | `null` | Structured IAM policy statements merged into the generated repository policy |
+| `repository_policy_statements` | `map(object)` | `null` | Structured IAM policy statements merged into the generated repository policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `resource_tags` | `map(string)` | `{}` | Tags applied to repositories created from this template |
 | `tags` | `map(string)` | `{}` | Tags applied to the template's own resources (IAM role, etc.) |
 
@@ -161,29 +161,29 @@ The root module manages the repository itself (private or public) plus every acc
 | `repository_type` | `string` | `"private"` | `private` or `public` |
 | `create_repository` | `bool` | `true` | Whether to create the repository; set `false` to manage only registry-level resources |
 | `repository_image_tag_mutability` | `string` | `"IMMUTABLE"` | `MUTABLE`, `IMMUTABLE`, `MUTABLE_WITH_EXCLUSION`, or `IMMUTABLE_WITH_EXCLUSION` |
-| `repository_image_tag_mutability_exclusion_filter` | `list(object)` | `null` | Filters exempting specific tags from the mutability setting |
+| `repository_image_tag_mutability_exclusion_filter` | `list(object)` | `null` | Filters exempting specific tags from the mutability setting — fields: `filter`, `filter_type` |
 | `repository_encryption_type` | `string` | `null` (`AES256` behavior) | `KMS` or `AES256` |
 | `repository_kms_key` | `string` | `null` | KMS key ARN used when `repository_encryption_type = "KMS"` |
 | `repository_image_scan_on_push` | `bool` | `true` | Scan images for vulnerabilities on push |
 | `repository_force_delete` | `bool` | `null` (`false` behavior) | Delete the repository even if it still contains images |
 | `attach_repository_policy` | `bool` | `true` | Whether to create/attach the private repository's `aws_ecr_repository_policy` |
 | `create_repository_policy` | `bool` | `true` | Auto-generate the policy from access-ARN variables and `repository_policy_statements`; set `false` to use `repository_policy` verbatim |
-| `repository_policy_statements` | `map(object)` | `null` | Structured IAM statements (sid, actions, resources, principals, conditions) merged into the generated policy |
+| `repository_policy_statements` | `map(object)` | `null` | Structured IAM statements (sid, actions, resources, principals, conditions) merged into the generated policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
 | `repository_policy` | `string` | `null` | Raw JSON policy used when `create_repository_policy = false` |
 | `repository_read_access_arns` | `list(string)` | `[]` | IAM principal ARNs granted pull-only access |
 | `repository_read_write_access_arns` | `list(string)` | `[]` | IAM principal ARNs granted pull/push access |
 | `repository_lambda_read_access_arns` | `list(string)` | `[]` | Lambda service role ARNs granted pull-only access |
-| `public_repository_catalog_data` | `object` | `null` | Description, about/usage text, logo, architectures, OS for public repositories |
+| `public_repository_catalog_data` | `object` | `null` | Description, about/usage text, logo, architectures, OS for public repositories — fields: `about_text`, `architectures`, `description`, `logo_image_blob`, `operating_systems`, `usage_text` |
 | `create_lifecycle_policy` | `bool` | `true` | Whether to create a lifecycle policy |
 | `repository_lifecycle_policy` | `string` | `""` | Lifecycle policy JSON document |
 | `create_registry_policy` | `bool` | `false` | Create a registry-level (account-wide) policy |
 | `registry_policy` | `string` | `null` | Registry policy JSON document |
-| `registry_pull_through_cache_rules` | `map(object)` | `{}` | Pull-through cache rules (prefix, upstream URL, credential ARN, custom role, region) |
+| `registry_pull_through_cache_rules` | `map(object)` | `{}` | Pull-through cache rules (prefix, upstream URL, credential ARN, custom role, region) — fields: `ecr_repository_prefix`, `upstream_registry_url`, `credential_arn`, `custom_role_arn`, `upstream_repository_prefix`, `region` |
 | `manage_registry_scanning_configuration` | `bool` | `false` | Manage the registry-wide scanning configuration |
 | `registry_scan_type` | `string` | `"ENHANCED"` | `ENHANCED` or `BASIC` |
-| `registry_scan_rules` | `list(object)` | `null` | Scan-frequency and repository-filter rules for registry scanning |
+| `registry_scan_rules` | `list(object)` | `null` | Scan-frequency and repository-filter rules for registry scanning — fields: `scan_frequency`, `filter` |
 | `create_registry_replication_configuration` | `bool` | `false` | Create a cross-region/cross-account replication configuration |
-| `registry_replication_rules` | `list(object)` | `null` | Replication destinations and repository filters (max 10 rules) |
+| `registry_replication_rules` | `list(object)` | `null` | Replication destinations and repository filters (max 10 rules) — fields: `destinations`, `repository_filters` |
 | `region` | `string` | `null` | Override the provider's default region for this module's resources |
 | `tags` | `map(string)` | `{}` | Tags applied to all created resources |
 

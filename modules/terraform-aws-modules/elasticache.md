@@ -296,7 +296,7 @@ The root module manages the full lifecycle of the primary cache resource — sta
 | `auth_token_update_strategy` | `string` | `null` | `SET`, `ROTATE`, or `DELETE` for AUTH token rotation |
 | `user_group_ids` | `list(string)` | `null` | Associates a user group (max one) created by the `user-group` submodule |
 | `vpc_id` | `string` | `null` | VPC where the module-created security group is placed |
-| `security_group_rules` | `any` | `{}` | Ingress/egress rules added to the module-created security group |
+| `security_group_rules` | `any` | `{}` | Ingress/egress rules added to the module-created security group — keys (from examples): `description`, `cidr_ipv4`, `referenced_security_group_id` |
 | `security_group_ids` | `list(string)` | `[]` | Additional externally managed security groups to attach |
 | `subnet_ids` | `list(string)` | `[]` | Subnet IDs for the ElastiCache subnet group |
 | `create_parameter_group` | `bool` | `false` | Create a custom parameter group |
