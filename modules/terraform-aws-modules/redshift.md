@@ -110,11 +110,11 @@ The module defaults to security best practices: AWS Secrets Manager manages the 
 | `iam_role_arns` | `list(string)` | `[]` | IAM role ARNs to associate with the cluster (max 10) |
 | `default_iam_role_arn` | `string` | `null` | Default IAM role ARN used for COPY/UNLOAD/Spectrum when none is specified |
 | **Automation & Limits** | | | |
-| `snapshot_schedule` | `object` | `null` | Snapshot schedule definition to create and associate with the cluster |
+| `snapshot_schedule` | `object` | `null` | Snapshot schedule definition to create and associate with the cluster — fields: `definitions`, `description`, `force_destroy`, `use_prefix`, `identifier`, `tags` |
 | `scheduled_actions` | `map(object)` | `{}` | Pause/resume/resize automation; target actions nest under `target_action` |
 | `create_scheduled_action_iam_role` | `bool` | `false` | Auto-create the IAM role used by scheduled actions |
-| `endpoint_access` | `map(object)` | `{}` | Managed VPC endpoint definitions (RA3 only) |
-| `usage_limits` | `map(object)` | `{}` | Usage limits for concurrency scaling and Spectrum |
+| `endpoint_access` | `map(object)` | `{}` | Managed VPC endpoint definitions (RA3 only) — fields: `name`, `resource_owner`, `subnet_group_name`, `vpc_security_group_ids` |
+| `usage_limits` | `map(object)` | `{}` | Usage limits for concurrency scaling and Spectrum — fields: `amount`, `breach_action`, `feature_type`, `limit_type`, `period`, `tags` |
 | `authentication_profiles` | `map(object)` | `{}` | Federated/IdP authentication profiles (JSON `content`) |
 | **Logging** | | | |
 | `logging` | `object` | `null` | Audit logging config (`bucket_name`/`log_destination_type`/`log_exports`/`s3_key_prefix`); presence of this object enables logging, there is no separate `enable` flag |
@@ -565,7 +565,7 @@ When using this module in automated workflows:
 3. **Version Constraints Are Load-Bearing**: Generate a root `terraform` block requiring `>= 1.11` and an `aws` provider `>= 6.27` alongside `version = "~> 7.1"` for the module, or apply will fail
 4. **Let the Module Own the Security Group by Default**: `create_security_group = true` (default) plus `vpc_id` is usually simpler than supplying `vpc_security_group_ids`; ingress/egress rule objects use `cidr_ipv4`/`ip_protocol`, not `cidr_blocks`/`protocol`, and `from_port`/`to_port` default to `port` (5439) when omitted
 5. **There Is No Dedicated Security Group Output**: Read the created security group ID from `cluster_vpc_security_group_ids`, not a `security_group_id` output
-6. **`scheduled_actions` Nests Under `target_action`**: `pause_cluster`, `resume_cluster`, and `resize_cluster` are keys inside each action's `target_action` object, not top-level keys
+6. **`scheduled_actions` Nests Under `target_action`**: `pause_cluster`, `resume_cluster`, and `resize_cluster` are keys inside each action's `target_action` object, not top-level keys. `pause_cluster` and `resume_cluster` are BARE BOOLEANS (`= true`), e.g. `target_action = { pause_cluster = true }` — only `resize_cluster` takes a nested object (`node_type`, `number_of_nodes`); do not wrap `pause_cluster`/`resume_cluster` in an object
 7. **`parameter_group_parameters` Is a List, Not a Map**: Use `[{ name = "...", value = "..." }, ...]`
 8. **Configure Network Inputs Together**: Provide both `vpc_id` and `subnet_ids` (required respectively when `create_security_group`/`create_subnet_group` default to `true`)
 9. **Enable Encryption for Production**: Set `encrypted = true` and provide `kms_key_arn`

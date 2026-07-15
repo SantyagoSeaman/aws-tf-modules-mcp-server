@@ -98,7 +98,7 @@ Creates an `aws_opensearchserverless_collection` and its associated access, netw
 | `lifecycle_policy_min_index_retention` | `string` | `null` | Minimum index retention, e.g. `"90d"` (`24h`–`3650d`) |
 | `create_collection_group` | `bool` | `false` | Create a collection group with shared capacity limits |
 | `collection_group_generation` | `string` | `null` | `CLASSIC` or `NEXTGEN` (`NEXTGEN` requires standby replicas enabled) |
-| `collection_group_capacity_limits` | `object` | `null` | Min/max indexing and search OCU limits for the group |
+| `collection_group_capacity_limits` | `object` | `null` | Min/max indexing and search OCU limits for the group — fields: `min_indexing_capacity_in_ocu`, `max_indexing_capacity_in_ocu`, `min_search_capacity_in_ocu`, `max_search_capacity_in_ocu` |
 | `vector_options` | `object` | `null` | `serverless_vector_acceleration` setting for `VECTORSEARCH` collections |
 | `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
@@ -171,26 +171,26 @@ The root module creates the OpenSearch/Elasticsearch domain itself along with it
 | `create` | `bool` | `true` | Whether to create all domain-related resources |
 | `engine_version` | `string` | `null` | Engine version, validated against `OpenSearch_X.Y` / `Elasticsearch_X.Y` format |
 | `cluster_config` | `any` | `{dedicated_master_enabled: true}` | Instance type/count, dedicated master, coordinator `node_options`, zone awareness |
-| `ebs_options` | `any` | `{ebs_enabled: true, volume_size: 64, volume_type: "gp3"}` | EBS volume type/size/IOPS/throughput |
+| `ebs_options` | `any` | `{ebs_enabled: true, volume_size: 64, volume_type: "gp3"}` | EBS volume type/size/IOPS/throughput — keys (from examples): `ebs_enabled`, `volume_size`, `volume_type`, `iops`, `throughput` |
 | `vpc_options` | `any` | `{}` | `subnet_ids`/`security_group_ids` to deploy the domain inside a VPC |
 | `advanced_security_options` | `any` | `{enabled: true, anonymous_auth_enabled: false}` | FGAC, `master_user_options`, `jwt_options` |
-| `identity_center_options` | `object` | `null` | IAM Identity Center SSO integration |
+| `identity_center_options` | `object` | `null` | IAM Identity Center SSO integration — fields: `enabled_api_access`, `identity_center_instance_arn`, `roles_key`, `subject_key` |
 | `encrypt_at_rest` | `any` | `{enabled: true}` | KMS encryption at rest (defaults to the AWS-managed key if no `kms_key_id` given) |
 | `node_to_node_encryption` | `any` | `{enabled: true}` | Inter-node TLS encryption |
-| `domain_endpoint_options` | `any` | `{enforce_https: true, tls_security_policy: "Policy-Min-TLS-1-2-2019-07"}` | HTTPS enforcement and TLS policy |
+| `domain_endpoint_options` | `any` | `{enforce_https: true, tls_security_policy: "Policy-Min-TLS-1-2-2019-07"}` | HTTPS enforcement and TLS policy — keys (from examples): `enforce_https` |
 | `ip_address_type` | `string` | `null` | `ipv4` or `dualstack` endpoint addressing |
 | `access_policy_statements` | `any` | `{}` | IAM statements used to build the domain access policy (required for the policy to be created) |
 | `create_access_policy` / `enable_access_policy` | `bool` | `true` / `true` | Whether to build, and whether to attach, the computed access policy |
 | `access_policies` | `string` | `null` | Raw IAM policy JSON, used when `create_access_policy = false` |
 | `create_security_group` / `security_group_rules` | `bool` / `any` | `true` / `{}` | Security group for the domain (only created if `vpc_options` set); no ingress rules by default |
-| `log_publishing_options` | `any` | `[{log_type: "INDEX_SLOW_LOGS"}, {log_type: "SEARCH_SLOW_LOGS"}]` | CloudWatch log types to publish |
+| `log_publishing_options` | `any` | `[{log_type: "INDEX_SLOW_LOGS"}, {log_type: "SEARCH_SLOW_LOGS"}]` | CloudWatch log types to publish — keys (from examples): `log_type` |
 | `create_cloudwatch_log_resource_policy` / `cloudwatch_log_resource_policy_name` | `bool` / `string` | `true` / `null` | Auto-create the resource policy allowing OpenSearch to write logs (named `opensearch-<domain_name>` by default) |
 | `cloudwatch_log_group_retention_in_days` | `number` | `60` | Log retention period |
 | `auto_tune_options` | `any` | `{desired_state: "ENABLED", rollback_on_disable: "NO_ROLLBACK"}` | Auto-Tune state, rollback behavior, `maintenance_schedule` |
 | `off_peak_window_options` | `any` | `{enabled: true, off_peak_window: {hours: 7}}` | Off-peak update window |
 | `software_update_options` | `any` | `{auto_software_update_enabled: true}` | Automatic service software updates |
-| `deployment_strategy_options` | `object` | `null` | Blue/green vs. in-place deployment strategy |
-| `aiml_options` | `object` | `null` | Natural-language query generation, S3 Vectors engine, serverless vector acceleration |
+| `deployment_strategy_options` | `object` | `null` | Blue/green vs. in-place deployment strategy — fields: `deployment_strategy` |
+| `aiml_options` | `object` | `null` | Natural-language query generation, S3 Vectors engine, serverless vector acceleration — fields: `natural_language_query_generation_options`, `s3_vectors_engine`, `serverless_vector_acceleration` |
 | `cognito_options` | `any` | `{}` | Cognito authentication for Dashboards |
 | `create_saml_options` / `saml_options` | `bool` / `any` | `false` / `{}` | SAML authentication for Dashboards |
 | `outbound_connections` | `any` | `{}` | Cross-cluster outbound connections to other domains |
