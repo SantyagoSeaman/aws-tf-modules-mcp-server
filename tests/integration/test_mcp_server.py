@@ -19,11 +19,13 @@ from tfmod_mcp_server import (
     SearchWeights,
     ServerState,
     ServerStateManager,
+    _extract_interface_h3,
     _parse_submodule_address,
     filter_module_sections,
     get_module_documentation,
     get_module_impl,
     modules_list_impl,
+    orientation_head,
     search_modules_impl,
 )
 from tfmod_search_lib import load_index
@@ -313,6 +315,15 @@ class TestGetModuleSections:
             assert "COMPLETE inputs/outputs" in resp, "Response must flag that it is a curated subset"
             assert "module source" in resp, "Response must name source as the creation-condition tier"
 
+    def test_footer_grep_hint_mentions_shapes(self):
+        """Footer broadens the grep pointer from names to names AND type/shape verification."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        assert "TYPE/SHAPE" in out, "Footer must carry the explicit type/shape verification phrase"
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)
@@ -406,6 +417,167 @@ class TestGetModuleSections:
         """Test that documents without H2 sections pass through unfiltered."""
         text = "# Title\n\nJust a paragraph, no sections.\n"
         assert filter_module_sections(text, ["inputs"]) == text
+
+    @pytest.mark.parametrize("mod", ["s3-bucket", "ecr", "lambda"])
+    def test_sections_inputs_examples_no_overfetch_real_docs(self, server_state, mod):
+        """BUG-1 repros: requesting inputs+examples must not drag in whole combined bundles."""
+        out = get_module_impl(mod, server_state, sections=["inputs", "examples"])
+        assert "Requested sections not found" not in out
+        # not the whole bundle: a root/submodule ### Main Outputs sub-section must not be
+        # dragged in alongside the requested inputs/examples H3s
+        assert "### Main Outputs" not in out
+        full = get_module_impl(mod, server_state, sections=["all"])
+        assert len(out) < len(full)
+
+    @pytest.mark.parametrize("mod", ["vpc", "redshift"])
+    def test_default_head_has_root_inputs_real_docs(self, server_state, mod):
+        """Default orientation head inlines root inputs for both combined (vpc) and
+        split-toplevel (redshift) interface schemes."""
+        out = get_module_impl(mod, server_state)
+        assert "Main Input Variables" in out
+        assert "Requested sections not found" not in out
+
+    def test_collection_head_no_inputs_noise_real_doc(self, server_state):
+        """iam is a pure submodule-collection doc (no Root/Main Module bundle); the default
+        head must not report a spurious 'not found' for the silently-requested inputs key."""
+        out = get_module_impl("iam", server_state)
+        assert "Requested sections not found" not in out
+
+
+def test_extract_interface_h3_inputs_only():
+    block = (
+        "## Root Module: S3 Bucket\n\n"
+        "### Description\n\nThe root module.\n\n"
+        "### Main Input Variables\n\n| Variable | Type |\n|---|---|\n| `bucket` | `string` |\n\n"
+        "### Main Outputs\n\n| Output | Description |\n|---|---|\n| `s3_bucket_id` | id |\n\n"
+        "### Usage Examples\n\n#### Example 1\n\n```hcl\nx = 1\n```\n"
+    )
+    out = _extract_interface_h3(block, {"inputs"})
+    assert "## Root Module: S3 Bucket" in out
+    assert "### Main Input Variables" in out
+    assert "`bucket`" in out
+    assert "### Main Outputs" not in out
+    assert "### Description" not in out
+    assert "### Usage Examples" not in out
+
+
+def test_extract_interface_h3_examples_matches_singular_and_carries_children():
+    block = (
+        "## Submodule 1: notification\n\n"
+        "### Main Input Variables\n\n| Variable | Type |\n|---|---|\n| `bucket_id` | `string` |\n\n"
+        "### Usage Example\n\n#### Example A\n\n```hcl\ny = 2\n```\n"
+    )
+    out = _extract_interface_h3(block, {"examples"})
+    assert "### Usage Example" in out
+    assert "#### Example A" in out
+    assert "y = 2" in out
+    assert "### Main Input Variables" not in out
+
+
+def test_extract_interface_h3_no_match_returns_empty():
+    block = "## Root Module: X\n\n### Description\n\nnothing here.\n"
+    assert _extract_interface_h3(block, {"inputs"}) == ""
+
+
+def test_extract_interface_h3_outputs_matches_key_outputs_variant():
+    # ecs and a few others title the outputs H3 "Key Outputs", not "Main Outputs".
+    block = (
+        "## Root Module (Integrated)\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `cluster_name` | `string` |\n\n"
+        "### Key Outputs\n\n| O | D |\n|---|---|\n| `cluster_arn` | arn |\n\n"
+    )
+    out = _extract_interface_h3(block, {"outputs"})
+    assert "### Key Outputs" in out
+    assert "`cluster_arn`" in out
+    assert "### Main Input Variables" not in out
+
+
+def test_filter_rejects_unknown_interface_scope():
+    import pytest
+
+    with pytest.raises(ValueError, match="interface_scope"):
+        filter_module_sections("## Description\n\nd\n", ["inputs"], interface_scope="rot")
+
+
+def test_interface_key_whole_section_fallback_when_no_h3():
+    # network-firewall style: interface lives as H3 entries under "## Submodules"
+    # (no "### Main Input Variables" table anywhere) -> the key must still resolve
+    # by including the whole matched section, never report "not found".
+    doc = (
+        "---\nm: nf\n---\n\n## Module Information\n\n- **Module ID**: x/nf/aws\n\n"
+        "## Description\n\nd\n\n"
+        "## Submodules\n\n### 1. firewall\n\nThe firewall submodule takes `firewall_name`.\n\n"
+        "### 2. policy\n\nThe policy submodule.\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    out = filter_module_sections(doc, ["inputs"])
+    assert "Requested sections not found" not in out
+    assert "## Submodules" in out
+    assert "firewall_name" in out
+
+
+def _combined_doc():
+    return (
+        "---\nmodule_name: demo\n---\n\n"
+        "## Module Information\n\n- **Module ID**: x/demo/aws\n\n"
+        "## Description\n\nDemo.\n\n"
+        "## Root Module: Demo\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `root_in` | `string` |\n\n"
+        "### Main Outputs\n\n| O | D |\n|---|---|\n| `root_out` | x |\n\n"
+        "## Submodule 1: sub\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `sub_in` | `string` |\n\n"
+        "### Main Outputs\n\n| O | D |\n|---|---|\n| `sub_out` | y |\n\n"
+        "## Notes for AI Agents\n\nNote.\n"
+    )
+
+
+def test_inputs_extracts_h3_not_whole_bundle_all_scope():
+    out = filter_module_sections(_combined_doc(), ["inputs"])
+    assert "`root_in`" in out and "`sub_in`" in out  # inputs from root AND submodule
+    assert "root_out" not in out and "sub_out" not in out  # outputs NOT dragged in
+    assert "Requested sections not found" not in out  # matched, not unmatched
+
+
+def test_inputs_root_scope_excludes_submodule():
+    out = filter_module_sections(_combined_doc(), ["inputs"], interface_scope="root")
+    assert "`root_in`" in out
+    assert "`sub_in`" not in out
+    assert "root_out" not in out
+
+
+def test_silent_keys_suppress_not_found():
+    doc = (
+        "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+        "## Description\n\nd\n\n## Submodule 1: only\n\n### Main Input Variables\n\n| V | T |\n|---|---|\n| `a` | `s` |\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    # 'features' absent here; as a silent key it must not appear in "not found"
+    out = filter_module_sections(doc, ["features"], silent_keys=frozenset({"features"}))
+    assert "Requested sections not found" not in out
+    # without silent_keys, it IS reported
+    out2 = filter_module_sections(doc, ["features"])
+    assert "Requested sections not found: features" in out2
+
+
+def test_head_inlines_root_inputs_combined():
+    out = orientation_head(_combined_doc())  # helper from Task 2 test
+    assert "### Main Input Variables" in out
+    assert "`root_in`" in out
+    assert "`sub_in`" not in out  # submodule inputs stay out of the head
+    assert "Requested sections not found" not in out
+
+
+def test_head_no_inputs_noise_for_collection_doc():
+    # collection doc: only a submodule bundle, no root inputs
+    doc = (
+        "---\nm: coll\n---\n\n## Module Information\n\n- **Module ID**: x/coll/aws\n\n"
+        "## Description\n\nd\n\n## Key Features\n\n- f\n\n## Main Use Cases\n\n- u\n\n"
+        "## Submodule 1: only\n\n### Main Input Variables\n\n| V | T |\n|---|---|\n| `a` | `s` |\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    out = orientation_head(doc)
+    assert "Requested sections not found" not in out
+    assert "`a`" not in out  # submodule inputs not inlined in a collection head
 
 
 class TestSubmoduleAddress:

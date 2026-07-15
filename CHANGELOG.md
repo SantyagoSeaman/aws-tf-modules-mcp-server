@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.20.0] - 2026-07-15
+
+[0.20.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.20.0
+
+Three server-only output-shaping wins from the v4 post-testing log analysis: `get_module(sections=['inputs'])` no longer over-fetches on combined-heading modules, the default orientation head now inlines the module's root inputs (removing a measured second call), and the grep escalation hint now steers agents to verify input TYPE/SHAPE, not just names. The search index and the module docs corpus are untouched — search results are byte-identical to 0.19.1.
+
+### Changed
+
+- **`get_module(sections=['inputs'|'outputs'|'examples'])` on combined-heading modules returns only the requested interface sub-sections, not the whole bundle.** The BUG-1 fix had fallen back to the entire `## Root Module:` / `## Submodule N:` block; asking for just inputs pulled the whole root plus every submodule (measured ~2.3-2.4x larger, e.g. s3-bucket 13.5K to 30.9K chars). The section filter now extracts only the matching `### Main Input Variables` / `### Main Outputs` / `### Usage Examples` H3 sub-sections. Docs with a non-standard interface layout (e.g. network-firewall, whose interface lives under a `## Submodules` inventory) still resolve via a whole-section safety net, so every interface key resolves on every doc as before.
+- **The default orientation head inlines the compact ROOT input table.** `get_module(mod)` with no `sections` now includes the root module's `Main Input Variables` alongside the existing features / use-cases / submodule-inventory / version-pin content, removing the measured `get_module(mod)` then `get_module(mod, sections=['inputs'])` double-fetch. Submodule inputs stay out of the head; pure submodule-collection docs with no root inputs add nothing (no spurious "not found").
+- **The grep escalation hint (get_module footer + `grep_module_docs` description) now names TYPE/SHAPE verification**, directing agents to grep the live doc to confirm the nested field structure of a `map(object)`/`any`-typed input before writing it, not only to confirm resource/variable names.
+
+### Unchanged
+
+- **The search index is not rebuilt and no module doc changed** — search ranking and results are byte-identical to 0.19.1; the golden set is unaffected by construction.
+- **No network, no new dependency, no tool-schema change.** All changes are in `tfmod_mcp_server.py` response shaping plus tests.
+- `sections=["all"|"full"|"everything"]` still returns the complete document verbatim; core sections remain always-included; split-heading docs (e.g. autoscaling, redshift) are byte-identical for `sections=['inputs']`.
+- Transports, the ONNX/torch backends, the shared-HTTP-daemon and proxy modes, and the Docker image build are all unaffected.
+
 ## [0.19.1] - 2026-07-15
 
 [0.19.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.19.1

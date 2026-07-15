@@ -879,6 +879,26 @@ _LATEST_VERSION_RE = re.compile(r"^\s*[-*]\s*\*\*Latest Version\*\*:\s*`?([^`\s]
 
 _H2_RE = re.compile(r"^## .+$", re.MULTILINE)
 
+# Interface key -> lowercase H3 sub-heading prefixes to extract from a combined
+# "## Root Module:"/"## Submodule N:" bundle. Prefix (startswith) match absorbs
+# singular/plural ("Usage Example"/"Usage Examples") and the "Main ..." phrasing.
+# Outputs carry two house styles across the corpus: "Main Outputs" and "Key
+# Outputs" (ecs) -- both must resolve.
+_INTERFACE_H3_PREFIXES: dict[str, tuple[str, ...]] = {
+    "inputs": ("main input variables",),
+    "variables": ("main input variables",),
+    "outputs": ("main output", "key output"),
+    "examples": ("usage example",),
+    "usage": ("usage example",),
+}
+
+_H3_RE = re.compile(r"^### .+$", re.MULTILINE)
+
+# Valid values for filter_module_sections(interface_scope=...): "all" extracts
+# interface H3s from every combined bundle (root + submodules); "root" restricts
+# to the root/main bundle (used by the compact orientation head).
+_INTERFACE_SCOPES = frozenset({"all", "root"})
+
 
 def _matches_combined_interface(title_lower: str) -> bool:
     """True for headings that carry the interface outside the split scheme."""
@@ -970,7 +990,48 @@ def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
     return preamble, sections
 
 
-def filter_module_sections(text: str, requested: list[str], *, extra_exact_titles: tuple[str, ...] = ()) -> str:
+def _extract_interface_h3(block: str, keys: set[str]) -> str:
+    """
+    From one combined H2 bundle, return its heading line plus only the H3
+    sub-sections whose title matches the requested interface keys.
+
+    Args:
+        block: A single "## Root Module:"/"## Submodule N:" bundle (heading + body).
+        keys: Interface keys (subset of _INTERFACE_H3_PREFIXES).
+
+    Returns:
+        The H2 heading line followed by the matching "### ..." sub-blocks in
+        document order, or "" when no sub-section matches.
+    """
+    prefixes = tuple(p for k in keys for p in _INTERFACE_H3_PREFIXES.get(k, ()))
+    if not prefixes:
+        return ""
+    matches = list(_H3_RE.finditer(block))
+    if not matches:
+        return ""
+    # The bundle's "## ..." heading is whatever precedes the first H3; empty when
+    # the block itself starts with an H3 (no enclosing H2 preamble).
+    pre = block[: matches[0].start()].splitlines()
+    heading_line = pre[0] if pre else ""
+    kept: list[str] = []
+    for i, m in enumerate(matches):
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(block)
+        title = m.group(0)[4:].strip().lower()
+        if title.startswith(prefixes):
+            kept.append(block[m.start() : end].rstrip())
+    if not kept:
+        return ""
+    return heading_line.rstrip() + "\n\n" + "\n\n".join(kept)
+
+
+def filter_module_sections(
+    text: str,
+    requested: list[str],
+    *,
+    extra_exact_titles: tuple[str, ...] = (),
+    interface_scope: str = "all",
+    silent_keys: frozenset[str] = frozenset(),
+) -> str:
     """
     Reduce a module document to core sections plus the requested ones.
 
@@ -990,10 +1051,22 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
             case-insensitive equality (not substring/prefix). Used by the
             orientation head to inline the exact ``## Submodules`` inventory
             heading without dragging in the ``## Submodule N:`` deep-dives.
+        interface_scope: "all" (default) or "root". When an interface key
+            (inputs/variables/outputs/examples/usage) falls back to extracting
+            H3 sub-sections from combined bundles, "root" restricts that
+            extraction to the ``## Root Module:``/``## Main Module:`` bundle
+            and skips ``## Submodule N:`` bundles.
+        silent_keys: Requested keys (lowercased) that should not be reported
+            in the "Requested sections not found" footer line when unmatched.
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
+
+    Raises:
+        ValueError: If interface_scope is not "all" or "root"
     """
+    if interface_scope not in _INTERFACE_SCOPES:
+        raise ValueError(f"interface_scope must be one of {sorted(_INTERFACE_SCOPES)}, got {interface_scope!r}")
     preamble, sections = _split_h2_sections(text)
     if not sections:
         return text
@@ -1001,6 +1074,10 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
     extra_lower = {t.lower() for t in extra_exact_titles}
     wanted: set[str] = {title for title, _ in sections if title in _CORE_SECTIONS or title.lower() in extra_lower}
     unmatched: list[str] = []
+    # Interface keys that found no exact H2 alias fall back to extracting their
+    # H3 sub-section(s) from the combined "Root/Main Module:"/"Submodule N:"
+    # bundles, rather than dragging in the whole bundle (the BUG-1 over-fetch).
+    fallback_keys: set[str] = set()
     for entry in requested:
         key = entry.strip().lower()
         if not key:
@@ -1021,15 +1098,42 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
         # aliases target. When an interface key resolves to no exact heading, fall
         # back to those interface-bearing sections rather than reporting it missing.
         if not matched and key in _INTERFACE_KEYS:
-            for title, _ in sections:
-                if _matches_combined_interface(title.lower()):
-                    wanted.add(title)
+            combined_titles: list[str] = []
+            for title, block in sections:
+                tl = title.lower()
+                if not _matches_combined_interface(tl):
+                    continue
+                if interface_scope == "root" and tl.startswith("submodule"):
+                    continue
+                combined_titles.append(title)
+                if _extract_interface_h3(block, {key}):
+                    fallback_keys.add(key)
                     matched = True
-        if not matched:
+            # Safety net: a combined-interface section exists but carries no
+            # matching H3 sub-section (e.g. network-firewall documents its
+            # interface as H3 entries under "## Submodules", not as a
+            # "### Main Input Variables" table). Include those section(s) whole so
+            # the standard interface key still resolves rather than reporting
+            # missing. Well-structured combined docs never reach here — their H3
+            # extraction above succeeds, so no whole-bundle over-fetch returns.
+            if not matched and combined_titles:
+                wanted.update(combined_titles)
+                matched = True
+        if not matched and key not in silent_keys:
             unmatched.append(entry)
 
     parts = [preamble.rstrip()] if preamble.strip() else []
-    parts.extend(block.rstrip() for title, block in sections if title in wanted)
+    for title, block in sections:
+        if title in wanted:
+            parts.append(block.rstrip())
+            continue
+        tl = title.lower()
+        if fallback_keys and _matches_combined_interface(tl):
+            if interface_scope == "root" and tl.startswith("submodule"):
+                continue
+            extracted = _extract_interface_h3(block, fallback_keys)
+            if extracted:
+                parts.append(extracted)
 
     # Always advertise the complete section inventory so the agent has an explicit
     # menu for follow-up get_module(sections=[...]) calls — not just what was
@@ -1049,7 +1153,10 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
         "using the Module ID above. Resource-creation conditions (whether an input gates a "
         "`count`/`for_each` resource) live in the module source, not the rendered doc. Do "
         "not assert an exact default, type, or that an input exists from this summary or from "
-        "memory when a wrong value would break `apply` — confirm it in the full doc first.",
+        "memory when a wrong value would break `apply` — confirm it in the full doc first. "
+        "Use `grep_module_docs` not only to confirm resource/variable NAMES but to verify the "
+        "exact TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure) "
+        "before writing it.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -1202,8 +1309,18 @@ def orientation_head(text: str) -> str:
     single orientation call surfaces which submodule to reach for — without
     expanding the far larger ``## Submodule N:`` deep-dive sections (request one
     by name, or via ``get_module("<name>//modules/<sub>")``).
+
+    Also inlines the root module's compact ``### Main Input Variables`` H3 (when
+    the doc has one), scoped to the root/main bundle only — submodule inputs stay
+    out of the head so a collection doc with no root inputs gets no extra noise.
     """
-    body = filter_module_sections(text, list(_ORIENTATION_KEYS), extra_exact_titles=("Submodules",))
+    body = filter_module_sections(
+        text,
+        [*_ORIENTATION_KEYS, "inputs"],
+        extra_exact_titles=("Submodules",),
+        interface_scope="root",
+        silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
+    )
     hint = _version_pin_hint(text)
     return f"{hint}\n\n{body}" if hint else body
 
@@ -1712,6 +1829,10 @@ def grep_module_docs(
     deterministic, section-marked text, caches it on disk, and runs a regex grep
     over it — returning only matching lines with surrounding context rather than
     the whole (often 10k+ token) document.
+
+    Use this not only to confirm resource/variable NAMES but to verify the exact
+    TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure)
+    before writing it — the curated doc's table often abbreviates these.
 
     Args:
         module_id: Terraform Registry coordinates "namespace/name/provider".
