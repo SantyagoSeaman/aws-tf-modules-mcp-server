@@ -225,6 +225,7 @@ def _read_cache_entry(path: Path) -> dict[str, Any] | None:
 
 
 _UNWRITABLE_CACHE_DIRS_WARNED: set[str] = set()
+_UNWRITABLE_WARN_LOCK = threading.Lock()
 
 
 def _write_cache_entry(path: Path, entry: dict[str, Any]) -> None:
@@ -249,8 +250,10 @@ def _write_cache_entry(path: Path, entry: dict[str, Any]) -> None:
             raise
     except OSError as exc:
         key = str(path.parent)
-        if key not in _UNWRITABLE_CACHE_DIRS_WARNED:
+        with _UNWRITABLE_WARN_LOCK:
+            already_warned = key in _UNWRITABLE_CACHE_DIRS_WARNED
             _UNWRITABLE_CACHE_DIRS_WARNED.add(key)
+        if not already_warned:
             logging.getLogger(__name__).warning(
                 f"Registry doc cache dir {key} is not writable ({exc}); "
                 "serving fetches uncached. Fix the ownership/permissions of the "
