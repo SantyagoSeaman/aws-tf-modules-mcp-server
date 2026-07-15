@@ -1,0 +1,23 @@
+# Completeness-linter allowlist: input rows whose type is genuinely `any`/opaque in
+# the module source AND for which there is no stable field set to name (no typed
+# submodule sibling, and the variable is never populated in the doc's own Usage
+# Examples). These are reviewed, reasoned exceptions -- not silences. Format:
+#   <module>.md::<variable>  # reason
+# The guard (tests/integration/test_doc_completeness.py) fails on any opaque row
+# NOT listed here, and fails on any stale entry here that is no longer flagged.
+
+app-runner.md::observability_configuration  # freeform any; no submodule types it and only the sibling enable_observability_configuration bool appears in examples
+cloudwatch.md::metric_query  # metric-alarm submodule examples never assign metric_query; no shape shown in this doc
+dms.md::access_iam_statements  # freeform custom IAM statements; never assigned in any of the doc's usage examples
+elasticache.md::default_user  # user-group submodule example sets create_default_user=false and never populates default_user
+elasticache.md::log_delivery_configuration  # referenced only in prose; never assigned in any usage example in this doc
+fsx.md::self_managed_active_directory  # Windows example uses the AWS-managed-AD path (active_directory_id); self_managed_active_directory never appears in an example
+opensearch.md::access_policy_statements  # referenced only in prose/bullets; never assigned in an example
+opensearch.md::cognito_options  # no example usage in this doc (SAML/JWT examples use saml_options/jwt_options)
+opensearch.md::node_to_node_encryption  # never assigned a literal object in any example
+opensearch.md::off_peak_window_options  # no example usage in this doc
+opensearch.md::outbound_connections  # no example usage in this doc
+opensearch.md::software_update_options  # no example usage in this doc
+opensearch.md::vpc_endpoints  # no example usage in this doc
+s3-bucket.md::intelligent_tiering  # freeform any; not populated in any of the doc's usage examples and no typed submodule
+s3-bucket.md::logging  # freeform any; not populated with a shape in the doc's usage examples
