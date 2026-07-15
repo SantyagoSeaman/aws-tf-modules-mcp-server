@@ -882,10 +882,12 @@ _H2_RE = re.compile(r"^## .+$", re.MULTILINE)
 # Interface key -> lowercase H3 sub-heading prefixes to extract from a combined
 # "## Root Module:"/"## Submodule N:" bundle. Prefix (startswith) match absorbs
 # singular/plural ("Usage Example"/"Usage Examples") and the "Main ..." phrasing.
+# Outputs carry two house styles across the corpus: "Main Outputs" and "Key
+# Outputs" (ecs) -- both must resolve.
 _INTERFACE_H3_PREFIXES: dict[str, tuple[str, ...]] = {
     "inputs": ("main input variables",),
     "variables": ("main input variables",),
-    "outputs": ("main output",),
+    "outputs": ("main output", "key output"),
     "examples": ("usage example",),
     "usage": ("usage example",),
 }
@@ -1002,7 +1004,10 @@ def _extract_interface_h3(block: str, keys: set[str]) -> str:
     matches = list(_H3_RE.finditer(block))
     if not matches:
         return ""
-    heading_line = block[: matches[0].start()].splitlines()[0] if block.strip() else ""
+    # The bundle's "## ..." heading is whatever precedes the first H3; empty when
+    # the block itself starts with an H3 (no enclosing H2 preamble).
+    pre = block[: matches[0].start()].splitlines()
+    heading_line = pre[0] if pre else ""
     kept: list[str] = []
     for i, m in enumerate(matches):
         end = matches[i + 1].start() if i + 1 < len(matches) else len(block)
@@ -1083,15 +1088,27 @@ def filter_module_sections(
         # aliases target. When an interface key resolves to no exact heading, fall
         # back to those interface-bearing sections rather than reporting it missing.
         if not matched and key in _INTERFACE_KEYS:
+            combined_titles: list[str] = []
             for title, block in sections:
                 tl = title.lower()
                 if not _matches_combined_interface(tl):
                     continue
                 if interface_scope == "root" and tl.startswith("submodule"):
                     continue
+                combined_titles.append(title)
                 if _extract_interface_h3(block, {key}):
                     fallback_keys.add(key)
                     matched = True
+            # Safety net: a combined-interface section exists but carries no
+            # matching H3 sub-section (e.g. network-firewall documents its
+            # interface as H3 entries under "## Submodules", not as a
+            # "### Main Input Variables" table). Include those section(s) whole so
+            # the standard interface key still resolves rather than reporting
+            # missing. Well-structured combined docs never reach here — their H3
+            # extraction above succeeds, so no whole-bundle over-fetch returns.
+            if not matched and combined_titles:
+                wanted.update(combined_titles)
+                matched = True
         if not matched and key not in silent_keys:
             unmatched.append(entry)
 

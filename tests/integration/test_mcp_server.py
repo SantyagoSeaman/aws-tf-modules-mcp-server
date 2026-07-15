@@ -479,6 +479,36 @@ def test_extract_interface_h3_no_match_returns_empty():
     assert _extract_interface_h3(block, {"inputs"}) == ""
 
 
+def test_extract_interface_h3_outputs_matches_key_outputs_variant():
+    # ecs and a few others title the outputs H3 "Key Outputs", not "Main Outputs".
+    block = (
+        "## Root Module (Integrated)\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `cluster_name` | `string` |\n\n"
+        "### Key Outputs\n\n| O | D |\n|---|---|\n| `cluster_arn` | arn |\n\n"
+    )
+    out = _extract_interface_h3(block, {"outputs"})
+    assert "### Key Outputs" in out
+    assert "`cluster_arn`" in out
+    assert "### Main Input Variables" not in out
+
+
+def test_interface_key_whole_section_fallback_when_no_h3():
+    # network-firewall style: interface lives as H3 entries under "## Submodules"
+    # (no "### Main Input Variables" table anywhere) -> the key must still resolve
+    # by including the whole matched section, never report "not found".
+    doc = (
+        "---\nm: nf\n---\n\n## Module Information\n\n- **Module ID**: x/nf/aws\n\n"
+        "## Description\n\nd\n\n"
+        "## Submodules\n\n### 1. firewall\n\nThe firewall submodule takes `firewall_name`.\n\n"
+        "### 2. policy\n\nThe policy submodule.\n\n"
+        "## Notes for AI Agents\n\nn\n"
+    )
+    out = filter_module_sections(doc, ["inputs"])
+    assert "Requested sections not found" not in out
+    assert "## Submodules" in out
+    assert "firewall_name" in out
+
+
 def _combined_doc():
     return (
         "---\nmodule_name: demo\n---\n\n"
