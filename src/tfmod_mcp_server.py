@@ -894,6 +894,11 @@ _INTERFACE_H3_PREFIXES: dict[str, tuple[str, ...]] = {
 
 _H3_RE = re.compile(r"^### .+$", re.MULTILINE)
 
+# Valid values for filter_module_sections(interface_scope=...): "all" extracts
+# interface H3s from every combined bundle (root + submodules); "root" restricts
+# to the root/main bundle (used by the compact orientation head).
+_INTERFACE_SCOPES = frozenset({"all", "root"})
+
 
 def _matches_combined_interface(title_lower: str) -> bool:
     """True for headings that carry the interface outside the split scheme."""
@@ -1056,7 +1061,12 @@ def filter_module_sections(
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
+
+    Raises:
+        ValueError: If interface_scope is not "all" or "root"
     """
+    if interface_scope not in _INTERFACE_SCOPES:
+        raise ValueError(f"interface_scope must be one of {sorted(_INTERFACE_SCOPES)}, got {interface_scope!r}")
     preamble, sections = _split_h2_sections(text)
     if not sections:
         return text

@@ -492,6 +492,13 @@ def test_extract_interface_h3_outputs_matches_key_outputs_variant():
     assert "### Main Input Variables" not in out
 
 
+def test_filter_rejects_unknown_interface_scope():
+    import pytest
+
+    with pytest.raises(ValueError, match="interface_scope"):
+        filter_module_sections("## Description\n\nd\n", ["inputs"], interface_scope="rot")
+
+
 def test_interface_key_whole_section_fallback_when_no_h3():
     # network-firewall style: interface lives as H3 entries under "## Submodules"
     # (no "### Main Input Variables" table anywhere) -> the key must still resolve
