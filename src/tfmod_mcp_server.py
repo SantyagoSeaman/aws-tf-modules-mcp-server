@@ -1127,6 +1127,12 @@ def filter_module_sections(
     # H3 sub-section(s) from the combined "Root/Main Module:"/"Submodule N:"
     # bundles, rather than dragging in the whole bundle (the BUG-1 over-fetch).
     fallback_keys: set[str] = set()
+    # L5: when the caller explicitly asks for the submodules inventory, the
+    # interface-key H3 fallback below must not re-expand "## Submodule N:"
+    # bundles either. The compact inventory answers "what submodules exist"; a
+    # specific submodule interface is reached by its "<name>//modules/<sub>"
+    # address or by naming its heading. Full exclusion of the deep-dives.
+    submodules_requested = any(_SECTION_ALIASES.get(e.strip().lower()) == "Submodules" for e in requested)
     for entry in requested:
         key = entry.strip().lower()
         if not key:
@@ -1135,7 +1141,12 @@ def filter_module_sections(
         matched = False
         for title, _ in sections:
             if canonical is not None:
-                hit = title == canonical or (canonical == "Submodules" and title.lower().startswith("submodule"))
+                # L5: the "submodules" key resolves to the compact "## Submodules"
+                # inventory by EXACT title match only. Matching "## Submodule N:"
+                # deep-dives here was the over-fetch -- a specific submodule is
+                # reached by heading substring or the "<name>//modules/<sub>"
+                # address instead.
+                hit = title == canonical
             else:
                 hit = key in title.lower()
             if hit:
@@ -1152,7 +1163,7 @@ def filter_module_sections(
                 tl = title.lower()
                 if not _matches_combined_interface(tl):
                     continue
-                if interface_scope == "root" and tl.startswith("submodule"):
+                if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                     continue
                 combined_titles.append(title)
                 if _extract_interface_h3(block, {key}):
@@ -1178,7 +1189,7 @@ def filter_module_sections(
             continue
         tl = title.lower()
         if fallback_keys and _matches_combined_interface(tl):
-            if interface_scope == "root" and tl.startswith("submodule"):
+            if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                 continue
             extracted = _extract_interface_h3(block, fallback_keys)
             if extracted:
@@ -2003,7 +2014,11 @@ def get_module(
             "outputs, examples, submodules, features, use-cases, best-practices, resources — "
             "or case-insensitive substrings of section headings (e.g. 'karpenter' for a single "
             "EKS submodule); the inputs/outputs/examples keys also resolve on modules that bundle "
-            "them into a combined section. Core context (description, module info, version pin, "
+            "them into a combined section. The 'submodules' key returns only the compact submodule "
+            "inventory (names, purposes, pinnable sources) -- which is already inlined in the default "
+            "head -- so an existence or name check never needs a sections call; reach a specific "
+            "submodule's full interface by naming its heading or via the '<name>//modules/<sub>' address. "
+            "Core context (description, module info, version pin, "
             "notes for AI agents, and any Important Gotchas the doc carries) is always included, and omitted sections are listed in "
             "a footer so you can request them later. Omit this parameter for the compact "
             "orientation head; pass ['all'] (or 'full') for the complete document."

@@ -315,3 +315,78 @@ def test_l3_expand_top_serialization_present_only_when_high_and_expanded(state) 
 
     expanded_low = search_modules_impl("sagemaker", state, top_k=3, expand_top=True)
     assert "top_module_doc" not in expanded_low.model_dump()
+
+
+# --------------------------------------------------------------------------- #
+# L5 - submodule-level sections scoping. The "submodules" logical key must
+# resolve to the compact ## Submodules inventory only (exact-title match, same
+# pattern A1 already uses via extra_exact_titles), never the full per-
+# submodule ## Submodule N: deep-dive bundles. Full exclusion: when
+# "submodules" is requested alongside an interface key (inputs/outputs/
+# examples), that key's combined-bundle H3 fallback must also skip submodule
+# bundles -- no "## Submodule N:" heading should appear at all in that combo.
+# A specific submodule stays reachable by heading substring or the
+# "<name>//modules/<sub>" address (A3); the default head keeps inlining the
+# compact inventory (A1).
+# --------------------------------------------------------------------------- #
+_VPC_PRE_FIX_OVERFETCH_LEN = 18972  # measured in the design doc / team report
+
+
+def test_l5_submodules_key_alone_is_scoped_to_compact_inventory(state) -> None:
+    filtered = get_module_impl("vpc", state, sections=["submodules"])
+    assert "## Submodules" in filtered, "compact inventory heading must be present"
+    assert "vpc-endpoints" in filtered, "submodule name must still be named"
+    assert "flow-log" in filtered, "submodule name must still be named"
+    assert "## Submodule 1:" not in filtered, "numbered deep-dive sections must not be bundled"
+    assert "## Submodule 2:" not in filtered, "numbered deep-dive sections must not be bundled"
+
+
+def test_l5_submodules_combined_with_inputs_is_scoped_not_full_bundle(state) -> None:
+    filtered = get_module_impl("vpc", state, sections=["submodules", "inputs"])
+
+    # Absolute upper bound well under the pre-fix ~18,972 char over-fetch.
+    assert len(filtered) < 12000, (
+        f"scoped submodules+inputs ({len(filtered)} chars) must be well under the "
+        f"pre-fix over-fetch ({_VPC_PRE_FIX_OVERFETCH_LEN} chars)"
+    )
+    # No numbered deep-dive heading at all -- full exclusion, not a partial one.
+    assert "## Submodule " not in filtered, "no per-submodule deep-dive heading may appear in this combo"
+    # Both submodules are still named -- the inventory still answers "what exists".
+    assert "vpc-endpoints" in filtered
+    assert "flow-log" in filtered
+    # The root inputs table requested alongside it is still present.
+    assert "Main Input Variables" in filtered
+
+
+def test_l5_bare_inputs_key_is_unaffected_by_the_submodules_fix(state) -> None:
+    """Regression guard: sections=['inputs'] ALONE must still resolve across every
+    combined bundle including submodules (BUG-1) -- the full-exclusion rule only
+    applies when 'submodules' is explicitly requested in the same call."""
+    filtered = get_module_impl("iam", state, sections=["inputs"])
+    assert (
+        "## Submodule 1:" in filtered
+    ), "bare inputs must still fall back into submodule bundles on pure-collection docs"
+
+
+def test_l5_a3_submodule_address_still_reaches_the_deep_dive(state) -> None:
+    """A3 stays intact: a submodule address still expands that submodule's own section."""
+    scoped = get_module_impl("vpc//modules/vpc-endpoints", state)
+    assert "## Submodule 1: vpc-endpoints" in scoped, "the addressed submodule's deep-dive must still expand"
+    assert "## Submodule 2: flow-log" not in scoped, "other submodules must stay out of a scoped address response"
+
+
+def test_l5_a3_submodule_name_substring_still_reaches_the_deep_dive(state) -> None:
+    """A free-form heading substring (not the 'submodules' logical key) still pulls one deep-dive."""
+    filtered = get_module_impl("vpc", state, sections=["vpc-endpoints"])
+    assert "## Submodule 1: vpc-endpoints" in filtered
+    assert "## Submodule 2: flow-log" not in filtered
+
+
+def test_l5_a1_default_head_still_inlines_compact_inventory() -> None:
+    """A1 stays intact: the default head inlines the compact inventory, not deep-dives."""
+    head = orientation_head(_doc("vpc"))
+    assert "## Submodules" in head
+    assert "vpc-endpoints" in head
+    assert "flow-log" in head
+    assert "## Submodule 1: vpc-endpoints" not in head
+    assert "## Submodule 2: flow-log" not in head
