@@ -1,6 +1,6 @@
 [project]
 name = "tfmodsearch"
-version = "0.19.1"
+version = "0.20.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.12"
