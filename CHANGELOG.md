@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.19.1] - 2026-07-15
+
+[0.19.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.19.1
+
+Hotfix: `grep_module_docs` failed with `[Errno 13] Permission denied` in compose deployments — the named volume mounted over `/home/app/.cache` is created root-owned by Docker when the image has no such directory, and the cache write path treated that as fatal. Found live within hours of 0.19.0 by a real plugin session.
+
+### Fixed
+
+- **Cache writes are now best-effort**: an unwritable registry-doc cache dir (root-owned volume, read-only rootfs) degrades to uncached fetches with a single WARNING naming the fix, instead of failing the tool call. The cache is an optimization, not a dependency.
+- **The image now bakes an app-owned `/home/app/.cache`**, so a FRESH named volume initializes with the right ownership (Docker copies content and ownership from the image on first mount of an empty volume). Volumes created by older images stay root-owned — one-off fix documented in `docker-compose.yml`: `docker exec -u root tfmodsearch-http chown app:app /home/app/.cache`.
+
+### Unchanged
+
+- Everything else from 0.19.0: ONNX backend, image size, PyPI dependency set, index, tools, transports.
+
 ## [0.19.0] - 2026-07-15
 
 [0.19.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.19.0

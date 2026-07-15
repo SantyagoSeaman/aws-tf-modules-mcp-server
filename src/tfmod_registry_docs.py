@@ -14,6 +14,7 @@ Exports:
 
 import datetime
 import json
+import logging
 import os
 import threading
 import urllib.request
@@ -223,21 +224,43 @@ def _read_cache_entry(path: Path) -> dict[str, Any] | None:
         return None
 
 
+_UNWRITABLE_CACHE_DIRS_WARNED: set[str] = set()
+_UNWRITABLE_WARN_LOCK = threading.Lock()
+
+
 def _write_cache_entry(path: Path, entry: dict[str, Any]) -> None:
-    """Atomically write a cache entry (temp file + rename).
+    """Atomically write a cache entry (temp file + rename), best-effort.
 
     Concurrent HTTP tool calls may write the same entry simultaneously;
     os.replace guarantees readers never observe a partially written file.
     Worst case under a race is a duplicate fetch, never corruption.
+
+    An unwritable cache dir (read-only rootfs, a root-owned named volume
+    mounted over ~/.cache) must degrade to uncached fetches with a WARNING,
+    never fail the tool call: the cache is an optimization, not a dependency.
     """
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}-{threading.get_ident()}")
     try:
-        tmp.write_text(json.dumps(entry))
-        os.replace(tmp, path)
-    except OSError:
-        tmp.unlink(missing_ok=True)
-        raise
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}-{threading.get_ident()}")
+        try:
+            tmp.write_text(json.dumps(entry))
+            os.replace(tmp, path)
+        except OSError:
+            tmp.unlink(missing_ok=True)
+            raise
+    except OSError as exc:
+        key = str(path.parent)
+        with _UNWRITABLE_WARN_LOCK:
+            already_warned = key in _UNWRITABLE_CACHE_DIRS_WARNED
+            _UNWRITABLE_CACHE_DIRS_WARNED.add(key)
+        if not already_warned:
+            logging.getLogger(__name__).warning(
+                f"Registry doc cache dir {key} is not writable ({exc}); "
+                "serving fetches uncached. Fix the ownership/permissions of the "
+                "cache dir (for the Docker named volume: "
+                "docker exec -u root <container> chown app:app /home/app/.cache) "
+                "or set TFMODSEARCH_CACHE_DIR to a writable location."
+            )
 
 
 def _is_latest_entry_fresh(entry: dict[str, Any], ttl_hours: int) -> bool:

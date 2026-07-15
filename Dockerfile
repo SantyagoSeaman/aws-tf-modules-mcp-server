@@ -98,8 +98,16 @@ COPY --from=builder --chown=app:app /opt/nltk_data /opt/nltk_data
 #     next in the search path — this one stays empty).
 #   - setup_logging() writes startup.log/mcp_server.log under <site-packages>/../logs.
 # Pre-create both, owned by the runtime user, instead of patching the app's path resolution.
-RUN mkdir -p /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs && \
-    chown app:app /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs
+# /home/app/.cache is created app-owned IN THE IMAGE so that a fresh named volume
+# mounted over it (docker-compose.yml) initializes with this ownership instead of
+# root:root -- Docker copies content AND ownership from the image only when the
+# volume is empty on first mount. Without this, grep_module_docs cannot write its
+# registry-doc cache in compose deployments (found live on 0.19.0; the server now
+# also degrades gracefully, but the cache should actually work).
+RUN mkdir -p /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs \
+             /home/app/.cache && \
+    chown app:app /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs \
+                  /home/app/.cache
 
 # pip/setuptools and bytecode caches aren't needed at runtime; trim what's cheap to trim.
 RUN rm -rf /usr/local/lib/python3.12/site-packages/pip \

@@ -79,3 +79,38 @@ def test_write_cache_entry_is_atomic_and_leaves_no_tmp(tmp_path):
     assert json.loads(target.read_text())["document"] == "x"
     leftovers = [p for p in tmp_path.iterdir() if p.name != target.name]
     assert leftovers == [], f"temp files left behind: {leftovers}"
+
+
+def test_unwritable_cache_dir_degrades_to_uncached_fetch(tmp_path, caplog):
+    """A root-owned/read-only cache dir must not fail the tool call (found live:
+    a compose named volume mounted over ~/.cache is created root-owned)."""
+    import logging
+    import stat
+
+    ro_parent = tmp_path / "ro"
+    ro_parent.mkdir()
+    cache_dir = ro_parent / "registry_docs"
+    ro_parent.chmod(stat.S_IRUSR | stat.S_IXUSR)  # read+exec only: mkdir inside fails
+    try:
+        import tfmod_registry_docs as rd
+
+        calls = []
+
+        def fake_fetch(ns, name, prov, ver):
+            calls.append(ver)
+            return FIX
+
+        with caplog.at_level(logging.WARNING):
+            text, resolved, _url, cache_hit, _ts = get_assembled_docs(
+                "terraform-aws-modules/vpc/aws", None, cache_dir=cache_dir, fetch=fake_fetch
+            )
+        assert calls, "fetch did not happen"
+        assert text and resolved
+        assert cache_hit is False
+        assert any("not writable" in r.message for r in caplog.records)
+        # Second call: still works (refetches, since nothing could be cached)
+        rd._MEMORY_CACHE.clear()
+        text2, *_ = get_assembled_docs("terraform-aws-modules/vpc/aws", None, cache_dir=cache_dir, fetch=fake_fetch)
+        assert text2 == text
+    finally:
+        ro_parent.chmod(stat.S_IRWXU)
