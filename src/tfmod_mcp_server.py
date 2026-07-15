@@ -1014,7 +1014,14 @@ def _extract_interface_h3(block: str, keys: set[str]) -> str:
     return heading_line.rstrip() + "\n\n" + "\n\n".join(kept)
 
 
-def filter_module_sections(text: str, requested: list[str], *, extra_exact_titles: tuple[str, ...] = ()) -> str:
+def filter_module_sections(
+    text: str,
+    requested: list[str],
+    *,
+    extra_exact_titles: tuple[str, ...] = (),
+    interface_scope: str = "all",
+    silent_keys: frozenset[str] = frozenset(),
+) -> str:
     """
     Reduce a module document to core sections plus the requested ones.
 
@@ -1034,6 +1041,13 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
             case-insensitive equality (not substring/prefix). Used by the
             orientation head to inline the exact ``## Submodules`` inventory
             heading without dragging in the ``## Submodule N:`` deep-dives.
+        interface_scope: "all" (default) or "root". When an interface key
+            (inputs/variables/outputs/examples/usage) falls back to extracting
+            H3 sub-sections from combined bundles, "root" restricts that
+            extraction to the ``## Root Module:``/``## Main Module:`` bundle
+            and skips ``## Submodule N:`` bundles.
+        silent_keys: Requested keys (lowercased) that should not be reported
+            in the "Requested sections not found" footer line when unmatched.
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
@@ -1045,6 +1059,10 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
     extra_lower = {t.lower() for t in extra_exact_titles}
     wanted: set[str] = {title for title, _ in sections if title in _CORE_SECTIONS or title.lower() in extra_lower}
     unmatched: list[str] = []
+    # Interface keys that found no exact H2 alias fall back to extracting their
+    # H3 sub-section(s) from the combined "Root/Main Module:"/"Submodule N:"
+    # bundles, rather than dragging in the whole bundle (the BUG-1 over-fetch).
+    fallback_keys: set[str] = set()
     for entry in requested:
         key = entry.strip().lower()
         if not key:
@@ -1065,15 +1083,30 @@ def filter_module_sections(text: str, requested: list[str], *, extra_exact_title
         # aliases target. When an interface key resolves to no exact heading, fall
         # back to those interface-bearing sections rather than reporting it missing.
         if not matched and key in _INTERFACE_KEYS:
-            for title, _ in sections:
-                if _matches_combined_interface(title.lower()):
-                    wanted.add(title)
+            for title, block in sections:
+                tl = title.lower()
+                if not _matches_combined_interface(tl):
+                    continue
+                if interface_scope == "root" and tl.startswith("submodule"):
+                    continue
+                if _extract_interface_h3(block, {key}):
+                    fallback_keys.add(key)
                     matched = True
         if not matched:
             unmatched.append(entry)
 
     parts = [preamble.rstrip()] if preamble.strip() else []
-    parts.extend(block.rstrip() for title, block in sections if title in wanted)
+    for title, block in sections:
+        if title in wanted:
+            parts.append(block.rstrip())
+            continue
+        tl = title.lower()
+        if fallback_keys and _matches_combined_interface(tl):
+            if interface_scope == "root" and tl.startswith("submodule"):
+                continue
+            extracted = _extract_interface_h3(block, fallback_keys)
+            if extracted:
+                parts.append(extracted)
 
     # Always advertise the complete section inventory so the agent has an explicit
     # menu for follow-up get_module(sections=[...]) calls — not just what was

@@ -444,6 +444,35 @@ def test_extract_interface_h3_no_match_returns_empty():
     assert _extract_interface_h3(block, {"inputs"}) == ""
 
 
+def _combined_doc():
+    return (
+        "---\nmodule_name: demo\n---\n\n"
+        "## Module Information\n\n- **Module ID**: x/demo/aws\n\n"
+        "## Description\n\nDemo.\n\n"
+        "## Root Module: Demo\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `root_in` | `string` |\n\n"
+        "### Main Outputs\n\n| O | D |\n|---|---|\n| `root_out` | x |\n\n"
+        "## Submodule 1: sub\n\n"
+        "### Main Input Variables\n\n| V | T |\n|---|---|\n| `sub_in` | `string` |\n\n"
+        "### Main Outputs\n\n| O | D |\n|---|---|\n| `sub_out` | y |\n\n"
+        "## Notes for AI Agents\n\nNote.\n"
+    )
+
+
+def test_inputs_extracts_h3_not_whole_bundle_all_scope():
+    out = filter_module_sections(_combined_doc(), ["inputs"])
+    assert "`root_in`" in out and "`sub_in`" in out  # inputs from root AND submodule
+    assert "root_out" not in out and "sub_out" not in out  # outputs NOT dragged in
+    assert "Requested sections not found" not in out  # matched, not unmatched
+
+
+def test_inputs_root_scope_excludes_submodule():
+    out = filter_module_sections(_combined_doc(), ["inputs"], interface_scope="root")
+    assert "`root_in`" in out
+    assert "`sub_in`" not in out
+    assert "root_out" not in out
+
+
 class TestSubmoduleAddress:
     """A3: get_module accepts a submodule address and returns a scoped head."""
 
