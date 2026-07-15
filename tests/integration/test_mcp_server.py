@@ -658,8 +658,8 @@ class TestModulesListTool:
         assert result.count == len(server_state.index.docs), "Should return all indexed documents"
 
     def test_modules_list_structure(self, server_state):
-        """Test that each module item has correct structure."""
-        result = modules_list_impl(server_state)
+        """Test that each full-detail module item has correct structure."""
+        result = modules_list_impl(server_state, detail="full")
 
         for module in result.modules:
             # Check all required fields are present
@@ -686,8 +686,8 @@ class TestModulesListTool:
             assert expected in module_names, f"Should include {expected} module"
 
     def test_modules_list_descriptions_truncated(self, server_state):
-        """Test that descriptions are properly truncated."""
-        result = modules_list_impl(server_state)
+        """Test that full-detail descriptions are properly truncated."""
+        result = modules_list_impl(server_state, detail="full")
 
         for module in result.modules:
             # Descriptions should be truncated to ~200 chars

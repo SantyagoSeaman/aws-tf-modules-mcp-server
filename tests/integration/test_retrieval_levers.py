@@ -17,6 +17,7 @@ from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     SearchWeights,
     ServerStateManager,
+    modules_list_impl,
     search_modules_impl,
 )
 from tfmod_search_lib import load_index
@@ -64,3 +65,32 @@ def test_l6_lower_ranks_drop_keywords_and_clip_description(state) -> None:
         assert len(hit.description) <= 141, (
             f"rank>=2 hit {hit.module_name} description must be clipped (<=141 chars), " f"got {len(hit.description)}"
         )
+
+
+# --------------------------------------------------------------------------- #
+# L1 — lean modules_list (compact default, full behind detail=full).
+# --------------------------------------------------------------------------- #
+def test_l1_compact_is_default_and_omits_keywords(state) -> None:
+    out = modules_list_impl(state)
+    assert out.count == len(out.modules) > 0
+    for item in out.modules:
+        assert not hasattr(item, "keywords"), "compact items must not carry keyword arrays"
+        assert item.module_id, f"{item.module_name}: compact must keep module_id (grep coordinate)"
+        assert item.latest_version, f"{item.module_name}: compact must keep latest_version"
+        assert len(item.purpose) <= 120, f"{item.module_name}: purpose must be clipped (<=120), got {len(item.purpose)}"
+
+
+def test_l1_full_detail_restores_keywords(state) -> None:
+    out = modules_list_impl(state, detail="full")
+    assert out.count == len(out.modules) > 0
+    assert any(item.keywords for item in out.modules), "detail=full must restore keyword arrays"
+    for item in out.modules:
+        assert hasattr(item, "keywords")
+
+
+def test_l1_compact_is_much_smaller_than_full(state) -> None:
+    compact = modules_list_impl(state)
+    full = modules_list_impl(state, detail="full")
+    assert (
+        len(compact.model_dump_json()) < len(full.model_dump_json()) * 0.6
+    ), "compact modules_list must be well under 60% of the full dump size"

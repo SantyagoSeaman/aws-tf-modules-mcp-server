@@ -726,8 +726,24 @@ class ModuleListItem(BaseModel):
     )
 
 
+class ModuleListItemCompact(BaseModel):
+    module_name: str = Field(..., description="Terraform module name (e.g., 'eks', 's3-bucket').")
+    purpose: str = Field(..., description="One-line purpose of the module (clipped).")
+    module_id: str = Field(
+        ...,
+        description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
+        "'terraform-aws-modules/vpc/aws'). Pass to grep_module_docs or resolve the module by name.",
+    )
+    latest_version: str = Field(
+        ...,
+        description="Latest version known at doc-curation time (a hint). Pass as `version` to grep_module_docs.",
+    )
+
+
 class ModulesListOutput(UpdateNoticeMixin):
-    modules: list[ModuleListItem] = Field(..., description="Complete list of all available Terraform modules.")
+    modules: list[ModuleListItemCompact] | list[ModuleListItem] = Field(
+        ..., description="List of all available Terraform modules (compact by default, full metadata when detail=full)."
+    )
     count: int = Field(..., description="Total number of modules in the catalog.")
 
 
@@ -1393,7 +1409,7 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     return orientation_head(content)
 
 
-def modules_list_impl(state: ServerState) -> ModulesListOutput:
+def modules_list_impl(state: ServerState, detail: str = "compact") -> ModulesListOutput:
     """
     Helper function to list all available modules.
 
@@ -1402,31 +1418,50 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
 
     Args:
         state: Server state containing index and configuration
+        detail: "compact" (default) returns name + purpose + registry coordinates
+            only; "full" restores the path, full description, and keyword arrays.
 
     Returns:
-        ModulesListOutput with complete catalog of all modules
+        ModulesListOutput with the catalog of all modules
 
     See modules_list() tool documentation for full details.
     """
     assert state.logger is not None, "ServerState must have a logger"  # noqa: S101
 
-    state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents")
+    state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents (detail={detail})")
 
-    modules: list[ModuleListItem] = []
-    for doc in state.index.docs:
-        # Extract purpose from Module Information section
-        description = extract_purpose(doc.text)
-
-        modules.append(
-            ModuleListItem(
-                module_name=doc.module_name or "",
-                path=doc.path,
-                description=description,
-                keywords=doc.keywords or [],
-                module_id=getattr(doc, "module_id", ""),
-                latest_version=getattr(doc, "latest_version", ""),
+    modules: list[ModuleListItemCompact] | list[ModuleListItem]
+    if detail == "full":
+        # L1: full metadata on demand. The 12-18-item keyword arrays and long
+        # descriptions this restores are the bulk of the byte-identical dump the
+        # compact default drops.
+        full_items: list[ModuleListItem] = []
+        for doc in state.index.docs:
+            full_items.append(
+                ModuleListItem(
+                    module_name=doc.module_name or "",
+                    path=doc.path,
+                    description=extract_purpose(doc.text),
+                    keywords=doc.keywords or [],
+                    module_id=getattr(doc, "module_id", ""),
+                    latest_version=getattr(doc, "latest_version", ""),
+                )
             )
-        )
+        modules = full_items
+    else:
+        compact_items: list[ModuleListItemCompact] = []
+        for doc in state.index.docs:
+            compact_items.append(
+                ModuleListItemCompact(
+                    module_name=doc.module_name or "",
+                    # 117 leaves room for extract_purpose's 3-char "..." suffix so
+                    # the clipped purpose never exceeds the 120-char budget.
+                    purpose=extract_purpose(doc.text, max_length=117),
+                    module_id=getattr(doc, "module_id", ""),
+                    latest_version=getattr(doc, "latest_version", ""),
+                )
+            )
+        modules = compact_items
 
     state.logger.debug(f"Modules list generated: {len(modules)} items")
 
@@ -1531,17 +1566,23 @@ def grep_module_docs_impl(
     tags={"catalog", "list", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="List all available Terraform modules"),
 )
-def modules_list() -> ModulesListOutput:
+def modules_list(detail: str = "compact") -> ModulesListOutput:
     """
     List all available Terraform modules in the catalog.
 
-    Returns a complete catalog of all indexed Terraform modules with their
-    metadata (name, path, description, keywords). This tool requires no
-    parameters and provides a full directory listing of available modules.
+    Returns the catalog of all indexed Terraform modules. By default (detail=
+    "compact") each entry carries only the module name, a one-line purpose, and
+    the registry coordinates (module_id, latest_version) needed to chain into
+    grep_module_docs - the whole catalog stays small enough to read on every
+    call. Pass detail="full" to also get each module's path, full description,
+    and keyword arrays.
+
+    Args:
+        detail: "compact" (default) or "full".
 
     Returns:
-        ModulesListOutput: Complete catalog with:
-            - modules: List of all modules with metadata
+        ModulesListOutput: Catalog with:
+            - modules: List of all modules (compact or full metadata)
             - count: Total number of modules
 
     Raises:
@@ -1574,7 +1615,7 @@ def modules_list() -> ModulesListOutput:
         4. Use get_module() to retrieve full documentation
     """
     state = ServerStateManager.get()
-    result = modules_list_impl(state)
+    result = modules_list_impl(state, detail=detail)
     result.update_notice = _update_notice()
     return result
 
