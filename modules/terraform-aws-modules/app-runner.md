@@ -66,7 +66,7 @@ This module has **no submodules**. All resources — service, auto-scaling confi
 | `source_configuration` | `any` | `{}` | Source configuration: either `code_repository` (GitHub) or `image_repository` (ECR) block |
 | `auto_scaling_configuration_arn` | `string` | `null` | ARN of an existing auto-scaling configuration to associate; App Runner's default is used if omitted |
 | `instance_configuration` | `any` | `{}` | Instance `cpu`/`memory` sizing for the service |
-| `health_check_configuration` | `any` | `{}` | Health check path, protocol, interval, timeout, thresholds |
+| `health_check_configuration` | `any` | `{}` | Health check path, protocol, interval, timeout, thresholds — keys (from examples): `healthy_threshold`, `interval`, `path`, `protocol`, `timeout`, `unhealthy_threshold` |
 | `network_configuration` | `any` | `{}` | Ingress (`is_publicly_accessible`) and egress (`egress_type`, VPC connector ARN) configuration |
 | `encryption_configuration` | `any` | `{}` | KMS key ARN for encrypting service data |
 | `observability_configuration` | `any` | `{}` | X-Ray observability configuration reference |
@@ -75,7 +75,7 @@ This module has **no submodules**. All resources — service, auto-scaling confi
 | `access_iam_role_policies` | `map(string)` | `{}` | Additional IAM policy ARNs to attach to the access role |
 | `create_instance_iam_role` | `bool` | `true` | Create the IAM role assumed by the running application |
 | `instance_iam_role_policies` | `map(string)` | `{}` | Additional IAM policy ARNs to attach to the instance role |
-| `instance_policy_statements` | `any` | `{}` | Map of inline IAM policy statements for custom instance-role permissions |
+| `instance_policy_statements` | `any` | `{}` | Map of inline IAM policy statements for custom instance-role permissions — keys (from examples): `actions`, `resources` |
 | `create_vpc_connector` | `bool` | `false` | Create a VPC Connector for egress to private VPC resources |
 | `vpc_connector_subnets` | `list(string)` | `[]` | Subnets for the VPC Connector (private subnets with NAT/internet route) |
 | `vpc_connector_security_groups` | `list(string)` | `[]` | Security groups for the VPC Connector |
@@ -85,7 +85,7 @@ This module has **no submodules**. All resources — service, auto-scaling confi
 | `create_custom_domain_association` | `bool` | `false` | Create a custom domain association |
 | `domain_name` | `string` | `""` | Custom domain (base or subdomain) to associate |
 | `enable_www_subdomain` | `bool` | `null` | Also associate the `www` subdomain (App Runner default is `true`) |
-| `connections` | `any` | `{}` | Map of reusable connection definitions (e.g., GitHub) to create |
+| `connections` | `any` | `{}` | Map of reusable connection definitions (e.g., GitHub) to create — keys (from examples): `provider_type` |
 | `auto_scaling_configurations` | `any` | `{}` | Map of reusable auto-scaling configuration definitions (`max_concurrency`, `max_size`, `min_size`) to create |
 | `enable_observability_configuration` | `bool` | `true` | Create and assign an X-Ray observability configuration |
 | `tags` | `map(string)` | `{}` | Tags to add to all resources |

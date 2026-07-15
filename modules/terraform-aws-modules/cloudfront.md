@@ -137,7 +137,7 @@ The root module creates the `aws_cloudfront_distribution` and its directly-attac
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Controls whether resources are created |
-| `default_cache_behavior` | `object` | **Required** | Default cache behavior configuration |
+| `default_cache_behavior` | `object` | **Required** | Default cache behavior configuration — fields: `allowed_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `cached_methods`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; see grep_module_docs) |
 | `aliases` | `list(string)` | `null` | Alternate domain names (CNAMEs) for the distribution |
 | `comment` | `string` | `null` | Distribution description/comment |
 | `enabled` | `bool` | `true` | Whether distribution accepts end user requests |
@@ -147,20 +147,20 @@ The root module creates the `aws_cloudfront_distribution` and its directly-attac
 | `default_root_object` | `string` | `null` | Object returned for root URL (e.g., `index.html`) |
 | `anycast_ip_list_id` | `string` | `null` | ID of an Anycast static IP list to associate with the distribution |
 | `origin` | `map(object)` | `{}` | Map of origins (S3, custom HTTP/HTTPS, or VPC — VPC origins support cross-account via `vpc_origin_config.owner_account_id`) |
-| `origin_access_control` | `map(object)` | S3 default | Origin access control settings with SigV4 signing (OAC only; OAI is not supported) |
-| `vpc_origin` | `map(object)` | `null` | VPC origin configurations for private ALB/NLB/EC2 resources |
-| `origin_group` | `map(object)` | `null` | Origin group failover configurations |
-| `ordered_cache_behavior` | `list(object)` | `[]` | Ordered list of cache behaviors by path pattern |
+| `origin_access_control` | `map(object)` | S3 default | Origin access control settings with SigV4 signing (OAC only; OAI is not supported) — fields: `description`, `name`, `origin_type`, `signing_behavior`, `signing_protocol` |
+| `vpc_origin` | `map(object)` | `null` | VPC origin configurations for private ALB/NLB/EC2 resources — fields: `arn`, `http_port`, `https_port`, `name`, `origin_protocol_policy`, `origin_ssl_protocols`, `timeouts`, `tags` |
+| `origin_group` | `map(object)` | `null` | Origin group failover configurations — fields: `failover_criteria`, `member`, `origin_id` |
+| `ordered_cache_behavior` | `list(object)` | `[]` | Ordered list of cache behaviors by path pattern — fields: `allowed_methods`, `cached_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; see grep_module_docs) |
 | `cache_policies` | `map(object)` | `null` | Cache policies to create and reference via `cache_policy_key` |
 | `origin_request_policies` | `map(object)` | `null` | Origin request policies to create and reference via `origin_request_policy_key` |
-| `response_headers_policies` | `map(object)` | `null` | Response headers policies to create (CORS, security headers, custom headers) |
+| `response_headers_policies` | `map(object)` | `null` | Response headers policies to create (CORS, security headers, custom headers) — fields: `name`, `comment`, `cors_config`, `custom_headers_config`, `remove_headers_config`, `security_headers_config`, `server_timing_headers_config` |
 | `cloudfront_functions` | `map(object)` | `null` | CloudFront Functions to create and associate via `function_key` |
-| `cache_tag_config` | `object` | `null` | Enables cache-tag extraction from an origin response header for tag-based invalidation |
+| `cache_tag_config` | `object` | `null` | Enables cache-tag extraction from an origin response header for tag-based invalidation — fields: `header_name` |
 | `viewer_certificate` | `object` | `{}` | SSL/TLS certificate configuration; ACM certificate must be in `us-east-1` |
 | `viewer_mtls_config` | `object` | `null` | Viewer mutual TLS (mTLS) configuration referencing a `trust_store_id` |
-| `restrictions` | `object` | `{restriction_type = "none"}` | Geo-restriction configuration |
-| `custom_error_response` | `list(object)` | `null` | Custom error response pages |
-| `logging_config` | `object` | `null` | Legacy (v1) S3 access logging configuration |
+| `restrictions` | `object` | `{restriction_type = "none"}` | Geo-restriction configuration — fields: `geo_restriction` |
+| `custom_error_response` | `list(object)` | `null` | Custom error response pages — fields: `error_caching_min_ttl`, `error_code`, `response_code`, `response_page_path` |
+| `logging_config` | `object` | `null` | Legacy (v1) S3 access logging configuration — fields: `bucket`, `include_cookies`, `prefix` |
 | `enable_v2_logging` | `bool` | `false` | Enable V2 logging (CloudWatch Logs or S3 Parquet) |
 | `v2_logging` | `object` | `null` | V2 logging destination configuration (CloudWatch destinations must be `us-east-1`) |
 | `web_acl_id` | `string` | `null` | AWS WAF Web ACL ARN/ID to attach (must exist in the CloudFront/global scope) |
