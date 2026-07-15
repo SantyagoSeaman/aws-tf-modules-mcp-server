@@ -1235,6 +1235,23 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
     return _read_module_file(full_path, doc.module_name or doc.path, state.logger)
 
 
+def _clip_blurb(text: str, max_length: int = 140) -> str:
+    """Clip a description to its first sentence, capped at max_length chars.
+
+    Used for non-top-1 search hits (L6): enough to recognize the module, without
+    re-billing the full description on every later turn.
+    """
+    text = text.strip()
+    if not text:
+        return text
+    period = text.find(". ")
+    if 0 < period + 1 <= max_length:
+        return text[: period + 1]
+    if len(text) <= max_length:
+        return text
+    return text[: max_length - 1].rstrip() + "…"
+
+
 def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> SearchOutput:
     """
     Helper function to search for modules.
@@ -1271,16 +1288,23 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
     )
 
     out: list[SearchHit] = []
-    for score, i in results:
+    for rank, (score, i) in enumerate(results):
         d = state.index.docs[i]
-        # Extract description from document text
-        description = extract_description(d.text)
+        # L6: only the top hit carries the full keyword array and description.
+        # Lower ranks re-bill on every later turn but nothing reads their keyword
+        # arrays, so they get an empty list and a first-sentence-clipped blurb.
+        if rank == 0:
+            keywords = d.keywords or []
+            description = extract_description(d.text)
+        else:
+            keywords = []
+            description = _clip_blurb(extract_description(d.text))
 
         out.append(
             SearchHit(
                 module_name=d.module_name or "",
                 path=d.path,
-                keywords=d.keywords or [],
+                keywords=keywords,
                 description=description,
                 score=float(score),
                 module_id=getattr(d, "module_id", ""),
