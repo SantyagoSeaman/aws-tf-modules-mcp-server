@@ -11,7 +11,7 @@ body:
     id: version
     attributes:
       label: Version
-      description: Which tfmodsearch version (e.g. 0.20.0)? Run `tfmodsearch --version` or check the image tag.
+      description: Which TFModSearch version (e.g. 0.20.0)? Run `tfmodsearch --version` or check the image tag.
       placeholder: "0.20.0"
     validations:
       required: true

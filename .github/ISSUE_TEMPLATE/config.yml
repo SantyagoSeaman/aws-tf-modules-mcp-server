@@ -4,4 +4,4 @@ blank_issues_enabled: false
 contact_links:
   - name: Usage questions and documentation
     url: https://github.com/SantyagoSeaman/tfmodsearch#readme
-    about: For how-to and setup questions, please read the README and CHANGELOG first. Open an issue only for a reproducible bug or a concrete feature request.
+    about: For how-to and setup questions, please read the README first. Open an issue only for a reproducible bug or a concrete feature request.
