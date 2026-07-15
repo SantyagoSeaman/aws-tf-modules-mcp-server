@@ -17,7 +17,10 @@ from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     SearchWeights,
     ServerStateManager,
+    filter_module_sections,
+    get_module_impl,
     modules_list_impl,
+    orientation_head,
     search_modules_impl,
 )
 from tfmod_search_lib import load_index
@@ -94,3 +97,54 @@ def test_l1_compact_is_much_smaller_than_full(state) -> None:
     assert (
         len(compact.model_dump_json()) < len(full.model_dump_json()) * 0.6
     ), "compact modules_list must be well under 60% of the full dump size"
+
+
+# --------------------------------------------------------------------------- #
+# L4 — cap the default-head input table to required rows.
+# --------------------------------------------------------------------------- #
+L4_MODULES = ["s3-bucket", "vpc", "elasticache", "apigateway-v2", "opensearch"]
+
+
+def _uncapped_head(doc: str) -> str:
+    """Rebuild the pre-L4 head (same section selection as orientation_head, no cap)."""
+    return filter_module_sections(
+        doc,
+        ["features", "use-cases", "inputs"],
+        extra_exact_titles=("Submodules",),
+        interface_scope="root",
+        silent_keys=frozenset({"features", "use-cases", "inputs"}),
+    )
+
+
+@pytest.mark.parametrize("module", L4_MODULES)
+def test_l4_capped_head_is_smaller_than_full_inputs(module: str) -> None:
+    doc = _doc(module)
+    head = orientation_head(doc)
+    bypassed = _uncapped_head(doc)
+    full_inputs = filter_module_sections(doc, ["inputs"])
+    assert len(head) < len(bypassed) or len(head) < len(full_inputs), (
+        f"{module}: capped default head ({len(head)} chars) must be smaller than either "
+        f"the cap-bypassed head ({len(bypassed)} chars) or the full sections=['inputs'] "
+        f"view ({len(full_inputs)} chars)"
+    )
+
+
+@pytest.mark.parametrize("module", L4_MODULES)
+def test_l4_capped_head_still_has_a_real_row_and_pointer(module: str) -> None:
+    head = orientation_head(_doc(module))
+    assert "| `" in head, f"{module}: capped head must still contain a real input row"
+    assert "optional inputs" in head, f"{module}: capped head must carry the drop-count pointer"
+
+
+@pytest.mark.parametrize("module", L4_MODULES)
+def test_l4_sections_inputs_still_returns_full_table(module: str, state) -> None:
+    doc = _doc(module)
+    head = orientation_head(doc)
+    full = get_module_impl(module, state, sections=["inputs"])
+    head_rows = head.count("| `")
+    full_rows = full.count("| `")
+    assert full_rows >= head_rows, (
+        f"{module}: sections=['inputs'] ({full_rows} rows) must not be smaller than "
+        f"the capped default head ({head_rows} rows)"
+    )
+    assert "optional inputs" not in full, f"{module}: full sections=['inputs'] must not carry the head-only pointer"

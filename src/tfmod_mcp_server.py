@@ -1332,6 +1332,114 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
     return SearchOutput(results=out)
 
 
+_INPUT_TABLE_HEADING_RE = re.compile(r"^### Main Input Variables[ \t]*$", re.MULTILINE)
+_TABLE_ROW_RE = re.compile(r"^\|.*\|[ \t]*$")
+_TABLE_SEPARATOR_RE = re.compile(r"^\|[ \t:-]+\|[ \t:|:-]*$")
+_MIN_HEAD_TABLE_ROWS = 8
+
+
+def _split_table_row(row: str) -> list[str]:
+    """Split a Markdown pipe-table row into stripped cells (drops the outer pipes)."""
+    return [cell.strip() for cell in row.strip().strip("|").split("|")]
+
+
+def _cell_marks_required(cell: str) -> bool:
+    """True when a Default-column cell signals the input has no default (required)."""
+    bare = cell.strip().strip("*").strip("`").strip().lower()
+    return bare in ("", "-", "—", "n/a") or "required" in bare
+
+
+def _cell_marks_required_column(cell: str) -> bool:
+    """True when a Required-column cell signals the input is required."""
+    bare = cell.strip().strip("*").strip("`").strip().lower()
+    return bare in ("yes", "true", "required")
+
+
+def _cap_head_input_table(head_text: str) -> str:
+    """
+    Cap the FIRST inlined ``### Main Input Variables`` table to essential rows.
+
+    L4: the 0.20.0 double-fetch fix inlined the whole root input table into the
+    default orientation head, growing it substantially on modules with wide
+    interfaces. This keeps only rows for inputs with no default (required,
+    however the doc spells it — an empty/``-``/``n/a`` Default cell, a
+    ``Required``/``*required*`` marker, or a ``Yes`` in a separate Required
+    column) and appends a pointer to the full table. When a module has no
+    required inputs, the first ~8 rows are kept instead so the head table is
+    never empty. Rows are never re-ordered.
+
+    This is a pure post-process on already-rendered Markdown: on any parse
+    ambiguity (no heading, no recognizable pipe table, no identifiable
+    Default/Required column) it returns ``head_text`` unchanged rather than
+    guessing. Only the first occurrence of the heading is touched — a doc that
+    happens to inline more than one is left alone past the first.
+    """
+    heading_match = _INPUT_TABLE_HEADING_RE.search(head_text)
+    if heading_match is None:
+        return head_text
+
+    lines = head_text.splitlines(keepends=True)
+    # Locate the heading's line index.
+    heading_line_idx = head_text.count("\n", 0, heading_match.start())
+
+    # Scan forward for the first non-blank line after the heading — it must be
+    # the table header row, else this is not the table shape we recognize.
+    idx = heading_line_idx + 1
+    while idx < len(lines) and lines[idx].strip() == "":
+        idx += 1
+    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+        return head_text
+    header_line_idx = idx
+    header_cells = _split_table_row(lines[header_line_idx])
+
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return head_text
+
+    # Identify the Default/Required column via the header, never a hardcoded index.
+    lower_headers = [c.lower() for c in header_cells]
+    if "default" in lower_headers:
+        col_idx = lower_headers.index("default")
+        is_required = _cell_marks_required
+    elif "required" in lower_headers:
+        col_idx = lower_headers.index("required")
+        is_required = _cell_marks_required_column
+    else:
+        return head_text
+
+    # Collect contiguous data rows following the separator.
+    row_start = sep_idx + 1
+    row_end = row_start
+    data_rows: list[str] = []
+    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
+        data_rows.append(lines[row_end])
+        row_end += 1
+
+    if not data_rows:
+        return head_text
+
+    required_rows = []
+    for row in data_rows:
+        cells = _split_table_row(row)
+        if col_idx >= len(cells):
+            continue
+        if is_required(cells[col_idx]):
+            required_rows.append(row)
+
+    if required_rows:
+        kept_rows = required_rows
+    else:
+        kept_rows = data_rows[:_MIN_HEAD_TABLE_ROWS]
+
+    dropped = len(data_rows) - len(kept_rows)
+    if dropped <= 0:
+        return head_text
+
+    pointer_line = f'_(+{dropped} optional inputs — get_module(sections=["inputs"]) for the full table)_\n'
+    new_lines = lines[:row_start] + kept_rows + [pointer_line] + lines[row_end:]
+    return "".join(new_lines)
+
+
 def orientation_head(text: str) -> str:
     """
     Build the compact orientation view returned by get_module by default.
@@ -1353,6 +1461,9 @@ def orientation_head(text: str) -> str:
     Also inlines the root module's compact ``### Main Input Variables`` H3 (when
     the doc has one), scoped to the root/main bundle only — submodule inputs stay
     out of the head so a collection doc with no root inputs gets no extra noise.
+    That inlined table is further capped to essential (required) rows by
+    ``_cap_head_input_table`` (L4) — the full table remains one
+    ``sections=["inputs"]`` call away.
     """
     body = filter_module_sections(
         text,
@@ -1361,6 +1472,7 @@ def orientation_head(text: str) -> str:
         interface_scope="root",
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
+    body = _cap_head_input_table(body)
     hint = _version_pin_hint(text)
     return f"{hint}\n\n{body}" if hint else body
 
