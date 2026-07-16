@@ -1312,54 +1312,49 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
     return text[: max_length - 1].rstrip() + "…"
 
 
-# L2/L7/L8: threshold on the top1/top2 combined-score ratio below which two
-# hits are treated as contested rather than one confidently winning. Indicative
-# (N=3 report: elasticache 11.32 vs memory-db 4.90 = 2.3x flags tie; clean
-# queries clear 3x+ and stay high) -- validated by the morning A/B run.
-SEARCH_NEAR_TIE_RATIO = 2.5
+# RC2 T3: floor on the raw (pre-min-max) semantic similarity below which a
+# lexical-but-not-exact top hit is still treated as a catalog gap rather than a
+# confident match -- catches the incidental-keyword case (an unrelated module
+# lists the query term as a related-service keyword, earning kw_overlap without
+# the query actually being covered). Provisional and A/B-tuned by the morning
+# run: e5 cosines are compressed so the real match/gap band is narrow; start at
+# 0.88 on the [0,1] scale and let the run reveal the true distribution. Do not
+# tune this toward any specific test pair.
+SEARCH_SEM_FLOOR = 0.88
 
 
-def _classify_confidence(hits: list[ScoredHit]) -> tuple[str, float]:
+def _classify_confidence(hits: list[ScoredHit]) -> str:
     """Classify a ranked hit list into a search-confidence verdict.
 
-    Two signals, because a single top1/top2 ratio conflates "absent" with
-    "contested":
+    Two-verdict design ("high" / "low" only -- no near-tie band):
     1. Whether the top hit earned a lexical component (exact module-name match
        OR any keyword-IDF overlap) -- a real match exists vs a semantic-only
        ceiling (the query is likely not covered by the catalog at all).
-    2. The top1/top2 combined-score ratio -- a wide gap means the top hit
-       confidently beat the field; a narrow gap means two hits are contested.
+    2. For a lexical-but-not-exact top hit, whether its raw semantic
+       similarity (ScoredHit.sem_sim, comparable across queries) clears
+       SEARCH_SEM_FLOOR -- catches the incidental-keyword catalog gap that a
+       kw_overlap check alone cannot separate from a real match.
 
     Verdict:
-    - "low": top-1 has no lexical component at all. Ratio is irrelevant here
-      (even a wide gap over noise is not a confident match).
-    - "tie": top-1 is lexical but the top1/top2 ratio is below
-      SEARCH_NEAR_TIE_RATIO -- two real candidates, pick between them.
-    - "high": top-1 is lexical and clearly ahead of rank 2.
+    - "low": top-1 has no lexical component at all (semantic-only ceiling), OR
+      top-1 is lexical-but-not-exact and its sem_sim is below the floor
+      (incidental-keyword catalog gap).
+    - "high": top-1 is an exact module-name match (always decisive,
+      regardless of sem_sim), or is lexical with sem_sim at/above the floor.
 
-    An empty or single-hit list is treated as "high" confidence with an
-    infinite ratio (nothing to contest it) per the documented empty/single-
-    result behavior.
-
-    Returns:
-        (verdict, ratio) -- ratio is float("inf") when there is no rank-2 hit
-        or its score is <= 0.
+    An empty hit list is treated as "high" confidence (nothing to contest it)
+    per the documented empty-result behavior.
     """
     if not hits:
-        return "high", float("inf")
+        return "high"
 
     top1 = hits[0]
-    if len(hits) < 2 or hits[1].score <= 0:
-        ratio = float("inf")
-    else:
-        ratio = top1.score / hits[1].score
-
     top1_lexical = top1.exact_hit or top1.kw_overlap
     if not top1_lexical:
-        return "low", ratio
-    if ratio < SEARCH_NEAR_TIE_RATIO:
-        return "tie", ratio
-    return "high", ratio
+        return "low"
+    if not top1.exact_hit and top1.sem_sim < SEARCH_SEM_FLOOR:
+        return "low"
+    return "high"
 
 
 def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_top: bool = False) -> SearchOutput:
@@ -1414,27 +1409,23 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
         logger=state.logger,
     )
 
-    confidence, ratio = _classify_confidence(hits)
+    confidence = _classify_confidence(hits)
+    state.logger.debug(
+        f"top1 sem_sim={hits[0].sem_sim:.4f} verdict={confidence}" if hits else f"no hits verdict={confidence}"
+    )
     hint: str | None = None
-    if hits:
+    if hits and confidence == "low":
         top1_name = state.index.docs[hits[0].doc_index].module_name or "?"
-        if confidence == "low":
-            hint = (
-                f"No confident catalog match (top score {hits[0].score:.1f}). Confirm absence with "
-                f"modules_list, or try grep_module_docs on the nearest module '{top1_name}' for the "
-                f"capability keyword."
-            )
-        elif confidence == "tie":
-            top2_name = state.index.docs[hits[1].doc_index].module_name or "?"
-            hint = (
-                f"Contested top match: '{top1_name}' vs '{top2_name}' (scores {hits[0].score:.1f} / "
-                f"{hits[1].score:.1f}, ratio {ratio:.1f}). Fetch both with get_module before committing."
-            )
+        hint = (
+            f"No confident catalog match (top score {hits[0].score:.1f}). Confirm absence with "
+            f"modules_list, or try grep_module_docs on the nearest module '{top1_name}' for the "
+            f"capability keyword."
+        )
 
     # L3: opt-in one-shot resolve. Only inline the top-1 orientation head when
-    # the caller asked for it AND the search is high confidence -- a tie or
-    # low verdict means the top hit is not (confidently) the module the
-    # caller wants, so inlining it would waste tokens on the wrong doc.
+    # the caller asked for it AND the search is high confidence -- a low
+    # verdict means the top hit is not (confidently) the module the caller
+    # wants, so inlining it would waste tokens on the wrong doc.
     top_module_doc: str | None = None
     if expand_top and confidence == "high" and hits:
         top_module_doc = orientation_head(state.index.docs[hits[0].doc_index].text)

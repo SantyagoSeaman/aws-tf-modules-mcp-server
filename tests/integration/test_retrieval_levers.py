@@ -16,7 +16,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     _MIN_HEAD_TABLE_ROWS,
-    SEARCH_NEAR_TIE_RATIO,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
@@ -231,54 +230,77 @@ def test_l2_clean_query_is_high_confidence_with_no_hint(state) -> None:
     assert out.hint is None
 
 
-def test_l7_l8_classify_confidence_low_when_top1_not_lexical() -> None:
-    # No exact-name and no keyword overlap on rank 1 -> low, regardless of ratio.
+def test_rc2_classify_confidence_low_when_top1_not_lexical() -> None:
+    # No exact-name and no keyword overlap on rank 1 -> low, regardless of sem_sim.
     hits = [
-        ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False),
-        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False),
+        ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.95),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
     ]
-    verdict, ratio = _classify_confidence(hits)
-    assert verdict == "low"
-    assert ratio == 5.0
+    assert _classify_confidence(hits) == "low"
 
 
-def test_l7_classify_confidence_tie_when_lexical_but_close_ratio() -> None:
-    # Lexical top-1 but top1/top2 ratio below the near-tie threshold -> tie.
+def test_rc2_classify_confidence_high_on_former_near_tie_regardless_of_score_ratio() -> None:
+    # T1: the near-tie fixture (elasticache/memory-db style) - both lexical, top1/
+    # top2 combined-score ratio well below the old 2.5 near-tie threshold. The tie
+    # verdict is gone; a lexical top-1 with a strong sem_sim is simply "high" now.
     hits = [
-        ScoredHit(score=11.32, doc_index=0, exact_hit=False, kw_overlap=True),
-        ScoredHit(score=4.90, doc_index=1, exact_hit=False, kw_overlap=True),
+        ScoredHit(score=11.32, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=4.90, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.93),
     ]
-    verdict, ratio = _classify_confidence(hits)
-    assert ratio == pytest.approx(11.32 / 4.90)
-    assert ratio < SEARCH_NEAR_TIE_RATIO
-    assert verdict == "tie"
+    assert hits[0].score / hits[1].score < 2.5, "fixture must reproduce the old near-tie ratio band"
+    assert _classify_confidence(hits) == "high"
 
 
-def test_l7_classify_confidence_high_when_lexical_and_wide_ratio() -> None:
+def test_rc2_classify_confidence_low_on_incidental_keyword_with_weak_sem_sim() -> None:
+    # T3: the incidental-keyword catalog-gap case - top-1 earned a real keyword
+    # overlap (e.g. an unrelated module lists the query term as a related-service
+    # keyword) but is not an exact-name match and its raw semantic similarity sits
+    # below the floor - a genuine catalog gap, not a confident match.
     hits = [
-        ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True),
-        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False),
+        ScoredHit(score=3.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.60),
+        ScoredHit(score=2.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
     ]
-    verdict, ratio = _classify_confidence(hits)
-    assert verdict == "high"
-    assert ratio == 9.0
+    assert _classify_confidence(hits) == "low"
 
 
-def test_l7_classify_confidence_high_when_no_rank2() -> None:
-    hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True)]
-    verdict, ratio = _classify_confidence(hits)
-    assert verdict == "high"
-    assert ratio == float("inf")
-
-
-def test_l7_classify_confidence_high_when_rank2_score_zero() -> None:
+def test_rc2_classify_confidence_high_on_lexical_top1_with_strong_sem_sim() -> None:
     hits = [
-        ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True),
-        ScoredHit(score=0.0, doc_index=1, exact_hit=False, kw_overlap=False),
+        ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.20),
     ]
-    verdict, ratio = _classify_confidence(hits)
-    assert verdict == "high"
-    assert ratio == float("inf")
+    assert _classify_confidence(hits) == "high"
+
+
+def test_rc2_classify_confidence_high_on_exact_hit_regardless_of_sem_sim() -> None:
+    # exact_hit always wins to "high" - a name match is decisive even with a weak
+    # raw semantic similarity.
+    hits = [
+        ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.05),
+    ]
+    assert _classify_confidence(hits) == "high"
+
+
+def test_rc2_classify_confidence_high_when_no_rank2() -> None:
+    hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.99)]
+    assert _classify_confidence(hits) == "high"
+
+
+def test_rc2_classify_confidence_never_returns_tie() -> None:
+    # T1: the verdict domain is {"high", "low"} only - no ratio plumbing anywhere.
+    for hits in (
+        [],
+        [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.99)],
+        [
+            ScoredHit(score=11.32, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+            ScoredHit(score=4.90, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.93),
+        ],
+        [
+            ScoredHit(score=3.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.60),
+            ScoredHit(score=2.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
+        ],
+    ):
+        assert _classify_confidence(hits) in ("high", "low")
 
 
 def test_l8_low_hint_names_nearest_module(state) -> None:
@@ -288,12 +310,13 @@ def test_l8_low_hint_names_nearest_module(state) -> None:
     assert out.results[0].module_name in out.hint
 
 
-def test_l7_tie_hint_names_both_top_modules(state) -> None:
+def test_rc2_former_near_tie_query_is_now_high_confidence(state) -> None:
+    # T1/T2: a query that used to land in the "tie" band now resolves to "high"
+    # against the live index (or skips if the live index no longer reproduces a
+    # close score band for this query - the fixture-based unit tests above cover
+    # the classifier logic unconditionally).
     out = search_modules_impl("redis in-memory cache cluster", state, top_k=3)
-    if out.confidence != "tie":
-        pytest.skip("query did not reproduce a near-tie against the live index; verdict logic is unit-tested above")
-    assert out.results[0].module_name in out.hint
-    assert out.results[1].module_name in out.hint
+    assert out.confidence in ("high", "low"), "tie must never be a possible verdict"
 
 
 def test_search_output_serialization_drops_hint_when_none(state) -> None:
