@@ -127,3 +127,155 @@ test either way.
 
 Lever 9 (shipped). Index/ranker retuning toward any test pair (overfit).
 Push / PR / merge / tag / publish (await explicit maintainer approval).
+
+---
+
+# RC2 revision (Run #8 measured, 2026-07-16)
+
+The 0.22.0-rc container was measured (Run #8, 3A+3B Sonnet, same method as run
+#7) and came out **worse**: A cost $24.48 -> $26.86 (+9.7%), doc calls 117 -> 143
+(+22%), while payload chars fell 4.4%. Source: `tfmodsearch-improvements-2.md`
+"Run #8 addendum". This section revises the design; the package version stays
+`0.22.0` and the next test image is tagged `0.22.0-rc2`.
+
+## The corrected objective: turns, not bytes
+
+Measured across both runs' transcripts: **one extra tool-call turn costs ~$0.093
+blended** ($0.047 early-session -> $0.129 late as context grows ~4x). The entire
+payload diet (-51.8K chars) is worth **$0.004-0.09** — under 4% of the turn
+delta. **Optimizing bytes-per-call while adding calls is a guaranteed net loss.**
+
+Standing design gate for every future server feature (record in CLAUDE.md):
+`value - (extra_turns x ~$0.09 x session_length_factor)`. The byte levers
+(L1/L4/L6) stay — they are ~free and do not add turns — but they are worth
+pennies; effort goes to turn-count.
+
+## Tier 0 — correctness (independent of the cost model)
+
+**C1. Scoped grep drops the enclosing nested-key name (defect #1).** An input
+row is a single f-string `- name | type | default | description`
+(`_format_input_row` in `tfmod_registry_docs.py`), but `type`/`description` can
+be multi-line, so a `grep_module_docs(scope=["inputs"])` match landing on a
+continuation line loses the `- <name>` header — the model back-fills a
+plausible-but-wrong container name from the prose (run8: 2/3 A workers emitted
+invalid HCL, `default_route_settings` vs real `stage_default_route_settings`).
+Fix: `grep_document` (`tfmod_doc_grep.py`) carries the nearest enclosing
+list-item. Add `enclosing: str | None` to `DocMatch`: when the matched line does
+not itself start with `"- "`, walk backward (non-marker, same section) to the
+nearest line starting with `"- "` and record it; render it in
+`grep_module_docs_impl` output (e.g. an `under: <row>` breadcrumb) so the
+container key is always present. Answer-agnostic; works for inputs/outputs/
+resources uniformly.
+
+**C2. Single-snapshot version consistency (defect #2).** `expand_top`'s inlined
+`top_module_doc` said global-accelerator `3.0.1` while `results[].latest_version`
+in the same payload said `3.0.0`; the wrong pin propagated to a final answer.
+Root cause: the head's pin comes from `_version_pin_hint(d.text)` (re-parses the
+doc body) while `results[].latest_version` is the separately-stored index
+metadata field — a drift-safe metadata patch desyncs them. Fix: thread the
+metadata version into the head on the expand_top path. `orientation_head(text,
+version_override=None)` and `_version_pin_hint(text, version_override=None)`;
+when `version_override` is set it is used verbatim instead of re-parsing.
+`search_modules_impl` calls
+`orientation_head(d.text, version_override=d.latest_version)` so the head pin and
+the result field are the same string by construction. `get_module_impl` keeps the
+re-parse (single source, no contradiction possible).
+
+## Tier 1 — the turn levers
+
+**T1. Remove the tie verdict and its imperative.** Measured net-negative: tie
+fired on 55% of searches (41/74), the "fetch both" imperative was acted on
+**0/41** and delivered **0/41** benefit (31/41 final = top-1 anyway), and it
+provoked **+28 search reformulations**. Score-ratio carries no separating signal
+(resolved and catalog-gap ties both span 1.0-2.3x). Delete the `"tie"` branch,
+`SEARCH_NEAR_TIE_RATIO`, the ratio plumbing in the verdict, and the tie hint.
+Verdict domain becomes `{"high", "low"}` only.
+
+**T2. expand_top default-on for high confidence.** The one right-direction lever,
+currently strangled (used by 1/6 workers; 16/23 calls suppressed by tie/low).
+Counterfactual (fleet-wide expand_top, no tie) collapses ~42 turns ≈ -$3.9-4.2 ->
+below the 0.21.0 baseline. Change the default to `expand_top=True`; it inlines
+`top_module_doc` only when `confidence == "high"` (so a `low`/catalog-gap verdict
+never inlines the wrong doc). The residency cost of the ~1.5K-char head is pennies
+against $0.09/turn and the top hit is the final pick 31/41 — the trade is strongly
+positive. Callers can still pass `expand_top=False` to suppress (pure-browse
+searches). Gated by C2 (single-snapshot) so the inlined head can never contradict
+the result row.
+
+## Tier 2 — honest no-match (lands WITH Tier 1, not after)
+
+Removing tie naively sends the 10/41 catalog-gap queries (which earned
+*incidental* keyword overlap from unrelated modules listing the term) into
+`"high"` -> expand_top would inline the wrong module. So the no-match detector
+must get stronger in the same change.
+
+**T3. Semantic-floor no-match.** Expose the absolute semantic signal the scorer
+already computes but discards: `cos_raw` (`tfmod_search_lib.py:1142`) is the
+per-doc cosine scaled to [0,1] **before** the per-query min-max — it is
+comparable across queries, unlike the combined score. Add `sem_sim: float` to
+`ScoredHit` (`sem_sim=float(cos_raw[i])`) and populate it in
+`compute_scores_detailed`; `compute_scores` wrapper unchanged.
+
+Classifier (`_classify_confidence`), preserving the working "not-lexical -> low"
+path and adding the incidental-keyword catch:
+```
+top1_lexical = top1.exact_hit or top1.kw_overlap
+if not top1_lexical:                       -> "low"   # semantic-only ceiling (as before)
+elif not top1.exact_hit and top1.sem_sim < SEARCH_SEM_FLOOR:  -> "low"   # incidental-kw catalog gap (NEW)
+else:                                      -> "high"
+```
+`exact_hit` always wins to `"high"` (a name match is decisive). No ratio anywhere.
+`SEARCH_SEM_FLOOR` is a module constant, **provisional** and A/B-tuned by the
+morning run — set an initial value (start ~0.88 on the [0,1] scale; e5 cosines are
+compressed, band is narrow) and `logger.debug` the top-1 `sem_sim` on every search
+so the run reveals the real catalog-gap-vs-match distribution. Do NOT tune it
+toward any specific test pair.
+
+**T4. Directional (not imperative) no-match hint.** The `low` verdict's
+directional hints were followed 3/4; imperatives demanding paid calls get ignored
+(and then narrated as done). Keep the `low` hint directional and non-committal:
+name the nearest module, suggest `modules_list` to confirm absence or
+`grep_module_docs` on that nearest module — no "you must fetch" imperative.
+
+## Tier 3 — free bytes (zero turns; do because free, expect pennies)
+
+**F1. Compress the get_module footer disclaimer.** The 764-char honest-limits
+prose block (`footer_lines[1]` in `filter_module_sections`) is verbatim on 56/56
+get_module calls (42.8K chars of pure repetition). Collapse to a 1-2 line
+actionable pointer that keeps the load-bearing escalation (curated subset -> full
+inputs/outputs/exact types + nested shapes via `grep_module_docs <Module ID>`;
+resource-creation conditions in module source) and drops the repetition. Keep the
+"Available sections" menu line and the omitted/unmatched lines unchanged.
+
+**F2. Search-payload boilerplate.** The addendum notes ~19% of each search payload
+duplicates the get_module header; with the tie hint deleted (T1) much of that
+recurring text is already gone. Confirm what remains after T1; trim only obvious
+verbatim repetition, no behavior change.
+
+## Testing (RC2 deltas)
+
+- C1: a synthetic inputs section with a multi-line `type` — a scoped grep match on
+  a continuation line carries the enclosing `- <name>` row; a match on the header
+  row itself has `enclosing=None`.
+- C2: `search_modules_impl(expand_top=True)` on a high-confidence query — the
+  version string in `top_module_doc` equals `results[0].latest_version` (patch the
+  fixture doc's metadata field away from its body bullet to prove the override
+  wins).
+- T1: no verdict ever returns `"tie"`; `SEARCH_NEAR_TIE_RATIO` is gone; the
+  near-tie fixture (elasticache/memory-db) now returns `"high"`. Remove/replace the
+  tie tests in `test_retrieval_levers.py`.
+- T2: default `search_modules_impl(query)` on a high-confidence query populates
+  `top_module_doc`; a `low` query does not; `expand_top=False` suppresses it.
+- T3: a genuinely-absent capability with only incidental keyword overlap and
+  `sem_sim < SEARCH_SEM_FLOOR` -> `"low"`; a real single-keyword match with strong
+  `sem_sim` -> `"high"`; an exact-name query -> `"high"` regardless of sem_sim.
+- F1: get_module default head no longer contains the long disclaimer paragraph but
+  still contains a `grep_module_docs` escalation pointer and the Module ID.
+- Full suite green; **no index rebuild** (sem_sim is read from the existing
+  embeddings at query time — embeddings untouched).
+
+## Build
+
+Tag the next test image `0.22.0-rc2`, run it on the same daemon port used for RC
+testing. Package version stays `0.22.0` (this is still the unreleased 0.22.0
+branch); no multi-file version-bump sprawl.
