@@ -1402,6 +1402,16 @@ def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
     Fails open (returns True) when there is no usable salience signal (empty
     query, only stopwords, or no corpus IDF), so it can only ever DEMOTE a hit
     that positively lacks the central term -- never invent confidence.
+
+    Known limitation (Run #11 defect 2, DEFERRED): the haystack is name +
+    keywords + full doc text, so a module whose body merely *mentions* an
+    adjacent service (an integration note) still passes for a query about that
+    service's core capability. Narrowing the capability evidence to the
+    capability-asserting fields (name / keywords / purpose) would catch those
+    remaining wide-margin adjacent-domain inlines, but risks demoting a real
+    match whose central term lives only in the body, so it needs its own
+    measured run -- left out of the 0.22.0 final on purpose (net wrong-domain
+    inline traffic was already flat and every judged fleet PASSes).
     """
     tokens = {
         t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)

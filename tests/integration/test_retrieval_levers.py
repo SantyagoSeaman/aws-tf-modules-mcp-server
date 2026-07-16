@@ -786,3 +786,36 @@ def test_expand_top_false_suppresses_even_when_high(state) -> None:
 def test_sem_floor_constant_still_exposed() -> None:
     # Secondary demoter retained (incidental-keyword guard); guard the constant.
     assert 0.0 < SEARCH_SEM_FLOOR < 1.0
+
+
+# --------------------------------------------------------------------------- #
+# RC4 #3 - verdict-stability (determinism) contract guards. A consumer cannot
+# budget around a verdict that flips on trivial rephrasing. We lock the part of
+# the contract the implementation can guarantee: adding generic-infra filler
+# words ("aws"/"terraform"/politeness) must NOT change the verdict, because the
+# capability check drops those as stopwords and the central term is unchanged.
+# (Broad cross-phrasing determinism -- entirely different wordings of one intent
+# -- is a known limitation on borderline catalog-gap phrasings; see the RC4
+# revision spec, deferred with defect item 2.)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "base",
+    ["kubernetes cluster", "object storage versioning"],
+)
+def test_verdict_is_invariant_to_generic_infra_filler(base, state) -> None:
+    baseline = search_modules_impl(base, state, top_k=3).confidence
+    for filler in (f"aws {base}", f"terraform module for {base}", f"{base} please"):
+        got = search_modules_impl(filler, state, top_k=3).confidence
+        assert got == baseline, f"verdict flipped on generic-infra filler: {base!r} -> {baseline}, {filler!r} -> {got}"
+
+
+@pytest.mark.parametrize(
+    ("paraphrases", "expected"),
+    [
+        (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "high"),
+        (["sagemaker", "sagemaker model endpoint", "machine learning model hosting on sagemaker"], "low"),
+    ],
+)
+def test_stable_paraphrase_sets_share_one_verdict(paraphrases, expected, state) -> None:
+    verdicts = {search_modules_impl(q, state, top_k=3).confidence for q in paraphrases}
+    assert verdicts == {expected}, f"paraphrases of one intent disagreed: {verdicts} (expected all {expected!r})"

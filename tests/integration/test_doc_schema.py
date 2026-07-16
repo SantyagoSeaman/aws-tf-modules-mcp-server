@@ -55,6 +55,20 @@ def test_docs_directory_is_populated():
 
 
 @pytest.mark.parametrize("doc", DOCS, ids=_id)
+def test_no_doc_opens_with_yaml_frontmatter(doc):
+    """RC4 #4 lint guard: a curated page must NOT open with a YAML front-matter
+    block. The parser reads metadata from `## Module Information`, so a leading
+    `---`/`module_name:`/`keywords:` fence is redundant and leaks into the
+    get_module and search-inline renders as raw YAML (measured on wafv2 over
+    four runs). Keep the catalog fence-free at build time."""
+    head = doc.read_text().lstrip()
+    assert not head.startswith("---"), (
+        f"{doc.name}: opens with a YAML front-matter fence; move any metadata into "
+        f"`## Module Information` and drop the block (it renders as raw YAML)."
+    )
+
+
+@pytest.mark.parametrize("doc", DOCS, ids=_id)
 def test_every_doc_has_universal_core_headings(doc):
     """Missing a core heading would drop always-on context from every response."""
     headings = _headings(doc.read_text())
