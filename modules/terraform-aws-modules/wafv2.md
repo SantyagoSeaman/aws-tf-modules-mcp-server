@@ -1,8 +1,3 @@
----
-module_name: terraform-aws-wafv2
-keywords: [waf, wafv2, web-application-firewall, web-acl, firewall, application-firewall, rate-limiting, managed-rules, owasp, bot-control, ip-set, regex-pattern-set, rule-group, cloudfront, alb, api-gateway, appsync, ddos-protection, layer7, security]
----
-
 # Terraform AWS WAF v2 Module
 
 ## Module Information

@@ -11,6 +11,8 @@ Exports:
 - build_index(docs_dir, model_name) -> SearchIndex
 - save_index(index, path), load_index(path) -> SearchIndex
 - compute_scores(index, query, ..., query_instruction) -> List[(score, idx)]
+- compute_scores_detailed(index, query, ..., query_instruction) -> List[ScoredHit]
+- ScoredHit: namedtuple(score, doc_index, exact_hit, kw_overlap, sem_sim)
 - extract_description(text, max_length) -> str
 - get_default_index_path() -> Path
 - resolve_index_path(index_path) -> Path
@@ -25,7 +27,7 @@ import pickle
 import re
 import sys
 import threading
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from collections.abc import Mapping
 from dataclasses import dataclass
 from logging.handlers import RotatingFileHandler
@@ -539,6 +541,28 @@ def cosine_sim_matrix(vec: np.ndarray, mat: np.ndarray) -> np.ndarray:
     return mat @ vec  # both normalized
 
 
+def _strip_yaml_frontmatter(text: str) -> str:
+    """Drop a leading YAML front-matter block (``---`` ... ``---``) if present.
+
+    RC4 #4: docs may open with a YAML front-matter block (``module_name`` /
+    ``keywords``). ``extract_description`` treats the ``---`` delimiters as
+    horizontal rules and skips them, but the block's key/value lines are not
+    headers or rules, so they leaked verbatim into the search-result
+    description. Strip the whole block first (opening ``---`` on the first
+    non-empty line through the matching closing ``---``/``...``). No-op when the
+    text does not start with a front-matter fence.
+    """
+    stripped = text.lstrip()
+    if not stripped.startswith("---"):
+        return text
+    lines = stripped.splitlines()
+    for i in range(1, len(lines)):
+        if lines[i].strip() in ("---", "..."):
+            return "\n".join(lines[i + 1 :])
+    # No closing fence -> not a well-formed block, leave the text untouched.
+    return text
+
+
 def extract_description(text: str, max_length: int = 200) -> str:
     """
     Extract a meaningful description from document text.
@@ -567,6 +591,8 @@ def extract_description(text: str, max_length: int = 200) -> str:
     """
     if not text:
         return ""
+
+    text = _strip_yaml_frontmatter(text)
 
     # Remove Markdown headers and extract first paragraph
     lines = text.strip().splitlines()
@@ -968,6 +994,20 @@ def load_index(path: str, logger: logging.Logger) -> SearchIndex:
 # -----------------------------
 # Scoring
 # -----------------------------
+ScoredHit = namedtuple("ScoredHit", ["score", "doc_index", "exact_hit", "kw_overlap", "sem_sim"])
+"""A single ranked search result with its scoring components exposed.
+
+- score: combined weighted score (same value compute_scores returns)
+- doc_index: index into index.docs array
+- exact_hit: True when this doc earned the exact module-name-match component
+- kw_overlap: True when this doc had any keyword-IDF overlap with the query
+  (pre-normalization; a real lexical signal, not just a residual after minmax)
+- sem_sim: the raw cosine similarity scaled to [0,1] (before the per-query
+  min-max normalization) - comparable across queries, unlike the combined
+  score or the min-maxed semantic component
+"""
+
+
 def compute_scores(
     index: SearchIndex,
     query: str,
@@ -981,6 +1021,39 @@ def compute_scores(
 ) -> list[tuple[float, int]]:
     """
     Perform hybrid search and return ranked results.
+
+    Thin wrapper over compute_scores_detailed() that drops the lexical-signal
+    fields, kept for backward compatibility with existing callers (CLI, tests).
+    See compute_scores_detailed() for the full docstring of the scoring
+    algorithm and parameters.
+    """
+    hits = compute_scores_detailed(
+        index,
+        query,
+        w_kw=w_kw,
+        w_exact=w_exact,
+        w_bm25=w_bm25,
+        w_sem=w_sem,
+        top_k=top_k,
+        query_instruction=query_instruction,
+        logger=logger,
+    )
+    return [(h.score, h.doc_index) for h in hits]
+
+
+def compute_scores_detailed(
+    index: SearchIndex,
+    query: str,
+    w_kw: float = 2.0,
+    w_exact: float = 3.0,
+    w_bm25: float = 1.0,
+    w_sem: float = 1.0,
+    top_k: int = 10,
+    query_instruction: str | None = None,
+    logger: logging.Logger | None = None,
+) -> list[ScoredHit]:
+    """
+    Perform hybrid search and return ranked results with scoring components exposed.
 
     Combines four scoring components with configurable weights:
     1. Keyword overlap (IDF-weighted) - matches query terms to document keywords
@@ -1015,10 +1088,17 @@ def compute_scores(
         logger: Logger instance for logging operations
 
     Returns:
-        List of (score, doc_index) tuples, sorted by descending score
-        Each tuple contains:
+        List of ScoredHit namedtuples, sorted by descending score. Each
+        ScoredHit contains:
         - score (float): Combined weighted score
         - doc_index (int): Index into index.docs array
+        - exact_hit (bool): True when the exact module-name-match component fired
+        - kw_overlap (bool): True when there was any keyword-IDF overlap with the query
+        - sem_sim (float): Raw cosine similarity scaled to [0,1], before the
+          per-query min-max normalization - comparable across queries
+
+        compute_scores() wraps this and returns plain (score, doc_index) tuples
+        for backward compatibility.
 
     Notes:
         - Empty query returns empty list
@@ -1029,18 +1109,18 @@ def compute_scores(
 
     Examples:
         >>> logger = logging.getLogger(__name__)
-        >>> results = compute_scores(index, "s3 bucket encryption", logger=logger)
-        >>> for score, idx in results[:3]:
-        ...     print(f"{score:.3f}: {index.docs[idx].module_name}")
+        >>> results = compute_scores_detailed(index, "s3 bucket encryption", logger=logger)
+        >>> for hit in results[:3]:
+        ...     print(f"{hit.score:.3f}: {index.docs[hit.doc_index].module_name}")
         6.934: s3-bucket
         1.921: eks
         1.764: iam
 
         >>> # Increase semantic weight for better conceptual matching
-        >>> results = compute_scores(index, "object storage", w_sem=3.0, logger=logger)
+        >>> results = compute_scores_detailed(index, "object storage", w_sem=3.0, logger=logger)
 
         >>> # Only exact name matching
-        >>> results = compute_scores(index, "vpc", w_kw=0, w_bm25=0, w_sem=0, w_exact=10.0, logger=logger)
+        >>> results = compute_scores_detailed(index, "vpc", w_kw=0, w_bm25=0, w_sem=0, w_exact=10.0, logger=logger)
     """
     assert logger is not None, "Logger must not be None"  # noqa: S101
     logger.info(f"Executing search query: '{query}'")
@@ -1118,12 +1198,21 @@ def compute_scores(
         final = w_bm25 * bm + w_sem * cos
 
     order = np.argsort(-final)[:top_k]
-    results = [(float(final[i]), int(i)) for i in order]
+    results = [
+        ScoredHit(
+            score=float(final[i]),
+            doc_index=int(i),
+            exact_hit=bool(exact_hits[i] > 0),
+            kw_overlap=bool(kw_arr[i] > 0),
+            sem_sim=float(cos_raw[i]),
+        )
+        for i in order
+    ]
 
     logger.info(f"Search complete: returning {len(results)} results")
     if results:
-        top_score = results[0][0]
-        top_module = index.docs[results[0][1]].module_name
+        top_score = results[0].score
+        top_module = index.docs[results[0].doc_index].module_name
         logger.debug(f"Top result: {top_module} (score={top_score:.3f})")
 
     return results

@@ -45,8 +45,10 @@ from tfmod_doc_grep import grep_document
 from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
+    ScoredHit,
     SearchIndex,
     compute_scores,
+    compute_scores_detailed,
     extract_description,
     extract_purpose,
     initialize_nltk,
@@ -55,6 +57,7 @@ from tfmod_search_lib import (
     resolve_index_path,
     setup_logging,
     switch_log_file,
+    tokenize,
 )
 
 try:
@@ -655,6 +658,14 @@ class SearchHit(BaseModel):
 class UpdateNoticeMixin(BaseModel):
     """Adds an optional update_notice that vanishes from output when None.
 
+    Also drops any other field named `hint` or `top_module_doc` when falsy
+    (None or empty string) for the same reason -- SearchOutput.hint (L2/L7/L8/
+    T3 confidence signal) is only meaningful for a "low" verdict, and
+    SearchOutput.top_module_doc (L3 expand_top, default-on since RC2 T2) is
+    only populated on a high-confidence search. Only SearchOutput currently
+    defines these fields, so this is a harmless no-op on every other model
+    built on this mixin.
+
     FastMCP serializes pydantic None fields as JSON null; the spec requires
     the field to be entirely absent when no update is known, hence the
     wrap-mode serializer (verified against FastMCP 3.4.4).
@@ -688,8 +699,13 @@ class UpdateNoticeMixin(BaseModel):
     @model_serializer(mode="wrap")
     def _drop_none_notice(self, handler: Any) -> Any:
         data = handler(self)
-        if isinstance(data, dict) and data.get("update_notice") is None:
-            data.pop("update_notice", None)
+        if isinstance(data, dict):
+            if data.get("update_notice") is None:
+                data.pop("update_notice", None)
+            if not data.get("hint"):
+                data.pop("hint", None)
+            if not data.get("top_module_doc"):
+                data.pop("top_module_doc", None)
         return data
 
     @classmethod
@@ -706,6 +722,23 @@ class UpdateNoticeMixin(BaseModel):
 
 class SearchOutput(UpdateNoticeMixin):
     results: list[SearchHit] = Field(..., description="Top-ranked Terraform modules matching the query.")
+    confidence: str = Field(
+        ...,
+        description="Search confidence verdict: 'high' (trust the top hit) or 'low' "
+        "(no confident catalog match -- likely absent). Always present.",
+    )
+    hint: str | None = Field(
+        default=None,
+        description="Actionable follow-up guidance, present only when confidence is "
+        "'low'; absent entirely (not null) when confidence is 'high'.",
+    )
+    top_module_doc: str | None = Field(
+        default=None,
+        description="The top-1 module orientation head (L3), present by default whenever "
+        "confidence is 'high' -- collapses the confident search->get_module pair into one "
+        "call. Pass expand_top=False to suppress it. Absent entirely (not null) when "
+        "expand_top=False or confidence is 'low'.",
+    )
 
 
 class ModuleListItem(BaseModel):
@@ -726,8 +759,24 @@ class ModuleListItem(BaseModel):
     )
 
 
+class ModuleListItemCompact(BaseModel):
+    module_name: str = Field(..., description="Terraform module name (e.g., 'eks', 's3-bucket').")
+    purpose: str = Field(..., description="One-line purpose of the module (clipped).")
+    module_id: str = Field(
+        ...,
+        description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
+        "'terraform-aws-modules/vpc/aws'). Pass to grep_module_docs or resolve the module by name.",
+    )
+    latest_version: str = Field(
+        ...,
+        description="Latest version known at doc-curation time (a hint). Pass as `version` to grep_module_docs.",
+    )
+
+
 class ModulesListOutput(UpdateNoticeMixin):
-    modules: list[ModuleListItem] = Field(..., description="Complete list of all available Terraform modules.")
+    modules: list[ModuleListItemCompact] | list[ModuleListItem] = Field(
+        ..., description="List of all available Terraform modules (compact by default, full metadata when detail=full)."
+    )
     count: int = Field(..., description="Total number of modules in the catalog.")
 
 
@@ -741,6 +790,13 @@ class GrepMatch(BaseModel):
     line: str = Field(..., description="The matching line's text.")
     before: list[str] = Field(..., description="Up to context_lines lines immediately preceding the match.")
     after: list[str] = Field(..., description="Up to context_lines lines immediately following the match.")
+    enclosing: str | None = Field(
+        default=None,
+        description="The nearest enclosing '- <name> | ...' list-item row (e.g. an input/output/"
+        "resource header) when the match landed on a continuation line of a multi-line row (a "
+        "type or description that spans multiple lines) -- so the container name/key is never "
+        "lost. None when the matched line is itself a list-item row, or none was found in section.",
+    )
 
 
 class CacheInfo(BaseModel):
@@ -944,25 +1000,63 @@ def _parse_submodule_address(module_identifier: str) -> tuple[str, str] | None:
     return (parent, sub) if parent else None
 
 
-def _version_pin_hint(text: str) -> str | None:
+def _version_pin_hint(text: str, version_override: str | None = None) -> str | None:
     """
     Build an actionable exact-pin line from the doc's `**Latest Version**` bullet.
 
     Agents that read only the module body tend to copy the `~> X.0` range shown
     in usage examples and pin a floor instead of the exact latest release. This
     surfaces the concrete version up front so an exact pin is the obvious choice.
-    Returns None when the doc carries no parseable Latest Version bullet.
+    Returns None when the doc carries no parseable Latest Version bullet and no
+    version_override was given.
+
+    Args:
+        text: The module document body.
+        version_override: When truthy, used verbatim as the pinned version
+            instead of re-parsing the body bullet (RC2 C2: single-snapshot
+            version consistency -- lets a caller thread in the same metadata
+            field it also reports elsewhere, so the two can never contradict
+            each other in one response).
     """
-    m = _LATEST_VERSION_RE.search(text)
-    if not m:
-        return None
-    version = m.group(1).strip()
+    if version_override:
+        version = version_override.strip()
+    else:
+        m = _LATEST_VERSION_RE.search(text)
+        if not m:
+            return None
+        version = m.group(1).strip()
     major = version.split(".")[0]
     return (
         f"> **Version pin** — latest release is `{version}`. For an exact pin use "
         f'`version = "{version}"`; use a range like `~> {major}.0` only when you '
         f"deliberately want automatic minor-version updates."
     )
+
+
+def _reconcile_body_version(text: str, resolved: str | None) -> str:
+    """Rewrite every body ``**Latest Version**`` bullet to the resolved snapshot.
+
+    RC3 #2 (single-snapshot consistency, applied to ALL version mentions): rc2
+    synced the pin banner with the caller-threaded metadata ``latest_version``,
+    but the curated doc body still carries its own ``**Latest Version**`` bullet
+    that can be stale and contradict both the banner and ``results[].latest_version``
+    in the same response. When a caller threads a resolved snapshot, rewrite the
+    body bullet's version token to match it so one response never self-contradicts.
+
+    Drift-safe by construction: this rewrites the *emitted* text only -- the
+    indexed document body (and therefore the embeddings) is untouched. No-op when
+    ``resolved`` is falsy or the text carries no parseable bullet.
+    """
+    if not resolved:
+        return text
+    resolved = resolved.strip()
+
+    def _sub(m: re.Match[str]) -> str:
+        # Replace only the captured version token within the matched bullet span,
+        # leaving the bullet's markup and any backticks intact.
+        return m.group(0).replace(m.group(1), resolved)
+
+    return _LATEST_VERSION_RE.sub(_sub, text)
 
 
 def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
@@ -1078,6 +1172,12 @@ def filter_module_sections(
     # H3 sub-section(s) from the combined "Root/Main Module:"/"Submodule N:"
     # bundles, rather than dragging in the whole bundle (the BUG-1 over-fetch).
     fallback_keys: set[str] = set()
+    # L5: when the caller explicitly asks for the submodules inventory, the
+    # interface-key H3 fallback below must not re-expand "## Submodule N:"
+    # bundles either. The compact inventory answers "what submodules exist"; a
+    # specific submodule interface is reached by its "<name>//modules/<sub>"
+    # address or by naming its heading. Full exclusion of the deep-dives.
+    submodules_requested = any(_SECTION_ALIASES.get(e.strip().lower()) == "Submodules" for e in requested)
     for entry in requested:
         key = entry.strip().lower()
         if not key:
@@ -1086,7 +1186,12 @@ def filter_module_sections(
         matched = False
         for title, _ in sections:
             if canonical is not None:
-                hit = title == canonical or (canonical == "Submodules" and title.lower().startswith("submodule"))
+                # L5: the "submodules" key resolves to the compact "## Submodules"
+                # inventory by EXACT title match only. Matching "## Submodule N:"
+                # deep-dives here was the over-fetch -- a specific submodule is
+                # reached by heading substring or the "<name>//modules/<sub>"
+                # address instead.
+                hit = title == canonical
             else:
                 hit = key in title.lower()
             if hit:
@@ -1103,7 +1208,7 @@ def filter_module_sections(
                 tl = title.lower()
                 if not _matches_combined_interface(tl):
                     continue
-                if interface_scope == "root" and tl.startswith("submodule"):
+                if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                     continue
                 combined_titles.append(title)
                 if _extract_interface_h3(block, {key}):
@@ -1129,7 +1234,7 @@ def filter_module_sections(
             continue
         tl = title.lower()
         if fallback_keys and _matches_combined_interface(tl):
-            if interface_scope == "root" and tl.startswith("submodule"):
+            if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                 continue
             extracted = _extract_interface_h3(block, fallback_keys)
             if extracted:
@@ -1143,20 +1248,15 @@ def filter_module_sections(
 
     footer_lines = [
         "---",
-        # Honest-limits pointer: the curated doc is a hand-picked SUBSET. Anything
-        # requiring completeness or exactness lives one tier down (live registry),
-        # and resource-creation conditions live in module source. Keeps the
-        # compact→full→source escalation a mechanical decision, not a guess.
-        "This is TFModSearch's curated summary (a selected subset of the module's inputs/"
-        "outputs). For the COMPLETE inputs/outputs — every variable with its exact type and "
-        "default — plus all examples, grep the live registry doc with `grep_module_docs` "
-        "using the Module ID above. Resource-creation conditions (whether an input gates a "
-        "`count`/`for_each` resource) live in the module source, not the rendered doc. Do "
-        "not assert an exact default, type, or that an input exists from this summary or from "
-        "memory when a wrong value would break `apply` — confirm it in the full doc first. "
-        "Use `grep_module_docs` not only to confirm resource/variable NAMES but to verify the "
-        "exact TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure) "
-        "before writing it.",
+        # RC2 F1: compact honest-limits pointer. The curated doc is a hand-picked
+        # SUBSET; anything requiring completeness/exactness escalates one tier to
+        # the live registry, and resource-creation conditions live in module
+        # source. Keeps the compact→full→source escalation a mechanical decision,
+        # not a guess, without repeating a long paragraph verbatim on every call.
+        "Curated subset. For the COMPLETE inputs/outputs (exact types/defaults, nested "
+        "map(object)/any TYPE/SHAPE) or to confirm a name exists, grep the live doc via "
+        "`grep_module_docs` using the Module ID above. Resource-creation (`count`/`for_each`) "
+        "conditions live in the module source, not here.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -1235,7 +1335,137 @@ def get_module_documentation(module_identifier: str, state: ServerState) -> str:
     return _read_module_file(full_path, doc.module_name or doc.path, state.logger)
 
 
-def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> SearchOutput:
+def _clip_blurb(text: str, max_length: int = 140) -> str:
+    """Clip a description to its first sentence, capped at max_length chars.
+
+    Used for non-top-1 search hits (L6): enough to recognize the module, without
+    re-billing the full description on every later turn.
+    """
+    text = text.strip()
+    if not text:
+        return text
+    period = text.find(". ")
+    if 0 < period + 1 <= max_length:
+        return text[: period + 1]
+    if len(text) <= max_length:
+        return text
+    # RC3 #3: clip on a word boundary, never mid-word. A hard char cut left a
+    # dangling partial word in every non-top-1 result row.
+    clipped = text[: max_length - 1].rstrip()
+    return clipped.rsplit(" ", 1)[0] + "…"
+
+
+# RC2 T3 / RC4 #1: floor on the raw (pre-min-max) semantic similarity, now the
+# SECONDARY demoter behind the capability-overlap check below. It still catches
+# the incidental-keyword case (an unrelated module lists the query term as a
+# related-service keyword, earning kw_overlap without the query being covered)
+# that the capability check can pass when the term sits in the doc's own keyword
+# line. Measured (production weights, 2026-07-16): real lexical-non-exact
+# matches sem 0.889..0.921; marginal gaps x-ray 0.8856 / cognito 0.8992 -- the
+# bands overlap so this is a PARTIAL signal. Do NOT raise it to chase gaps; the
+# capability check now carries the wrong-domain load.
+SEARCH_SEM_FLOOR = 0.88
+
+# RC4 #1: generic infrastructure words that can score a high IDF in a Terraform
+# catalog yet carry no capability signal -- never treat one as the query's
+# central capability term when deciding capability coverage.
+_CAPABILITY_STOPWORDS = frozenset(
+    {
+        "aws",
+        "terraform",
+        "module",
+        "modules",
+        "resource",
+        "resources",
+        "infrastructure",
+        "cloud",
+        "service",
+        "services",
+    }
+)
+
+
+def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
+    """Whether the top-1 candidate covers the query's central capability term.
+
+    RC4 #1: the wrong-domain inline failure is a CAPABILITY mismatch, not a
+    ranking-confidence one -- a wide score margin still inlines a module whose
+    doc never mentions the query's defining term (Run #10: a 12K-char doc with
+    zero occurrences of the query's central capability term, and a near-miss
+    where the correct module sat one rank behind an adjacent-domain giant). A
+    score-gap gate is structurally blind to this. This reads ONLY the query and
+    the candidate doc (answer-agnostic, ranker untouched): take the query's most
+    salient token (highest BM25 IDF -- the rarest across the catalog, skipping
+    generic-infra words) and require it to appear in the candidate's name /
+    keywords / doc text. Absent -> the query is not covered here.
+
+    Fails open (returns True) when there is no usable salience signal (empty
+    query, only stopwords, or no corpus IDF), so it can only ever DEMOTE a hit
+    that positively lacks the central term -- never invent confidence.
+
+    Known limitation (Run #11 defect 2, DEFERRED): the haystack is name +
+    keywords + full doc text, so a module whose body merely *mentions* an
+    adjacent service (an integration note) still passes for a query about that
+    service's core capability. Narrowing the capability evidence to the
+    capability-asserting fields (name / keywords / purpose) would catch those
+    remaining wide-margin adjacent-domain inlines, but risks demoting a real
+    match whose central term lives only in the body, so it needs its own
+    measured run -- left out of the 0.22.0 final on purpose (net wrong-domain
+    inline traffic was already flat and every judged fleet PASSes).
+    """
+    tokens = {
+        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
+    }
+    if not tokens:
+        return True
+    idf = getattr(index.bm25, "idf", None) or {}
+    max_idf = max((idf.get(t, 0.0) for t in tokens), default=0.0)
+    if max_idf <= 0.0:
+        return True
+    central = {t for t in tokens if idf.get(t, 0.0) == max_idf}
+    doc = index.docs[doc_index]
+    hay = f"{doc.module_name or ''} {' '.join(doc.keywords or [])} {doc.text}".lower()
+    return any(t in hay for t in central)
+
+
+def _classify_confidence(query: str, hits: list[ScoredHit], index: SearchIndex) -> str:
+    """Classify a search into a confidence verdict that also decides the inline.
+
+    Two-verdict design ("high" / "low"). RC4 #2 unifies the verdict and the
+    expand_top inline under ONE signal: the caller inlines iff the verdict is
+    "high", so the docstring contract ("high => doc inlined") holds again.
+
+    Decision (top-1 only):
+    1. No lexical component (neither exact-name match nor keyword-IDF overlap)
+       -> "low": a semantic-only ceiling, the query is likely not in the catalog.
+    2. Exact module-name match -> "high": always decisive.
+    3. Lexical-but-not-exact -> "high" only when BOTH hold:
+       - capability-overlap (RC4 #1, primary): the query's central capability
+         term appears in the candidate -- guards the wrong-domain inline that a
+         score margin is blind to;
+       - semantic floor (RC2 T3, secondary): sem_sim >= SEARCH_SEM_FLOOR --
+         guards the incidental-keyword gap the capability check can pass.
+       Either failing -> "low".
+
+    An empty hit list is "high" (nothing to contest it) per the documented
+    empty-result behavior; the caller still inlines nothing (no top doc).
+    """
+    if not hits:
+        return "high"
+
+    top1 = hits[0]
+    if not (top1.exact_hit or top1.kw_overlap):
+        return "low"
+    if top1.exact_hit:
+        return "high"
+    if not _capability_covered(query, index, top1.doc_index):
+        return "low"
+    if top1.sem_sim < SEARCH_SEM_FLOOR:
+        return "low"
+    return "high"
+
+
+def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_top: bool = True) -> SearchOutput:
     """
     Helper function to search for modules.
 
@@ -1246,9 +1476,26 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
         query: Search query string
         state: Server state containing index and configuration
         top_k: Number of results to return (clamped to 1..10, default 3)
+        expand_top: When True AND the search is high confidence, inline the
+            top-1 module orientation head into the response (L3) -- collapses
+            a confident search->get_module pair into one call. Default True
+            (RC2 T2): a fleet-wide counterfactual measurement showed the
+            opt-in default was strangling the one right-direction lever (used
+            by 1/6 workers), and the residency cost of the ~1.5K-char head is
+            pennies against the ~$0.09/turn an extra get_module call costs.
+            Pass expand_top=False to suppress it (pure-browse searches).
+            Inlined iff the verdict is "high" (RC4 #2: verdict and inline are
+            one decision -- the capability-aware classifier demotes a
+            wrong-domain top hit to "low" before it can drag its doc into
+            context, so "high" reliably means the inlined doc is on-target).
 
     Returns:
-        SearchOutput with top-k ranked results
+        SearchOutput with top-k ranked results plus a confidence verdict
+        (L2/L7/L8/T3/RC4): "high" (trust the top hit) or "low" (no confident
+        catalog match). A hint accompanies a "low" verdict and is absent from
+        the JSON output when confidence is "high". top_module_doc (L3) is
+        populated by default whenever confidence == "high"; absent from the JSON
+        output when expand_top=False or confidence is "low".
 
     See search_modules() tool documentation for full details.
     """
@@ -1258,29 +1505,78 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
 
     # Use configured weights from state
     weights = state.weights
-    results = compute_scores(
+    # Always fetch at least 2 hits internally even when the caller asked for
+    # top_k=1, so a rank-2 hit is available to callers/tests that inspect the
+    # raw hits list. The confidence classifier (RC4) reads only hits[0]
+    # (exact_hit/kw_overlap/sem_sim + capability-overlap of the top doc) -- there
+    # is no ratio against rank-2.
+    fetch_k = max(top_k, 2)
+    hits = compute_scores_detailed(
         state.index,
         query,
         w_kw=weights.w_kw,
         w_exact=weights.w_exact,
         w_bm25=weights.w_bm25,
         w_sem=weights.w_sem,
-        top_k=top_k,
+        top_k=fetch_k,
         query_instruction=state.query_instruction,
         logger=state.logger,
     )
 
+    confidence = _classify_confidence(query, hits, state.index)
+    if hits:
+        cap = _capability_covered(query, state.index, hits[0].doc_index)
+        state.logger.debug(
+            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
+            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} cap={cap} "
+            f"verdict={confidence} inline={confidence == 'high'}"
+        )
+    else:
+        state.logger.debug(f"no hits verdict={confidence}")
+    hint: str | None = None
+    if hits and confidence == "low":
+        top1_name = state.index.docs[hits[0].doc_index].module_name or "?"
+        hint = (
+            f"No confident catalog match (top score {hits[0].score:.1f}). Confirm absence with "
+            f"modules_list, or try grep_module_docs on the nearest module '{top1_name}' for the "
+            f"capability keyword."
+        )
+
+    # L3 / RC4 #2: inline the top-1 orientation head iff the verdict is "high".
+    # The verdict itself (capability-overlap + semantic floor) now decides both
+    # the reported confidence and the inline -- one signal, so the "high => doc
+    # inlined" contract in the docstring holds and a wrong-domain top hit is
+    # demoted to "low" before it can drag its doc into context.
+    top_module_doc: str | None = None
+    if expand_top and confidence == "high" and hits:
+        top_doc = state.index.docs[hits[0].doc_index]
+        # RC2 C2: thread the same metadata field reported in results[].latest_version
+        # into the head's version pin, so the two can never contradict each other in
+        # one response (the body-bullet re-parse and the metadata field can drift
+        # apart after a metadata-only patch).
+        top_module_doc = orientation_head(top_doc.text, version_override=top_doc.latest_version)
+
+    results = hits[:top_k]
+
     out: list[SearchHit] = []
-    for score, i in results:
+    for rank, hit in enumerate(results):
+        score, i = hit.score, hit.doc_index
         d = state.index.docs[i]
-        # Extract description from document text
-        description = extract_description(d.text)
+        # L6: only the top hit carries the full keyword array and description.
+        # Lower ranks re-bill on every later turn but nothing reads their keyword
+        # arrays, so they get an empty list and a first-sentence-clipped blurb.
+        if rank == 0:
+            keywords = d.keywords or []
+            description = extract_description(d.text)
+        else:
+            keywords = []
+            description = _clip_blurb(extract_description(d.text))
 
         out.append(
             SearchHit(
                 module_name=d.module_name or "",
                 path=d.path,
-                keywords=d.keywords or [],
+                keywords=keywords,
                 description=description,
                 score=float(score),
                 module_id=getattr(d, "module_id", ""),
@@ -1288,11 +1584,128 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3) -> Searc
             )
         )
 
-    state.logger.debug(f"Search for '{query}' returned {len(out)} results")
-    return SearchOutput(results=out)
+    state.logger.debug(f"Search for '{query}' returned {len(out)} results (confidence={confidence})")
+    return SearchOutput(results=out, confidence=confidence, hint=hint, top_module_doc=top_module_doc)
 
 
-def orientation_head(text: str) -> str:
+_INPUT_TABLE_HEADING_RE = re.compile(r"^### Main Input Variables[ \t]*$", re.MULTILINE)
+_TABLE_ROW_RE = re.compile(r"^\|.*\|[ \t]*$")
+_TABLE_SEPARATOR_RE = re.compile(r"^\|[ \t:-]+\|[ \t:|:-]*$")
+_MIN_HEAD_TABLE_ROWS = 8
+
+
+def _split_table_row(row: str) -> list[str]:
+    """Split a Markdown pipe-table row into stripped cells (drops the outer pipes)."""
+    return [cell.strip() for cell in row.strip().strip("|").split("|")]
+
+
+def _cell_marks_required(cell: str) -> bool:
+    """True when a Default-column cell signals the input has no default (required)."""
+    bare = cell.strip().strip("*").strip("`").strip().lower()
+    return bare in ("", "-", "—", "n/a") or "required" in bare
+
+
+def _cell_marks_required_column(cell: str) -> bool:
+    """True when a Required-column cell signals the input is required."""
+    bare = cell.strip().strip("*").strip("`").strip().lower()
+    return bare in ("yes", "true", "required")
+
+
+def _cap_head_input_table(head_text: str) -> str:
+    """
+    Cap the FIRST inlined ``### Main Input Variables`` table to a bounded sample.
+
+    L4: the 0.20.0 double-fetch fix inlined the whole root input table into the
+    default orientation head, growing it substantially on modules with wide
+    interfaces. The kept sample is the first ``_MIN_HEAD_TABLE_ROWS`` rows (the
+    terraform-aws-modules docs front-load the inputs that matter) PLUS any row
+    the doc explicitly marks required that falls outside that window, so a
+    required input is never hidden. A pointer to the full table is appended and
+    rows keep document order.
+
+    Note on the corpus: almost every terraform-aws-modules input carries a
+    concrete or ``null`` default, so the required-row detection (an empty/``-``/
+    ``n/a`` Default cell, a ``Required``/``*required*`` marker, or a ``Yes`` in a
+    separate Required column) only adds rows on the handful of docs that mark
+    inputs required — for the rest this is simply the leading-N sample. Either
+    way the head stays small and never empty, and the complete table is one
+    ``sections=["inputs"]`` call away.
+
+    This is a pure post-process on already-rendered Markdown: on any parse
+    ambiguity (no heading, no recognizable pipe table, no identifiable
+    Default/Required column) it returns ``head_text`` unchanged rather than
+    guessing. Only the first occurrence of the heading is touched — a doc that
+    happens to inline more than one is left alone past the first.
+    """
+    heading_match = _INPUT_TABLE_HEADING_RE.search(head_text)
+    if heading_match is None:
+        return head_text
+
+    lines = head_text.splitlines(keepends=True)
+    # Locate the heading's line index.
+    heading_line_idx = head_text.count("\n", 0, heading_match.start())
+
+    # Scan forward for the first non-blank line after the heading — it must be
+    # the table header row, else this is not the table shape we recognize.
+    idx = heading_line_idx + 1
+    while idx < len(lines) and lines[idx].strip() == "":
+        idx += 1
+    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+        return head_text
+    header_line_idx = idx
+    header_cells = _split_table_row(lines[header_line_idx])
+
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return head_text
+
+    # Identify the Default/Required column via the header, never a hardcoded index.
+    lower_headers = [c.lower() for c in header_cells]
+    if "default" in lower_headers:
+        col_idx = lower_headers.index("default")
+        is_required = _cell_marks_required
+    elif "required" in lower_headers:
+        col_idx = lower_headers.index("required")
+        is_required = _cell_marks_required_column
+    else:
+        return head_text
+
+    # Collect contiguous data rows following the separator.
+    row_start = sep_idx + 1
+    row_end = row_start
+    data_rows: list[str] = []
+    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
+        data_rows.append(lines[row_end])
+        row_end += 1
+
+    if not data_rows:
+        return head_text
+
+    required_rows = []
+    for row in data_rows:
+        cells = _split_table_row(row)
+        if col_idx >= len(cells):
+            continue
+        if is_required(cells[col_idx]):
+            required_rows.append(row)
+
+    # Bounded orientation sample: the leading rows, plus any required rows the doc
+    # marks that fall outside that window (so a required input is never hidden),
+    # in document order. On docs that mark nothing required this is exactly the
+    # leading-N sample.
+    keep_set = set(data_rows[:_MIN_HEAD_TABLE_ROWS]) | set(required_rows)
+    kept_rows = [row for row in data_rows if row in keep_set]
+
+    dropped = len(data_rows) - len(kept_rows)
+    if dropped <= 0:
+        return head_text
+
+    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs"]) for the full table)_\n'
+    new_lines = lines[:row_start] + kept_rows + [pointer_line] + lines[row_end:]
+    return "".join(new_lines)
+
+
+def orientation_head(text: str, version_override: str | None = None) -> str:
     """
     Build the compact orientation view returned by get_module by default.
 
@@ -1313,6 +1726,15 @@ def orientation_head(text: str) -> str:
     Also inlines the root module's compact ``### Main Input Variables`` H3 (when
     the doc has one), scoped to the root/main bundle only — submodule inputs stay
     out of the head so a collection doc with no root inputs gets no extra noise.
+    That inlined table is further capped to essential (required) rows by
+    ``_cap_head_input_table`` (L4) — the full table remains one
+    ``sections=["inputs"]`` call away.
+
+    Args:
+        text: The module document body.
+        version_override: Forwarded to ``_version_pin_hint`` verbatim (RC2 C2:
+            single-snapshot version consistency). None (default) re-parses the
+            body's ``**Latest Version**`` bullet as before.
     """
     body = filter_module_sections(
         text,
@@ -1321,7 +1743,13 @@ def orientation_head(text: str) -> str:
         interface_scope="root",
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
-    hint = _version_pin_hint(text)
+    body = _cap_head_input_table(body)
+    # RC3 #2: when a snapshot is threaded in, reconcile the body's own
+    # **Latest Version** bullet to it so the inlined head cannot contradict the
+    # pin banner / results[].latest_version. No override -> body bullet is the
+    # snapshot, so this is a no-op and the head stays self-consistent as before.
+    body = _reconcile_body_version(body, version_override)
+    hint = _version_pin_hint(text, version_override=version_override)
     return f"{hint}\n\n{body}" if hint else body
 
 
@@ -1369,7 +1797,7 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     return orientation_head(content)
 
 
-def modules_list_impl(state: ServerState) -> ModulesListOutput:
+def modules_list_impl(state: ServerState, detail: str = "compact") -> ModulesListOutput:
     """
     Helper function to list all available modules.
 
@@ -1378,31 +1806,50 @@ def modules_list_impl(state: ServerState) -> ModulesListOutput:
 
     Args:
         state: Server state containing index and configuration
+        detail: "compact" (default) returns name + purpose + registry coordinates
+            only; "full" restores the path, full description, and keyword arrays.
 
     Returns:
-        ModulesListOutput with complete catalog of all modules
+        ModulesListOutput with the catalog of all modules
 
     See modules_list() tool documentation for full details.
     """
     assert state.logger is not None, "ServerState must have a logger"  # noqa: S101
 
-    state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents")
+    state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents (detail={detail})")
 
-    modules: list[ModuleListItem] = []
-    for doc in state.index.docs:
-        # Extract purpose from Module Information section
-        description = extract_purpose(doc.text)
-
-        modules.append(
-            ModuleListItem(
-                module_name=doc.module_name or "",
-                path=doc.path,
-                description=description,
-                keywords=doc.keywords or [],
-                module_id=getattr(doc, "module_id", ""),
-                latest_version=getattr(doc, "latest_version", ""),
+    modules: list[ModuleListItemCompact] | list[ModuleListItem]
+    if detail == "full":
+        # L1: full metadata on demand. The 12-18-item keyword arrays and long
+        # descriptions this restores are the bulk of the byte-identical dump the
+        # compact default drops.
+        full_items: list[ModuleListItem] = []
+        for doc in state.index.docs:
+            full_items.append(
+                ModuleListItem(
+                    module_name=doc.module_name or "",
+                    path=doc.path,
+                    description=extract_purpose(doc.text),
+                    keywords=doc.keywords or [],
+                    module_id=getattr(doc, "module_id", ""),
+                    latest_version=getattr(doc, "latest_version", ""),
+                )
             )
-        )
+        modules = full_items
+    else:
+        compact_items: list[ModuleListItemCompact] = []
+        for doc in state.index.docs:
+            compact_items.append(
+                ModuleListItemCompact(
+                    module_name=doc.module_name or "",
+                    # 117 leaves room for extract_purpose's 3-char "..." suffix so
+                    # the clipped purpose never exceeds the 120-char budget.
+                    purpose=extract_purpose(doc.text, max_length=117),
+                    module_id=getattr(doc, "module_id", ""),
+                    latest_version=getattr(doc, "latest_version", ""),
+                )
+            )
+        modules = compact_items
 
     state.logger.debug(f"Modules list generated: {len(modules)} items")
 
@@ -1475,7 +1922,14 @@ def grep_module_docs_impl(
     )
 
     matches = [
-        GrepMatch(section=m.section, line_number=m.line_number, line=m.line, before=m.before, after=m.after)
+        GrepMatch(
+            section=m.section,
+            line_number=m.line_number,
+            line=m.line,
+            before=m.before,
+            after=m.after,
+            enclosing=m.enclosing,
+        )
         for m in doc_matches
     ]
 
@@ -1500,24 +1954,32 @@ def grep_module_docs_impl(
 @app.tool(
     description=(
         "List all available Terraform modules in the catalog. "
-        "Returns complete list of modules with names, paths, descriptions, and keywords. "
+        "Compact by default: each entry carries the module name, a one-line purpose, and the "
+        'registry coordinates (module_id, latest_version). Pass detail="full" to also get each '
+        "module's path, full description, and keyword arrays. "
         "Use this to discover what modules are available before searching or retrieving documentation. "
         "If there are no required module, please search in Terraform Registry (https://registry.terraform.io/)."
     ),
     tags={"catalog", "list", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="List all available Terraform modules"),
 )
-def modules_list() -> ModulesListOutput:
+def modules_list(detail: str = "compact") -> ModulesListOutput:
     """
     List all available Terraform modules in the catalog.
 
-    Returns a complete catalog of all indexed Terraform modules with their
-    metadata (name, path, description, keywords). This tool requires no
-    parameters and provides a full directory listing of available modules.
+    Returns the catalog of all indexed Terraform modules. By default (detail=
+    "compact") each entry carries only the module name, a one-line purpose, and
+    the registry coordinates (module_id, latest_version) needed to chain into
+    grep_module_docs - the whole catalog stays small enough to read on every
+    call. Pass detail="full" to also get each module's path, full description,
+    and keyword arrays.
+
+    Args:
+        detail: "compact" (default) or "full".
 
     Returns:
-        ModulesListOutput: Complete catalog with:
-            - modules: List of all modules with metadata
+        ModulesListOutput: Catalog with:
+            - modules: List of all modules (compact or full metadata)
             - count: Total number of modules
 
     Raises:
@@ -1550,7 +2012,7 @@ def modules_list() -> ModulesListOutput:
         4. Use get_module() to retrieve full documentation
     """
     state = ServerStateManager.get()
-    result = modules_list_impl(state)
+    result = modules_list_impl(state, detail=detail)
     result.update_notice = _update_notice()
     return result
 
@@ -1559,8 +2021,9 @@ def modules_list() -> ModulesListOutput:
     description=(
         "Search for Terraform AWS modules by keywords, exact name, or free-text query. "
         "Returns top-ranked results (top_k, default 3) with module name, path, keywords, "
-        "description, and relevance score. "
-        "After finding modules, use get_module tool to retrieve brief documentation."
+        "description, relevance score, and a confidence verdict (high/low). On a "
+        "high-confidence result the top-1 module orientation head is inlined by default "
+        "(top_module_doc) -- pass expand_top=False to suppress it for a pure-browse search."
     ),
     tags={"search", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="Search for Terraform AWS modules by keywords, exact name, or free-text query."),
@@ -1582,6 +2045,18 @@ def search_modules(
             "raise it for ambiguous queries like 'iam'.",
         ),
     ] = 3,
+    expand_top: Annotated[
+        bool,
+        Field(
+            description="When True AND the search is high confidence, inline the top-1 "
+            "module orientation head into the response (top_module_doc) -- collapses a "
+            "confident search->get_module pair into one call. Default True: a confident "
+            "search is almost always followed by fetching that module, so the head comes "
+            "along for free. Pass expand_top=False to suppress it for a pure-browse search. "
+            "Inlined iff the verdict is 'high' (the capability-aware classifier demotes a "
+            "wrong-domain top hit to 'low' first).",
+        ),
+    ] = True,
 ) -> SearchOutput:
     """
     Search for Terraform AWS modules using hybrid search.
@@ -1602,14 +2077,25 @@ def search_modules(
                keywords (e.g., "s3 encryption"), module names (e.g., "vpc"),
                or natural language descriptions (e.g., "object storage with versioning").
         top_k: Number of results to return (1-10, default 3).
+        expand_top: When True and the search is high confidence, inline the
+               top-1 module orientation head into top_module_doc (L3) -- one
+               call instead of search then get_module. Default True (RC2 T2).
+               Populated iff the verdict is "high" (RC4 #2: verdict and inline
+               are one decision), so a wrong-domain top hit is never inlined.
 
     Returns:
-        SearchOutput: Container with top-k ranked results. Each result includes:
+        SearchOutput: Container with top-k ranked results plus a confidence
+            verdict. Each result includes:
             - module_name: Normalized module identifier (e.g., "s3-bucket", "eks")
             - path: Relative path to module documentation file
             - keywords: List of extracted module keywords/tags
             - description: Extracted module description (up to 200 chars)
             - score: Combined relevance score (higher = more relevant)
+            Plus on the container itself:
+            - confidence: "high" / "low" -- always present
+            - hint: actionable follow-up guidance, present only for "low"
+            - top_module_doc: the top-1 orientation head, present by default whenever
+              confidence == "high" (absent when expand_top=False or confidence == "low")
 
     Raises:
         RuntimeError: If server state is not initialized.
@@ -1634,7 +2120,7 @@ def search_modules(
         - Empty queries return empty results
     """
     state = ServerStateManager.get()
-    result = search_modules_impl(query, state, top_k=top_k)
+    result = search_modules_impl(query, state, top_k=top_k, expand_top=expand_top)
     result.update_notice = _update_notice()
     return result
 
@@ -1676,7 +2162,11 @@ def get_module(
             "outputs, examples, submodules, features, use-cases, best-practices, resources — "
             "or case-insensitive substrings of section headings (e.g. 'karpenter' for a single "
             "EKS submodule); the inputs/outputs/examples keys also resolve on modules that bundle "
-            "them into a combined section. Core context (description, module info, version pin, "
+            "them into a combined section. The 'submodules' key returns only the compact submodule "
+            "inventory (names, purposes, pinnable sources) -- which is already inlined in the default "
+            "head -- so an existence or name check never needs a sections call; reach a specific "
+            "submodule's full interface by naming its heading or via the '<name>//modules/<sub>' address. "
+            "Core context (description, module info, version pin, "
             "notes for AI agents, and any Important Gotchas the doc carries) is always included, and omitted sections are listed in "
             "a footer so you can request them later. Omit this parameter for the compact "
             "orientation head; pass ['all'] (or 'full') for the complete document."
@@ -1845,8 +2335,11 @@ def grep_module_docs(
         refresh: Bypass the cache and refetch from the registry.
 
     Returns:
-        GrepOutput: matches (with section label, line number, and context),
-            total_matches/returned_matches/truncated, resolved_version,
+        GrepOutput: matches (with section label, line number, context, and an
+            `enclosing` breadcrumb naming the nearest '- <name> | ...' row when
+            the match landed on a continuation line of a multi-line row --
+            e.g. a nested object/map type -- so the container name is never
+            lost), total_matches/returned_matches/truncated, resolved_version,
             source_url, cache status, and available_sections (useful to refine
             pattern/scope, especially when total_matches is 0).
 

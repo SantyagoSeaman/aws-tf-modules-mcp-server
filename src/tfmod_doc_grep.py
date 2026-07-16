@@ -43,6 +43,7 @@ class DocMatch:
     line: str
     before: list[str]
     after: list[str]
+    enclosing: str | None = None
 
 
 def _label_lines(lines: list[str]) -> tuple[list[str | None], list[bool]]:
@@ -123,6 +124,38 @@ def _scope_matches(label: str | None, scope: list[str] | None) -> bool:
     return False
 
 
+def _find_enclosing(lines: list[str], is_marker: list[bool], sections: list[str | None], idx: int) -> str | None:
+    """
+    Find the nearest enclosing "- <name> | ..." list-item header for a match on
+    a continuation line (RC2 C1).
+
+    An input/output/resource row is a single logical entry that can span
+    multiple physical lines when a field (e.g. a nested object/map type)
+    embeds newlines. Only the row's first physical line starts with "- "; a
+    match landing on a later line of that same row would otherwise lose the
+    row's name entirely. Walk backward from idx over non-marker lines in the
+    SAME section, stopping at the nearest "- "-prefixed line (the header) or
+    at the section boundary (marker line or section-label change), whichever
+    comes first.
+
+    Returns None when the line at idx itself starts with "- " (it is its own
+    header) or when no enclosing header is found within the section.
+    """
+    if lines[idx].strip().startswith("- "):
+        return None
+
+    label = sections[idx]
+    j = idx - 1
+    while j >= 0:
+        if is_marker[j] or sections[j] != label:
+            break
+        stripped = lines[j].strip()
+        if stripped.startswith("- "):
+            return stripped
+        j -= 1
+    return None
+
+
 def _gather_context(lines: list[str], is_marker: list[bool], start_idx: int, step: int, count: int) -> list[str]:
     """
     Walk from start_idx in direction `step` (-1 for before, +1 for after), skipping
@@ -182,6 +215,7 @@ def grep_document(
         if len(matches) < max_matches:
             before = _gather_context(lines, is_marker, idx, -1, context_lines)
             after = _gather_context(lines, is_marker, idx, 1, context_lines)
+            enclosing = _find_enclosing(lines, is_marker, sections, idx)
             matches.append(
                 DocMatch(
                     section=label if label is not None else "",
@@ -189,6 +223,7 @@ def grep_document(
                     line=line,
                     before=before,
                     after=after,
+                    enclosing=enclosing,
                 )
             )
 

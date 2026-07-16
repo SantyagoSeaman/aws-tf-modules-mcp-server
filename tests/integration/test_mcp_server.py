@@ -324,6 +324,24 @@ class TestGetModuleSections:
         out = filter_module_sections(doc, [])
         assert "TYPE/SHAPE" in out, "Footer must carry the explicit type/shape verification phrase"
 
+    def test_footer_disclaimer_is_compact(self):
+        """RC2 F1: the honest-limits disclaimer is a 1-2 line pointer, not a long
+        repeated paragraph -- it is verbatim on every get_module call (measured
+        42.8K chars of pure repetition across 56 calls at the old ~764-char size),
+        so it must be collapsed while keeping the escalation load-bearing."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        disclaimer_line = next(line for line in out.splitlines() if "grep_module_docs" in line)
+        assert len(disclaimer_line) < 400, (
+            f"disclaimer line ({len(disclaimer_line)} chars) must be far shorter than the old " f"~764-char paragraph"
+        )
+        # The now-removed verbose repetition must be gone.
+        assert "Do not assert an exact default" not in out
+        assert "confirm it in the full doc first" not in out
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)
@@ -401,11 +419,18 @@ class TestGetModuleSections:
         filtered = get_module_impl("eks", server_state, sections=["karpenter"])
         assert "## Submodule 4: karpenter" in filtered, "Substring should match the submodule heading"
 
-    def test_submodules_key_matches_numbered_sections(self, server_state):
-        """Test that the submodules key pulls the index and all numbered submodule sections."""
+    def test_submodules_key_resolves_to_compact_inventory_only(self, server_state):
+        """L5: the submodules key pulls the compact index, not the numbered deep-dive sections.
+
+        The submodule NAMES/purposes/pinnable sources are already in the compact
+        ## Submodules inventory (also inlined in the default head, A1); bundling
+        every ## Submodule N: deep-dive alongside it was pure over-fetch. A
+        specific submodule is still reachable by name (test_freeform_heading_
+        substring_match) or via the //modules/<sub> address (A3).
+        """
         filtered = get_module_impl("eks", server_state, sections=["submodules"])
         assert "## Submodules" in filtered, "Submodules index section should be present"
-        assert "## Submodule 1:" in filtered, "Numbered submodule sections should be present"
+        assert "## Submodule 1:" not in filtered, "Numbered submodule deep-dive sections must not be bundled"
 
     def test_unmatched_section_reported(self, server_state):
         """Test that unmatched entries are reported with available sections."""
@@ -658,8 +683,8 @@ class TestModulesListTool:
         assert result.count == len(server_state.index.docs), "Should return all indexed documents"
 
     def test_modules_list_structure(self, server_state):
-        """Test that each module item has correct structure."""
-        result = modules_list_impl(server_state)
+        """Test that each full-detail module item has correct structure."""
+        result = modules_list_impl(server_state, detail="full")
 
         for module in result.modules:
             # Check all required fields are present
@@ -686,8 +711,8 @@ class TestModulesListTool:
             assert expected in module_names, f"Should include {expected} module"
 
     def test_modules_list_descriptions_truncated(self, server_state):
-        """Test that descriptions are properly truncated."""
-        result = modules_list_impl(server_state)
+        """Test that full-detail descriptions are properly truncated."""
+        result = modules_list_impl(server_state, detail="full")
 
         for module in result.modules:
             # Descriptions should be truncated to ~200 chars

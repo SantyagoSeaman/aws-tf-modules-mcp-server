@@ -58,14 +58,22 @@ async def test_full_stdio_protocol_session():
                 assert tool.description, f"{tool.name} missing description"
                 assert tool.inputSchema is not None, f"{tool.name} missing input schema"
 
-            # --- modules_list ---
+            # --- modules_list (compact default) ---
             result = await session.call_tool("modules_list", {})
             assert not result.isError
             payload = json.loads(_result_text(result))
             assert payload["count"] == 55
             assert len(payload["modules"]) == 55
             sample = payload["modules"][0]
-            assert set(sample) >= {"module_name", "path", "description", "keywords"}
+            assert set(sample) >= {"module_name", "purpose", "module_id", "latest_version"}
+            assert "keywords" not in sample, "compact default must omit keyword arrays"
+
+            # --- modules_list (detail=full) ---
+            result = await session.call_tool("modules_list", {"detail": "full"})
+            assert not result.isError
+            full_payload = json.loads(_result_text(result))
+            full_sample = full_payload["modules"][0]
+            assert set(full_sample) >= {"module_name", "path", "description", "keywords"}
 
             # --- search_modules ---
             result = await session.call_tool("search_modules", {"query": "vpc networking"})

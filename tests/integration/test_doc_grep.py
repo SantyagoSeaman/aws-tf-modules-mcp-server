@@ -46,3 +46,73 @@ def test_invalid_regex_raises_valueerror():
 
     with pytest.raises(ValueError):
         grep_document(DOC, "(")
+
+
+# --------------------------------------------------------------------------- #
+# RC2 C1 - scoped grep must carry the enclosing "- <name> | ..." header row
+# when a match lands on a continuation line of a multi-line input row (e.g. a
+# nested object/map type), so the model never back-fills a plausible-but-wrong
+# container name from the surrounding prose.
+# --------------------------------------------------------------------------- #
+DOC_MULTILINE_INPUT = """===== MODULE ns/x/aws @ 1.0.0 =====
+
+===== ROOT README =====
+Some prose line that happens to start with a dash below.
+- not a data row, just a readme bullet
+===== ROOT INPUTS =====
+- simple_input | string | "" | A simple input
+- complex_input | object({
+  a = string
+  b = number
+}) | n/a | A complex input
+- another_input | bool | false | Another input
+"""
+
+
+def test_enclosing_is_none_when_match_is_on_the_header_row_itself():
+    matches, total, _ = grep_document(DOC_MULTILINE_INPUT, "complex_input", scope=["inputs"])
+    assert total == 1
+    assert matches[0].line.startswith("- complex_input")
+    assert matches[0].enclosing is None
+
+
+def test_enclosing_carries_the_header_row_for_a_continuation_line_match():
+    matches, total, _ = grep_document(DOC_MULTILINE_INPUT, "b = number", scope=["inputs"])
+    assert total == 1
+    m = matches[0]
+    assert m.line.strip() == "b = number"
+    assert m.enclosing == "- complex_input | object({"
+
+
+def test_enclosing_walks_back_over_multiple_continuation_lines():
+    matches, total, _ = grep_document(DOC_MULTILINE_INPUT, r"\}\) \| n/a", scope=["inputs"])
+    assert total == 1
+    m = matches[0]
+    assert m.enclosing == "- complex_input | object({"
+
+
+def test_enclosing_is_none_for_a_simple_single_line_row_match():
+    matches, total, _ = grep_document(DOC_MULTILINE_INPUT, "simple_input", scope=["inputs"])
+    assert total == 1
+    assert matches[0].enclosing is None
+
+
+DOC_ORPHAN_CONTINUATION = """===== MODULE ns/x/aws @ 1.0.0 =====
+
+===== ROOT README =====
+- readme bullet, not an input row
+prose continuation of readme
+===== ROOT INPUTS =====
+  orphan continuation line with no preceding dash row in THIS section
+- real_input | string | "" | desc
+"""
+
+
+def test_enclosing_does_not_cross_into_a_different_section():
+    # "- readme bullet, not an input row" is the nearest "- " line overall, but
+    # it lives in a different section (root/readme). Walking back for the
+    # orphan continuation line in root/inputs must stop at the section marker
+    # rather than leaking a false enclosing row from the previous section.
+    matches, total, _ = grep_document(DOC_ORPHAN_CONTINUATION, "orphan continuation", scope=["inputs"])
+    assert total == 1
+    assert matches[0].enclosing is None
