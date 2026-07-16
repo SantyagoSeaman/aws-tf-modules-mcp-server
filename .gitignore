@@ -107,3 +107,9 @@ CLAUDE.md
 
 # Internal maintenance docs (not part of the published package)
 modules/UPDATE_PROMPTS.md
+
+# Private A/B evaluation harness and experiment evidence.
+# evals/ is its own independent git repo pushed to the private
+# SantyagoSeaman/tfmodsearch-evals; ignoring it keeps this public repo
+# unaware of it (no gitlink, no .gitmodules). Never git-add it here.
+evals/
