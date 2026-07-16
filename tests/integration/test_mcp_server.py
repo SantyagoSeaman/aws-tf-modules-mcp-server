@@ -324,6 +324,24 @@ class TestGetModuleSections:
         out = filter_module_sections(doc, [])
         assert "TYPE/SHAPE" in out, "Footer must carry the explicit type/shape verification phrase"
 
+    def test_footer_disclaimer_is_compact(self):
+        """RC2 F1: the honest-limits disclaimer is a 1-2 line pointer, not a long
+        repeated paragraph -- it is verbatim on every get_module call (measured
+        42.8K chars of pure repetition across 56 calls at the old ~764-char size),
+        so it must be collapsed while keeping the escalation load-bearing."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        disclaimer_line = next(line for line in out.splitlines() if "grep_module_docs" in line)
+        assert len(disclaimer_line) < 400, (
+            f"disclaimer line ({len(disclaimer_line)} chars) must be far shorter than the old " f"~764-char paragraph"
+        )
+        # The now-removed verbose repetition must be gone.
+        assert "Do not assert an exact default" not in out
+        assert "confirm it in the full doc first" not in out
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)

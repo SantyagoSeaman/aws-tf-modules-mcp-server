@@ -1221,20 +1221,15 @@ def filter_module_sections(
 
     footer_lines = [
         "---",
-        # Honest-limits pointer: the curated doc is a hand-picked SUBSET. Anything
-        # requiring completeness or exactness lives one tier down (live registry),
-        # and resource-creation conditions live in module source. Keeps the
-        # compact→full→source escalation a mechanical decision, not a guess.
-        "This is TFModSearch's curated summary (a selected subset of the module's inputs/"
-        "outputs). For the COMPLETE inputs/outputs — every variable with its exact type and "
-        "default — plus all examples, grep the live registry doc with `grep_module_docs` "
-        "using the Module ID above. Resource-creation conditions (whether an input gates a "
-        "`count`/`for_each` resource) live in the module source, not the rendered doc. Do "
-        "not assert an exact default, type, or that an input exists from this summary or from "
-        "memory when a wrong value would break `apply` — confirm it in the full doc first. "
-        "Use `grep_module_docs` not only to confirm resource/variable NAMES but to verify the "
-        "exact TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure) "
-        "before writing it.",
+        # RC2 F1: compact honest-limits pointer. The curated doc is a hand-picked
+        # SUBSET; anything requiring completeness/exactness escalates one tier to
+        # the live registry, and resource-creation conditions live in module
+        # source. Keeps the compact→full→source escalation a mechanical decision,
+        # not a guess, without repeating a long paragraph verbatim on every call.
+        "Curated subset. For the COMPLETE inputs/outputs (exact types/defaults, nested "
+        "map(object)/any TYPE/SHAPE) or to confirm a name exists, grep the live doc via "
+        "`grep_module_docs` using the Module ID above. Resource-creation (`count`/`for_each`) "
+        "conditions live in the module source, not here.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
