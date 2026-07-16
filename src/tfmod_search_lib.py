@@ -473,6 +473,25 @@ def normalize_modname(name: str) -> str:
     return n
 
 
+def exact_name_match(module_name: str, normalized_query: str) -> bool:
+    """
+    Whether a normalized module name appears in the normalized query on
+    hyphen boundaries.
+
+    The exact-name scoring component must fire for "vpc" inside
+    "vpc-with-private-subnets" (the user named the module) but not for
+    "rds" inside "manage-dns-records-zones" (the name is an accidental
+    substring of an unrelated word). normalize_modname joins phrases with
+    hyphens, so wrapping both sides in sentinels reduces the check to a
+    boundary-safe containment test.
+    """
+    if not module_name:
+        return False
+    if module_name == normalized_query:
+        return True
+    return f"-{module_name}-" in f"-{normalized_query}-"
+
+
 def tokenize(text: str) -> list[str]:
     """
     Tokenize text into lowercase words using NLTK's word_tokenize.
@@ -1141,9 +1160,7 @@ def compute_scores_detailed(
     q_kw = {t for t in q_tokens if t in known_keywords}
     logger.debug(f"Query keywords matching index: {q_kw}")
 
-    exact_hits = np.array(
-        [1.0 if (mn and (mn == q_norm or mn in q_norm)) else 0.0 for mn in index.module_names], dtype=np.float32
-    )
+    exact_hits = np.array([1.0 if exact_name_match(mn, q_norm) else 0.0 for mn in index.module_names], dtype=np.float32)
     exact_count = int(np.sum(exact_hits))
     if exact_count > 0:
         logger.debug(f"Found {exact_count} exact module name matches")
