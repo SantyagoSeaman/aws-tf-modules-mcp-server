@@ -789,6 +789,13 @@ class GrepMatch(BaseModel):
     line: str = Field(..., description="The matching line's text.")
     before: list[str] = Field(..., description="Up to context_lines lines immediately preceding the match.")
     after: list[str] = Field(..., description="Up to context_lines lines immediately following the match.")
+    enclosing: str | None = Field(
+        default=None,
+        description="The nearest enclosing '- <name> | ...' list-item row (e.g. an input/output/"
+        "resource header) when the match landed on a continuation line of a multi-line row (a "
+        "type or description that spans multiple lines) -- so the container name/key is never "
+        "lost. None when the matched line is itself a list-item row, or none was found in section.",
+    )
 
 
 class CacheInfo(BaseModel):
@@ -1811,7 +1818,14 @@ def grep_module_docs_impl(
     )
 
     matches = [
-        GrepMatch(section=m.section, line_number=m.line_number, line=m.line, before=m.before, after=m.after)
+        GrepMatch(
+            section=m.section,
+            line_number=m.line_number,
+            line=m.line,
+            before=m.before,
+            after=m.after,
+            enclosing=m.enclosing,
+        )
         for m in doc_matches
     ]
 
@@ -2213,8 +2227,11 @@ def grep_module_docs(
         refresh: Bypass the cache and refetch from the registry.
 
     Returns:
-        GrepOutput: matches (with section label, line number, and context),
-            total_matches/returned_matches/truncated, resolved_version,
+        GrepOutput: matches (with section label, line number, context, and an
+            `enclosing` breadcrumb naming the nearest '- <name> | ...' row when
+            the match landed on a continuation line of a multi-line row --
+            e.g. a nested object/map type -- so the container name is never
+            lost), total_matches/returned_matches/truncated, resolved_version,
             source_url, cache status, and available_sections (useful to refine
             pattern/scope, especially when total_matches is 0).
 
