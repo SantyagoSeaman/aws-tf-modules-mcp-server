@@ -104,6 +104,7 @@ temp/
 !.claude/skills/
 CLAUDE.md
 /.serena/
+.mcp.json
 
 # Internal maintenance docs (not part of the published package)
 modules/UPDATE_PROMPTS.md
