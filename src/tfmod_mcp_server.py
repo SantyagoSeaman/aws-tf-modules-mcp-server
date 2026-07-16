@@ -993,19 +993,31 @@ def _parse_submodule_address(module_identifier: str) -> tuple[str, str] | None:
     return (parent, sub) if parent else None
 
 
-def _version_pin_hint(text: str) -> str | None:
+def _version_pin_hint(text: str, version_override: str | None = None) -> str | None:
     """
     Build an actionable exact-pin line from the doc's `**Latest Version**` bullet.
 
     Agents that read only the module body tend to copy the `~> X.0` range shown
     in usage examples and pin a floor instead of the exact latest release. This
     surfaces the concrete version up front so an exact pin is the obvious choice.
-    Returns None when the doc carries no parseable Latest Version bullet.
+    Returns None when the doc carries no parseable Latest Version bullet and no
+    version_override was given.
+
+    Args:
+        text: The module document body.
+        version_override: When truthy, used verbatim as the pinned version
+            instead of re-parsing the body bullet (RC2 C2: single-snapshot
+            version consistency -- lets a caller thread in the same metadata
+            field it also reports elsewhere, so the two can never contradict
+            each other in one response).
     """
-    m = _LATEST_VERSION_RE.search(text)
-    if not m:
-        return None
-    version = m.group(1).strip()
+    if version_override:
+        version = version_override.strip()
+    else:
+        m = _LATEST_VERSION_RE.search(text)
+        if not m:
+            return None
+        version = m.group(1).strip()
     major = version.split(".")[0]
     return (
         f"> **Version pin** — latest release is `{version}`. For an exact pin use "
@@ -1428,7 +1440,12 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     # wants, so inlining it would waste tokens on the wrong doc.
     top_module_doc: str | None = None
     if expand_top and confidence == "high" and hits:
-        top_module_doc = orientation_head(state.index.docs[hits[0].doc_index].text)
+        top_doc = state.index.docs[hits[0].doc_index]
+        # RC2 C2: thread the same metadata field reported in results[].latest_version
+        # into the head's version pin, so the two can never contradict each other in
+        # one response (the body-bullet re-parse and the metadata field can drift
+        # apart after a metadata-only patch).
+        top_module_doc = orientation_head(top_doc.text, version_override=top_doc.latest_version)
 
     results = hits[:top_k]
 
@@ -1579,7 +1596,7 @@ def _cap_head_input_table(head_text: str) -> str:
     return "".join(new_lines)
 
 
-def orientation_head(text: str) -> str:
+def orientation_head(text: str, version_override: str | None = None) -> str:
     """
     Build the compact orientation view returned by get_module by default.
 
@@ -1603,6 +1620,12 @@ def orientation_head(text: str) -> str:
     That inlined table is further capped to essential (required) rows by
     ``_cap_head_input_table`` (L4) — the full table remains one
     ``sections=["inputs"]`` call away.
+
+    Args:
+        text: The module document body.
+        version_override: Forwarded to ``_version_pin_hint`` verbatim (RC2 C2:
+            single-snapshot version consistency). None (default) re-parses the
+            body's ``**Latest Version**`` bullet as before.
     """
     body = filter_module_sections(
         text,
@@ -1612,7 +1635,7 @@ def orientation_head(text: str) -> str:
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
     body = _cap_head_input_table(body)
-    hint = _version_pin_hint(text)
+    hint = _version_pin_hint(text, version_override=version_override)
     return f"{hint}\n\n{body}" if hint else body
 
 

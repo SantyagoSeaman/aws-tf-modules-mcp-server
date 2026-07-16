@@ -21,6 +21,7 @@ from tfmod_mcp_server import (
     ServerStateManager,
     _cap_head_input_table,
     _classify_confidence,
+    _version_pin_hint,
     filter_module_sections,
     get_module_impl,
     modules_list_impl,
@@ -504,3 +505,63 @@ def test_search_modules_impl_hits_carry_sem_sim(state) -> None:
     # plain search must not blow up now that ScoredHit grew a field.
     out = search_modules_impl("vpc", state, top_k=3)
     assert out.results
+
+
+# --------------------------------------------------------------------------- #
+# RC2 C2/T2 gate - single-snapshot version consistency. The inlined
+# top_module_doc head's version pin must come from the same metadata field as
+# results[].latest_version, never a re-parse of the doc body, so the two can
+# never contradict each other in one response.
+# --------------------------------------------------------------------------- #
+def test_version_pin_hint_override_wins_verbatim() -> None:
+    text = "- **Latest Version**: 6.6.1\n"
+    assert _version_pin_hint(text, version_override="9.9.9") == (
+        "> **Version pin** — latest release is `9.9.9`. For an exact pin use "
+        '`version = "9.9.9"`; use a range like `~> 9.0` only when you '
+        "deliberately want automatic minor-version updates."
+    )
+
+
+def test_version_pin_hint_none_override_keeps_body_parse() -> None:
+    text = "- **Latest Version**: 6.6.1\n"
+    assert _version_pin_hint(text) == _version_pin_hint(text, version_override=None)
+    assert "6.6.1" in _version_pin_hint(text)
+
+
+def test_orientation_head_version_override_wins_over_body_bullet() -> None:
+    doc = _doc("vpc")
+    default_head = orientation_head(doc)
+    assert "6.6.1" in default_head, "fixture doc must carry its real body-bullet version"
+    overridden_head = orientation_head(doc, version_override="9.9.9")
+    assert "9.9.9" in overridden_head
+    assert "6.6.1" not in overridden_head.split("\n\n", 1)[0], "override must replace, not append, the pin line"
+
+
+def test_search_expand_top_version_matches_result_metadata_snapshot(state, monkeypatch) -> None:
+    """C2: patch the fixture doc's body bullet away from its stored metadata
+    field to prove the metadata override wins - the inlined head's version
+    string must equal results[0].latest_version by construction, never a
+    contradicting re-parse of the (possibly stale) body bullet."""
+    out = search_modules_impl("vpc", state, top_k=3, expand_top=True)
+    assert out.confidence == "high"
+    doc = state.index.docs[0]
+    for d in state.index.docs:
+        if d.module_name == out.results[0].module_name:
+            doc = d
+            break
+    original_text = doc.text
+    original_latest_version = doc.latest_version
+    monkeypatch.setattr(doc, "latest_version", "9.9.9-metadata")
+    monkeypatch.setattr(doc, "text", original_text.replace(original_latest_version, "1.1.1-stale-body", 1))
+
+    out2 = search_modules_impl("vpc", state, top_k=3, expand_top=True)
+    assert out2.confidence == "high"
+    assert out2.results[0].latest_version == "9.9.9-metadata"
+    assert out2.top_module_doc is not None
+    # The version-pin hint line (the C2-guarded value) must match the metadata
+    # snapshot, not the stale re-parsed body bullet -- the two can never
+    # contradict each other by construction.
+    pin_line = out2.top_module_doc.split("\n\n", 1)[0]
+    assert "9.9.9-metadata" in pin_line
+    assert "1.1.1-stale-body" not in pin_line
+    assert pin_line == _version_pin_hint(doc.text, version_override=out2.results[0].latest_version)
