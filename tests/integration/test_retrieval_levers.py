@@ -343,9 +343,11 @@ def test_search_output_confidence_always_present_direct_construction() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# L3 - opt-in expand_top inlines the top-1 orientation head on a high-
-# confidence search, collapsing the confident search->get_module pair into
-# one call. Off by default; never inlined on a non-high verdict.
+# L3/T2 - expand_top inlines the top-1 orientation head on a high-confidence
+# search, collapsing the confident search->get_module pair into one call.
+# RC2 T2: default-on now (the counterfactual measurement showed the opt-in
+# default was strangling the one right-direction lever); never inlined on a
+# non-high verdict; explicit expand_top=False still suppresses it.
 # --------------------------------------------------------------------------- #
 def test_l3_expand_top_high_confidence_inlines_orientation_head(state) -> None:
     out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=True)
@@ -356,37 +358,27 @@ def test_l3_expand_top_high_confidence_inlines_orientation_head(state) -> None:
     assert "## " in out.top_module_doc, "inlined doc should look like an orientation head with section headings"
 
     top_doc_text = (DOCS / f"{top_name}.md").read_text()
-    assert out.top_module_doc == orientation_head(top_doc_text)
+    assert out.top_module_doc == orientation_head(top_doc_text, version_override=out.results[0].latest_version)
 
 
-def test_l3_expand_top_defaults_to_off(state) -> None:
+def test_l3_expand_top_defaults_to_on_and_inlines_on_high_confidence(state) -> None:
     out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3)
-    assert out.top_module_doc is None
-    assert "top_module_doc" not in out.model_dump()
-    assert "top_module_doc" not in out.model_dump_json()
+    assert out.confidence == "high"
+    assert out.top_module_doc, "expand_top defaults to True (T2); a high-confidence search must inline the head"
+    assert "top_module_doc" in out.model_dump()
+    assert "top_module_doc" in out.model_dump_json()
 
 
 def test_l3_expand_top_false_explicit_stays_off(state) -> None:
     out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=False)
     assert out.top_module_doc is None
+    assert "top_module_doc" not in out.model_dump()
 
 
-def test_l3_expand_top_low_confidence_never_inlines(state) -> None:
-    out = search_modules_impl("sagemaker", state, top_k=3, expand_top=True)
+def test_l3_expand_top_low_confidence_never_inlines_even_by_default(state) -> None:
+    out = search_modules_impl("sagemaker", state, top_k=3)
     assert out.confidence == "low"
     assert out.top_module_doc is None
-
-
-def test_l3_expand_top_tie_confidence_never_inlines(state) -> None:
-    # Exercise the SHIPPED path: run a live near-tie query through
-    # search_modules_impl with expand_top=True and assert the real implementation
-    # does not inline on a tie verdict. Skips if the live index stops reproducing
-    # a tie for this query (the synthetic tie is covered by the classifier unit
-    # tests); it never passes vacuously on a non-tie result.
-    out = search_modules_impl("redis in-memory cache cluster", state, top_k=3, expand_top=True)
-    if out.confidence != "tie":
-        pytest.skip("query did not reproduce a near-tie against the live index")
-    assert out.top_module_doc is None, "expand_top must not inline on a tie verdict"
     assert "top_module_doc" not in out.model_dump()
 
 
