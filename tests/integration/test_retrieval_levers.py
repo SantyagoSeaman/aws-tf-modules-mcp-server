@@ -16,11 +16,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     _MIN_HEAD_TABLE_ROWS,
+    SEARCH_INLINE_SCORE_MARGIN,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
     _cap_head_input_table,
     _classify_confidence,
+    _clip_blurb,
+    _reconcile_body_version,
+    _should_inline_top,
     _version_pin_hint,
     filter_module_sections,
     get_module_impl,
@@ -70,9 +74,9 @@ def test_l6_lower_ranks_drop_keywords_and_clip_description(state) -> None:
     assert len(out.results) >= 2, "need at least 2 results to test the trim"
     for hit in out.results[1:]:
         assert hit.keywords == [], f"rank>=2 hit {hit.module_name} must drop keywords"
-        assert len(hit.description) <= 141, (
-            f"rank>=2 hit {hit.module_name} description must be clipped (<=141 chars), " f"got {len(hit.description)}"
-        )
+        assert (
+            len(hit.description) <= 141
+        ), f"rank>=2 hit {hit.module_name} description must be clipped (<=141 chars), got {len(hit.description)}"
 
 
 # --------------------------------------------------------------------------- #
@@ -557,3 +561,154 @@ def test_search_expand_top_version_matches_result_metadata_snapshot(state, monke
     assert "9.9.9-metadata" in pin_line
     assert "1.1.1-stale-body" not in pin_line
     assert pin_line == _version_pin_hint(doc.text, version_override=out2.results[0].latest_version)
+
+
+# --------------------------------------------------------------------------- #
+# RC3 #2 - render-time single-snapshot version consistency applied to ALL
+# version mentions. rc2 synced only the pin banner; the body's own **Latest
+# Version** bullet could still be stale and contradict the banner /
+# results[].latest_version in the same response. _reconcile_body_version
+# rewrites the body bullet to the threaded snapshot at render time (drift-safe:
+# emitted text only, the indexed body/embeddings are untouched).
+# --------------------------------------------------------------------------- #
+def test_reconcile_body_version_rewrites_bullet_to_resolved() -> None:
+    text = "## Module Information\n- **Latest Version**: 1.0.0-stale\n\nbody text\n"
+    out = _reconcile_body_version(text, "2.5.0")
+    assert "- **Latest Version**: 2.5.0" in out
+    assert "1.0.0-stale" not in out
+
+
+def test_reconcile_body_version_noop_without_resolved() -> None:
+    text = "- **Latest Version**: 1.0.0\n"
+    assert _reconcile_body_version(text, None) == text
+    assert _reconcile_body_version(text, "") == text
+
+
+def test_reconcile_body_version_noop_without_bullet() -> None:
+    text = "## Description\nno version bullet here at all\n"
+    assert _reconcile_body_version(text, "2.5.0") == text
+
+
+def test_orientation_head_override_reconciles_body_bullet_not_just_banner() -> None:
+    # RC3 #2: the body's own Latest Version bullet (inside Module Information)
+    # must be rewritten to the override, not only the pin banner.
+    doc = _doc("vpc")
+    assert "- **Latest Version**: 6.6.1" in _doc("vpc"), "fixture must carry its real body bullet"
+    head = orientation_head(doc, version_override="9.9.9")
+    assert "- **Latest Version**: 9.9.9" in head, "body bullet must be reconciled to the override"
+    assert "- **Latest Version**: 6.6.1" not in head, "stale body bullet must not survive in the head"
+
+
+def test_search_expand_top_body_bullet_matches_snapshot(state, monkeypatch) -> None:
+    """The inlined head's BODY version bullet (not only the pin banner) must
+    equal results[].latest_version -- the whole point of RC3 #2."""
+    out = search_modules_impl("vpc", state, top_k=3, expand_top=True)
+    assert out.confidence == "high" and out.top_module_doc is not None
+    doc = next(d for d in state.index.docs if d.module_name == out.results[0].module_name)
+    monkeypatch.setattr(doc, "latest_version", "9.9.9-metadata")
+
+    out2 = search_modules_impl("vpc", state, top_k=3, expand_top=True)
+    assert out2.top_module_doc is not None
+    # The stale-vs-fresh contradiction is gone: the metadata snapshot appears in
+    # the body bullet and nowhere does an unreconciled body bullet contradict it.
+    assert "- **Latest Version**: 9.9.9-metadata" in out2.top_module_doc
+
+
+# --------------------------------------------------------------------------- #
+# RC3 #3 - non-top-1 result blurbs must clip on a word boundary, never mid-word.
+# --------------------------------------------------------------------------- #
+def test_clip_blurb_clips_on_word_boundary_no_midword_cut() -> None:
+    # No early period, so the hard char-cap branch runs; it must not leave a
+    # dangling partial word.
+    text = (
+        "Terraform module to provision managed streaming kafka clusters with "
+        "encryption authentication and monitoring enabled"
+    )
+    clipped = _clip_blurb(text, max_length=40)
+    assert clipped.endswith("…")
+    body = clipped[:-1]
+    assert body, "clip must keep at least one whole word"
+    assert text.startswith(body), "clip must be a prefix of the source"
+    # The char immediately after the kept prefix is whitespace -> we cut between
+    # words, not through one.
+    assert text[len(body)] == " "
+
+
+def test_clip_blurb_first_sentence_branch_unaffected() -> None:
+    text = "Short purpose. Extra detail that should be dropped by the sentence clip."
+    assert _clip_blurb(text) == "Short purpose."
+
+
+# --------------------------------------------------------------------------- #
+# RC3 #1 - the expand_top auto-inline gate (_should_inline_top) is STRICTER
+# than the confidence verdict: an exact hit always inlines; a lexical-but-not-
+# exact hit inlines only when it clears SEARCH_SEM_FLOOR AND dominates rank-2
+# by SEARCH_INLINE_SCORE_MARGIN. This withholds the expensive 13-17K-char
+# inline on catalog-gap false-highs without touching the two-band verdict.
+# --------------------------------------------------------------------------- #
+def test_should_inline_empty_is_false() -> None:
+    assert _should_inline_top([]) is False
+
+
+def test_should_inline_exact_hit_always_even_with_tiny_gap() -> None:
+    hits = [
+        ScoredHit(score=9.00, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
+        ScoredHit(score=8.99, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.10),
+    ]
+    assert _should_inline_top(hits) is True
+
+
+def test_should_inline_lexical_dominant_above_floor() -> None:
+    hits = [
+        ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=4.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.90),
+    ]
+    assert _should_inline_top(hits) is True
+
+
+def test_should_inline_single_lexical_hit_above_floor() -> None:
+    hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95)]
+    assert _should_inline_top(hits) is True
+
+
+def test_should_not_inline_lexical_marginal_flat_field_though_verdict_high() -> None:
+    # sem clears the floor (verdict "high") but the top hit barely leads rank-2:
+    # a flat wrong-domain field -> withhold the inline, keep the verdict.
+    hits = [
+        ScoredHit(score=3.10, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=3.00, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.94),
+    ]
+    assert _classify_confidence(hits) == "high"
+    assert (hits[0].score - hits[1].score) < SEARCH_INLINE_SCORE_MARGIN
+    assert _should_inline_top(hits) is False
+
+
+def test_should_not_inline_lexical_below_sem_floor() -> None:
+    hits = [
+        ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.60),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
+    ]
+    assert _should_inline_top(hits) is False
+
+
+def test_should_not_inline_non_lexical_top1() -> None:
+    hits = [
+        ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.99),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
+    ]
+    assert _should_inline_top(hits) is False
+
+
+def test_search_marginal_high_confidence_does_not_inline(state, monkeypatch) -> None:
+    """Integration: force a lexical-non-exact top hit that clears the floor but
+    barely leads rank-2, and confirm the live path withholds the inline while
+    still reporting 'high'."""
+    flat = [
+        ScoredHit(score=3.10, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=3.00, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.94),
+    ]
+    monkeypatch.setattr("tfmod_mcp_server.compute_scores_detailed", lambda *a, **k: flat)
+    out = search_modules_impl("anything", state, top_k=2, expand_top=True)
+    assert out.confidence == "high"
+    assert out.top_module_doc is None
+    assert "top_module_doc" not in out.model_dump()

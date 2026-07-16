@@ -734,9 +734,11 @@ class SearchOutput(UpdateNoticeMixin):
     top_module_doc: str | None = Field(
         default=None,
         description="The top-1 module orientation head (L3), present by default when "
-        "confidence is 'high' -- collapses the confident search->get_module pair into "
-        "one call. Pass expand_top=False to suppress it. Absent entirely (not null) "
-        "when expand_top=False or confidence is 'low'.",
+        "confidence is 'high' and the top hit clearly dominates (exact-name match, or a "
+        "keyword match that also leads the runner-up) -- collapses the confident "
+        "search->get_module pair into one call. Pass expand_top=False to suppress it. "
+        "Absent entirely (not null) when expand_top=False, confidence is 'low', or the "
+        "top hit is only marginally ahead of the field.",
     )
 
 
@@ -1032,6 +1034,32 @@ def _version_pin_hint(text: str, version_override: str | None = None) -> str | N
     )
 
 
+def _reconcile_body_version(text: str, resolved: str | None) -> str:
+    """Rewrite every body ``**Latest Version**`` bullet to the resolved snapshot.
+
+    RC3 #2 (single-snapshot consistency, applied to ALL version mentions): rc2
+    synced the pin banner with the caller-threaded metadata ``latest_version``,
+    but the curated doc body still carries its own ``**Latest Version**`` bullet
+    that can be stale and contradict both the banner and ``results[].latest_version``
+    in the same response. When a caller threads a resolved snapshot, rewrite the
+    body bullet's version token to match it so one response never self-contradicts.
+
+    Drift-safe by construction: this rewrites the *emitted* text only -- the
+    indexed document body (and therefore the embeddings) is untouched. No-op when
+    ``resolved`` is falsy or the text carries no parseable bullet.
+    """
+    if not resolved:
+        return text
+    resolved = resolved.strip()
+
+    def _sub(m: re.Match[str]) -> str:
+        # Replace only the captured version token within the matched bullet span,
+        # leaving the bullet's markup and any backticks intact.
+        return m.group(0).replace(m.group(1), resolved)
+
+    return _LATEST_VERSION_RE.sub(_sub, text)
+
+
 def _split_h2_sections(text: str) -> tuple[str, list[tuple[str, str]]]:
     """
     Split a module document into preamble and H2 sections.
@@ -1322,7 +1350,10 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
         return text[: period + 1]
     if len(text) <= max_length:
         return text
-    return text[: max_length - 1].rstrip() + "…"
+    # RC3 #3: clip on a word boundary, never mid-word. A hard char cut left a
+    # dangling partial word in every non-top-1 result row.
+    clipped = text[: max_length - 1].rstrip()
+    return clipped.rsplit(" ", 1)[0] + "…"
 
 
 # RC2 T3: floor on the raw (pre-min-max) semantic similarity below which a
@@ -1383,6 +1414,48 @@ def _classify_confidence(hits: list[ScoredHit]) -> str:
     return "high"
 
 
+# RC3 #1: the expand_top auto-inline is an asymmetric-cost action -- inlining a
+# 13-17K-char orientation head onto a catalog-gap false-high wastes far more
+# than the single get_module turn it would have saved on a real match (Run #9:
+# the entire +11% payload delta on absence-proof workflows came from a
+# generous-band wrong-domain hit dragging an irrelevant doc into context). So
+# the inline gate is STRICTER than the (unchanged) two-band confidence verdict:
+# an exact-name hit always inlines; a lexical-but-not-exact hit inlines only
+# when it also clears the semantic floor AND dominates the runner-up by a
+# margin -- i.e. the top hit is clearly THE module, not the least-bad of a flat
+# wrong-domain field. The verdict itself stays "high" (a real lexical match
+# exists and the caller should still trust the top hit); only the expensive
+# inline is withheld, at the cost of one cheap get_module turn on the marginal
+# case. The margin is on the WITHIN-query score gap (comparable inside one
+# query; the gate only ever evaluates in the keyword-scoring branch since it
+# requires kw_overlap, so the score scale is consistent for the population it
+# is applied to). PROVISIONAL starting value -- deliberately small so it blocks
+# only near-flat gap fields and preserves the measured expand_top turn savings;
+# A/B-refine from the debug-logged score_gap distribution, do NOT tune toward
+# any specific test pair.
+SEARCH_INLINE_SCORE_MARGIN = 0.5
+
+
+def _should_inline_top(hits: list[ScoredHit]) -> bool:
+    """Whether expand_top should auto-inline the top-1 orientation head.
+
+    Stricter than the confidence verdict (see the SEARCH_INLINE_SCORE_MARGIN
+    comment): exact-name hit -> always; lexical-but-not-exact -> only when it
+    clears SEARCH_SEM_FLOOR and dominates rank-2 by SEARCH_INLINE_SCORE_MARGIN;
+    a non-lexical top hit never inlines.
+    """
+    if not hits:
+        return False
+    top1 = hits[0]
+    if top1.exact_hit:
+        return True
+    if not (top1.kw_overlap and top1.sem_sim >= SEARCH_SEM_FLOOR):
+        return False
+    if len(hits) < 2:
+        return True
+    return (top1.score - hits[1].score) >= SEARCH_INLINE_SCORE_MARGIN
+
+
 def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_top: bool = True) -> SearchOutput:
     """
     Helper function to search for modules.
@@ -1402,16 +1475,20 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
             by 1/6 workers), and the residency cost of the ~1.5K-char head is
             pennies against the ~$0.09/turn an extra get_module call costs.
             Pass expand_top=False to suppress it (pure-browse searches).
-            Never inlined on a "low" verdict, since expand_top only pays off
-            when the top hit is the module the caller actually wants.
+            Never inlined on a "low" verdict, and (RC3 #1) also withheld when
+            the top hit is only a marginal keyword winner over a flat field --
+            the auto-inline gate (_should_inline_top) is stricter than the
+            verdict because inlining a wrong 13-17K-char doc costs far more than
+            the one get_module turn it would save on a real match.
 
     Returns:
         SearchOutput with top-k ranked results plus a confidence verdict
         (L2/L7/L8/T3): "high" (trust the top hit) or "low" (no confident
         catalog match). A hint accompanies a "low" verdict and is absent from
         the JSON output when confidence is "high". top_module_doc (L3) is
-        populated by default when confidence == "high"; absent from the JSON
-        output when expand_top=False or confidence is "low".
+        populated by default when confidence == "high" AND the top hit clearly
+        dominates (_should_inline_top); absent from the JSON output when
+        expand_top=False, confidence is "low", or the top hit is only marginal.
 
     See search_modules() tool documentation for full details.
     """
@@ -1440,9 +1517,15 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     )
 
     confidence = _classify_confidence(hits)
-    state.logger.debug(
-        f"top1 sem_sim={hits[0].sem_sim:.4f} verdict={confidence}" if hits else f"no hits verdict={confidence}"
-    )
+    if hits:
+        gap = (hits[0].score - hits[1].score) if len(hits) >= 2 else float("inf")
+        state.logger.debug(
+            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} score_gap={gap:.3f} "
+            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} verdict={confidence} "
+            f"inline={_should_inline_top(hits)}"
+        )
+    else:
+        state.logger.debug(f"no hits verdict={confidence}")
     hint: str | None = None
     if hits and confidence == "low":
         top1_name = state.index.docs[hits[0].doc_index].module_name or "?"
@@ -1457,7 +1540,7 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     # verdict means the top hit is not (confidently) the module the caller
     # wants, so inlining it would waste tokens on the wrong doc.
     top_module_doc: str | None = None
-    if expand_top and confidence == "high" and hits:
+    if expand_top and confidence == "high" and _should_inline_top(hits):
         top_doc = state.index.docs[hits[0].doc_index]
         # RC2 C2: thread the same metadata field reported in results[].latest_version
         # into the head's version pin, so the two can never contradict each other in
@@ -1653,6 +1736,11 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
     body = _cap_head_input_table(body)
+    # RC3 #2: when a snapshot is threaded in, reconcile the body's own
+    # **Latest Version** bullet to it so the inlined head cannot contradict the
+    # pin banner / results[].latest_version. No override -> body bullet is the
+    # snapshot, so this is a no-op and the head stays self-consistent as before.
+    body = _reconcile_body_version(body, version_override)
     hint = _version_pin_hint(text, version_override=version_override)
     return f"{hint}\n\n{body}" if hint else body
 
@@ -1955,7 +2043,8 @@ def search_modules(
             "confident search->get_module pair into one call. Default True: a confident "
             "search is almost always followed by fetching that module, so the head comes "
             "along for free. Pass expand_top=False to suppress it for a pure-browse search. "
-            "Never inlined on a 'low' confidence verdict.",
+            "Never inlined on a 'low' confidence verdict, or when the top hit only "
+            "marginally leads the field.",
         ),
     ] = True,
 ) -> SearchOutput:
@@ -1981,7 +2070,8 @@ def search_modules(
         expand_top: When True and the search is high confidence, inline the
                top-1 module orientation head into top_module_doc (L3) -- one
                call instead of search then get_module. Default True (RC2 T2).
-               Never populated on a "low" verdict.
+               Never populated on a "low" verdict, and (RC3 #1) also withheld
+               when the top hit only marginally leads a flat field.
 
     Returns:
         SearchOutput: Container with top-k ranked results plus a confidence
@@ -1995,7 +2085,8 @@ def search_modules(
             - confidence: "high" / "low" -- always present
             - hint: actionable follow-up guidance, present only for "low"
             - top_module_doc: the top-1 orientation head, present by default when
-              confidence == "high" (absent when expand_top=False or confidence == "low")
+              confidence == "high" and the top hit clearly dominates (absent when
+              expand_top=False, confidence == "low", or the top hit is only marginal)
 
     Raises:
         RuntimeError: If server state is not initialized.
