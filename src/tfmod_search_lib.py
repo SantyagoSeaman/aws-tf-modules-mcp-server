@@ -970,7 +970,7 @@ def load_index(path: str, logger: logging.Logger) -> SearchIndex:
 # -----------------------------
 # Scoring
 # -----------------------------
-ScoredHit = namedtuple("ScoredHit", ["score", "doc_index", "exact_hit", "kw_overlap"])
+ScoredHit = namedtuple("ScoredHit", ["score", "doc_index", "exact_hit", "kw_overlap", "sem_sim"])
 """A single ranked search result with its scoring components exposed.
 
 - score: combined weighted score (same value compute_scores returns)
@@ -978,6 +978,9 @@ ScoredHit = namedtuple("ScoredHit", ["score", "doc_index", "exact_hit", "kw_over
 - exact_hit: True when this doc earned the exact module-name-match component
 - kw_overlap: True when this doc had any keyword-IDF overlap with the query
   (pre-normalization; a real lexical signal, not just a residual after minmax)
+- sem_sim: the raw cosine similarity scaled to [0,1] (before the per-query
+  min-max normalization) - comparable across queries, unlike the combined
+  score or the min-maxed semantic component
 """
 
 
@@ -1067,6 +1070,8 @@ def compute_scores_detailed(
         - doc_index (int): Index into index.docs array
         - exact_hit (bool): True when the exact module-name-match component fired
         - kw_overlap (bool): True when there was any keyword-IDF overlap with the query
+        - sem_sim (float): Raw cosine similarity scaled to [0,1], before the
+          per-query min-max normalization - comparable across queries
 
         compute_scores() wraps this and returns plain (score, doc_index) tuples
         for backward compatibility.
@@ -1175,6 +1180,7 @@ def compute_scores_detailed(
             doc_index=int(i),
             exact_hit=bool(exact_hits[i] > 0),
             kw_overlap=bool(kw_arr[i] > 0),
+            sem_sim=float(cos_raw[i]),
         )
         for i in order
     ]

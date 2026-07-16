@@ -28,7 +28,7 @@ from tfmod_mcp_server import (
     orientation_head,
     search_modules_impl,
 )
-from tfmod_search_lib import ScoredHit, load_index
+from tfmod_search_lib import ScoredHit, compute_scores_detailed, load_index
 
 DOCS = PROJECT_ROOT / "modules" / "terraform-aws-modules"
 
@@ -451,3 +451,33 @@ def test_l5_a1_default_head_still_inlines_compact_inventory() -> None:
     assert "flow-log" in head
     assert "## Submodule 1: vpc-endpoints" not in head
     assert "## Submodule 2: flow-log" not in head
+
+
+# --------------------------------------------------------------------------- #
+# RC2 T3 - sem_sim exposed on ScoredHit. cos_raw (the per-doc cosine scaled to
+# [0,1], before the per-query min-max) is comparable across queries, unlike
+# the combined score. Populated for every hit, read-only from the existing
+# embeddings - no index rebuild.
+# --------------------------------------------------------------------------- #
+def test_scored_hit_sem_sim_is_populated_float_in_unit_range(state) -> None:
+    hits = compute_scores_detailed(
+        state.index,
+        "s3 bucket with encryption and versioning",
+        w_kw=2.0,
+        w_exact=3.0,
+        w_bm25=1.0,
+        w_sem=1.0,
+        top_k=5,
+        logger=state.logger,
+    )
+    assert hits, "expected at least one hit"
+    for hit in hits:
+        assert isinstance(hit.sem_sim, float)
+        assert 0.0 <= hit.sem_sim <= 1.0
+
+
+def test_search_modules_impl_hits_carry_sem_sim(state) -> None:
+    # search_modules_impl goes through compute_scores_detailed internally; a
+    # plain search must not blow up now that ScoredHit grew a field.
+    out = search_modules_impl("vpc", state, top_k=3)
+    assert out.results
