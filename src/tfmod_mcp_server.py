@@ -1329,10 +1329,23 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
 # lexical-but-not-exact top hit is still treated as a catalog gap rather than a
 # confident match -- catches the incidental-keyword case (an unrelated module
 # lists the query term as a related-service keyword, earning kw_overlap without
-# the query actually being covered). Provisional and A/B-tuned by the morning
-# run: e5 cosines are compressed so the real match/gap band is narrow; start at
-# 0.88 on the [0,1] scale and let the run reveal the true distribution. Do not
-# tune this toward any specific test pair.
+# the query actually being covered). This floor ONLY gates lexical-non-exact
+# hits; an exact-name match is always "high", and a query with no lexical
+# component at all is always "low" (that not-lexical path catches the majority
+# of genuine gaps -- sagemaker/quicksight/macie/kinesis all have kw=0 -- floor
+# independent).
+#
+# Value measured against the live index (production weights) 2026-07-16:
+#   real lexical-non-exact matches: sem 0.889..0.921 (dns 0.889, cdn 0.894, ...)
+#   lexical-non-exact catalog gaps: x-ray 0.8856, cognito 0.8992
+# 0.88 is the highest floor that demotes NONE of the measured real matches
+# (all >= 0.889) while still catching the marginal x-ray-type gap. The bands
+# overlap (cognito-gap 0.899 > dns-real 0.889), so this is inherently a PARTIAL
+# signal -- e5 cosines are compressed and a semantically-close gap (cognito)
+# cannot be caught without also demoting real matches, which would re-strangle
+# expand_top. Do NOT raise this to chase the residual gaps, and do not tune it
+# toward any specific test pair; A/B-refine from the debug-logged sem_sim
+# distribution of the actual run.
 SEARCH_SEM_FLOOR = 0.88
 
 
