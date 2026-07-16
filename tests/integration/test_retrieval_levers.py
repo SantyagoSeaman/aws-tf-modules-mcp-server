@@ -16,15 +16,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     _MIN_HEAD_TABLE_ROWS,
-    SEARCH_INLINE_SCORE_MARGIN,
+    SEARCH_SEM_FLOOR,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
     _cap_head_input_table,
+    _capability_covered,
     _classify_confidence,
     _clip_blurb,
     _reconcile_body_version,
-    _should_inline_top,
     _version_pin_hint,
     filter_module_sections,
     get_module_impl,
@@ -39,6 +39,30 @@ DOCS = PROJECT_ROOT / "modules" / "terraform-aws-modules"
 
 def _doc(module: str) -> str:
     return (DOCS / f"{module}.md").read_text()
+
+
+# --------------------------------------------------------------------------- #
+# Minimal fake index for the capability-aware classifier unit tests (RC4). The
+# classifier reads only index.docs[doc_index].{module_name,keywords,text} and
+# index.bm25.idf, so a lightweight stand-in lets us drive capability coverage
+# and the sem floor precisely without depending on real doc content.
+# --------------------------------------------------------------------------- #
+class _FakeDoc:
+    def __init__(self, text: str = "", keywords=(), module_name: str = "") -> None:
+        self.text = text
+        self.keywords = list(keywords)
+        self.module_name = module_name
+
+
+class _FakeBM25:
+    def __init__(self, idf: dict) -> None:
+        self.idf = idf
+
+
+class _FakeIndex:
+    def __init__(self, docs: list, idf: dict) -> None:
+        self.docs = docs
+        self.bm25 = _FakeBM25(idf)
 
 
 @pytest.fixture(scope="module")
@@ -235,37 +259,51 @@ def test_l2_clean_query_is_high_confidence_with_no_hint(state) -> None:
     assert out.hint is None
 
 
+# A fake index whose top-1 doc DOES cover the query's central term ("redis"),
+# used by the classify tests that want the capability gate to pass so they can
+# isolate the sem-floor / lexical behaviour.
+def _covered_index() -> _FakeIndex:
+    return _FakeIndex(
+        docs=[
+            _FakeDoc(text="managed redis and memcached in-memory cache clusters", keywords=["redis", "cache"]),
+            _FakeDoc(text="unrelated document body"),
+        ],
+        idf={"redis": 5.0, "cache": 2.0, "in-memory": 3.0},
+    )
+
+
 def test_rc2_classify_confidence_low_when_top1_not_lexical() -> None:
-    # No exact-name and no keyword overlap on rank 1 -> low, regardless of sem_sim.
+    # No exact-name and no keyword overlap on rank 1 -> low, regardless of sem_sim
+    # (the capability gate is not even reached).
     hits = [
         ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.95),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
     ]
-    assert _classify_confidence(hits) == "low"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
 
 
 def test_rc2_classify_confidence_high_on_former_near_tie_regardless_of_score_ratio() -> None:
     # T1: the near-tie fixture (elasticache/memory-db style) - both lexical, top1/
     # top2 combined-score ratio well below the old 2.5 near-tie threshold. The tie
-    # verdict is gone; a lexical top-1 with a strong sem_sim is simply "high" now.
+    # verdict is gone; a lexical, capability-covered top-1 with a strong sem_sim is
+    # simply "high" now.
     hits = [
         ScoredHit(score=11.32, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
         ScoredHit(score=4.90, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.93),
     ]
     assert hits[0].score / hits[1].score < 2.5, "fixture must reproduce the old near-tie ratio band"
-    assert _classify_confidence(hits) == "high"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_low_on_incidental_keyword_with_weak_sem_sim() -> None:
     # T3: the incidental-keyword catalog-gap case - top-1 earned a real keyword
-    # overlap (e.g. an unrelated module lists the query term as a related-service
-    # keyword) but is not an exact-name match and its raw semantic similarity sits
-    # below the floor - a genuine catalog gap, not a confident match.
+    # overlap AND covers the central term, but its raw semantic similarity sits
+    # below the floor - the secondary sem-floor demoter still catches it.
     hits = [
         ScoredHit(score=3.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.60),
         ScoredHit(score=2.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
     ]
-    assert _classify_confidence(hits) == "low"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
 
 
 def test_rc2_classify_confidence_high_on_lexical_top1_with_strong_sem_sim() -> None:
@@ -273,26 +311,27 @@ def test_rc2_classify_confidence_high_on_lexical_top1_with_strong_sem_sim() -> N
         ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.20),
     ]
-    assert _classify_confidence(hits) == "high"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_high_on_exact_hit_regardless_of_sem_sim() -> None:
     # exact_hit always wins to "high" - a name match is decisive even with a weak
-    # raw semantic similarity.
+    # raw semantic similarity and even if the doc would fail the capability check.
     hits = [
         ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.05),
     ]
-    assert _classify_confidence(hits) == "high"
+    assert _classify_confidence("something unrelated", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_high_when_no_rank2() -> None:
     hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.99)]
-    assert _classify_confidence(hits) == "high"
+    assert _classify_confidence("redis", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_never_returns_tie() -> None:
     # T1: the verdict domain is {"high", "low"} only - no ratio plumbing anywhere.
+    idx = _covered_index()
     for hits in (
         [],
         [ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.99)],
@@ -305,7 +344,7 @@ def test_rc2_classify_confidence_never_returns_tie() -> None:
             ScoredHit(score=2.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
         ],
     ):
-        assert _classify_confidence(hits) in ("high", "low")
+        assert _classify_confidence("redis cache", hits, idx) in ("high", "low")
 
 
 def test_l8_low_hint_names_nearest_module(state) -> None:
@@ -640,75 +679,110 @@ def test_clip_blurb_first_sentence_branch_unaffected() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC3 #1 - the expand_top auto-inline gate (_should_inline_top) is STRICTER
-# than the confidence verdict: an exact hit always inlines; a lexical-but-not-
-# exact hit inlines only when it clears SEARCH_SEM_FLOOR AND dominates rank-2
-# by SEARCH_INLINE_SCORE_MARGIN. This withholds the expensive 13-17K-char
-# inline on catalog-gap false-highs without touching the two-band verdict.
+# RC4 #1 - capability-overlap gate. The wrong-domain inline failure is a
+# capability mismatch, not a ranking-confidence one: a wide score margin still
+# inlines a module whose doc never mentions the query's defining term. The
+# classifier now demotes a lexical-non-exact top-1 to "low" when the query's
+# central capability token (highest BM25 IDF, skipping generic-infra words) is
+# absent from the candidate's name/keywords/text. Answer-agnostic; fails open.
 # --------------------------------------------------------------------------- #
-def test_should_inline_empty_is_false() -> None:
-    assert _should_inline_top([]) is False
+def test_capability_covered_true_when_central_term_present() -> None:
+    idx = _FakeIndex(
+        docs=[_FakeDoc(text="managed redis in-memory cache clusters", keywords=["redis"])],
+        idf={"redis": 5.0, "cache": 2.0},
+    )
+    assert _capability_covered("redis cache cluster", idx, 0) is True
 
 
-def test_should_inline_exact_hit_always_even_with_tiny_gap() -> None:
-    hits = [
-        ScoredHit(score=9.00, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
-        ScoredHit(score=8.99, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.10),
-    ]
-    assert _should_inline_top(hits) is True
+def test_capability_covered_false_when_central_term_absent() -> None:
+    # "kinesis" is the rarest (highest-IDF) query token and never appears in the
+    # candidate doc -> capability mismatch even though "stream" does appear.
+    idx = _FakeIndex(
+        docs=[_FakeDoc(text="a document about data stream processing generally", keywords=["stream"])],
+        idf={"kinesis": 6.0, "stream": 2.0, "processing": 1.5},
+    )
+    assert _capability_covered("kinesis stream processing", idx, 0) is False
 
 
-def test_should_inline_lexical_dominant_above_floor() -> None:
+def test_capability_covered_matches_in_keywords_or_name() -> None:
+    idx = _FakeIndex(
+        docs=[_FakeDoc(text="body without the term", keywords=["cognito"], module_name="auth")], idf={"cognito": 7.0}
+    )
+    assert _capability_covered("cognito", idx, 0) is True
+
+
+def test_capability_covered_fails_open_without_salience_signal() -> None:
+    idx = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={})
+    # No corpus IDF -> no salience -> do not demote (fail open).
+    assert _capability_covered("some query", idx, 0) is True
+    # Stopword-only query -> nothing salient to require -> fail open.
+    idx2 = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={"aws": 3.0, "terraform": 3.0})
+    assert _capability_covered("aws terraform module", idx2, 0) is True
+
+
+def test_classify_low_on_capability_miss_despite_strong_sem() -> None:
+    # RC4 #1: a lexical-non-exact top-1 with a strong sem_sim is still "low" when
+    # the query's central term is absent from the candidate -- this is the
+    # wrong-domain inline a score-margin gate was blind to.
+    idx = _FakeIndex(
+        docs=[
+            _FakeDoc(text="adjacent-domain giant that never mentions the term", keywords=["network"]),
+            _FakeDoc(text="rank 2"),
+        ],
+        idf={"kinesis": 6.0, "stream": 2.0},
+    )
     hits = [
         ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
-        ScoredHit(score=4.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.90),
+        ScoredHit(score=8.5, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.90),
     ]
-    assert _should_inline_top(hits) is True
+    assert _classify_confidence("kinesis stream", hits, idx) == "low"
 
 
-def test_should_inline_single_lexical_hit_above_floor() -> None:
-    hits = [ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95)]
-    assert _should_inline_top(hits) is True
+# --------------------------------------------------------------------------- #
+# RC4 #2 - verdict and inline are ONE decision: top_module_doc is present iff
+# the verdict is "high". The docstring contract ("high => doc inlined") holds.
+# --------------------------------------------------------------------------- #
+def test_inline_present_iff_high_on_live_queries(state) -> None:
+    for query in ("s3 bucket with encryption and versioning", "sagemaker", "vpc", "kubernetes cluster"):
+        out = search_modules_impl(query, state, top_k=3, expand_top=True)
+        assert (out.top_module_doc is not None) == (out.confidence == "high"), (
+            f"{query!r}: inline must be present iff confidence is high (got confidence={out.confidence}, "
+            f"inline={'present' if out.top_module_doc else 'absent'})"
+        )
 
 
-def test_should_not_inline_lexical_marginal_flat_field_though_verdict_high() -> None:
-    # sem clears the floor (verdict "high") but the top hit barely leads rank-2:
-    # a flat wrong-domain field -> withhold the inline, keep the verdict.
-    hits = [
-        ScoredHit(score=3.10, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
-        ScoredHit(score=3.00, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.94),
+def test_wrong_domain_top1_is_low_and_not_inlined(state, monkeypatch) -> None:
+    """Integration: force the top hit onto a real doc that does not cover the
+    query's central capability term, and confirm the unified path demotes it to
+    'low' and inlines nothing (RC4 #1 + #2)."""
+    idf = getattr(state.index.bm25, "idf", {}) or {}
+    term = "sagemaker"  # a real catalog capability term (has corpus IDF)
+    assert idf.get(term, 0.0) > 0.0, "term must carry a corpus salience signal"
+    # Pick any doc whose name/keywords/text does not cover the term -> a
+    # wrong-domain candidate for the query below.
+    target_idx = next(
+        i
+        for i, d in enumerate(state.index.docs)
+        if term not in f"{d.module_name or ''} {' '.join(d.keywords or [])} {d.text}".lower()
+    )
+    forced = [
+        ScoredHit(score=9.0, doc_index=target_idx, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=4.0, doc_index=target_idx, exact_hit=False, kw_overlap=True, sem_sim=0.90),
     ]
-    assert _classify_confidence(hits) == "high"
-    assert (hits[0].score - hits[1].score) < SEARCH_INLINE_SCORE_MARGIN
-    assert _should_inline_top(hits) is False
+    monkeypatch.setattr("tfmod_mcp_server.compute_scores_detailed", lambda *a, **k: forced)
+    out = search_modules_impl(term, state, top_k=2, expand_top=True)
+    assert out.confidence == "low"
+    assert out.top_module_doc is None
+    assert "top_module_doc" not in out.model_dump()
 
 
-def test_should_not_inline_lexical_below_sem_floor() -> None:
-    hits = [
-        ScoredHit(score=9.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.60),
-        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.55),
-    ]
-    assert _should_inline_top(hits) is False
-
-
-def test_should_not_inline_non_lexical_top1() -> None:
-    hits = [
-        ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.99),
-        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
-    ]
-    assert _should_inline_top(hits) is False
-
-
-def test_search_marginal_high_confidence_does_not_inline(state, monkeypatch) -> None:
-    """Integration: force a lexical-non-exact top hit that clears the floor but
-    barely leads rank-2, and confirm the live path withholds the inline while
-    still reporting 'high'."""
-    flat = [
-        ScoredHit(score=3.10, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
-        ScoredHit(score=3.00, doc_index=1, exact_hit=False, kw_overlap=True, sem_sim=0.94),
-    ]
-    monkeypatch.setattr("tfmod_mcp_server.compute_scores_detailed", lambda *a, **k: flat)
-    out = search_modules_impl("anything", state, top_k=2, expand_top=True)
+def test_expand_top_false_suppresses_even_when_high(state) -> None:
+    out = search_modules_impl("s3 bucket with encryption and versioning", state, top_k=3, expand_top=False)
     assert out.confidence == "high"
     assert out.top_module_doc is None
     assert "top_module_doc" not in out.model_dump()
+
+
+def test_sem_floor_constant_still_exposed() -> None:
+    # Secondary demoter retained (incidental-keyword guard); guard the constant.
+    assert 0.0 < SEARCH_SEM_FLOOR < 1.0

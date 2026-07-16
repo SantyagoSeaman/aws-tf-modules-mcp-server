@@ -57,6 +57,7 @@ from tfmod_search_lib import (
     resolve_index_path,
     setup_logging,
     switch_log_file,
+    tokenize,
 )
 
 try:
@@ -733,12 +734,10 @@ class SearchOutput(UpdateNoticeMixin):
     )
     top_module_doc: str | None = Field(
         default=None,
-        description="The top-1 module orientation head (L3), present by default when "
-        "confidence is 'high' and the top hit clearly dominates (exact-name match, or a "
-        "keyword match that also leads the runner-up) -- collapses the confident "
-        "search->get_module pair into one call. Pass expand_top=False to suppress it. "
-        "Absent entirely (not null) when expand_top=False, confidence is 'low', or the "
-        "top hit is only marginally ahead of the field.",
+        description="The top-1 module orientation head (L3), present by default whenever "
+        "confidence is 'high' -- collapses the confident search->get_module pair into one "
+        "call. Pass expand_top=False to suppress it. Absent entirely (not null) when "
+        "expand_top=False or confidence is 'low'.",
     )
 
 
@@ -1356,104 +1355,104 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
     return clipped.rsplit(" ", 1)[0] + "…"
 
 
-# RC2 T3: floor on the raw (pre-min-max) semantic similarity below which a
-# lexical-but-not-exact top hit is still treated as a catalog gap rather than a
-# confident match -- catches the incidental-keyword case (an unrelated module
-# lists the query term as a related-service keyword, earning kw_overlap without
-# the query actually being covered). This floor ONLY gates lexical-non-exact
-# hits; an exact-name match is always "high", and a query with no lexical
-# component at all is always "low" (that not-lexical path catches the majority
-# of genuine gaps -- sagemaker/quicksight/macie/kinesis all have kw=0 -- floor
-# independent).
-#
-# Value measured against the live index (production weights) 2026-07-16:
-#   real lexical-non-exact matches: sem 0.889..0.921 (dns 0.889, cdn 0.894, ...)
-#   lexical-non-exact catalog gaps: x-ray 0.8856, cognito 0.8992
-# 0.88 is the highest floor that demotes NONE of the measured real matches
-# (all >= 0.889) while still catching the marginal x-ray-type gap. The bands
-# overlap (cognito-gap 0.899 > dns-real 0.889), so this is inherently a PARTIAL
-# signal -- e5 cosines are compressed and a semantically-close gap (cognito)
-# cannot be caught without also demoting real matches, which would re-strangle
-# expand_top. Do NOT raise this to chase the residual gaps, and do not tune it
-# toward any specific test pair; A/B-refine from the debug-logged sem_sim
-# distribution of the actual run.
+# RC2 T3 / RC4 #1: floor on the raw (pre-min-max) semantic similarity, now the
+# SECONDARY demoter behind the capability-overlap check below. It still catches
+# the incidental-keyword case (an unrelated module lists the query term as a
+# related-service keyword, earning kw_overlap without the query being covered)
+# that the capability check can pass when the term sits in the doc's own keyword
+# line. Measured (production weights, 2026-07-16): real lexical-non-exact
+# matches sem 0.889..0.921; marginal gaps x-ray 0.8856 / cognito 0.8992 -- the
+# bands overlap so this is a PARTIAL signal. Do NOT raise it to chase gaps; the
+# capability check now carries the wrong-domain load.
 SEARCH_SEM_FLOOR = 0.88
 
+# RC4 #1: generic infrastructure words that can score a high IDF in a Terraform
+# catalog yet carry no capability signal -- never treat one as the query's
+# central capability term when deciding capability coverage.
+_CAPABILITY_STOPWORDS = frozenset(
+    {
+        "aws",
+        "terraform",
+        "module",
+        "modules",
+        "resource",
+        "resources",
+        "infrastructure",
+        "cloud",
+        "service",
+        "services",
+    }
+)
 
-def _classify_confidence(hits: list[ScoredHit]) -> str:
-    """Classify a ranked hit list into a search-confidence verdict.
 
-    Two-verdict design ("high" / "low" only -- no near-tie band):
-    1. Whether the top hit earned a lexical component (exact module-name match
-       OR any keyword-IDF overlap) -- a real match exists vs a semantic-only
-       ceiling (the query is likely not covered by the catalog at all).
-    2. For a lexical-but-not-exact top hit, whether its raw semantic
-       similarity (ScoredHit.sem_sim, comparable across queries) clears
-       SEARCH_SEM_FLOOR -- catches the incidental-keyword catalog gap that a
-       kw_overlap check alone cannot separate from a real match.
+def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
+    """Whether the top-1 candidate covers the query's central capability term.
 
-    Verdict:
-    - "low": top-1 has no lexical component at all (semantic-only ceiling), OR
-      top-1 is lexical-but-not-exact and its sem_sim is below the floor
-      (incidental-keyword catalog gap).
-    - "high": top-1 is an exact module-name match (always decisive,
-      regardless of sem_sim), or is lexical with sem_sim at/above the floor.
+    RC4 #1: the wrong-domain inline failure is a CAPABILITY mismatch, not a
+    ranking-confidence one -- a wide score margin still inlines a module whose
+    doc never mentions the query's defining term (Run #10: a 12K-char doc with
+    zero occurrences of the query's central capability term, and a near-miss
+    where the correct module sat one rank behind an adjacent-domain giant). A
+    score-gap gate is structurally blind to this. This reads ONLY the query and
+    the candidate doc (answer-agnostic, ranker untouched): take the query's most
+    salient token (highest BM25 IDF -- the rarest across the catalog, skipping
+    generic-infra words) and require it to appear in the candidate's name /
+    keywords / doc text. Absent -> the query is not covered here.
 
-    An empty hit list is treated as "high" confidence (nothing to contest it)
-    per the documented empty-result behavior.
+    Fails open (returns True) when there is no usable salience signal (empty
+    query, only stopwords, or no corpus IDF), so it can only ever DEMOTE a hit
+    that positively lacks the central term -- never invent confidence.
+    """
+    tokens = {
+        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
+    }
+    if not tokens:
+        return True
+    idf = getattr(index.bm25, "idf", None) or {}
+    max_idf = max((idf.get(t, 0.0) for t in tokens), default=0.0)
+    if max_idf <= 0.0:
+        return True
+    central = {t for t in tokens if idf.get(t, 0.0) == max_idf}
+    doc = index.docs[doc_index]
+    hay = f"{doc.module_name or ''} {' '.join(doc.keywords or [])} {doc.text}".lower()
+    return any(t in hay for t in central)
+
+
+def _classify_confidence(query: str, hits: list[ScoredHit], index: SearchIndex) -> str:
+    """Classify a search into a confidence verdict that also decides the inline.
+
+    Two-verdict design ("high" / "low"). RC4 #2 unifies the verdict and the
+    expand_top inline under ONE signal: the caller inlines iff the verdict is
+    "high", so the docstring contract ("high => doc inlined") holds again.
+
+    Decision (top-1 only):
+    1. No lexical component (neither exact-name match nor keyword-IDF overlap)
+       -> "low": a semantic-only ceiling, the query is likely not in the catalog.
+    2. Exact module-name match -> "high": always decisive.
+    3. Lexical-but-not-exact -> "high" only when BOTH hold:
+       - capability-overlap (RC4 #1, primary): the query's central capability
+         term appears in the candidate -- guards the wrong-domain inline that a
+         score margin is blind to;
+       - semantic floor (RC2 T3, secondary): sem_sim >= SEARCH_SEM_FLOOR --
+         guards the incidental-keyword gap the capability check can pass.
+       Either failing -> "low".
+
+    An empty hit list is "high" (nothing to contest it) per the documented
+    empty-result behavior; the caller still inlines nothing (no top doc).
     """
     if not hits:
         return "high"
 
     top1 = hits[0]
-    top1_lexical = top1.exact_hit or top1.kw_overlap
-    if not top1_lexical:
+    if not (top1.exact_hit or top1.kw_overlap):
         return "low"
-    if not top1.exact_hit and top1.sem_sim < SEARCH_SEM_FLOOR:
+    if top1.exact_hit:
+        return "high"
+    if not _capability_covered(query, index, top1.doc_index):
+        return "low"
+    if top1.sem_sim < SEARCH_SEM_FLOOR:
         return "low"
     return "high"
-
-
-# RC3 #1: the expand_top auto-inline is an asymmetric-cost action -- inlining a
-# 13-17K-char orientation head onto a catalog-gap false-high wastes far more
-# than the single get_module turn it would have saved on a real match (Run #9:
-# the entire +11% payload delta on absence-proof workflows came from a
-# generous-band wrong-domain hit dragging an irrelevant doc into context). So
-# the inline gate is STRICTER than the (unchanged) two-band confidence verdict:
-# an exact-name hit always inlines; a lexical-but-not-exact hit inlines only
-# when it also clears the semantic floor AND dominates the runner-up by a
-# margin -- i.e. the top hit is clearly THE module, not the least-bad of a flat
-# wrong-domain field. The verdict itself stays "high" (a real lexical match
-# exists and the caller should still trust the top hit); only the expensive
-# inline is withheld, at the cost of one cheap get_module turn on the marginal
-# case. The margin is on the WITHIN-query score gap (comparable inside one
-# query; the gate only ever evaluates in the keyword-scoring branch since it
-# requires kw_overlap, so the score scale is consistent for the population it
-# is applied to). PROVISIONAL starting value -- deliberately small so it blocks
-# only near-flat gap fields and preserves the measured expand_top turn savings;
-# A/B-refine from the debug-logged score_gap distribution, do NOT tune toward
-# any specific test pair.
-SEARCH_INLINE_SCORE_MARGIN = 0.5
-
-
-def _should_inline_top(hits: list[ScoredHit]) -> bool:
-    """Whether expand_top should auto-inline the top-1 orientation head.
-
-    Stricter than the confidence verdict (see the SEARCH_INLINE_SCORE_MARGIN
-    comment): exact-name hit -> always; lexical-but-not-exact -> only when it
-    clears SEARCH_SEM_FLOOR and dominates rank-2 by SEARCH_INLINE_SCORE_MARGIN;
-    a non-lexical top hit never inlines.
-    """
-    if not hits:
-        return False
-    top1 = hits[0]
-    if top1.exact_hit:
-        return True
-    if not (top1.kw_overlap and top1.sem_sim >= SEARCH_SEM_FLOOR):
-        return False
-    if len(hits) < 2:
-        return True
-    return (top1.score - hits[1].score) >= SEARCH_INLINE_SCORE_MARGIN
 
 
 def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_top: bool = True) -> SearchOutput:
@@ -1475,20 +1474,18 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
             by 1/6 workers), and the residency cost of the ~1.5K-char head is
             pennies against the ~$0.09/turn an extra get_module call costs.
             Pass expand_top=False to suppress it (pure-browse searches).
-            Never inlined on a "low" verdict, and (RC3 #1) also withheld when
-            the top hit is only a marginal keyword winner over a flat field --
-            the auto-inline gate (_should_inline_top) is stricter than the
-            verdict because inlining a wrong 13-17K-char doc costs far more than
-            the one get_module turn it would save on a real match.
+            Inlined iff the verdict is "high" (RC4 #2: verdict and inline are
+            one decision -- the capability-aware classifier demotes a
+            wrong-domain top hit to "low" before it can drag its doc into
+            context, so "high" reliably means the inlined doc is on-target).
 
     Returns:
         SearchOutput with top-k ranked results plus a confidence verdict
-        (L2/L7/L8/T3): "high" (trust the top hit) or "low" (no confident
+        (L2/L7/L8/T3/RC4): "high" (trust the top hit) or "low" (no confident
         catalog match). A hint accompanies a "low" verdict and is absent from
         the JSON output when confidence is "high". top_module_doc (L3) is
-        populated by default when confidence == "high" AND the top hit clearly
-        dominates (_should_inline_top); absent from the JSON output when
-        expand_top=False, confidence is "low", or the top hit is only marginal.
+        populated by default whenever confidence == "high"; absent from the JSON
+        output when expand_top=False or confidence is "low".
 
     See search_modules() tool documentation for full details.
     """
@@ -1500,9 +1497,9 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     weights = state.weights
     # Always fetch at least 2 hits internally even when the caller asked for
     # top_k=1, so a rank-2 hit is available to callers/tests that inspect the
-    # raw hits list. The confidence classifier itself (RC2 T3) only looks at
-    # hits[0] (exact_hit/kw_overlap/sem_sim) -- there is no ratio against
-    # rank-2 anymore.
+    # raw hits list. The confidence classifier (RC4) reads only hits[0]
+    # (exact_hit/kw_overlap/sem_sim + capability-overlap of the top doc) -- there
+    # is no ratio against rank-2.
     fetch_k = max(top_k, 2)
     hits = compute_scores_detailed(
         state.index,
@@ -1516,13 +1513,13 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
         logger=state.logger,
     )
 
-    confidence = _classify_confidence(hits)
+    confidence = _classify_confidence(query, hits, state.index)
     if hits:
-        gap = (hits[0].score - hits[1].score) if len(hits) >= 2 else float("inf")
+        cap = _capability_covered(query, state.index, hits[0].doc_index)
         state.logger.debug(
-            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} score_gap={gap:.3f} "
-            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} verdict={confidence} "
-            f"inline={_should_inline_top(hits)}"
+            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
+            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} cap={cap} "
+            f"verdict={confidence} inline={confidence == 'high'}"
         )
     else:
         state.logger.debug(f"no hits verdict={confidence}")
@@ -1535,12 +1532,13 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
             f"capability keyword."
         )
 
-    # L3: opt-in one-shot resolve. Only inline the top-1 orientation head when
-    # the caller asked for it AND the search is high confidence -- a low
-    # verdict means the top hit is not (confidently) the module the caller
-    # wants, so inlining it would waste tokens on the wrong doc.
+    # L3 / RC4 #2: inline the top-1 orientation head iff the verdict is "high".
+    # The verdict itself (capability-overlap + semantic floor) now decides both
+    # the reported confidence and the inline -- one signal, so the "high => doc
+    # inlined" contract in the docstring holds and a wrong-domain top hit is
+    # demoted to "low" before it can drag its doc into context.
     top_module_doc: str | None = None
-    if expand_top and confidence == "high" and _should_inline_top(hits):
+    if expand_top and confidence == "high" and hits:
         top_doc = state.index.docs[hits[0].doc_index]
         # RC2 C2: thread the same metadata field reported in results[].latest_version
         # into the head's version pin, so the two can never contradict each other in
@@ -2043,8 +2041,8 @@ def search_modules(
             "confident search->get_module pair into one call. Default True: a confident "
             "search is almost always followed by fetching that module, so the head comes "
             "along for free. Pass expand_top=False to suppress it for a pure-browse search. "
-            "Never inlined on a 'low' confidence verdict, or when the top hit only "
-            "marginally leads the field.",
+            "Inlined iff the verdict is 'high' (the capability-aware classifier demotes a "
+            "wrong-domain top hit to 'low' first).",
         ),
     ] = True,
 ) -> SearchOutput:
@@ -2070,8 +2068,8 @@ def search_modules(
         expand_top: When True and the search is high confidence, inline the
                top-1 module orientation head into top_module_doc (L3) -- one
                call instead of search then get_module. Default True (RC2 T2).
-               Never populated on a "low" verdict, and (RC3 #1) also withheld
-               when the top hit only marginally leads a flat field.
+               Populated iff the verdict is "high" (RC4 #2: verdict and inline
+               are one decision), so a wrong-domain top hit is never inlined.
 
     Returns:
         SearchOutput: Container with top-k ranked results plus a confidence
@@ -2084,9 +2082,8 @@ def search_modules(
             Plus on the container itself:
             - confidence: "high" / "low" -- always present
             - hint: actionable follow-up guidance, present only for "low"
-            - top_module_doc: the top-1 orientation head, present by default when
-              confidence == "high" and the top hit clearly dominates (absent when
-              expand_top=False, confidence == "low", or the top hit is only marginal)
+            - top_module_doc: the top-1 orientation head, present by default whenever
+              confidence == "high" (absent when expand_top=False or confidence == "low")
 
     Raises:
         RuntimeError: If server state is not initialized.

@@ -541,6 +541,28 @@ def cosine_sim_matrix(vec: np.ndarray, mat: np.ndarray) -> np.ndarray:
     return mat @ vec  # both normalized
 
 
+def _strip_yaml_frontmatter(text: str) -> str:
+    """Drop a leading YAML front-matter block (``---`` ... ``---``) if present.
+
+    RC4 #4: docs may open with a YAML front-matter block (``module_name`` /
+    ``keywords``). ``extract_description`` treats the ``---`` delimiters as
+    horizontal rules and skips them, but the block's key/value lines are not
+    headers or rules, so they leaked verbatim into the search-result
+    description. Strip the whole block first (opening ``---`` on the first
+    non-empty line through the matching closing ``---``/``...``). No-op when the
+    text does not start with a front-matter fence.
+    """
+    stripped = text.lstrip()
+    if not stripped.startswith("---"):
+        return text
+    lines = stripped.splitlines()
+    for i in range(1, len(lines)):
+        if lines[i].strip() in ("---", "..."):
+            return "\n".join(lines[i + 1 :])
+    # No closing fence -> not a well-formed block, leave the text untouched.
+    return text
+
+
 def extract_description(text: str, max_length: int = 200) -> str:
     """
     Extract a meaningful description from document text.
@@ -569,6 +591,8 @@ def extract_description(text: str, max_length: int = 200) -> str:
     """
     if not text:
         return ""
+
+    text = _strip_yaml_frontmatter(text)
 
     # Remove Markdown headers and extract first paragraph
     lines = text.strip().splitlines()
