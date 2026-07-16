@@ -365,3 +365,101 @@ pointer more prominent rather than inlining more content.
 
 Tag the next test image `0.22.0-rc3`, run it on the same daemon port as RC2.
 Package version stays `0.22.0`.
+
+# RC4 revision (Run #10 measured, 2026-07-16)
+
+Run #10 tested RC3 and confirmed the hygiene fixes: 0 score/verdict inversions
+in 74 pairs, 74/74 version triples consistent (the rc2 desync class is extinct),
+no mid-word cuts, and the head-only watch item closed (0 recurrences). RC3 was
+the cheapest A-fleet of ten runs ($21.18) with the first all-PASS judged
+selection. Two meta-findings reshaped the backlog:
+
+1. **Output consistency is a first-class cost lever.** The headline saving came
+   NOT from the payload trim but from consumer thinking tokens: A-side output
+   halved (172K -> 86K), carrying -$1.29 of -$1.54; the turns-first formula
+   alone predicted the wrong sign. New term: `- Δconsumer_thinking × $15/M`.
+   Principle: **every internally inconsistent field is paid for twice -- once in
+   bytes, once in the consumer's tokens spent deciding which field to trust.**
+   This is why the RC3 version-desync fix mattered far beyond its byte count.
+
+2. **The RC3 inline gate was the right intuition, wrong mechanism.** Run #10
+   asked to reverse two RC3 decisions.
+
+## #1 + #2 — capability-aware unified verdict (reverses RC3's decoupling)
+
+Run #10 defect 1: the RC3 gate keyed on the score margin, but the failure mode
+is CAPABILITY mismatch. A wide-margin score win still inlined a module whose doc
+has zero occurrences of the query's central capability term (a 12K-char doc,
+4/6 repro; a near-miss where the correct module sat one rank behind an
+adjacent-domain giant). A score-gap gate is structurally blind to this.
+
+Run #10 defect 2: RC3 decided the verdict and the inline with two DIFFERENT
+signals -- it suppressed the inline on thin-margin CORRECT top-1s (4 of 7 fleet
+get_module calls were this pattern) while wide-margin WRONG top-1s sailed
+through, and the docstring still promised "high => doc inlined". A contract the
+docstring states and the server breaks is a trust defect.
+
+Rejected the report's literal "monotonic function of absolute score" wording:
+the displayed `score` is per-query min-max normalized and NOT cross-query
+comparable (already the RC2/RC3 finding), so a floor on it misbehaves. Instead:
+
+- **`_capability_covered(query, index, doc_index)`** (RC4 #1): take the query's
+  most salient token (highest BM25 IDF, skipping a small generic-infra
+  stopword set) and require it to appear in the top-1 candidate's
+  name/keywords/doc text. Absent -> the query is not covered here. Reads only
+  query <-> candidate (answer-agnostic, ranker untouched); fails open when there
+  is no salience signal so it can only ever DEMOTE a positively-uncovered hit.
+- **Unify verdict and inline** (RC4 #2): the classifier now takes the query and
+  index, and its lexical-non-exact branch requires capability-overlap (primary)
+  AND the RC2 semantic floor (secondary, incidental-keyword guard). Deleted
+  `_should_inline_top` and `SEARCH_INLINE_SCORE_MARGIN`; the caller inlines iff
+  the verdict is "high", so the docstring contract holds again. A wrong-domain
+  top hit is demoted BEFORE it can drag its doc into context, and a thin-margin
+  correct hit (capability-covered) inlines as it should.
+
+Live sanity (production weights): real lexical-non-exact matches
+(dns/cdn/cache/kubernetes/queue/secrets) stay high+inline; a forced wrong-domain
+top-1 (query central term absent from the doc) demotes to low+no-inline. No real
+match in the probe set was newly demoted; the pre-existing non-lexical gaps
+(load-balancer/container-registry, curated-keyword mismatches) are unchanged.
+
+## #4 — string hygiene
+
+- **Front-matter leak**: `extract_description` skipped the `---` fences as
+  horizontal rules but picked up the YAML body lines (`module_name:`,
+  `keywords:`) as content -- only `wafv2.md` opens with front-matter, so its
+  search-result description leaked raw YAML. `_strip_yaml_frontmatter` drops the
+  leading block first. Pure code fix, no index effect.
+- **S3 SSE nested shape**: the `server_side_encryption_configuration` input row
+  now names the canonical nested keys (`rule` >
+  `apply_server_side_encryption_by_default` > { `sse_algorithm`,
+  `kms_master_key_id` }, `bucket_key_enabled`), matching the completeness-pass
+  style, so a grep of the curated doc finds them. Re-encoded s3-bucket only;
+  because the row sits past the e5 ~512-token truncation window, its embedding
+  vector is byte-identical -- **zero embedding drift**, golden set held; BM25
+  avgdl shifts marginally (5420.09 -> 5420.51) with no top-3 reshuffle.
+
+## Deferred: #3 (band knife-edge)
+
+Max-low 4.01 vs min-high 4.06 -- no inversions, but equivalent phrasings can
+straddle the 0.05 gap. Deferred: with the verdict now gated on capability
+coverage (a token-presence signal) rather than a score threshold, the score
+knife-edge is expected to lose most of its bite; revisit only if Run #11 still
+shows phrasing-luck verdicts.
+
+## Testing (RC4 deltas)
+
+- #1: `_capability_covered` fixtures (central term present/absent, match in
+  keywords/name, fail-open without salience). Classifier: lexical-non-exact with
+  a capability miss -> "low" even with strong sem_sim.
+- #2: `top_module_doc` present iff `confidence == "high"` across live queries; a
+  forced wrong-domain top-1 -> low + no inline; `expand_top=False` still
+  suppresses. `_should_inline_top`/`SEARCH_INLINE_SCORE_MARGIN` gone.
+- #4: `extract_description` strips front-matter (wafv2 no longer leaks YAML);
+  the s3-bucket SSE row names the canonical child keys; re-encode is
+  vector-byte-identical for every doc.
+
+## Build
+
+Tag the next test image `0.22.0-rc4`, run it on the same daemon port as RC3.
+Package version stays `0.22.0`.
