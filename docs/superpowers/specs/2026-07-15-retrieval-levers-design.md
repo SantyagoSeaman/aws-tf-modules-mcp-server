@@ -109,9 +109,14 @@ test either way.
   carries a real input row + the "+N optional" pointer; sections=["inputs"] full
   table unchanged.
 - L6: search rank>=2 hits have empty keywords + clipped description; rank-1 full.
-- L2/L7/L8: cognito -> "low"; a clean query -> "high"; a near-tie -> "tie";
-  hint present for low/tie, absent for high. Extends `test_repro_pack.py`
-  (removes the Repro-5 xfail).
+- L2/L7/L8: a genuinely-absent capability with no lexical hit -> "low"; a clean
+  query -> "high"; a near-tie -> "tie"; hint present for low/tie, absent for
+  high. Extends `test_repro_pack.py` (removes the Repro-5 xfail). NOTE: the clean
+  "low" example is `sagemaker`, not `cognito` — `cognito` earns a real (if
+  incidental) keyword overlap because several unrelated modules list it as a
+  related-service keyword, so it classifies as "tie". This is the two-signal
+  classifier behaving correctly, not a bug; forcing it to "low" would require
+  overfitting the threshold, which the Out-of-scope section forbids.
 - L3: expand_top on a confident query populates top_module_doc; off by default;
   never populated when confidence != high.
 - L5: sections=["submodules","inputs"] is scoped, not the full bundle;

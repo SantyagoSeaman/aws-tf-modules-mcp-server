@@ -15,10 +15,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
+    _MIN_HEAD_TABLE_ROWS,
     SEARCH_NEAR_TIE_RATIO,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
+    _cap_head_input_table,
     _classify_confidence,
     filter_module_sections,
     get_module_impl,
@@ -136,7 +138,7 @@ def test_l4_capped_head_is_smaller_than_full_inputs(module: str) -> None:
 def test_l4_capped_head_still_has_a_real_row_and_pointer(module: str) -> None:
     head = orientation_head(_doc(module))
     assert "| `" in head, f"{module}: capped head must still contain a real input row"
-    assert "optional inputs" in head, f"{module}: capped head must carry the drop-count pointer"
+    assert "more inputs" in head, f"{module}: capped head must carry the drop-count pointer"
 
 
 @pytest.mark.parametrize("module", L4_MODULES)
@@ -150,7 +152,64 @@ def test_l4_sections_inputs_still_returns_full_table(module: str, state) -> None
         f"{module}: sections=['inputs'] ({full_rows} rows) must not be smaller than "
         f"the capped default head ({head_rows} rows)"
     )
-    assert "optional inputs" not in full, f"{module}: full sections=['inputs'] must not carry the head-only pointer"
+    assert "more inputs" not in full, f"{module}: full sections=['inputs'] must not carry the head-only pointer"
+
+
+# --------------------------------------------------------------------------- #
+# L4 direct unit tests for _cap_head_input_table (the corpus tests above only
+# exercise the leading-sample path, since terraform-aws-modules docs mark almost
+# nothing required — these cover both branches and the unchanged-fallbacks).
+# --------------------------------------------------------------------------- #
+def _synthetic_head(default_cells: list[str]) -> str:
+    """Build a head with a ### Main Input Variables table; one row per default cell."""
+    rows = "\n".join(f"| `var{i}` | `string` | {d} | desc {i} |" for i, d in enumerate(default_cells))
+    return (
+        "## Description\n\nsome text\n\n"
+        "### Main Input Variables\n\n"
+        "| Variable | Type | Default | Description |\n"
+        "|---|---|---|---|\n" + rows + "\n\n## Notes\n\ntail\n"
+    )
+
+
+def test_cap_keeps_leading_sample_and_pointer_when_all_concrete_defaults() -> None:
+    head = _synthetic_head([f"`{i}`" for i in range(12)])  # 12 concrete-default rows
+    capped = _cap_head_input_table(head)
+    assert capped.count("| `var") == _MIN_HEAD_TABLE_ROWS, "must keep exactly the leading N rows"
+    assert "`var0`" in capped and f"`var{_MIN_HEAD_TABLE_ROWS - 1}`" in capped
+    assert f"`var{_MIN_HEAD_TABLE_ROWS}`" not in capped, "rows past the window are dropped"
+    assert f"(+{12 - _MIN_HEAD_TABLE_ROWS} more inputs" in capped
+
+
+def test_cap_includes_required_row_beyond_the_window() -> None:
+    # A required (empty Default) row at position 10, past the N=8 leading window.
+    defaults = [f"`{i}`" for i in range(12)]
+    defaults[10] = ""  # empty Default cell => required
+    head = _synthetic_head(defaults)
+    capped = _cap_head_input_table(head)
+    assert "`var10`" in capped, "a doc-marked required row must survive even beyond the leading window"
+    assert capped.count("| `var") == _MIN_HEAD_TABLE_ROWS + 1, "leading N plus the one out-of-window required row"
+
+
+def test_cap_recognizes_separate_required_column() -> None:
+    head = (
+        "### Main Input Variables\n\n"
+        "| Variable | Type | Required | Description |\n"
+        "|---|---|---|---|\n"
+        + "\n".join(f"| `var{i}` | `string` | no | d |" for i in range(10))
+        + "\n| `mustset` | `string` | yes | d |\n\n## Notes\n\ntail\n"
+    )
+    capped = _cap_head_input_table(head)
+    assert "`mustset`" in capped, "a Yes in a separate Required column must be kept"
+
+
+def test_cap_returns_unchanged_when_table_fits() -> None:
+    head = _synthetic_head([f"`{i}`" for i in range(_MIN_HEAD_TABLE_ROWS)])  # exactly N rows
+    assert _cap_head_input_table(head) == head, "no cap when the table already fits the window"
+
+
+def test_cap_returns_unchanged_when_no_input_table() -> None:
+    head = "## Description\n\njust prose, no input table\n\n## Notes\n\ntail\n"
+    assert _cap_head_input_table(head) == head
 
 
 # --------------------------------------------------------------------------- #
@@ -294,15 +353,17 @@ def test_l3_expand_top_low_confidence_never_inlines(state) -> None:
     assert out.top_module_doc is None
 
 
-def test_l3_expand_top_tie_confidence_never_inlines() -> None:
-    # Unit-test the inline condition directly on a synthetic tie verdict so the
-    # guard is covered independent of whether the live index still reproduces a
-    # tie for any particular query (see the L7 tie test above for that check).
-    verdict = "tie"
-    expand_top = True
-    hits_present = True
-    should_inline = expand_top and verdict == "high" and hits_present
-    assert should_inline is False
+def test_l3_expand_top_tie_confidence_never_inlines(state) -> None:
+    # Exercise the SHIPPED path: run a live near-tie query through
+    # search_modules_impl with expand_top=True and assert the real implementation
+    # does not inline on a tie verdict. Skips if the live index stops reproducing
+    # a tie for this query (the synthetic tie is covered by the classifier unit
+    # tests); it never passes vacuously on a non-tie result.
+    out = search_modules_impl("redis in-memory cache cluster", state, top_k=3, expand_top=True)
+    if out.confidence != "tie":
+        pytest.skip("query did not reproduce a near-tie against the live index")
+    assert out.top_module_doc is None, "expand_top must not inline on a tie verdict"
+    assert "top_module_doc" not in out.model_dump()
 
 
 def test_l3_expand_top_serialization_present_only_when_high_and_expanded(state) -> None:

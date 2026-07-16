@@ -1496,16 +1496,23 @@ def _cell_marks_required_column(cell: str) -> bool:
 
 def _cap_head_input_table(head_text: str) -> str:
     """
-    Cap the FIRST inlined ``### Main Input Variables`` table to essential rows.
+    Cap the FIRST inlined ``### Main Input Variables`` table to a bounded sample.
 
     L4: the 0.20.0 double-fetch fix inlined the whole root input table into the
     default orientation head, growing it substantially on modules with wide
-    interfaces. This keeps only rows for inputs with no default (required,
-    however the doc spells it — an empty/``-``/``n/a`` Default cell, a
-    ``Required``/``*required*`` marker, or a ``Yes`` in a separate Required
-    column) and appends a pointer to the full table. When a module has no
-    required inputs, the first ~8 rows are kept instead so the head table is
-    never empty. Rows are never re-ordered.
+    interfaces. The kept sample is the first ``_MIN_HEAD_TABLE_ROWS`` rows (the
+    terraform-aws-modules docs front-load the inputs that matter) PLUS any row
+    the doc explicitly marks required that falls outside that window, so a
+    required input is never hidden. A pointer to the full table is appended and
+    rows keep document order.
+
+    Note on the corpus: almost every terraform-aws-modules input carries a
+    concrete or ``null`` default, so the required-row detection (an empty/``-``/
+    ``n/a`` Default cell, a ``Required``/``*required*`` marker, or a ``Yes`` in a
+    separate Required column) only adds rows on the handful of docs that mark
+    inputs required — for the rest this is simply the leading-N sample. Either
+    way the head stays small and never empty, and the complete table is one
+    ``sections=["inputs"]`` call away.
 
     This is a pure post-process on already-rendered Markdown: on any parse
     ambiguity (no heading, no recognizable pipe table, no identifiable
@@ -1565,16 +1572,18 @@ def _cap_head_input_table(head_text: str) -> str:
         if is_required(cells[col_idx]):
             required_rows.append(row)
 
-    if required_rows:
-        kept_rows = required_rows
-    else:
-        kept_rows = data_rows[:_MIN_HEAD_TABLE_ROWS]
+    # Bounded orientation sample: the leading rows, plus any required rows the doc
+    # marks that fall outside that window (so a required input is never hidden),
+    # in document order. On docs that mark nothing required this is exactly the
+    # leading-N sample.
+    keep_set = set(data_rows[:_MIN_HEAD_TABLE_ROWS]) | set(required_rows)
+    kept_rows = [row for row in data_rows if row in keep_set]
 
     dropped = len(data_rows) - len(kept_rows)
     if dropped <= 0:
         return head_text
 
-    pointer_line = f'_(+{dropped} optional inputs — get_module(sections=["inputs"]) for the full table)_\n'
+    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs"]) for the full table)_\n'
     new_lines = lines[:row_start] + kept_rows + [pointer_line] + lines[row_end:]
     return "".join(new_lines)
 
