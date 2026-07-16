@@ -279,3 +279,89 @@ verbatim repetition, no behavior change.
 Tag the next test image `0.22.0-rc2`, run it on the same daemon port used for RC
 testing. Package version stays `0.22.0` (this is still the unreleased 0.22.0
 branch); no multi-file version-bump sprawl.
+
+# RC3 revision (Run #9 measured, 2026-07-16)
+
+Run #9 tested RC2 and **the forecast held**: A-fleet $22.72 (−$1.76 below the
+0.21.0 baseline), get_module 56 → 3 calls (−94.6%), tie-driven reformulations
+41 → 0, first all-perfect A selection, 12/12 honesty. The three headline levers
+worked as designed. Model refinement carried forward: the inline *relocates*
+get_module's bytes into the search response rather than deleting them, so
+$/turn rose +7.6% while turns fell −39%; net still a large win because turns
+dominate bytes 19–30×. Updated scoring formula:
+`value − (Δturns × ~$0.09 × session_len) − (Δcontext_chars × ~$1.5/M)`.
+
+RC3 is another **measured** candidate (not final): three residual "calibration
+hygiene" items from Run #9's defect scan, all worth cents not dollars — fixed
+for trust and context hygiene, not cost.
+
+## #1 — decoupled expand_top inline gate (the only item with any cost)
+
+Run #9: confidence banding is non-monotonic in the displayed `score` (probe:
+score 3.91 → "high", 5.0 → "low"), and a catalog-gap query whose best
+wrong-domain hit lands "high" drags a 13–17K-char irrelevant doc into context
+via the inline — the entire +11% payload delta on absence-proof workflows.
+
+The report proposed "make the band a monotonic function of absolute score".
+**Rejected**: the displayed `score` is per-query min-max normalized on each
+component, so it is NOT cross-query comparable — the no-keyword branch always
+yields ~5.0 for its top hit (real match or gap alike), the log-damped keyword
+branch scores systematically lower. A floor on absolute score would mislabel
+every no-keyword semantic query "high". The "5.0 → low" is the confidence axis
+working correctly (no lexical → semantic ceiling → gap); it only looks
+incoherent against the non-comparable displayed number.
+
+Instead: keep the two-band verdict unchanged and make the **auto-inline gate
+stricter than the verdict** (`_should_inline_top`). Inlining a wrong 13–17K doc
+is asymmetric-cost — far more than the one get_module turn it would save on a
+real match — so it earns a stricter test: exact-name hit → always inline;
+lexical-but-not-exact → inline only when it clears `SEARCH_SEM_FLOOR` AND
+dominates rank-2 by `SEARCH_INLINE_SCORE_MARGIN` (within-query score gap;
+evaluated only in the keyword branch, where the scale is consistent). Verdict
+stays "high" (a real match exists); only the expensive inline is withheld on a
+flat field. `SEARCH_INLINE_SCORE_MARGIN = 0.5` is PROVISIONAL — deliberately
+small to preserve the measured turn savings; the debug log now emits
+`score`/`score_gap`/`inline` per search for A/B refinement.
+
+## #2 — render-time single-snapshot version, applied to ALL mentions
+
+rc2 (C2) synced the pin *banner* with `results[].latest_version`, but the
+curated doc *body* still carries its own `**Latest Version**` bullet that can be
+stale (3 of 55 modules in Run #9 traffic) and contradict both the banner and the
+metadata field in one response. `_reconcile_body_version` rewrites the body
+bullet to the threaded snapshot at render time inside `orientation_head` (only
+when an override is present; no override → body bullet is the snapshot, no-op).
+Drift-safe by construction: emitted text only, embeddings untouched. This is the
+only drift-safe fix — editing the .md body would force an index re-encode.
+
+## #3 — word-boundary blurb clip
+
+`_clip_blurb` hard-cut mid-word on the char cap, leaving a dangling partial word
+in every non-top-1 result row. Clip on the last space instead
+(`rsplit(" ", 1)[0]`), matching `extract_description`.
+
+## Watch item (no server change)
+
+Head-only orientation risk: 1 wrong leaf shape in 69 gradings (a worker
+skeletoned a nested input without fetching `inputs`/`examples`). Not acted on;
+if it recurs across runs, make the footer's "shapes live in inputs/examples"
+pointer more prominent rather than inlining more content.
+
+## Testing (RC3 deltas)
+
+- #1: `_should_inline_top` fixtures — exact → always; lexical+floor+dominant →
+  inline; lexical+floor+flat-field → withheld though verdict stays "high";
+  lexical below floor → withheld; non-lexical → withheld; single lexical hit →
+  inline. Integration: a monkeypatched flat high-confidence field yields
+  `confidence == "high"` with `top_module_doc is None`.
+- #2: `_reconcile_body_version` rewrites/no-ops correctly; `orientation_head`
+  with an override reconciles the body bullet, not just the banner; the inlined
+  head's body bullet equals `results[].latest_version`.
+- #3: `_clip_blurb` clips on a word boundary (next source char is whitespace);
+  the first-sentence branch is unaffected.
+- Full suite green; **no index rebuild**.
+
+## Build
+
+Tag the next test image `0.22.0-rc3`, run it on the same daemon port as RC2.
+Package version stays `0.22.0`.
