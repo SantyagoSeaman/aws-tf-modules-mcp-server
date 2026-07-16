@@ -12,7 +12,7 @@ Exports:
 - save_index(index, path), load_index(path) -> SearchIndex
 - compute_scores(index, query, ..., query_instruction) -> List[(score, idx)]
 - compute_scores_detailed(index, query, ..., query_instruction) -> List[ScoredHit]
-- ScoredHit: namedtuple(score, doc_index, exact_hit, kw_overlap)
+- ScoredHit: namedtuple(score, doc_index, exact_hit, kw_overlap, sem_sim)
 - extract_description(text, max_length) -> str
 - get_default_index_path() -> Path
 - resolve_index_path(index_path) -> Path

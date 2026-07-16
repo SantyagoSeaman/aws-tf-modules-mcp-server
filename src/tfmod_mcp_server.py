@@ -1954,7 +1954,9 @@ def grep_module_docs_impl(
 @app.tool(
     description=(
         "List all available Terraform modules in the catalog. "
-        "Returns complete list of modules with names, paths, descriptions, and keywords. "
+        "Compact by default: each entry carries the module name, a one-line purpose, and the "
+        'registry coordinates (module_id, latest_version). Pass detail="full" to also get each '
+        "module's path, full description, and keyword arrays. "
         "Use this to discover what modules are available before searching or retrieving documentation. "
         "If there are no required module, please search in Terraform Registry (https://registry.terraform.io/)."
     ),
