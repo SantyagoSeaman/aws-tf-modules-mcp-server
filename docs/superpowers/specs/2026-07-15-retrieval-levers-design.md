@@ -463,3 +463,73 @@ shows phrasing-luck verdicts.
 
 Tag the next test image `0.22.0-rc4`, run it on the same daemon port as RC3.
 Package version stays `0.22.0`.
+
+# Finalization (Run #11 measured, 2026-07-16)
+
+Run #11 tested RC4 and confirmed the headline win landed completely: the
+unified verdict/inline (high => inline 50/50, low => suppressed 6/6, zero
+contract violations) made the false-negative get_module round-trips extinct,
+drove fleet searches down 25% (75 -> 56) with two of three workers making ZERO
+get_module calls, and produced a second consecutive all-PASS judged A fleet.
+Cost reconciled to cents again. New general lesson: **consistency benefits
+arrive as fewer calls, not smaller calls** (rc4 payloads were ~flat; it removed
+whole calls) -- score a consistency fix by the calls it makes unnecessary.
+
+**Circularity check (the decision to stop).** The confidence-gate signal had
+cycled: sem-floor (RC2) -> +score-margin decoupled (RC3) -> capability replaces
+score-margin, re-unified (RC4). Run #11's top proposal (defect 1: "compose the
+classifier with the floor") is **already shipped** -- RC4's classifier is
+`capability AND sem_floor` (both must hold for "high"). The report inferred
+"the floor was deleted" from the verdict being non-monotonic in the displayed
+`score`, but the floor is on `sem_sim` (raw cosine), not `score`; score
+non-monotonicity was always expected and is exactly why the "band on absolute
+score" proposal was rejected twice. Acting on defect 1 would re-add what exists
+and would not help anyway: the ~6 surviving wrong-domain inlines pass BOTH
+signals (adjacent-domain, sem >= floor, central term present as a body mention).
+Net wrong-domain inline traffic is flat across rc3->rc4 (7 -> 6) despite three
+gate mechanisms -- the diminishing-returns signal to stop tuning the gate.
+
+**Shipped in the 0.22.0 final:**
+
+- **#4 YAML front-matter, root fix.** The RC4 `extract_description` strip
+  cleaned only the search-result `description`; the raw block still rendered at
+  the top of `wafv2`'s get_module and inline head (from the doc body). The
+  block is redundant -- its `keywords:` duplicate the `## Module Information`
+  Keywords bullet the parser actually reads -- so it was deleted from
+  `wafv2.md`. Re-encoded wafv2 only (the block sits in the first ~40 tokens, so
+  its vector DID change, unlike the s3-bucket edit); golden set held 172/172,
+  wafv2 still findable by name/keyword/NL. A parametrized lint guard
+  (`test_no_doc_opens_with_yaml_frontmatter`) fails any curated page that opens
+  with a `---` fence, matching the report's "lint rule for the catalog build."
+  `_strip_yaml_frontmatter` stays as defense-in-depth.
+- **#3 determinism, as a contract test (no behavior change).** Locked the part
+  of the invariant the implementation guarantees: adding generic-infra filler
+  (`aws`/`terraform`/politeness) does not change the verdict (those are
+  capability stopwords, the central term is unchanged), plus two stable
+  paraphrase sets (a covered intent all "high", a gap intent all "low"). Broad
+  cross-phrasing determinism is NOT asserted -- it is the deferred instability
+  below.
+- **Record correction for defect 1** -- documented that `capability AND
+  sem_floor` was already the RC4 design.
+
+**Deferred out of the final (documented known-limitations):**
+
+- **Defect 2 -- capability against "provides" fields, not body mentions.** The
+  one remaining substantive gate change: score capability overlap against
+  name/keywords/purpose and treat body-text mentions as weak. It targets the
+  surviving adjacent-domain inlines but risks demoting a real match whose
+  central term lives only in the body, so it needs its own measured run.
+  Net wrong-domain traffic is flat and every judged fleet PASSes, so it is a
+  cost/trust nuisance, not a correctness failure. Comment on
+  `_capability_covered` records this.
+- **Defect 3 -- broad cross-phrasing verdict instability.** Measured: an
+  "object storage" paraphrase set split high/low/low. With the verdict gated on
+  capability-token presence (not a score threshold), this is the residual of
+  the capability check's field scope (defect 2) more than a separate knob;
+  revisit if it recurs after defect 2 lands.
+
+## Final build
+
+Package version stays `0.22.0` (already consistent across pyproject, both
+plugin manifests, `DEFAULT_IMAGE`, docker-compose, README). Ready for the
+release flow (version already bumped; PR/merge/tag pending maintainer approval).
