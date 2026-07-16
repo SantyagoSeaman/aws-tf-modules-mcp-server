@@ -1385,6 +1385,86 @@ _CAPABILITY_STOPWORDS = frozenset(
 )
 
 
+# Two-tier capability evidence weights. A term asserted in a capability
+# field (module name, keywords, extracted description) counts in full; a
+# term that only appears somewhere in the doc body is a mention, not a
+# capability, and counts at a fraction. Coverage below the threshold means
+# the candidate does not assert the asked capability.
+_COVERAGE_ALPHA = 0.3
+_COVERAGE_THETA = 0.5
+
+
+def _field_parts(*field_strings: str) -> set[str]:
+    """Lowercase alphanumeric runs from capability field strings.
+
+    "jwt-authorizer" contributes {"jwt", "authorizer"}; "in-memory"
+    contributes {"in", "memory"}. Splitting keywords and names into parts
+    lets split query tokens match hyphenated catalog vocabulary.
+    """
+    parts: set[str] = set()
+    for s in field_strings:
+        run = ""
+        for ch in s.lower():
+            if ch.isalnum():
+                run += ch
+            elif run:
+                parts.add(run)
+                run = ""
+        if run:
+            parts.add(run)
+    return parts
+
+
+def _token_matches_parts(token: str, parts: set[str]) -> bool:
+    """Token-vs-field-part match: equality, trailing-plural tolerance, or
+    prefix tolerance for tokens/parts of length >= 4 (no mid-word
+    substrings - "ui" must not match inside "guide")."""
+    if token in parts:
+        return True
+    singular = token.rstrip("s")
+    for part in parts:
+        if singular and singular == part.rstrip("s"):
+            return True
+        if len(token) >= 4 and len(part) >= 4 and (token.startswith(part) or part.startswith(token)):
+            return True
+    return False
+
+
+def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> float:
+    """IDF-weighted fraction of the query's capability terms the candidate
+    doc asserts.
+
+    Evidence strength per content token: 1.0 when it matches the module
+    name, keywords, or extracted description (fields that assert
+    capability); _COVERAGE_ALPHA when it only appears in the body (a
+    mention is not a capability); 0.0 when absent. Weighted by corpus IDF
+    so rare, query-defining terms dominate. Tokens without a positive IDF
+    are excluded (no discriminative signal); an empty usable token set
+    fails open to 1.0 so the score can only ever demote on positive
+    evidence of absence.
+    """
+    tokens = {
+        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
+    }
+    idf = getattr(index.bm25, "idf", None) or {}
+    weighted = [(t, idf.get(t, 0.0)) for t in tokens]
+    weighted = [(t, w) for t, w in weighted if w > 0.0]
+    if not weighted:
+        return 1.0
+    doc = index.docs[doc_index]
+    strong = _field_parts(doc.module_name or "", *(doc.keywords or []), extract_description(doc.text))
+    body = doc.text.lower()
+    total = 0.0
+    covered = 0.0
+    for t, w in weighted:
+        total += w
+        if _token_matches_parts(t, strong):
+            covered += w
+        elif t in body:
+            covered += w * _COVERAGE_ALPHA
+    return covered / total
+
+
 def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
     """Whether the top-1 candidate covers the query's central capability term.
 
