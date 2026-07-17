@@ -144,6 +144,25 @@ MODULE_TEST_DATA = [
     ModuleTestCase("ssm-parameter", "parameter-store", "systems manager configuration"),
     # Big Data & Analytics - 1 module
     ModuleTestCase("emr", "hadoop spark", "elastic mapreduce big data"),
+    # Cloud Posse gap-fillers - 3 modules (0.24.0 pilot; docs live under modules/cloudposse/)
+    ModuleTestCase(
+        "config",
+        "aws config rules",
+        "compliance and configuration drift auditing",
+        doc_path="modules/cloudposse/config.md",
+    ),
+    ModuleTestCase(
+        "vpc-peering",
+        "vpc peering connection",
+        "connect two vpcs directly with peering",
+        doc_path="modules/cloudposse/vpc-peering.md",
+    ),
+    ModuleTestCase(
+        "ses",
+        "simple email service",
+        "send transactional email",
+        doc_path="modules/cloudposse/ses.md",
+    ),
 ]
 
 
@@ -322,7 +341,7 @@ class TestModuleResultCompleteness:
     """Test that all modules have complete metadata in search results."""
 
     def test_all_modules_have_keywords(self, server_state):
-        """Verify that all 55 modules have keywords populated."""
+        """Verify that all 58 modules have keywords populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -336,7 +355,7 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_keywords)} modules without keywords: {modules_without_keywords}"
 
     def test_all_modules_have_module_name(self, server_state):
-        """Verify that all 55 modules have module_name populated."""
+        """Verify that all 58 modules have module_name populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -350,7 +369,7 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_name)} modules without module_name: {modules_without_name}"
 
     def test_all_modules_have_text_content(self, server_state):
-        """Verify that all 55 modules have text content populated."""
+        """Verify that all 58 modules have text content populated."""
         # Get all modules from index
         all_modules = server_state.index.docs
 
@@ -364,9 +383,9 @@ class TestModuleResultCompleteness:
         ), f"Found {len(modules_without_content)} modules without sufficient text content: {modules_without_content}"
 
     def test_module_count(self, server_state):
-        """Verify that index contains exactly 55 modules."""
+        """Verify that index contains exactly 58 modules."""
         module_count = len(server_state.index.docs)
-        assert module_count == 55, f"Expected 55 modules in index, found {module_count}"
+        assert module_count == 58, f"Expected 58 modules in index, found {module_count}"
 
 
 class TestSearchQuality:

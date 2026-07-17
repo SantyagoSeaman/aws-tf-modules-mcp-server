@@ -906,7 +906,15 @@ def build_index(
     logger.info(f"Building index from directory: {docs_dir}")
     logger.info(f"Using embedding model: {model_name}")
 
-    paths = list(Path(docs_dir).rglob("*.md"))
+    # Scan every vendor subdirectory (terraform-aws-modules/, cloudposse/, ...) but
+    # never the doc template (it parses as a bogus "module-template" record) or the
+    # work-in-progress temp/ area. This keeps a full rebuild multi-vendor-safe: pointing
+    # docs_dir at modules/ picks up all vendor catalogs without dropping one.
+    paths = [
+        p
+        for p in Path(docs_dir).rglob("*.md")
+        if p.name != "module_template.md" and "temp" not in p.relative_to(docs_dir).parts
+    ]
     logger.info(f"Found {len(paths)} markdown files to process")
 
     docs: list[DocRecord] = []
