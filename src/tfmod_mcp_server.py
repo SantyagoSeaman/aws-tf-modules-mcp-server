@@ -1365,18 +1365,23 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
 # carry the wrong-domain load.
 SEARCH_SEM_FLOOR = 0.88
 
-# Floor on the combined (displayed) score. Derived (2026-07-17) from the
-# full golden-set score distribution under production weights: the largest
-# value at which no correct golden top-1 loses its high verdict. Measured
-# outcome: under production weights, single-keyword catalog queries can
-# legitimately score as low as 3.0 (min-max normalization plus the
-# keyword-count log dampener collapse to a handful of discrete low values
-# for genuinely correct matches), so the floor sits well below the
-# originally-expected ~4.2-4.5 landing zone to avoid demoting real matches.
-# This means the floor no longer catches every low-scoring wrong-domain
-# candidate on its own -- coverage and the sem floor carry most of that
-# load now; a residual low-score false-high class stays a known limitation.
-# See the 0.23.0 design spec (private) for the full derivation table.
+# Floor on the combined (displayed) score. SEARCH_SCORE_FLOOR = 2.9.
+# Derivation: golden-set score distribution, 2026-07-17.
+#
+# Under production weights, the ranker's min-max normalization pins the
+# top-1 combined score at >= 3.0 in both the no-keyword-match branch and
+# the multi-keyword-match branch, so this floor can fire only in the
+# single-matched-keyword branch (the one branch whose normalization can
+# legitimately land as low as 3.0 for a genuinely correct match). The
+# primary guard for no-evidence queries is the out-of-vocabulary rule in
+# _capability_coverage (an unknown, uncovered term now participates at the
+# corpus's maximum IDF weight instead of being dropped, so it can drag
+# coverage below theta on its own); the raw-semantic floor above is the
+# secondary guard. This floor is retained as a conjunct for non-default
+# weight configurations and for the single-keyword branch, where it still
+# has room to act. A residual low-score false-high class (an incidental
+# keyword line that is not a real capability) stays a known, documented
+# limitation -- coverage and the sem floor carry that load, not this one.
 SEARCH_SCORE_FLOOR = 2.9
 
 # Generic infrastructure words that can score a high IDF in a Terraform
@@ -1397,12 +1402,72 @@ _CAPABILITY_STOPWORDS = frozenset(
     }
 )
 
+# General English function words: connectors, prepositions, pronouns, and
+# politeness filler that carry no capability signal in any domain. Filtered
+# out of the capability-coverage token set alongside _CAPABILITY_STOPWORDS
+# (catalog-domain filler) so a query's incidental "and"/"for"/"with" cannot
+# be mistaken for -- or incidentally match -- a real capability term.
+_ENGLISH_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "but",
+        "by",
+        "can",
+        "do",
+        "for",
+        "from",
+        "has",
+        "have",
+        "how",
+        "i",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "this",
+        "to",
+        "up",
+        "us",
+        "use",
+        "using",
+        "via",
+        "want",
+        "was",
+        "we",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "will",
+        "with",
+        "without",
+        "you",
+        "your",
+        "need",
+    }
+)
+
 
 # Two-tier capability evidence weights. A term asserted in a capability
-# field (module name, keywords, extracted description) counts in full; a
-# term that only appears somewhere in the doc body is a mention, not a
-# capability, and counts at a fraction. Coverage below the threshold means
-# the candidate does not assert the asked capability.
+# field (module name, keywords, or the module's own "## Description"
+# section) counts in full; a term that only appears somewhere in the doc
+# body is a mention, not a capability, and counts at a fraction. Coverage
+# below the threshold means the candidate does not assert the asked
+# capability.
 _COVERAGE_ALPHA = 0.3
 _COVERAGE_THETA = 0.5
 
@@ -1430,15 +1495,23 @@ def _field_parts(*field_strings: str) -> set[str]:
 
 def _token_matches_parts(token: str, parts: set[str]) -> bool:
     """Token-vs-field-part match: equality, trailing-plural tolerance, or
-    prefix tolerance for tokens/parts of length >= 4 (no mid-word
-    substrings - "ui" must not match inside "guide")."""
+    prefix tolerance for tokens/parts of length >= 5 (no mid-word
+    substrings - "ui" must not match inside "guide").
+
+    The plural-strip equality only fires when the stripped token has length
+    >= 3, so short function words are never conflated with a shorter stem
+    ("as" -> "a", "its" -> "it"). The prefix tolerance requires both sides
+    to be at least 5 characters (raised from 4): at 4 chars it let unrelated
+    words absorb each other ("base"/"based", "data"/"database",
+    "auto"/"automatic", "with"/"without").
+    """
     if token in parts:
         return True
     singular = token.rstrip("s")
     for part in parts:
-        if singular and singular == part.rstrip("s"):
+        if len(singular) >= 3 and singular == part.rstrip("s"):
             return True
-        if len(token) >= 4 and len(part) >= 4 and (token.startswith(part) or part.startswith(token)):
+        if len(token) >= 5 and len(part) >= 5 and (token.startswith(part) or part.startswith(token)):
             return True
     return False
 
@@ -1479,21 +1552,40 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
 
     Evidence strength per content token: 1.0 when it matches the module
     name, keywords, or the module's ``## Description`` section text (fields
-    that assert capability); _COVERAGE_ALPHA when it only appears in the
-    body (a mention is not a capability); 0.0 when absent. Weighted by
-    corpus IDF so rare, query-defining terms dominate. Tokens without a
-    positive IDF are excluded (no discriminative signal); an empty usable
-    token set fails open to 1.0 so the score can only ever demote on
-    positive evidence of absence.
+    that assert capability); _COVERAGE_ALPHA when it only appears somewhere
+    in the body on a word boundary (a mention is not a capability); 0.0 when
+    absent. Weighted by corpus IDF so rare, query-defining terms dominate.
+
+    Out-of-corpus tokens (idf <= 0, i.e. absent from the corpus IDF table)
+    are NOT dropped: they participate at the corpus's maximum IDF weight,
+    since an unknown term is exactly the kind of query-defining vocabulary
+    the catalog may not serve -- if it matches nothing, that is strong
+    evidence of a miss, not a reason to discount it.
+
+    Two conditions are checked before scoring, in order:
+    1. An empty/absent corpus IDF table (degraded index) -- cannot judge
+       coverage either way, so this fails OPEN to 1.0.
+    2. An empty content-token set after filtering stopwords (a contentless
+       query: "", "?", "please help", "aws terraform") -- no evidence to
+       trust, so this fails CLOSED to 0.0. The whole-query-exact check in
+       _classify_confidence (rule step 1) still catches a bare module name
+       before coverage ever runs, so this cannot demote that case.
     """
     tokens = {
-        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
+        t
+        for t in tokenize(query)
+        if len(t) >= 2
+        and t not in _CAPABILITY_STOPWORDS
+        and t not in _ENGLISH_STOPWORDS
+        and any(c.isalnum() for c in t)
     }
     idf = getattr(index.bm25, "idf", None) or {}
-    weighted = [(t, idf.get(t, 0.0)) for t in tokens]
-    weighted = [(t, w) for t, w in weighted if w > 0.0]
-    if not weighted:
+    if not idf:
         return 1.0
+    if not tokens:
+        return 0.0
+    max_idf = max(idf.values())
+    weighted = [(t, idf.get(t, 0.0) if idf.get(t, 0.0) > 0.0 else max_idf) for t in tokens]
     doc = index.docs[doc_index]
     strong = _field_parts(doc.module_name or "", *(doc.keywords or []), _capability_description_text(doc.text))
     body = doc.text.lower()
@@ -1503,7 +1595,7 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
         total += w
         if _token_matches_parts(t, strong):
             covered += w
-        elif t in body:
+        elif re.search(rf"\b{re.escape(t)}\b", body):
             covered += w * _COVERAGE_ALPHA
     return covered / total
 
@@ -1608,11 +1700,12 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
 
     confidence = _classify_confidence(query, hits, state.index)
     if hits:
-        cov = _capability_coverage(query, state.index, hits[0].doc_index)
-        state.logger.debug(
-            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
-            f"coverage={cov:.3f} verdict={confidence} inline={confidence == 'high'}"
-        )
+        if state.logger.isEnabledFor(logging.DEBUG):
+            cov = _capability_coverage(query, state.index, hits[0].doc_index)
+            state.logger.debug(
+                f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
+                f"coverage={cov:.3f} verdict={confidence} inline={confidence == 'high'}"
+            )
     else:
         state.logger.debug(f"no hits verdict={confidence}")
     hint: str | None = None
