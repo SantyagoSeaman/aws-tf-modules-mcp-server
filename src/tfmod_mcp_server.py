@@ -757,10 +757,22 @@ class SearchOutput(UpdateNoticeMixin):
 
 
 class ModuleListItem(BaseModel):
+    """One catalog entry, covering BOTH modules_list detail levels with a single,
+    union-free schema.
+
+    Compact mode (the default) populates ``purpose``; full mode (``detail=full``)
+    populates ``path``/``description``/``keywords`` instead. Every mode-specific
+    field is optional, so the advertised output-item schema requires only the
+    always-present fields and NOT ``path``. This is load-bearing: a strict MCP
+    output-schema validator (the host client that drives the plugin) rejected the
+    previous heterogeneous ``list[Compact] | list[Full]`` union with
+    "'path' is a required property" because it mis-resolved the union to require
+    ``path`` on compact items. A single model with optional fields carries no
+    union for the validator to mis-resolve. Unset fields are dropped on
+    serialization so the compact default stays byte-lean (no ``path: null`` noise).
+    """
+
     module_name: str = Field(..., description="Terraform module name (e.g., 'eks', 's3-bucket').")
-    path: str = Field(..., description="File path to module documentation.")
-    description: str = Field(..., description="Module description extracted from documentation text.")
-    keywords: list[str] = Field(..., description="Module keywords/tags.")
     module_id: str = Field(
         ...,
         description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
@@ -772,24 +784,30 @@ class ModuleListItem(BaseModel):
         description="Latest version known at doc-curation time (a hint, not a live guarantee). "
         "Pass as `version` to grep_module_docs to pin that snapshot, or omit to resolve the true latest.",
     )
+    purpose: str | None = Field(
+        None, description="One-line purpose of the module (clipped). Present in the compact default."
+    )
+    path: str | None = Field(None, description="File path to module documentation. Present with detail=full.")
+    description: str | None = Field(
+        None, description="Module description extracted from documentation text. Present with detail=full."
+    )
+    keywords: list[str] | None = Field(None, description="Module keywords/tags. Present with detail=full.")
+
+    @model_serializer
+    def _drop_unset(self) -> dict[str, object]:
+        # Emit only the fields the active detail level populated, so the compact
+        # default carries no null path/description/keywords and full carries no
+        # null purpose. Preserves the pre-0.23.1 byte-identical output shape.
+        return {k: v for k, v in self.__dict__.items() if v is not None}
 
 
-class ModuleListItemCompact(BaseModel):
-    module_name: str = Field(..., description="Terraform module name (e.g., 'eks', 's3-bucket').")
-    purpose: str = Field(..., description="One-line purpose of the module (clipped).")
-    module_id: str = Field(
-        ...,
-        description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
-        "'terraform-aws-modules/vpc/aws'). Pass to grep_module_docs or resolve the module by name.",
-    )
-    latest_version: str = Field(
-        ...,
-        description="Latest version known at doc-curation time (a hint). Pass as `version` to grep_module_docs.",
-    )
+# Back-compat alias: modules_list previously built a distinct compact model. The
+# compact/full split is now the same model with optional fields (see above).
+ModuleListItemCompact = ModuleListItem
 
 
 class ModulesListOutput(UpdateNoticeMixin):
-    modules: list[ModuleListItemCompact] | list[ModuleListItem] = Field(
+    modules: list[ModuleListItem] = Field(
         ..., description="List of all available Terraform modules (compact by default, full metadata when detail=full)."
     )
     count: int = Field(..., description="Total number of modules in the catalog.")
@@ -2031,7 +2049,7 @@ def modules_list_impl(state: ServerState, detail: str = "compact") -> ModulesLis
 
     state.logger.debug(f"Listing all modules: {len(state.index.docs)} documents (detail={detail})")
 
-    modules: list[ModuleListItemCompact] | list[ModuleListItem]
+    modules: list[ModuleListItem]
     if detail == "full":
         # L1: full metadata on demand. The 12-18-item keyword arrays and long
         # descriptions this restores are the bulk of the byte-identical dump the

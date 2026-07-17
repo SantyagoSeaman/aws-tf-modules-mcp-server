@@ -109,6 +109,49 @@ async def test_full_http_protocol_session(http_server):
 @pytest.mark.e2e
 @pytest.mark.timeout(180)
 @pytest.mark.asyncio
+async def test_modules_list_over_http_no_path_required_union(http_server):
+    """Regression (0.23.1): over the real HTTP transport, the advertised
+    modules_list output-item schema must carry NO anyOf and must NOT require
+    `path`, and BOTH the compact default and detail=full must return cleanly.
+
+    A strict MCP output-schema validator (the plugin proxy / host client)
+    mis-resolved the prior ``list[Compact] | list[Full]`` union into requiring
+    `path`, so the compact default failed with "'path' is a required property".
+    The stdio e2e path never exercised this. Guard the wire schema here."""
+    port, _ = http_server
+    async with streamablehttp_client(f"http://127.0.0.1:{port}/mcp") as (read, write, _):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
+
+            tools = await session.list_tools()
+            ml = next(t for t in tools.tools if t.name == "modules_list")
+            out_schema = ml.outputSchema
+            modules = out_schema["properties"]["modules"]
+            # the modules field itself must not be a union of arrays
+            assert "anyOf" not in modules, f"modules field must not be a union: {modules}"
+            items = modules["items"]
+            # the advertised item schema may be inlined or a $ref into $defs/definitions;
+            # resolve it before asserting, so the check is not a trivial false-positive
+            if "$ref" in items:
+                ref = items["$ref"].split("/")[-1]
+                defs = out_schema.get("$defs") or out_schema.get("definitions") or {}
+                items = defs[ref]
+            assert "anyOf" not in items, f"modules item schema must not be a union: {items}"
+            assert "path" not in (items.get("required") or []), "path must be optional in the advertised item schema"
+
+            compact = json.loads(_result_text(await session.call_tool("modules_list", {})))
+            assert compact["count"] > 0 and compact["modules"], "compact modules_list empty over HTTP"
+            assert "path" not in compact["modules"][0], "compact item must stay lean (no path)"
+            assert "purpose" in compact["modules"][0]
+
+            full = json.loads(_result_text(await session.call_tool("modules_list", {"detail": "full"})))
+            assert full["count"] == compact["count"]
+            assert "path" in full["modules"][0]
+
+
+@pytest.mark.e2e
+@pytest.mark.timeout(180)
+@pytest.mark.asyncio
 async def test_concurrent_tool_calls(http_server):
     port, _ = http_server
     queries = [
