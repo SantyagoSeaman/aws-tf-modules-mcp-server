@@ -75,33 +75,29 @@ class TestEvidenceBasedLow:
         # keywords, or the module's ## Description section -- so it counts
         # at _COVERAGE_ALPHA (0.3), not in full; "audit"/"compliance" are
         # likewise body-only mentions.
-        # Measured: top1=cloudwatch score=3.71 sem=0.9065 cov=0.446
-        # (< theta 0.5) -> the coverage gate (rule step 2) fires before the
-        # sem/score floors are even reached.
+        # Measured (post Stage R calibration, 2026-07-17): top1=cloudwatch
+        # score=3.71 sem=0.9065 cov=0.285 (< theta 0.5) -> the coverage gate
+        # (rule step 2) fires before the sem/score floors are even reached.
         # Discriminating: under the OLD (pre-0.23.0) classifier this same
         # query/hit resolved "high" (its single-central-token check only
         # required "trail" to appear ANYWHERE in name/keywords/full text,
         # which it does, in the body) -- a wrong-domain false-high the
         # coverage rewrite fixes.
         #
-        # 0.23.0 Task 5 note: the original phrasing of this query included
-        # the filler words "and"/"for" ("audit trail and compliance
-        # monitoring for cloud resources"). Task 5's one permitted
-        # mechanism-level coverage adjustment (the strong-evidence field now
-        # reads the real ## Description section text instead of the inert
-        # extract_description heuristic -- see _capability_description_text)
-        # exposed a separate, NOT-fixed residual gap: cloudwatch's real
-        # Description is long, natural prose, and generic English connector
-        # words ("and", "for") can incidentally appear in it and count as
-        # strong evidence, since _CAPABILITY_STOPWORDS only filters
-        # catalog-domain filler ("aws", "terraform", ...), not general
-        # English stopwords. That made the original phrasing flip to "high"
-        # for the wrong reason. Fixing the connector-word gap would be a
-        # SECOND mechanism adjustment, which Task 5's discipline rule
-        # forbids (at most one adjustment per derivation); it stays a known,
-        # reported limitation. This test keeps the same intent with the
-        # filler words dropped, which avoids the confound and cleanly
-        # demonstrates the property again.
+        # Connector-word gap: FIXED. The original phrasing of this query
+        # ("audit trail and compliance monitoring for cloud resources")
+        # used to flip to "high" for the wrong reason -- generic English
+        # connector words ("and", "for") could incidentally appear in
+        # cloudwatch's real, long Description prose and count as strong
+        # evidence, since _CAPABILITY_STOPWORDS only filtered catalog-domain
+        # filler, not general English stopwords. The Stage R fix wave added
+        # _ENGLISH_STOPWORDS (filtered alongside _CAPABILITY_STOPWORDS in
+        # _capability_coverage's token selection), closing that gap: both
+        # phrasings now filter to the identical content-token set and
+        # measure identical coverage (0.285), so both resolve "low"
+        # consistently. This test keeps the filler-free phrasing (no
+        # remaining confound to avoid); the with-filler phrasing is no
+        # longer a distinct case worth its own test.
         out = search_modules_impl("audit trail compliance monitoring", state, top_k=3)
         assert out.results[0].module_name == "cloudwatch"
         assert out.confidence == "low"
