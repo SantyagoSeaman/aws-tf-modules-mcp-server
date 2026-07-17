@@ -699,6 +699,49 @@ class TestModulesListTool:
             # description is extracted, can be empty if no content
             assert all(isinstance(kw, str) for kw in module.keywords), "all keywords should be strings"
 
+    def test_modules_list_output_schema_has_no_path_required_union(self):
+        """Regression (0.23.1): the modules_list output-item schema must NOT be a
+        union and must NOT require `path`.
+
+        A prior heterogeneous ``list[Compact] | list[Full]`` output type produced
+        an item schema a strict MCP output-schema validator (the plugin proxy /
+        host client) mis-resolved into requiring `path`, so the COMPACT default
+        (which has no path) failed over HTTP with "'path' is a required property".
+        The single optional-field model must keep `path` optional and carry no
+        anyOf for any validator to mis-resolve."""
+        schema = ModulesListOutput.model_json_schema()
+        modules = schema["properties"]["modules"]
+        assert "anyOf" not in modules, "modules field must not be a union (anyOf mis-resolves for strict validators)"
+        # resolve the item schema (either inline or via $ref/$defs)
+        items = modules["items"]
+        if "$ref" in items:
+            ref = items["$ref"].split("/")[-1]
+            items = schema["$defs"][ref]
+        assert "anyOf" not in items, "modules item schema must not be a union"
+        required = items.get("required", [])
+        assert "path" not in required, f"path must be OPTIONAL on modules items, got required={required}"
+        assert set(required) == {"module_name", "module_id", "latest_version"}
+
+    def test_modules_list_compact_is_lean_full_is_complete(self, server_state):
+        """The compact default serializes WITHOUT path/description/keywords (byte-lean,
+        no null noise); detail=full serializes WITH them. Guards the 0.23.1 unified
+        model + drop-none serializer against re-bloating the compact response."""
+        compact = modules_list_impl(server_state).model_dump()
+        assert compact["modules"], "compact list is empty"
+        c0 = compact["modules"][0]
+        assert set(c0) == {
+            "module_name",
+            "purpose",
+            "module_id",
+            "latest_version",
+        }, f"compact item leaked keys: {set(c0)}"
+        assert "path" not in c0
+
+        full = modules_list_impl(server_state, detail="full").model_dump()
+        f0 = full["modules"][0]
+        assert {"module_name", "path", "description", "keywords", "module_id", "latest_version"} <= set(f0)
+        assert "purpose" not in f0, "full item should not carry the compact-only purpose key"
+
     def test_modules_list_contains_expected_modules(self, server_state):
         """Test that modules_list includes known modules."""
         result = modules_list_impl(server_state)

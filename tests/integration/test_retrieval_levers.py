@@ -110,7 +110,14 @@ def test_l1_compact_is_default_and_omits_keywords(state) -> None:
     out = modules_list_impl(state)
     assert out.count == len(out.modules) > 0
     for item in out.modules:
-        assert not hasattr(item, "keywords"), "compact items must not carry keyword arrays"
+        # Since 0.23.1 compact and full share one model with optional fields (a
+        # union-free output schema; see the modules_list HTTP output-validation
+        # fix). Leanness is now a SERIALIZATION contract: the compact item must
+        # not EMIT keywords/path/description, though the field exists as None on
+        # the model object.
+        dumped = item.model_dump()
+        assert "keywords" not in dumped, "compact items must not emit keyword arrays"
+        assert "path" not in dumped and "description" not in dumped, "compact items must stay lean"
         assert item.module_id, f"{item.module_name}: compact must keep module_id (grep coordinate)"
         assert item.latest_version, f"{item.module_name}: compact must keep latest_version"
         assert len(item.purpose) <= 120, f"{item.module_name}: purpose must be clipped (<=120), got {len(item.purpose)}"
