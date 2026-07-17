@@ -10,7 +10,7 @@ Evidence-based confidence verdict for `search_modules`: the `"high"`/`"low"` cla
 
 - **IDF-weighted capability coverage** (`_capability_coverage` in `tfmod_mcp_server.py`): scores how much of a query's content tokens a candidate module's own name, keywords, and Description section actually assert, weighted by corpus IDF so rare, query-defining terms dominate. Evidence is two-tier: a term matched in one of those capability-asserting fields counts in full; a term that only appears somewhere in the free-form doc body counts as a fractional mention rather than a real capability claim. Hyphen-aware field splitting (`_field_parts`/`_token_matches_parts`) lets a hyphenated catalog term match a query token written as a separate word, and vice versa.
 - **`SEARCH_SCORE_FLOOR`**, a floor on the combined ranking score derived from the full golden query set under production search weights — the largest value at which no genuinely correct top-1 result loses its `"high"` verdict.
-- New tests: `tests/integration/test_capability_coverage.py` (coverage-function unit tests: strong/weak/absent evidence, IDF weighting, fail-open behavior), `tests/integration/test_exact_match_boundary.py` (ranker hyphen-boundary unit tests), and additions to `tests/integration/test_verdict_rule.py` (fresh, non-probe exemplars covering the new decision rule and its paraphrase-determinism guarantees).
+- New tests: `tests/integration/test_capability_coverage.py` (coverage-function unit tests: strong/weak/absent evidence, IDF weighting, fail-open behavior), `tests/integration/test_exact_match_boundary.py` (ranker hyphen-boundary unit tests), and the new `tests/integration/test_verdict_rule.py` (fresh, non-probe exemplars covering the new decision rule and its paraphrase-determinism guarantees).
 
 ### Changed
 
@@ -28,8 +28,8 @@ Evidence-based confidence verdict for `search_modules`: the `"high"`/`"low"` cla
 ### Known limitations
 
 - A very low-scoring match whose only connection to the query is an incidental keyword can still grade `"high"` — the score floor is derived so it never demotes a genuinely correct low-scoring match, which leaves some low-relevance matches with modest coverage inside the same score range.
-- A query phrased as an exclusion ("X without Y") is not evaluated as a negation — the excluded technology's own vocabulary can still count as coverage evidence, occasionally grading such a query `"high"` against the module it explicitly asked to avoid.
-- A hyphenated compound written as a single query token (no surrounding spaces) is not reliably matched against a catalog field that stores the same concept as separate hyphenated parts, and gerund/noun variants of the same word (e.g. an "-ing" form versus its noun form) are not treated as equivalent — both can under-count genuine coverage.
+- A query phrased as an exclusion ("X without Y") is still not evaluated as a negation — the excluded technology's own vocabulary can still count as coverage evidence toward the module it explicitly asked to avoid, occasionally grading such a query `"high"`. Only lexical guards exist (a curated catalog-domain and general-English stopword list, and a tightened prefix-tolerance rule); neither is negation-aware, so this caveat is unchanged.
+- A hyphenated compound written as a single query token (no surrounding spaces, since the tokenizer does not split on hyphens) now matches a catalog field that stores the same concept as separate parts when every one of the compound's constituent words is itself asserted in that candidate's own name, keywords, or Description section. A compound still under-counts when even one constituent word is missing from those fields, or appears there only as a different part of speech (a gerund/noun mismatch, e.g. "generation" versus "generate") — this narrower residual gap remains.
 
 ## [0.22.0] - 2026-07-16
 
