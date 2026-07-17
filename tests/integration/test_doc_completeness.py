@@ -15,8 +15,10 @@ import lint_doc_completeness as lint  # noqa: E402 -- sys.path must be set up fi
 
 ROOT = Path(__file__).resolve().parents[2]
 # Every vendor subdir under modules/ is part of the catalog and must satisfy the
-# same completeness guard (terraform-aws-modules plus the Cloud Posse gap-fillers).
-DOC_DIRS = [ROOT / "modules/terraform-aws-modules", ROOT / "modules/cloudposse"]
+# same completeness guard. Derive the list by scanning modules/ (skipping the
+# work-in-progress temp/ area) so a NEW vendor subdir is covered automatically
+# instead of silently bypassing the guard. sorted() for a stable order.
+DOC_DIRS = sorted(d for d in (ROOT / "modules").iterdir() if d.is_dir() and d.name != "temp")
 ALLOWLIST = ROOT / "tests/fixtures/doc_completeness_allowlist.txt"
 
 

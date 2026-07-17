@@ -50,19 +50,27 @@ def append_docs(index_path: str, new_paths: list[str], logger: logging.Logger) -
 
     Existing docs' embedding rows and BM25 token lists are preserved verbatim;
     only the new docs are encoded/tokenized. BM25 and keyword IDF are rebuilt
-    over the full corpus (they are corpus-global). A path already present in the
-    index (matched by file name) is skipped, so re-running is idempotent.
+    over the full corpus (they are corpus-global). A doc already present in the
+    index (matched by vendor subdir + file name, so the same file name under two
+    vendor dirs stays distinct) is skipped, so re-running is idempotent.
     """
     initialize_nltk()
     index = load_index(index_path, logger)
 
-    existing_names = {Path(d.path).name for d in index.docs}
+    # Key on (vendor-dir, file name), not the bare file name: paths look like
+    # modules/<vendor>/<name>.md, and two vendors may legitimately ship a file of
+    # the same name -- keying on the name alone would wrongly skip the second.
+    def _doc_key(pth: str) -> tuple[str, str]:
+        p = Path(pth)
+        return (p.parent.name, p.name)
+
+    existing_keys = {_doc_key(d.path) for d in index.docs}
     new_recs = []
     for p in new_paths:
         rec = parse_markdown_file(Path(p), logger)
         if rec is None:
             raise RuntimeError(f"append: failed to parse {p}")
-        if Path(rec.path).name in existing_names:
+        if _doc_key(rec.path) in existing_keys:
             logger.warning(f"append: {rec.path} already in index; skipping")
             continue
         new_recs.append(rec)

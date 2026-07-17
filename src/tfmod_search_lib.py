@@ -910,11 +910,13 @@ def build_index(
     # never the doc template (it parses as a bogus "module-template" record) or the
     # work-in-progress temp/ area. This keeps a full rebuild multi-vendor-safe: pointing
     # docs_dir at modules/ picks up all vendor catalogs without dropping one.
-    paths = [
+    # sorted() so a full rebuild is deterministic regardless of filesystem rglob
+    # order -- doc/index row order is then stable across machines.
+    paths = sorted(
         p
         for p in Path(docs_dir).rglob("*.md")
         if p.name != "module_template.md" and "temp" not in p.relative_to(docs_dir).parts
-    ]
+    )
     logger.info(f"Found {len(paths)} markdown files to process")
 
     docs: list[DocRecord] = []
