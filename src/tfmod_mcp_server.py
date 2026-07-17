@@ -84,6 +84,16 @@ training data.
    coordinates for chaining into `grep_module_docs`). Query by functionality
    ("s3 bucket with encryption and versioning"), technology ("kubernetes
    cluster"), or exact module name ("vpc", "eks").
+   Each result also carries a `confidence` verdict: `"high"` means the top
+   hit's own name/keywords/Description assert the asked capability — trust
+   it, and its orientation head is inlined as `top_module_doc`. `"low"` means
+   the capability is not clearly asserted by the top hit; a `"low"` does NOT
+   by itself mean "not in catalog" — it can still be the right module under
+   unfamiliar phrasing. On a `"low"`, rephrase by capability and/or check
+   `get_module`/`modules_list` BEFORE concluding no module exists. Caveat: a
+   query phrased as an exclusion ("X without Y") is not evaluated as a
+   negation and can grade `"high"` on the very technology it asked to avoid —
+   read the description before trusting a `"high"` on that kind of query.
 2. `get_module(module_identifier, sections=None)` — orient on the chosen
    module. Accepts a module name ("vpc"), a relative doc path
    ("modules/terraform-aws-modules/vpc.md"), or a submodule address
@@ -96,7 +106,12 @@ training data.
    source, or call `get_module("<name>//modules/<sub>")` for its scoped head.
    Pass `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
    `sections=["all"]` for the full document; prefer scoped `sections` over
-   "all" on large modules.
+   "all" on large modules. A nested/complex leaf shape — a bare bool vs an
+   object, a map keyed by a NUMBER vs a name, a plural vs singular field, a
+   sub-block that defaults ON — is usually visible only in `examples`: check
+   `get_module(name, sections=["examples"])` (or grep) before writing any
+   nested/complex (`any`/`object(...)`) input. Never leave a required nested
+   block as a prose comment or TODO — write the exact shape the doc shows.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 

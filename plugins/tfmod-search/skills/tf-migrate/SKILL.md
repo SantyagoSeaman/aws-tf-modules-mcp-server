@@ -19,7 +19,10 @@ worse than no replacement.
 2. **Search from several angles.** Describe the cluster functionally and run
    `search_modules` more than once with different aspects
    ("security group with http ingress rules", "vpc private subnets nat
-   gateway", "s3 bucket lifecycle encryption"). One query is not enough.
+   gateway", "s3 bucket lifecycle encryption"). One query is not enough. A
+   `"low"` confidence verdict on every phrasing is a real signal there is no
+   covering module — but a single `"low"` is not; try another angle before
+   moving to "poor fit" in step 5.
 3. **Read the winner.** `get_module` for the best candidate, pulling
    `sections=["inputs", "submodules"]` for the interface (the default response
    is a compact head); note its current major version.
