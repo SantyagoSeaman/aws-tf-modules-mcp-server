@@ -10,11 +10,11 @@
 
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
 
-**Ready to Use**: Includes a pre-built search index with embeddings for 55 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
+**Ready to Use**: Includes a pre-built search index with embeddings for 63 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
 
 ## 🤔 Why TFModSearch?
 
-When an AI assistant writes Terraform, it often guesses at module names, invents variables that don't exist, or reaches for outdated syntax. TFModSearch gives your assistant a **curated, versioned, offline knowledge base** of the official [`terraform-aws-modules`](https://github.com/terraform-aws-modules) so it can:
+When an AI assistant writes Terraform, it often guesses at module names, invents variables that don't exist, or reaches for outdated syntax. TFModSearch gives your assistant a **curated, versioned, offline knowledge base** of the official [`terraform-aws-modules`](https://github.com/terraform-aws-modules) — plus a set of vendor-maintained [Cloud Posse](https://github.com/cloudposse) modules that fill gaps the official set does not cover — so it can:
 
 - **Find the right module from intent** — "I need a Redis cache" resolves to `elasticache`, not a hallucinated module name.
 - **Ground generated code in real inputs/outputs** — the assistant pulls the full, current module documentation (submodules, variables, outputs, examples) on demand instead of improvising.
@@ -115,7 +115,7 @@ Then add to your MCP client config:
 
 > **Tip**: Run `uvx tfmodsearch --warmup` once after installing — it pre-downloads the embedding model (~130 MB) and verifies the server end-to-end, so the first real query is instant.
 
-> **Bundled and ready**: The pre-built search index and all 55 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `intfloat/e5-small-v2` embedding model — ~130 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
+> **Bundled and ready**: The pre-built search index and all 63 module docs ship *inside* the package, so `uvx` fetches, installs, and runs the server with nothing to clone or rebuild. (The `intfloat/e5-small-v2` embedding model — ~130 MB — is downloaded automatically on the first search to encode your query, then cached for subsequent queries.)
 
 > **Note**: If you get "command not found" error, use the full path to `uvx`:
 > ```bash
@@ -153,7 +153,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.23.1"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.24.0"]
     }
   }
 }
@@ -165,7 +165,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.23.1
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.24.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -179,7 +179,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.23.1 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.24.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -199,7 +199,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.23.1 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.24.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -264,7 +264,7 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.22.0", "modules": 55,
+# {"status": "ok", "version": "0.24.0", "modules": 63,
 #  "latest_version": null, "update_available": false}
 ```
 
@@ -356,7 +356,7 @@ pip install -e .
 
 ### 1. Build the Search Index (Optional)
 
-**Note**: This repository includes a pre-built search index at `model/tfmod_e5_small_index.pkl` with embeddings for 55 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
+**Note**: This repository includes a pre-built search index at `model/tfmod_e5_small_index.pkl` with embeddings for 63 curated Terraform AWS modules. You can skip this step and proceed directly to testing or running the server if you want to use the included modules.
 
 To rebuild the index or create a new one with additional modules:
 
@@ -628,7 +628,7 @@ List all available Terraform modules in the catalog.
       "latest_version": "6.6.1"
     }
   ],
-  "count": 55
+  "count": 63
 }
 ```
 
@@ -829,7 +829,7 @@ The project includes comprehensive integration tests covering all major function
 pytest tests/ -v
 
 # Run specific test suite
-pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 55 modules (172 tests)
+pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 63 modules (196 tests)
 pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
 pytest tests/integration/test_mcp_server.py -v              # MCP server tools (40 tests)
 pytest tests/integration/test_doc_grep.py -v               # grep engine (6 tests)
@@ -849,10 +849,10 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 ### Test Coverage
 
-- **All Modules Searchable** (172 tests): every one of the 55 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
+- **All Modules Searchable** (196 tests): every one of the 63 modules is verified findable by keyword, exact name, and natural-language query (target in top-3), plus catalog metadata and search-quality checks
 - **Model Comparison** (31 tests): embedding model performance comparison with timing analysis
 - **MCP Server** (65 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, inline submodule inventory, submodule-address scoped head, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
-- **Doc Schema** (386 tests): schema-integrity guards over all 55 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, a clean orientation head, and every doc's submodule inventory surfaced in the head — so `get_module` section filtering can't silently break
+- **Doc Schema** (441 tests): schema-integrity guards over all 63 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, a clean orientation head, and every doc's submodule inventory surfaced in the head — so `get_module` section filtering can't silently break
 - **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
 - **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
@@ -861,7 +861,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **Security Config** (5 tests): the Dependabot config, `SECURITY.md` reporting policy, both workflows' least-privilege `permissions`, and the publish job's retained OIDC `id-token: write` grant
 - **Registry Comparison** (5 tests): top-1/top-3 retrieval benchmark vs. the public Terraform Registry (see [Registry Search Comparison](#registry-search-comparison-vs-terraform-registry--hashicorp-mcp)); one network-free guard runs always, the four live tests are opt-in via `RUN_REGISTRY_BENCHMARK=1`
 
-**Total**: 775 tests (integration + e2e; 752 passing, 23 skip — 6 opt-in live tests unless `RUN_REGISTRY_BENCHMARK=1`, plus 17 docs with no submodule inventory skipped by the schema guard)
+**Total**: 1130 tests (integration + e2e; 1103 passing, 27 skipped — 6 opt-in live tests unless `RUN_REGISTRY_BENCHMARK=1`, plus docs with no submodule inventory skipped by the schema guard)
 
 ## 🔒 Security
 
@@ -883,18 +883,18 @@ This repository includes:
 - **Pre-built Search Index** (`model/tfmod_e5_small_index.pkl`):
   - Ready-to-use search index with pre-computed embeddings using `intfloat/e5-small-v2` model
   - Contains BM25 corpus, semantic vectors, and keyword IDF scores
-  - Includes 55 curated Terraform AWS modules
-  - File size: ~4.27 MB
+  - Includes 63 curated Terraform AWS modules
+  - File size: ~4.87 MB
 
-- **Curated Module Documentation** (`modules/terraform-aws-modules/`):
-  - Compiled documentation for 55 Terraform AWS modules covering compute, storage, networking, databases, security, and more
-  - Sourced from official [terraform-aws-modules](https://github.com/terraform-aws-modules) project
-  - Formatted as Markdown with YAML front-matter metadata
+- **Curated Module Documentation** (`modules/terraform-aws-modules/` + `modules/cloudposse/`):
+  - Compiled documentation for 63 Terraform AWS modules covering compute, storage, networking, databases, security, and more
+  - 55 sourced from the official [terraform-aws-modules](https://github.com/terraform-aws-modules) project, plus 8 vendor-maintained [Cloud Posse](https://github.com/cloudposse) gap-fillers (aws-config, ses, vpc-peering, security-hub, guardduty, cloudtrail, backup, sso); provenance is preserved in each doc's Module ID / Source
+  - Formatted as Markdown with a `## Module Information` metadata block
   - Each module includes comprehensive documentation with best practices, use cases, and examples
 
 ### Indexed Modules
 
-The search index includes 55 Terraform AWS modules across multiple service categories. Each module is documented with comprehensive descriptions, best practices, use cases, and integration examples.
+The search index includes 63 Terraform AWS modules across multiple service categories. Each module is documented with comprehensive descriptions, best practices, use cases, and integration examples.
 
 **Compute & Containers:**
 - `app-runner` - Containerized web application deployments
@@ -970,6 +970,16 @@ The search index includes 55 Terraform AWS modules across multiple service categ
 
 **Big Data & Analytics:**
 - `emr` - Elastic MapReduce (Hadoop, Spark) for big data processing
+
+**Cloud Posse (vendor-maintained gap-fillers, `modules/cloudposse/`):**
+- `config` - AWS Config compliance rules and multi-account aggregation
+- `ses` - Simple Email Service domains and SMTP credentials
+- `vpc-peering` - Same-account VPC peering connections
+- `security-hub` - Security Hub findings aggregation and security standards
+- `guardduty` - GuardDuty threat detection
+- `cloudtrail` - CloudTrail API-activity logging into an encrypted S3 bucket
+- `backup` - AWS Backup plans, vaults, and selections
+- `sso` - IAM Identity Center (AWS SSO) permission sets and account assignments
 
 All modules include detailed documentation with:
 - Module metadata and version information
@@ -1074,6 +1084,35 @@ RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v
 ```
 
 The comparison is committed as `tests/integration/test_registry_comparison.py`. It stays hermetic in normal CI (live tests skip unless `RUN_REGISTRY_BENCHMARK=1`, and skip gracefully if the registry is unreachable); a network-free guard test pins the "100% top-3" figure on our side.
+
+### Agentic Selection Comparison (the tool inside a real agent loop)
+
+The table above measures the **search engine in isolation** — one query, one answer. This measures what happens when a full agent *uses* it: reformulating, chaining calls, and reasoning across turns to select a module and orient on its inputs. **These are two different tests** — an agent can reformulate its way past a weak single-shot search, so a gap in one need not appear in the other; neither is evidence for the other.
+
+**Setup.** 23 infrastructure requirements phrased purely as capabilities, with the module name and its obvious keyword *withheld* (the query describes the outcome, never the AWS service name) — plus distractors, two genuinely ambiguous pairs, and three honesty checks where the correct answer is *"no module fits, fall back to a raw resource."* Condition **A** may use only TFModSearch; condition **B** only the official [`hashicorp/terraform-mcp-server`](https://github.com/hashicorp/terraform-mcp-server) — mutually exclusive, tool isolation verified with zero cross-tool contamination. The same task is run across three consumer-model tiers; 3 workers per condition. Selection is scored mechanically against a pre-registered golden; orientation (are the generated skeleton's variable names real and current?) is graded by independent, blinded judges, with one fixed judge model across all fleets.
+
+**Selection accuracy** — correct module chosen (n=69 = 3 workers × 23 requirements):
+
+| Consumer model | TFModSearch | HashiCorp MCP |
+|---|---:|---:|
+| Opus (frontier) | **69/69** | ~65/69 |
+| Sonnet (mid) | **69/69** | 66/69 |
+| Haiku (small / cheap) | **64/69** | 35/69 |
+
+**Orientation fidelity** — real, current variable names in the skeleton (blinded judges, n=69):
+
+| Consumer model | TFModSearch | HashiCorp MCP | Gap |
+|---|---:|---:|---:|
+| Opus (frontier) | 66/69 | 63/69 | +3 |
+| Sonnet (mid) | 68/69 | 56/69 | **+12** |
+| Haiku (small / cheap) | **53/69** | 23/69 | **+30** |
+
+**Takeaways:**
+
+- **The advantage grows as the consumer model weakens: +3 → +12 → +30.** A strong model routes *around* a weak search — it reformulates and self-corrects — so accuracy ties at the frontier and the tool's value there is cost, not correctness. A cheap model *cannot* route around it: on the raw registry, Haiku picks download-ranked third-party forks over the official module, marks modules that exist as "not found," and hallucinates variable names wholesale (two baseline runs scored 6/23 and 7/23 on orientation — mostly invented fields). On the curated catalog the same model reaches 64/69 selection and 53/69 orientation.
+- **Cost: the same answers at ~2× fewer documentation calls** (26 vs 53 on average at the frontier), and cheaper in dollars on every run — e.g. a Sonnet fleet at **$22.89 vs $40.54** — a gap that held for 13 consecutive runs. A cheap model on TFModSearch *approached* the orientation quality of a frontier model on the raw baseline at a small fraction of the spend.
+- **Reported straight:** at frontier reasoning, selection ties at ceiling and orientation is within noise (+3). *"Fewer calls to the right module"* is the always-true claim; *"catches selections a weaker agent would get wrong"* is true and large for cheap models, and invisible at the frontier.
+- **Caveats:** small N (3 per condition per tier — a demonstration of the mechanism, not a powered statistical estimate); selections and skeletons are graded statically against current docs, with no `terraform apply`; the cheap model's selection misses are query-formulation *upstream* of the tool, not the tool returning a wrong result; and automated workers do not invoke the interactive workflow skills, so a human session is likely better than these numbers, not worse.
 
 ## 🤝 Contributing
 

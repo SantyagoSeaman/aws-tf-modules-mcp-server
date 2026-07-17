@@ -48,6 +48,9 @@ def test_wheel_payload(built_wheel):
 
     docs = [n for n in names if n.startswith("modules/terraform-aws-modules/")]
     assert len(docs) == 55
+    # Cloud Posse gap-fillers ship from their own vendor subdir (force-included separately).
+    cloudposse_docs = [n for n in names if n.startswith("modules/cloudposse/")]
+    assert len(cloudposse_docs) == 8, f"cloudposse docs missing from wheel: {cloudposse_docs}"
 
     strays = [
         n
@@ -87,4 +90,4 @@ def test_uvx_runs_packaged_server_warmup(built_wheel, tmp_path):
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert "Warmup complete" in proc.stdout
-    assert "55 modules" in proc.stdout
+    assert "63 modules" in proc.stdout

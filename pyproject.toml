@@ -1,6 +1,6 @@
 [project]
 name = "tfmodsearch"
-version = "0.23.1"
+version = "0.24.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -169,4 +169,5 @@ packages = ["src/tfmod_mcp_server.py", "src/tfmod_search_cli.py", "src/tfmod_sea
 [tool.hatch.build.targets.wheel.force-include]
 "model/tfmod_e5_small_index.pkl" = "model/tfmod_e5_small_index.pkl"
 "modules/terraform-aws-modules" = "modules/terraform-aws-modules"
+"modules/cloudposse" = "modules/cloudposse"
 "config.yaml" = "config.yaml"

@@ -73,7 +73,7 @@ class TestCodexManifests:
     def test_plugin_manifest(self):
         # uvx-only, unlike the Claude Code plugin: Codex CLI doesn't reliably interpolate
         # ${CLAUDE_PLUGIN_ROOT} in a plugin's mcp.json, so it can't portably reference the
-        # bundled dual-mode launcher (see docs/docker-container-support.md §4.6).
+        # bundled dual-mode launcher.
         manifest = _load_json(PLUGIN_DIR / ".codex-plugin" / "plugin.json")
         assert manifest["name"] == "tfmod-search"
         assert manifest["version"] == _project_version()

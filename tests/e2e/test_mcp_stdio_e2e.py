@@ -62,8 +62,8 @@ async def test_full_stdio_protocol_session():
             result = await session.call_tool("modules_list", {})
             assert not result.isError
             payload = json.loads(_result_text(result))
-            assert payload["count"] == 55
-            assert len(payload["modules"]) == 55
+            assert payload["count"] == 63
+            assert len(payload["modules"]) == 63
             sample = payload["modules"][0]
             assert set(sample) >= {"module_name", "purpose", "module_id", "latest_version"}
             assert "keywords" not in sample, "compact default must omit keyword arrays"
@@ -157,4 +157,4 @@ def test_warmup_flag_loads_everything_and_exits():
     )
     assert proc.returncode == 0, proc.stderr[-2000:]
     assert "Warmup complete" in proc.stdout
-    assert "55 modules" in proc.stdout
+    assert "63 modules" in proc.stdout

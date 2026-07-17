@@ -2,8 +2,7 @@
 Tests for the dual-mode launcher shipped with the Claude Code plugin
 (plugins/tfmod-search/bin/tfmodsearch_launch.py). It selects between the
 default local `uvx tfmodsearch` and the opt-in `docker run -i --rm <image>`
-backend based on the TFMODSEARCH_DOCKER env flag — see
-docs/docker-container-support.md §4.6.
+backend based on the TFMODSEARCH_DOCKER env flag.
 
 Loaded as a module (not run as a subprocess) so `select_backend()` — the pure
 dispatch function — can be exercised directly, without needing a real `docker`

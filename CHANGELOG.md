@@ -1,5 +1,24 @@
 # Changelog
 
+## [0.24.0] - 2026-07-17
+
+[0.24.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.24.0
+
+Catalog expansion: eight vendor-maintained Cloud Posse modules join the curated catalog (55 -> 63), filling capability gaps the official `terraform-aws-modules` set does not cover — AWS Config compliance rules, SES email, same-account VPC peering, Security Hub, GuardDuty, CloudTrail, AWS Backup, and IAM Identity Center (SSO). They live in a new `modules/cloudposse/` vendor subdir. Provenance is load-bearing and preserved: each doc's Module ID and Source carry the true `cloudposse` namespace (never re-badged as `terraform-aws-modules`), and each doc flags Cloud Posse's `context`/`label` convention so an agent does not propagate it onto other vendors' modules in the same project. The index was grown drift-safe — the existing 55 embedding rows are kept byte-identical and only the corpus-global BM25 and keyword-IDF tables are recomputed — so existing rankings are unaffected.
+
+### Added
+
+- **Eight Cloud Posse gap-filler modules** under `modules/cloudposse/`: `config`, `ses`, `vpc-peering`, `security-hub`, `guardduty`, `cloudtrail`, `backup`, `sso`. Each is findable by exact name, keyword, and natural-language query, with keywords chosen so a new module does not steal an existing one's queries (for example `cloudtrail` stays off `config`'s compliance keywords, and `sso` stays off `iam`'s identity keywords).
+- The corpus completeness guard (`tests/integration/test_doc_completeness.py`) now also covers `modules/cloudposse/`, so every vendor subdir satisfies the same opaque-input-row invariant.
+
+### Changed
+
+- The catalog is now vendor-heterogeneous: `modules/` holds `terraform-aws-modules/` (55) and `cloudposse/` (8). `build_index` scans the whole `modules/` tree (skipping the doc template and work-in-progress `temp/` docs), and the wheel force-includes both vendor subdirs.
+
+### Unchanged
+
+- Every pre-existing module's embedding row is byte-identical to 0.23.1; search behavior for the original 55 modules, the verdict layer, and all tool response shapes are unchanged. The `stdio` and HTTP transports behave identically to 0.23.1 apart from the larger catalog.
+
 ## [0.23.1] - 2026-07-17
 
 [0.23.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.23.1
