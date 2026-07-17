@@ -1085,6 +1085,35 @@ RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v
 
 The comparison is committed as `tests/integration/test_registry_comparison.py`. It stays hermetic in normal CI (live tests skip unless `RUN_REGISTRY_BENCHMARK=1`, and skip gracefully if the registry is unreachable); a network-free guard test pins the "100% top-3" figure on our side.
 
+### Agentic Selection Comparison (the tool inside a real agent loop)
+
+The table above measures the **search engine in isolation** — one query, one answer. This measures what happens when a full agent *uses* it: reformulating, chaining calls, and reasoning across turns to select a module and orient on its inputs. **These are two different tests** — an agent can reformulate its way past a weak single-shot search, so a gap in one need not appear in the other; neither is evidence for the other.
+
+**Setup.** 23 infrastructure requirements phrased purely as capabilities, with the module name and its obvious keyword *withheld* (the query describes the outcome, never the AWS service name) — plus distractors, two genuinely ambiguous pairs, and three honesty checks where the correct answer is *"no module fits, fall back to a raw resource."* Condition **A** may use only TFModSearch; condition **B** only the official [`hashicorp/terraform-mcp-server`](https://github.com/hashicorp/terraform-mcp-server) — mutually exclusive, tool isolation verified with zero cross-tool contamination. The same task is run across three consumer-model tiers; 3 workers per condition. Selection is scored mechanically against a pre-registered golden; orientation (are the generated skeleton's variable names real and current?) is graded by independent, blinded judges, with one fixed judge model across all fleets.
+
+**Selection accuracy** — correct module chosen (n=69 = 3 workers × 23 requirements):
+
+| Consumer model | TFModSearch | HashiCorp MCP |
+|---|---:|---:|
+| Opus (frontier) | **69/69** | ~65/69 |
+| Sonnet (mid) | **69/69** | 66/69 |
+| Haiku (small / cheap) | **64/69** | 35/69 |
+
+**Orientation fidelity** — real, current variable names in the skeleton (blinded judges, n=69):
+
+| Consumer model | TFModSearch | HashiCorp MCP | Gap |
+|---|---:|---:|---:|
+| Opus (frontier) | 66/69 | 63/69 | +3 |
+| Sonnet (mid) | 68/69 | 56/69 | **+12** |
+| Haiku (small / cheap) | **53/69** | 23/69 | **+30** |
+
+**Takeaways:**
+
+- **The advantage grows as the consumer model weakens: +3 → +12 → +30.** A strong model routes *around* a weak search — it reformulates and self-corrects — so accuracy ties at the frontier and the tool's value there is cost, not correctness. A cheap model *cannot* route around it: on the raw registry, Haiku picks download-ranked third-party forks over the official module, marks modules that exist as "not found," and hallucinates variable names wholesale (two baseline runs scored 6/23 and 7/23 on orientation — mostly invented fields). On the curated catalog the same model reaches 64/69 selection and 53/69 orientation.
+- **Cost: the same answers at ~2× fewer documentation calls** (26 vs 53 on average at the frontier), and cheaper in dollars on every run — e.g. a Sonnet fleet at **$22.89 vs $40.54** — a gap that held for 13 consecutive runs. A cheap model on TFModSearch *approached* the orientation quality of a frontier model on the raw baseline at a small fraction of the spend.
+- **Reported straight:** at frontier reasoning, selection ties at ceiling and orientation is within noise (+3). *"Fewer calls to the right module"* is the always-true claim; *"catches selections a weaker agent would get wrong"* is true and large for cheap models, and invisible at the frontier.
+- **Caveats:** small N (3 per condition per tier — a demonstration of the mechanism, not a powered statistical estimate); selections and skeletons are graded statically against current docs, with no `terraform apply`; the cheap model's selection misses are query-formulation *upstream* of the tool, not the tool returning a wrong result; and automated workers do not invoke the interactive workflow skills, so a human session is likely better than these numbers, not worse.
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these guidelines:
