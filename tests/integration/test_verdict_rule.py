@@ -2,8 +2,8 @@
 
 Verdict = high iff (whole-query exact name) OR (coverage >= theta AND
 sem >= sem-floor AND score >= score-floor). These tests pin the rule with
-real-catalog exemplars chosen per mechanism class (signals recorded in
-comments); they are NOT the private regression probe rows.
+real-catalog exemplars chosen per mechanism class, with the measured
+signals recorded in comments.
 
 All measured signals below were captured with the production search weights
 (w_kw=1.0, w_exact=3.0, w_bm25=2.0, w_sem=3.0), which is also what the `state`
@@ -59,8 +59,8 @@ class TestEvidenceBasedHigh:
         # exact name) cannot fire -- the verdict must come purely from
         # coverage + sem + score.
         # Measured: top1=elasticache score=6.65 sem=0.9167 cov=0.898 (all
-        # three floors clear: cov 0.898 >= 0.5, sem 0.9167 >= 0.88,
-        # score 6.65 >= 4.5).
+        # three floors clear: cov 0.898 >= 0.5, sem 0.9167 >= 0.88, and
+        # score 6.65 clears SEARCH_SCORE_FLOOR (2.9) by a wide margin).
         out = search_modules_impl("redis cluster with automatic failover", state, top_k=3)
         assert out.results[0].module_name == "elasticache"
         assert out.confidence == "high"

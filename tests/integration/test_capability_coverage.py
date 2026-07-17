@@ -46,11 +46,26 @@ class TestTokenMatchesParts:
         assert _token_matches_parts("buckets", {"bucket"}) is True
         assert _token_matches_parts("bucket", {"buckets"}) is True
 
-    def test_prefix_rule_needs_length_four(self):
-        # long-token prefix tolerance
+    def test_short_stopword_like_token_plural_strip_does_not_fire(self):
+        # The plural-strip equality only fires when the stripped token has
+        # length >= 3, so "as" (stem "a") and "its" (stem "it") can never be
+        # conflated with a shorter word via the plural rule.
+        assert _token_matches_parts("as", {"a"}) is False
+        assert _token_matches_parts("its", {"it"}) is False
+
+    def test_prefix_rule_needs_length_five(self):
+        # long-token prefix tolerance (>= 5 chars both sides)
         assert _token_matches_parts("authoriz", {"authorizer"}) is True
         # short parts never prefix-match ("db" must not absorb "database")
         assert _token_matches_parts("database", {"db"}) is False
+
+    def test_prefix_rule_four_char_artifacts_no_longer_match(self):
+        # Regression tests: the old 4-char boundary let these unrelated pairs
+        # absorb each other; the 5-char boundary kills all of them.
+        assert _token_matches_parts("database", {"data"}) is False
+        assert _token_matches_parts("base", {"based"}) is False
+        assert _token_matches_parts("automatic", {"auto"}) is False
+        assert _token_matches_parts("without", {"with"}) is False
 
     def test_no_mid_word_substring(self):
         # "ui" inside "guide" must not match
@@ -114,13 +129,64 @@ class TestCapabilityCoverage:
         idx = make_index([doc], {"relational": 3.0})
         assert _capability_coverage("relational", idx, 0) == pytest.approx(1.0)
 
-    def test_fail_open_on_empty_and_stopword_queries(self):
+    def test_fail_closed_on_contentless_query(self):
+        # Out-of-catalog honesty (F1 fix): an empty query, or a query whose
+        # every token is filtered as stopword/catalog-filler, carries no
+        # evidence to trust. It must NOT fail open to a blanket "covers
+        # everything" verdict -- the old fail-open behavior let a contentless
+        # query ("?", "please help", "aws terraform module") reach
+        # verdict=high and inline a wrong doc. The corpus idf table here is
+        # non-empty so the degraded-index guard (tested separately below)
+        # does not mask this path.
+        doc = make_doc("anything", ["kw"], "body")
+        idx = make_index([doc], {"something": 2.0})
+        assert _capability_coverage("", idx, 0) == pytest.approx(0.0)
+        assert _capability_coverage("aws terraform module", idx, 0) == pytest.approx(0.0)
+
+    def test_degraded_index_empty_idf_fails_open(self):
+        # A genuinely empty/absent corpus idf table means the index itself
+        # cannot judge coverage -- this is the one remaining fail-open case,
+        # distinct from a contentless query.
         doc = make_doc("anything", ["kw"], "body")
         idx = make_index([doc], {})
-        assert _capability_coverage("", idx, 0) == pytest.approx(1.0)
-        assert _capability_coverage("aws terraform module", idx, 0) == pytest.approx(1.0)
+        assert _capability_coverage("some real capability terms here", idx, 0) == pytest.approx(1.0)
 
-    def test_zero_idf_tokens_are_excluded(self):
+    def test_zero_idf_token_participates_at_max_idf_weight_when_matched(self):
+        # "novelterm" has no idf entry (out-of-corpus) but IS present in this
+        # doc's own keywords -- it must count as strong evidence at the
+        # corpus's max IDF weight, not be silently dropped.
+        doc = make_doc("mod", ["alpha", "novelterm"], "body")
+        idx = make_index([doc], {"alpha": 2.0})  # max idf in this tiny corpus = 2.0
+        cov = _capability_coverage("alpha novelterm", idx, 0)
+        assert cov == pytest.approx(1.0)  # both weighted 2.0 (real + max-idf fallback), both matched strong
+
+    def test_out_of_vocab_token_collapses_coverage_below_theta_when_unmatched(self):
+        # An out-of-catalog term (e.g. "bedrock", "snowflake") participates at
+        # the corpus's max IDF weight rather than being dropped -- when it
+        # matches nothing, it drags coverage below theta even though the
+        # query's other term matches in full.
         doc = make_doc("mod", ["alpha"], "body")
-        idx = make_index([doc], {"alpha": 2.0})  # "novelterm" has no idf entry
-        assert _capability_coverage("alpha novelterm", idx, 0) == pytest.approx(1.0)
+        idx = make_index([doc], {"alpha": 1.0, "some-other-high-idf-term": 5.0})
+        cov = _capability_coverage("alpha bedrock", idx, 0)  # "bedrock" absent from idf and from the doc
+        assert cov < _COVERAGE_THETA
+
+    def test_weak_tier_requires_word_boundary_not_substring(self):
+        # "ui" must not earn weak (body-mention) credit from being a
+        # substring of "guide" -- the weak-tier match is now a word-boundary
+        # regex, not `t in body`.
+        doc = make_doc("docsvc", ["docs"], "This is a helpful guide for developers.")
+        idx = make_index([doc], {"ui": 3.0})
+        assert _capability_coverage("ui", idx, 0) == pytest.approx(0.0)
+
+    def test_connector_words_do_not_change_coverage(self):
+        # A synthetic-doc equivalent of the "audit trail and compliance
+        # monitoring for cloud resources" class: general English connector
+        # words ("and", "for") and catalog filler ("cloud") must not change
+        # coverage relative to the connector-free phrasing -- both resolve to
+        # the same content-token set now that _ENGLISH_STOPWORDS is filtered
+        # alongside _CAPABILITY_STOPWORDS.
+        doc = make_doc("logstore", ["monitoring"], "General purpose object storage with lifecycle rules.")
+        idx = make_index([doc], {"trail": 3.0, "compliance": 2.5, "audit": 2.0})
+        with_connectors = _capability_coverage("audit trail and compliance monitoring for cloud resources", idx, 0)
+        without_connectors = _capability_coverage("audit trail compliance monitoring", idx, 0)
+        assert with_connectors == pytest.approx(without_connectors)

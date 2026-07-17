@@ -405,9 +405,9 @@ def test_search_output_confidence_always_present_direct_construction() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# L3/T2 - expand_top inlines the top-1 orientation head on a high-confidence
+# L3 - expand_top inlines the top-1 orientation head on a high-confidence
 # search, collapsing the confident search->get_module pair into one call.
-# RC2 T2: default-on now (the counterfactual measurement showed the opt-in
+# Default-on (a fleet-wide counterfactual measurement showed the opt-in
 # default was strangling the one right-direction lever); never inlined on a
 # non-high verdict; explicit expand_top=False still suppresses it.
 # --------------------------------------------------------------------------- #
@@ -532,9 +532,9 @@ def test_l5_a1_default_head_still_inlines_compact_inventory() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC2 T3 - sem_sim exposed on ScoredHit. cos_raw (the per-doc cosine scaled to
-# [0,1], before the per-query min-max) is comparable across queries, unlike
-# the combined score. Populated for every hit, read-only from the existing
+# sem_sim exposed on ScoredHit: the per-doc cosine scaled to [0,1], before
+# the per-query min-max, so it is comparable across queries, unlike the
+# combined score. Populated for every hit, read-only from the existing
 # embeddings - no index rebuild.
 # --------------------------------------------------------------------------- #
 def test_scored_hit_sem_sim_is_populated_float_in_unit_range(state) -> None:
@@ -562,8 +562,8 @@ def test_search_modules_impl_hits_carry_sem_sim(state) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC2 C2/T2 gate - single-snapshot version consistency. The inlined
-# top_module_doc head's version pin must come from the same metadata field as
+# Single-snapshot version consistency gate. The inlined top_module_doc
+# head's version pin must come from the same metadata field as
 # results[].latest_version, never a re-parse of the doc body, so the two can
 # never contradict each other in one response.
 # --------------------------------------------------------------------------- #
@@ -622,9 +622,9 @@ def test_search_expand_top_version_matches_result_metadata_snapshot(state, monke
 
 
 # --------------------------------------------------------------------------- #
-# RC3 #2 - render-time single-snapshot version consistency applied to ALL
-# version mentions. rc2 synced only the pin banner; the body's own **Latest
-# Version** bullet could still be stale and contradict the banner /
+# Render-time single-snapshot version consistency applied to ALL version
+# mentions. An earlier fix synced only the pin banner; the body's own
+# **Latest Version** bullet could still be stale and contradict the banner /
 # results[].latest_version in the same response. _reconcile_body_version
 # rewrites the body bullet to the threaded snapshot at render time (drift-safe:
 # emitted text only, the indexed body/embeddings are untouched).
@@ -648,8 +648,8 @@ def test_reconcile_body_version_noop_without_bullet() -> None:
 
 
 def test_orientation_head_override_reconciles_body_bullet_not_just_banner() -> None:
-    # RC3 #2: the body's own Latest Version bullet (inside Module Information)
-    # must be rewritten to the override, not only the pin banner.
+    # The body's own Latest Version bullet (inside Module Information) must
+    # be rewritten to the override, not only the pin banner.
     doc = _doc("vpc")
     assert "- **Latest Version**: 6.6.1" in _doc("vpc"), "fixture must carry its real body bullet"
     head = orientation_head(doc, version_override="9.9.9")
@@ -659,7 +659,8 @@ def test_orientation_head_override_reconciles_body_bullet_not_just_banner() -> N
 
 def test_search_expand_top_body_bullet_matches_snapshot(state, monkeypatch) -> None:
     """The inlined head's BODY version bullet (not only the pin banner) must
-    equal results[].latest_version -- the whole point of RC3 #2."""
+    equal results[].latest_version -- the whole point of the render-time
+    reconciliation fix."""
     out = search_modules_impl("vpc", state, top_k=3, expand_top=True)
     assert out.confidence == "high" and out.top_module_doc is not None
     doc = next(d for d in state.index.docs if d.module_name == out.results[0].module_name)
@@ -673,7 +674,7 @@ def test_search_expand_top_body_bullet_matches_snapshot(state, monkeypatch) -> N
 
 
 # --------------------------------------------------------------------------- #
-# RC3 #3 - non-top-1 result blurbs must clip on a word boundary, never mid-word.
+# Non-top-1 result blurbs must clip on a word boundary, never mid-word.
 # --------------------------------------------------------------------------- #
 def test_clip_blurb_clips_on_word_boundary_no_midword_cut() -> None:
     # No early period, so the hard char-cap branch runs; it must not leave a
@@ -726,7 +727,7 @@ def test_classify_low_on_capability_miss_despite_strong_sem() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC4 #2 - verdict and inline are ONE decision: top_module_doc is present iff
+# Verdict and inline are ONE decision: top_module_doc is present iff
 # the verdict is "high". The docstring contract ("high => doc inlined") holds.
 # --------------------------------------------------------------------------- #
 def test_inline_present_iff_high_on_live_queries(state) -> None:
@@ -741,7 +742,7 @@ def test_inline_present_iff_high_on_live_queries(state) -> None:
 def test_wrong_domain_top1_is_low_and_not_inlined(state, monkeypatch) -> None:
     """Integration: force the top hit onto a real doc that does not cover the
     query's central capability term, and confirm the unified path demotes it to
-    'low' and inlines nothing (RC4 #1 + #2)."""
+    'low' and inlines nothing."""
     idf = getattr(state.index.bm25, "idf", {}) or {}
     term = "sagemaker"  # a real catalog capability term (has corpus IDF)
     assert idf.get(term, 0.0) > 0.0, "term must carry a corpus salience signal"
@@ -776,31 +777,74 @@ def test_sem_floor_constant_still_exposed() -> None:
 
 
 def test_score_floor_constant_is_positive() -> None:
-    # 0.23.0: the fourth (final) demoter in the truth table; provisional
-    # value pending a later derivation task, but must always be a sane
-    # positive floor.
+    # 0.23.0: the fourth (final) demoter in the truth table; derived (2026-07-17)
+    # from the full golden-set score distribution under production weights, and
+    # must always be a sane positive floor.
     assert SEARCH_SCORE_FLOOR > 0.0
 
 
+def test_classify_low_on_score_floor_despite_full_coverage_and_strong_sem() -> None:
+    # Step 4 of the decision rule: coverage and sem_sim both clear their
+    # floors, but the combined score does not -- the score floor is still the
+    # deciding conjunct in the single-matched-keyword branch it was derived
+    # to catch. A synthetic hit (the _FakeIndex pattern), since driving the
+    # ranker itself down to a sub-floor score while holding coverage/sem fixed
+    # would require contriving a real query.
+    hits = [
+        ScoredHit(score=2.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
+    ]
+    assert SEARCH_SCORE_FLOOR > 2.0, "fixture score must sit below the real floor for this test to be meaningful"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
+
+
 # --------------------------------------------------------------------------- #
-# RC4 #3 - verdict-stability (determinism) contract guards. A consumer cannot
+# Verdict-stability (determinism) contract guards. A consumer cannot
 # budget around a verdict that flips on trivial rephrasing. We lock the part of
 # the contract the implementation can guarantee: adding generic-infra filler
 # words ("aws"/"terraform"/politeness) must NOT change the verdict, because the
 # capability check drops those as stopwords and the central term is unchanged.
 # (Broad cross-phrasing determinism -- entirely different wordings of one intent
-# -- is a known limitation on borderline catalog-gap phrasings; see the RC4
-# revision spec, deferred with defect item 2.)
+# -- is a known limitation on borderline catalog-gap phrasings, deferred as a
+# future task.)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
     "base",
     ["kubernetes cluster", "object storage versioning"],
 )
 def test_verdict_is_invariant_to_generic_infra_filler(base, state) -> None:
+    # Only catalog-domain filler is covered by this guarantee: "aws" and
+    # "terraform"/"module"/"for" are all filtered by _CAPABILITY_STOPWORDS or
+    # _ENGLISH_STOPWORDS, so the capability-coverage token set -- and
+    # therefore the verdict -- is unchanged. A generic out-of-vocabulary
+    # filler word not on either curated list (e.g. "please") is NOT covered
+    # by this guarantee -- see test_unmatched_out_of_vocab_filler_can_flip_a_
+    # borderline_query below for the disclosed, narrow side effect of the
+    # Stage R out-of-vocabulary rule (B1).
     baseline = search_modules_impl(base, state, top_k=3).confidence
-    for filler in (f"aws {base}", f"terraform module for {base}", f"{base} please"):
+    for filler in (f"aws {base}", f"terraform module for {base}"):
         got = search_modules_impl(filler, state, top_k=3).confidence
         assert got == baseline, f"verdict flipped on generic-infra filler: {base!r} -> {baseline}, {filler!r} -> {got}"
+
+
+def test_unmatched_out_of_vocab_filler_can_flip_a_borderline_query(state) -> None:
+    # Disclosed side effect of B1 (Stage R out-of-vocabulary rule): a
+    # politeness word not on either curated stopword list ("please") is now
+    # honestly treated as unmatched vocabulary, participating at the
+    # corpus's max IDF weight instead of being silently dropped. For a query
+    # whose coverage sits only narrowly above theta on its real content
+    # tokens, one such filler word can pull it back under theta and flip
+    # "high" -> "low". This is the accepted, narrow cost of closing the
+    # out-of-catalog-vocabulary false-high hole (F1) with a curated,
+    # finite stopword list rather than an open-ended one -- it cannot be
+    # eliminated without either a broader list (which never covers every
+    # possible filler word) or a second mechanism change, both out of scope
+    # for this fix. Measured: "kubernetes cluster" -> eks, cov=1.0, high;
+    # "kubernetes cluster please" -> same top-1, cov=0.346 (below theta), low.
+    baseline = search_modules_impl("kubernetes cluster", state, top_k=3).confidence
+    assert baseline == "high"
+    got = search_modules_impl("kubernetes cluster please", state, top_k=3).confidence
+    assert got == "low"
 
 
 @pytest.mark.parametrize(
