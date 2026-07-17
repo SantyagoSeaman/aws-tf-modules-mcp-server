@@ -172,20 +172,33 @@ class TestCapabilityCoverage:
         idx = make_index([doc], {})
         assert _capability_coverage("some real capability terms here", idx, 0) == pytest.approx(1.0)
 
-    def test_zero_idf_token_participates_at_max_idf_weight_when_matched(self):
+    def test_zero_idf_token_participates_at_mean_idf_weight_when_matched(self):
         # "novelterm" has no idf entry (out-of-corpus) but IS present in this
         # doc's own keywords -- it must count as strong evidence at the
-        # corpus's max IDF weight, not be silently dropped.
+        # corpus's MEAN idf weight (C1 calibration, 2026-07-17: an unknown
+        # word's principled prior is "typical rarity", not "as rare as the
+        # single rarest word anywhere in the corpus" -- the prior max-based
+        # weight measurably overweighed informal/slang/typo tokens on real
+        # queries, e.g. "pls create s3 bucket"), not be silently dropped.
         doc = make_doc("mod", ["alpha", "novelterm"], "body")
-        idx = make_index([doc], {"alpha": 2.0})  # max idf in this tiny corpus = 2.0
+        idx = make_index([doc], {"alpha": 2.0, "beta": 6.0})  # mean idf = 4.0 (max would be 6.0)
         cov = _capability_coverage("alpha novelterm", idx, 0)
-        assert cov == pytest.approx(1.0)  # both weighted 2.0 (real + max-idf fallback), both matched strong
+        assert cov == pytest.approx(1.0)  # both match strong regardless of the exact fallback weight
+
+    def test_out_of_vocab_token_weighted_at_mean_not_max(self):
+        # C1: pins the exact fallback weight as mean(idf.values()), not max.
+        doc = make_doc("mod", ["alpha"], "body")
+        idx = make_index([doc], {"alpha": 1.0, "beta": 2.0, "gamma": 6.0})  # mean = 3.0, max = 6.0
+        cov = _capability_coverage("alpha bedrock", idx, 0)  # "bedrock" absent from idf and from the doc
+        # alpha (matched, strong) weight=1.0; bedrock (unmatched) weight=mean=3.0 (would be 6.0 under the old max rule)
+        assert cov == pytest.approx(1.0 / (1.0 + 3.0))
 
     def test_out_of_vocab_token_collapses_coverage_below_theta_when_unmatched(self):
-        # An out-of-catalog term (e.g. "bedrock", "snowflake") participates at
-        # the corpus's max IDF weight rather than being dropped -- when it
-        # matches nothing, it drags coverage below theta even though the
-        # query's other term matches in full.
+        # An out-of-catalog term (e.g. "bedrock", "snowflake") still
+        # participates at a real, non-zero fallback weight rather than being
+        # dropped -- when it matches nothing, it can still drag coverage
+        # below theta even though the query's other term matches in full,
+        # just less aggressively than the pre-C1 max-weighted version.
         doc = make_doc("mod", ["alpha"], "body")
         idx = make_index([doc], {"alpha": 1.0, "some-other-high-idf-term": 5.0})
         cov = _capability_coverage("alpha bedrock", idx, 0)  # "bedrock" absent from idf and from the doc

@@ -1573,10 +1573,16 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
     absent. Weighted by corpus IDF so rare, query-defining terms dominate.
 
     Out-of-corpus tokens (idf <= 0, i.e. absent from the corpus IDF table)
-    are NOT dropped: they participate at the corpus's maximum IDF weight,
-    since an unknown term is exactly the kind of query-defining vocabulary
-    the catalog may not serve -- if it matches nothing, that is strong
-    evidence of a miss, not a reason to discount it.
+    are NOT dropped: they participate at the corpus's MEAN IDF weight (C1
+    calibration, 2026-07-17 -- capped down from the corpus max), since an
+    unknown term is exactly the kind of query-defining vocabulary the
+    catalog may not serve -- if it matches nothing, that is evidence of a
+    miss, not a reason to discount it entirely. The mean, not the max, is
+    the principled prior for an unknown word's rarity ("typical", not "as
+    rare as the single rarest word in the whole corpus"): weighting at the
+    max measurably overweighed a single informal/slang/typo token enough to
+    demote otherwise-correct, otherwise-fully-covered queries ("pls create
+    s3 bucket", "hey i need a postgres database asap") to a false "low".
 
     Two conditions are checked before scoring, in order:
     1. An empty/absent corpus IDF table (degraded index) -- cannot judge
@@ -1600,8 +1606,8 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
         return 1.0
     if not tokens:
         return 0.0
-    max_idf = max(idf.values())
-    weighted = [(t, idf.get(t, 0.0) if idf.get(t, 0.0) > 0.0 else max_idf) for t in tokens]
+    mean_idf = sum(idf.values()) / len(idf)
+    weighted = [(t, idf.get(t, 0.0) if idf.get(t, 0.0) > 0.0 else mean_idf) for t in tokens]
     doc = index.docs[doc_index]
     strong = _field_parts(doc.module_name or "", *(doc.keywords or []), _capability_description_text(doc.text))
     body = doc.text.lower()
