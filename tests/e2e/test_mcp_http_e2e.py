@@ -125,7 +125,17 @@ async def test_modules_list_over_http_no_path_required_union(http_server):
 
             tools = await session.list_tools()
             ml = next(t for t in tools.tools if t.name == "modules_list")
-            items = ml.outputSchema["properties"]["modules"]["items"]
+            out_schema = ml.outputSchema
+            modules = out_schema["properties"]["modules"]
+            # the modules field itself must not be a union of arrays
+            assert "anyOf" not in modules, f"modules field must not be a union: {modules}"
+            items = modules["items"]
+            # the advertised item schema may be inlined or a $ref into $defs/definitions;
+            # resolve it before asserting, so the check is not a trivial false-positive
+            if "$ref" in items:
+                ref = items["$ref"].split("/")[-1]
+                defs = out_schema.get("$defs") or out_schema.get("definitions") or {}
+                items = defs[ref]
             assert "anyOf" not in items, f"modules item schema must not be a union: {items}"
             assert "path" not in (items.get("required") or []), "path must be optional in the advertised item schema"
 
