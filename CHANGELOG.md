@@ -1,6 +1,6 @@
 # Changelog
 
-## [0.23.0] - UNRELEASED
+## [0.23.0] - 2026-07-17
 
 [0.23.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.23.0
 
