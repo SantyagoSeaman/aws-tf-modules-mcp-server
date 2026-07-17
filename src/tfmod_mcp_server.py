@@ -1504,6 +1504,18 @@ def _token_matches_parts(token: str, parts: set[str]) -> bool:
     to be at least 5 characters (raised from 4): at 4 chars it let unrelated
     words absorb each other ("base"/"based", "data"/"database",
     "auto"/"automatic", "with"/"without").
+
+    Hyphenated-compound symmetry: _field_parts already splits FIELD strings
+    ("jwt-authorizer" -> {"jwt", "authorizer"}) into alnum runs, but a query
+    TOKEN that is itself a hyphenated compound written as one tokenizer
+    token ("auto-scaling-group" -- tokenize() does not split on hyphens)
+    never got the same treatment, so it could only ever strong-match via
+    the prefix-tolerance branch matching one run at a time -- exactly what
+    the old, since-tightened 4-char prefix bound was accidentally providing.
+    When the token contains punctuation, it is split into its own alnum
+    runs (len >= 2) and matches only when EVERY run matches `parts` via
+    these same rules -- a partial compound match ("data-warehouse" against
+    just "data") is not evidence of coverage.
     """
     if token in parts:
         return True
@@ -1512,6 +1524,10 @@ def _token_matches_parts(token: str, parts: set[str]) -> bool:
         if len(singular) >= 3 and singular == part.rstrip("s"):
             return True
         if len(token) >= 5 and len(part) >= 5 and (token.startswith(part) or part.startswith(token)):
+            return True
+    if any(not ch.isalnum() for ch in token):
+        runs = {r for r in _field_parts(token) if len(r) >= 2}
+        if runs and all(_token_matches_parts(r, parts) for r in runs):
             return True
     return False
 

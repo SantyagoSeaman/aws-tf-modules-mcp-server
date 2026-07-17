@@ -71,6 +71,27 @@ class TestTokenMatchesParts:
         # "ui" inside "guide" must not match
         assert _token_matches_parts("ui", {"guide"}) is False
 
+    def test_hyphenated_compound_query_token_matches_when_every_run_matches(self):
+        # Symmetry fix: _field_parts already splits FIELD strings into alnum
+        # runs; a hyphenated compound written as a single tokenizer TOKEN
+        # (tokenize() does not split on hyphens) must get the same treatment
+        # on the query side, or it can never strong-match split field parts.
+        # Every run must match -- this is what the old, accidental 4-char
+        # prefix rule was silently providing for exactly one run at a time.
+        assert _token_matches_parts("auto-scaling-group", {"auto", "scaling", "group"}) is True
+        assert _token_matches_parts("data-warehouse", {"data", "warehouse"}) is True
+        assert _token_matches_parts("web-application-firewall", {"web", "application", "firewall"}) is True
+
+    def test_hyphenated_compound_query_token_partial_match_is_rejected(self):
+        # A partial compound match is not evidence of coverage -- ALL runs
+        # must match, not a majority.
+        assert _token_matches_parts("data-warehouse", {"data", "lake"}) is False
+
+    def test_plain_non_compound_token_unaffected_by_compound_rule(self):
+        # A token with no punctuation never enters the compound-decomposition
+        # branch at all; unmatched plain tokens behave exactly as before.
+        assert _token_matches_parts("bedrock", {"unrelated", "parts", "only"}) is False
+
 
 class TestCapabilityCoverage:
     def test_strong_keyword_coverage_is_full(self):
