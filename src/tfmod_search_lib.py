@@ -473,6 +473,13 @@ def normalize_modname(name: str) -> str:
     return n
 
 
+def _punctuation_to_hyphen_boundaries(s: str) -> str:
+    """Map every run of non-alphanumeric characters to a single hyphen and
+    strip leading/trailing hyphens, so punctuation (commas, periods, colons,
+    ...) becomes a hyphen boundary instead of defeating one."""
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
 def exact_name_match(module_name: str, normalized_query: str) -> bool:
     """
     Whether a normalized module name appears in the normalized query on
@@ -484,12 +491,22 @@ def exact_name_match(module_name: str, normalized_query: str) -> bool:
     substring of an unrelated word). normalize_modname joins phrases with
     hyphens, so wrapping both sides in sentinels reduces the check to a
     boundary-safe containment test.
+
+    Punctuation tolerance: before the boundary check, every non-alphanumeric
+    character on BOTH sides (module_name and normalized_query) is mapped to
+    a hyphen and consecutive hyphens are collapsed, so a stray comma,
+    period, or colon in either string ("vpc," / "vpc." / "eks: karpenter
+    autoscaling") no longer defeats the hyphen-boundary test.
     """
     if not module_name:
         return False
-    if module_name == normalized_query:
+    name = _punctuation_to_hyphen_boundaries(module_name)
+    query = _punctuation_to_hyphen_boundaries(normalized_query)
+    if not name:
+        return False
+    if name == query:
         return True
-    return f"-{module_name}-" in f"-{normalized_query}-"
+    return f"-{name}-" in f"-{query}-"
 
 
 def tokenize(text: str) -> list[str]:
