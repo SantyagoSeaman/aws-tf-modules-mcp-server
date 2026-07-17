@@ -1365,12 +1365,19 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
 # carry the wrong-domain load.
 SEARCH_SEM_FLOOR = 0.88
 
-# Floor on the combined (displayed) score. Derived from the golden-set
-# score distribution: the maximum value at which no correct golden top-1
-# loses its high verdict. Catches low-scoring candidates that pass the
-# coverage check through an incidentally shared keyword. See the 0.23.0
-# design spec (private) for the derivation table.
-SEARCH_SCORE_FLOOR = 4.5
+# Floor on the combined (displayed) score. Derived (2026-07-17) from the
+# full golden-set score distribution under production weights: the largest
+# value at which no correct golden top-1 loses its high verdict. Measured
+# outcome: under production weights, single-keyword catalog queries can
+# legitimately score as low as 3.0 (min-max normalization plus the
+# keyword-count log dampener collapse to a handful of discrete low values
+# for genuinely correct matches), so the floor sits well below the
+# originally-expected ~4.2-4.5 landing zone to avoid demoting real matches.
+# This means the floor no longer catches every low-scoring wrong-domain
+# candidate on its own -- coverage and the sem floor carry most of that
+# load now; a residual low-score false-high class stays a known limitation.
+# See the 0.23.0 design spec (private) for the full derivation table.
+SEARCH_SCORE_FLOOR = 2.9
 
 # Generic infrastructure words that can score a high IDF in a Terraform
 # catalog yet carry no capability signal -- never treat one as the query's
@@ -1436,18 +1443,48 @@ def _token_matches_parts(token: str, parts: set[str]) -> bool:
     return False
 
 
+def _capability_description_text(text: str) -> str:
+    """Text of the module's own ``## Description`` H2 section, for capability
+    coverage's strong-evidence field.
+
+    ``extract_description()`` (tfmod_search_lib) is a header-skip-then-
+    first-N-chars heuristic tuned for the search-result blurb. On every
+    catalog doc the ``## Module Information`` bullets precede
+    ``## Description`` and consume its 200-char budget before the real
+    prose is ever reached (measured: 0/55 docs), making it an inert, noisy
+    strong-evidence source for coverage specifically. This helper instead
+    reads the actual ``## Description`` section body via
+    ``_split_h2_sections`` (exact-title match, the same idiom
+    ``_CORE_SECTIONS`` uses) -- a genuine capability-asserting source.
+
+    This is a coverage-mechanism-only fix: the search-result ``description``
+    field (the response body) still uses ``extract_description`` directly
+    and is untouched.
+
+    Falls back to ``extract_description(text)`` when the doc has no exact
+    ``## Description`` H2 heading, preserving the prior fail-open behavior
+    on non-standard docs.
+    """
+    _, sections = _split_h2_sections(text)
+    for title, block in sections:
+        if title == "Description":
+            body = block.split("\n", 1)[1] if "\n" in block else ""
+            return body.strip()
+    return extract_description(text)
+
+
 def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> float:
     """IDF-weighted fraction of the query's capability terms the candidate
     doc asserts.
 
     Evidence strength per content token: 1.0 when it matches the module
-    name, keywords, or extracted description (fields that assert
-    capability); _COVERAGE_ALPHA when it only appears in the body (a
-    mention is not a capability); 0.0 when absent. Weighted by corpus IDF
-    so rare, query-defining terms dominate. Tokens without a positive IDF
-    are excluded (no discriminative signal); an empty usable token set
-    fails open to 1.0 so the score can only ever demote on positive
-    evidence of absence.
+    name, keywords, or the module's ``## Description`` section text (fields
+    that assert capability); _COVERAGE_ALPHA when it only appears in the
+    body (a mention is not a capability); 0.0 when absent. Weighted by
+    corpus IDF so rare, query-defining terms dominate. Tokens without a
+    positive IDF are excluded (no discriminative signal); an empty usable
+    token set fails open to 1.0 so the score can only ever demote on
+    positive evidence of absence.
     """
     tokens = {
         t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
@@ -1458,7 +1495,7 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
     if not weighted:
         return 1.0
     doc = index.docs[doc_index]
-    strong = _field_parts(doc.module_name or "", *(doc.keywords or []), extract_description(doc.text))
+    strong = _field_parts(doc.module_name or "", *(doc.keywords or []), _capability_description_text(doc.text))
     body = doc.text.lower()
     total = 0.0
     covered = 0.0

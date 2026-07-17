@@ -280,9 +280,9 @@ def test_classify_confidence_ignores_stale_exact_hit_and_kw_overlap_fields() -> 
     # branch is gone by design -- the new rule never reads exact_hit or
     # kw_overlap at all. With both False here, the verdict is decided purely
     # by coverage/sem/score, all of which are favorable (cov=1.0 -- both
-    # query terms match doc0's keywords; sem=0.95; score=5.0 >= 4.5) -> "high",
-    # proving a lexical-overlap flag no longer gates the outcome in either
-    # direction.
+    # query terms match doc0's keywords; sem=0.95; score=5.0 clears
+    # SEARCH_SCORE_FLOOR) -> "high", proving a lexical-overlap flag no
+    # longer gates the outcome in either direction.
     hits = [
         ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.95),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
@@ -806,18 +806,19 @@ def test_verdict_is_invariant_to_generic_infra_filler(base, state) -> None:
 @pytest.mark.parametrize(
     ("paraphrases", "expected"),
     [
-        # 0.23.0 re-derivation: under this file's fixture weights
-        # (w_kw=2.0, w_exact=3.0, w_bm25=1.0, w_sem=1.0 -- NOT the
-        # production weights), the combined scores for this group sit
-        # below SEARCH_SCORE_FLOOR (4.5): "kubernetes cluster" ->
-        # top1=eks score=3.82 cov=0.798; "managed kubernetes cluster" ->
-        # top1=eks score=3.74 cov=0.857; "kubernetes container
-        # orchestration" -> top1=app-runner score=4.06 cov=0.352 (also
-        # below the coverage theta). All three land "low" under the new
-        # rule, still a single shared verdict across every phrasing --
-        # the determinism guarantee this test exists to pin still holds,
-        # only the expected label changed.
-        (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "low"),
+        # 0.23.0 Task 5 re-derivation: SEARCH_SCORE_FLOOR was derived from the
+        # full golden-set score distribution and moved 4.5 -> 2.9 (production
+        # weights showed correct golden top-1s scoring as low as 3.0 under
+        # the ranker's min-max normalization, well below the originally
+        # expected ~4.2-4.5 landing zone). Under this file's fixture weights
+        # (w_kw=2.0, w_exact=3.0, w_bm25=1.0, w_sem=1.0 -- NOT the production
+        # weights): "kubernetes cluster" -> top1=eks score=3.82 cov=1.0;
+        # "managed kubernetes cluster" -> top1=eks score=3.74 cov=1.0;
+        # "kubernetes container orchestration" -> top1=app-runner score=4.06
+        # cov=0.657. All three now clear every gate (coverage, sem, and the
+        # re-derived score floor) and land "high" -- still a single shared
+        # verdict across every phrasing, only the expected label changed.
+        (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "high"),
         (["sagemaker", "sagemaker model endpoint", "machine learning model hosting on sagemaker"], "low"),
     ],
 )
