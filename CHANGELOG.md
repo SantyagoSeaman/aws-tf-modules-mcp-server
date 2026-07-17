@@ -1,5 +1,36 @@
 # Changelog
 
+## [0.23.0] - UNRELEASED
+
+[0.23.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.23.0
+
+Evidence-based confidence verdict for `search_modules`: the `"high"`/`"low"` classifier no longer keys off whether the query happens to contain the target module's name as one of its words. The prior rule failed in both directions — a capability-phrased query with no name token could wrongly grade `"low"` even when the correct module was the top hit, while an unrelated module could wrongly grade `"high"` purely because a name-like substring appeared inside an unrelated query word. The verdict is now decided by whether the top hit actually asserts the asked capability, backed by a ranker-level fix to the same substring problem. Response bodies, hints, the "high verdict implies the doc is inlined" contract, and the search index are all unchanged; stdio behavior is otherwise identical to 0.22.0.
+
+### Added
+
+- **IDF-weighted capability coverage** (`_capability_coverage` in `tfmod_mcp_server.py`): scores how much of a query's content tokens a candidate module's own name, keywords, and Description section actually assert, weighted by corpus IDF so rare, query-defining terms dominate. Evidence is two-tier: a term matched in one of those capability-asserting fields counts in full; a term that only appears somewhere in the free-form doc body counts as a fractional mention rather than a real capability claim. Hyphen-aware field splitting (`_field_parts`/`_token_matches_parts`) lets a hyphenated catalog term match a query token written as a separate word, and vice versa.
+- **`SEARCH_SCORE_FLOOR`**, a floor on the combined ranking score derived from the full golden query set under production search weights — the largest value at which no genuinely correct top-1 result loses its `"high"` verdict.
+- New tests: `tests/integration/test_capability_coverage.py` (coverage-function unit tests: strong/weak/absent evidence, IDF weighting, fail-open behavior), `tests/integration/test_exact_match_boundary.py` (ranker hyphen-boundary unit tests), and additions to `tests/integration/test_verdict_rule.py` (fresh, non-probe exemplars covering the new decision rule and its paraphrase-determinism guarantees).
+
+### Changed
+
+- **`search_modules`'s confidence verdict is now an evidence-based decision rule**, replacing the prior name-token-dependent classifier: `"high"` iff the normalized query IS the top result's module name (the strongest possible assertion of intent), OR the top result's capability coverage clears a threshold AND its raw semantic similarity clears the existing semantic floor AND its combined score clears `SEARCH_SCORE_FLOOR`; otherwise `"low"`. The verdict deliberately no longer depends on whether the query contains the module name as one of its words — a capability-phrased query with no name token can grade `"high"`, and a name-like substring inside an unrelated query word no longer forces a verdict either way.
+- **Exact-name matching in the ranker now requires a hyphen boundary** (`exact_name_match` in `tfmod_search_lib.py`): a module name must appear as a whole hyphen-delimited segment of the normalized query, not merely as a raw substring, so a short module name can no longer earn the exact-match score component by accidentally appearing inside an unrelated, longer query word.
+- **Capability coverage's strong-evidence field now reads each module doc's actual `## Description` section body** (`_capability_description_text`), rather than the truncated heuristic used for the search-result blurb, which the preceding `## Module Information` bullets typically consume before the real description prose is reached on this catalog's docs. This is a coverage-mechanism-only change — the user-visible `description` field in search results is untouched.
+- Internal design specs and plans moved out of the public tree (`docs/superpowers/` removed and gitignored); the public design surface for a release is now code, docstrings, tests, the changelog, and the PR description.
+
+### Unchanged
+
+- **Response bodies, hints, and the "high verdict implies the top module doc is inlined" contract are unchanged** — only which searches receive which verdict changes.
+- **The search index is not rebuilt and no module doc changed.** No ranker weights changed; only the exact-match boundary condition and the verdict classifier changed.
+- **No network, no new dependency, no tool-schema change.**
+
+### Known limitations
+
+- A very low-scoring match whose only connection to the query is an incidental keyword can still grade `"high"` — the score floor is derived so it never demotes a genuinely correct low-scoring match, which leaves some low-relevance matches with modest coverage inside the same score range.
+- A query phrased as an exclusion ("X without Y") is not evaluated as a negation — the excluded technology's own vocabulary can still count as coverage evidence, occasionally grading such a query `"high"` against the module it explicitly asked to avoid.
+- A hyphenated compound written as a single query token (no surrounding spaces) is not reliably matched against a catalog field that stores the same concept as separate hyphenated parts, and gerund/noun variants of the same word (e.g. an "-ing" form versus its noun form) are not treated as equivalent — both can under-count genuine coverage.
+
 ## [0.22.0] - 2026-07-16
 
 [0.22.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.22.0
