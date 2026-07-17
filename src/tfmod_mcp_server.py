@@ -1355,16 +1355,22 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
     return clipped.rsplit(" ", 1)[0] + "…"
 
 
-# RC2 T3 / RC4 #1: floor on the raw (pre-min-max) semantic similarity, now the
-# SECONDARY demoter behind the capability-overlap check below. It still catches
-# the incidental-keyword case (an unrelated module lists the query term as a
-# related-service keyword, earning kw_overlap without the query being covered)
-# that the capability check can pass when the term sits in the doc's own keyword
-# line. Measured (production weights, 2026-07-16): real lexical-non-exact
-# matches sem 0.889..0.921; marginal gaps x-ray 0.8856 / cognito 0.8992 -- the
-# bands overlap so this is a PARTIAL signal. Do NOT raise it to chase gaps; the
-# capability check now carries the wrong-domain load.
+# Floor on the raw (pre-min-max) semantic similarity - the secondary
+# demoter behind the capability-coverage check. It catches the
+# incidental-keyword case: an unrelated module lists the query term in its
+# own keyword line, earning full coverage without the query being covered
+# semantically. Measured on production weights: genuine matches and
+# marginal catalog gaps overlap near this value, so it is a PARTIAL
+# signal - do not raise it to chase gaps; coverage and the score floor
+# carry the wrong-domain load.
 SEARCH_SEM_FLOOR = 0.88
+
+# Floor on the combined (displayed) score. Derived from the golden-set
+# score distribution: the maximum value at which no correct golden top-1
+# loses its high verdict. Catches low-scoring candidates that pass the
+# coverage check through an incidentally shared keyword. See the 0.23.0
+# design spec (private) for the derivation table.
+SEARCH_SCORE_FLOOR = 4.5
 
 # RC4 #1: generic infrastructure words that can score a high IDF in a Terraform
 # catalog yet carry no capability signal -- never treat one as the query's
@@ -1465,82 +1471,42 @@ def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> floa
     return covered / total
 
 
-def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
-    """Whether the top-1 candidate covers the query's central capability term.
-
-    RC4 #1: the wrong-domain inline failure is a CAPABILITY mismatch, not a
-    ranking-confidence one -- a wide score margin still inlines a module whose
-    doc never mentions the query's defining term (Run #10: a 12K-char doc with
-    zero occurrences of the query's central capability term, and a near-miss
-    where the correct module sat one rank behind an adjacent-domain giant). A
-    score-gap gate is structurally blind to this. This reads ONLY the query and
-    the candidate doc (answer-agnostic, ranker untouched): take the query's most
-    salient token (highest BM25 IDF -- the rarest across the catalog, skipping
-    generic-infra words) and require it to appear in the candidate's name /
-    keywords / doc text. Absent -> the query is not covered here.
-
-    Fails open (returns True) when there is no usable salience signal (empty
-    query, only stopwords, or no corpus IDF), so it can only ever DEMOTE a hit
-    that positively lacks the central term -- never invent confidence.
-
-    Known limitation (Run #11 defect 2, DEFERRED): the haystack is name +
-    keywords + full doc text, so a module whose body merely *mentions* an
-    adjacent service (an integration note) still passes for a query about that
-    service's core capability. Narrowing the capability evidence to the
-    capability-asserting fields (name / keywords / purpose) would catch those
-    remaining wide-margin adjacent-domain inlines, but risks demoting a real
-    match whose central term lives only in the body, so it needs its own
-    measured run -- left out of the 0.22.0 final on purpose (net wrong-domain
-    inline traffic was already flat and every judged fleet PASSes).
-    """
-    tokens = {
-        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
-    }
-    if not tokens:
-        return True
-    idf = getattr(index.bm25, "idf", None) or {}
-    max_idf = max((idf.get(t, 0.0) for t in tokens), default=0.0)
-    if max_idf <= 0.0:
-        return True
-    central = {t for t in tokens if idf.get(t, 0.0) == max_idf}
-    doc = index.docs[doc_index]
-    hay = f"{doc.module_name or ''} {' '.join(doc.keywords or [])} {doc.text}".lower()
-    return any(t in hay for t in central)
-
-
 def _classify_confidence(query: str, hits: list[ScoredHit], index: SearchIndex) -> str:
-    """Classify a search into a confidence verdict that also decides the inline.
+    """Classify a search into the confidence verdict that also decides the inline.
 
-    Two-verdict design ("high" / "low"). RC4 #2 unifies the verdict and the
-    expand_top inline under ONE signal: the caller inlines iff the verdict is
-    "high", so the docstring contract ("high => doc inlined") holds again.
+    Two-verdict design ("high" / "low"); the caller inlines the top-1
+    orientation head iff the verdict is "high", so "high => doc inlined"
+    holds by construction.
 
     Decision (top-1 only):
-    1. No lexical component (neither exact-name match nor keyword-IDF overlap)
-       -> "low": a semantic-only ceiling, the query is likely not in the catalog.
-    2. Exact module-name match -> "high": always decisive.
-    3. Lexical-but-not-exact -> "high" only when BOTH hold:
-       - capability-overlap (RC4 #1, primary): the query's central capability
-         term appears in the candidate -- guards the wrong-domain inline that a
-         score margin is blind to;
-       - semantic floor (RC2 T3, secondary): sem_sim >= SEARCH_SEM_FLOOR --
-         guards the incidental-keyword gap the capability check can pass.
-       Either failing -> "low".
+    0. No hits -> "high" (nothing to contest; the caller inlines nothing).
+    1. The whole normalized query IS the top-1 module name -> "high".
+       Typing exactly a module name is the strongest assertion of intent.
+    2. Capability coverage below _COVERAGE_THETA -> "low": the module does
+       not assert the asked capability in its name, keywords, or
+       description (body-only mentions count fractionally).
+    3. Raw semantic similarity below SEARCH_SEM_FLOOR -> "low": guards the
+       incidental-keyword case where coverage passes on a foreign keyword.
+    4. Combined score below SEARCH_SCORE_FLOOR -> "low": low-scoring
+       candidates do not earn an inline even with plausible coverage.
+    5. Otherwise -> "high".
 
-    An empty hit list is "high" (nothing to contest it) per the documented
-    empty-result behavior; the caller still inlines nothing (no top doc).
+    The verdict deliberately does NOT depend on whether the query contains
+    the module name as one of its words: a capability search from a user
+    who does not know the module name is exactly the case the verdict
+    exists for, and a name token inside a longer query proves nothing
+    about the remaining terms.
     """
     if not hits:
         return "high"
-
     top1 = hits[0]
-    if not (top1.exact_hit or top1.kw_overlap):
-        return "low"
-    if top1.exact_hit:
+    if index.docs[top1.doc_index].module_name == normalize_modname(query):
         return "high"
-    if not _capability_covered(query, index, top1.doc_index):
+    if _capability_coverage(query, index, top1.doc_index) < _COVERAGE_THETA:
         return "low"
     if top1.sem_sim < SEARCH_SEM_FLOOR:
+        return "low"
+    if top1.score < SEARCH_SCORE_FLOOR:
         return "low"
     return "high"
 
@@ -1587,9 +1553,9 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     weights = state.weights
     # Always fetch at least 2 hits internally even when the caller asked for
     # top_k=1, so a rank-2 hit is available to callers/tests that inspect the
-    # raw hits list. The confidence classifier (RC4) reads only hits[0]
-    # (exact_hit/kw_overlap/sem_sim + capability-overlap of the top doc) -- there
-    # is no ratio against rank-2.
+    # raw hits list. The confidence classifier reads only hits[0] (whole-query
+    # exact-name match, capability coverage, sem_sim, and score of the top
+    # doc) -- there is no ratio against rank-2.
     fetch_k = max(top_k, 2)
     hits = compute_scores_detailed(
         state.index,
@@ -1605,11 +1571,10 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
 
     confidence = _classify_confidence(query, hits, state.index)
     if hits:
-        cap = _capability_covered(query, state.index, hits[0].doc_index)
+        cov = _capability_coverage(query, state.index, hits[0].doc_index)
         state.logger.debug(
             f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
-            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} cap={cap} "
-            f"verdict={confidence} inline={confidence == 'high'}"
+            f"coverage={cov:.3f} verdict={confidence} inline={confidence == 'high'}"
         )
     else:
         state.logger.debug(f"no hits verdict={confidence}")
@@ -1622,11 +1587,12 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
             f"capability keyword."
         )
 
-    # L3 / RC4 #2: inline the top-1 orientation head iff the verdict is "high".
-    # The verdict itself (capability-overlap + semantic floor) now decides both
-    # the reported confidence and the inline -- one signal, so the "high => doc
-    # inlined" contract in the docstring holds and a wrong-domain top hit is
-    # demoted to "low" before it can drag its doc into context.
+    # L3: inline the top-1 orientation head iff the verdict is "high". The
+    # verdict itself (capability coverage, semantic floor, score floor) now
+    # decides both the reported confidence and the inline -- one signal, so
+    # the "high => doc inlined" contract in the docstring holds and a
+    # wrong-domain top hit is demoted to "low" before it can drag its doc
+    # into context.
     top_module_doc: str | None = None
     if expand_top and confidence == "high" and hits:
         top_doc = state.index.docs[hits[0].doc_index]

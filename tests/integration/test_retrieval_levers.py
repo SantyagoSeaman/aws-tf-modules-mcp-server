@@ -16,12 +16,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     _MIN_HEAD_TABLE_ROWS,
+    SEARCH_SCORE_FLOOR,
     SEARCH_SEM_FLOOR,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
     _cap_head_input_table,
-    _capability_covered,
     _classify_confidence,
     _clip_blurb,
     _reconcile_body_version,
@@ -244,10 +244,12 @@ def test_cap_returns_unchanged_when_no_input_table() -> None:
 # L2/L7/L8 - two-signal search confidence classifier.
 # --------------------------------------------------------------------------- #
 def test_l2_absent_capability_is_low_confidence_with_hint(state) -> None:
-    # sagemaker is absent from the catalog and shares no exact-name or keyword
-    # overlap with any indexed module (unlike "cognito", which several unrelated
-    # modules list as a related-service keyword -- see test_repro_pack.py for
-    # that near-tie case) -- a clean semantic-only-ceiling example.
+    # sagemaker is absent from the catalog; its nearest top-1 (step-functions,
+    # under this file's fixture weights) does not assert the "sagemaker"
+    # capability in its name/keywords/description (measured cov=0.3, well
+    # below _COVERAGE_THETA) -- the coverage gate demotes it to "low" (unlike
+    # "cognito", which several unrelated modules list as a related-service
+    # keyword -- see test_repro_pack.py for that near-tie case).
     out = search_modules_impl("sagemaker", state, top_k=3)
     assert out.confidence == "low"
     assert out.hint, "low confidence must carry a non-empty hint"
@@ -272,14 +274,19 @@ def _covered_index() -> _FakeIndex:
     )
 
 
-def test_rc2_classify_confidence_low_when_top1_not_lexical() -> None:
-    # No exact-name and no keyword overlap on rank 1 -> low, regardless of sem_sim
-    # (the capability gate is not even reached).
+def test_classify_confidence_ignores_stale_exact_hit_and_kw_overlap_fields() -> None:
+    # 0.23.0: the old "no exact-name and no keyword overlap on rank 1 -> low"
+    # branch is gone by design -- the new rule never reads exact_hit or
+    # kw_overlap at all. With both False here, the verdict is decided purely
+    # by coverage/sem/score, all of which are favorable (cov=1.0 -- both
+    # query terms match doc0's keywords; sem=0.95; score=5.0 >= 4.5) -> "high",
+    # proving a lexical-overlap flag no longer gates the outcome in either
+    # direction.
     hits = [
         ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.95),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
     ]
-    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_high_on_former_near_tie_regardless_of_score_ratio() -> None:
@@ -314,14 +321,25 @@ def test_rc2_classify_confidence_high_on_lexical_top1_with_strong_sem_sim() -> N
     assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
-def test_rc2_classify_confidence_high_on_exact_hit_regardless_of_sem_sim() -> None:
-    # exact_hit always wins to "high" - a name match is decisive even with a weak
-    # raw semantic similarity and even if the doc would fail the capability check.
+def test_classify_confidence_high_on_whole_query_exact_name_regardless_of_sem_sim() -> None:
+    # 0.23.0: the ScoredHit.exact_hit flag (a ranker-level boundary match that
+    # can fire inside a longer query) no longer decides the verdict by
+    # itself -- only a WHOLE-QUERY match against the top-1 module name does
+    # (rule step 1). Here the query literally IS the module name, so it wins
+    # even with a very weak raw semantic similarity and even though the doc
+    # would otherwise fail the capability/sem/score checks.
+    idx = _FakeIndex(
+        docs=[
+            _FakeDoc(text="unrelated body", keywords=[], module_name="redis"),
+            _FakeDoc(text="unrelated document body"),
+        ],
+        idf={"redis": 5.0},
+    )
     hits = [
         ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.05),
     ]
-    assert _classify_confidence("something unrelated", hits, _covered_index()) == "high"
+    assert _classify_confidence("redis", hits, idx) == "high"
 
 
 def test_rc2_classify_confidence_high_when_no_rank2() -> None:
@@ -679,50 +697,18 @@ def test_clip_blurb_first_sentence_branch_unaffected() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC4 #1 - capability-overlap gate. The wrong-domain inline failure is a
-# capability mismatch, not a ranking-confidence one: a wide score margin still
-# inlines a module whose doc never mentions the query's defining term. The
-# classifier now demotes a lexical-non-exact top-1 to "low" when the query's
-# central capability token (highest BM25 IDF, skipping generic-infra words) is
-# absent from the candidate's name/keywords/text. Answer-agnostic; fails open.
+# Capability-coverage gate. The wrong-domain inline failure is a capability
+# mismatch, not a ranking-confidence one: a wide score margin still inlines a
+# module whose doc never asserts the query's capability terms. The classifier
+# demotes a top-1 to "low" when its IDF-weighted capability coverage falls
+# below _COVERAGE_THETA. Coverage itself (full/partial/absent evidence tiers,
+# IDF weighting, fail-open behavior) is unit-tested directly in
+# test_capability_coverage.py (Task 2); this section only covers
+# _classify_confidence's own use of that signal.
 # --------------------------------------------------------------------------- #
-def test_capability_covered_true_when_central_term_present() -> None:
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="managed redis in-memory cache clusters", keywords=["redis"])],
-        idf={"redis": 5.0, "cache": 2.0},
-    )
-    assert _capability_covered("redis cache cluster", idx, 0) is True
-
-
-def test_capability_covered_false_when_central_term_absent() -> None:
-    # "kinesis" is the rarest (highest-IDF) query token and never appears in the
-    # candidate doc -> capability mismatch even though "stream" does appear.
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="a document about data stream processing generally", keywords=["stream"])],
-        idf={"kinesis": 6.0, "stream": 2.0, "processing": 1.5},
-    )
-    assert _capability_covered("kinesis stream processing", idx, 0) is False
-
-
-def test_capability_covered_matches_in_keywords_or_name() -> None:
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="body without the term", keywords=["cognito"], module_name="auth")], idf={"cognito": 7.0}
-    )
-    assert _capability_covered("cognito", idx, 0) is True
-
-
-def test_capability_covered_fails_open_without_salience_signal() -> None:
-    idx = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={})
-    # No corpus IDF -> no salience -> do not demote (fail open).
-    assert _capability_covered("some query", idx, 0) is True
-    # Stopword-only query -> nothing salient to require -> fail open.
-    idx2 = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={"aws": 3.0, "terraform": 3.0})
-    assert _capability_covered("aws terraform module", idx2, 0) is True
-
-
 def test_classify_low_on_capability_miss_despite_strong_sem() -> None:
-    # RC4 #1: a lexical-non-exact top-1 with a strong sem_sim is still "low" when
-    # the query's central term is absent from the candidate -- this is the
+    # a lexical-non-exact top-1 with a strong sem_sim is still "low" when the
+    # query's capability terms are absent from the candidate -- this is the
     # wrong-domain inline a score-margin gate was blind to.
     idx = _FakeIndex(
         docs=[
@@ -788,6 +774,13 @@ def test_sem_floor_constant_still_exposed() -> None:
     assert 0.0 < SEARCH_SEM_FLOOR < 1.0
 
 
+def test_score_floor_constant_is_positive() -> None:
+    # 0.23.0: the fourth (final) demoter in the truth table; provisional
+    # value pending a later derivation task, but must always be a sane
+    # positive floor.
+    assert SEARCH_SCORE_FLOOR > 0.0
+
+
 # --------------------------------------------------------------------------- #
 # RC4 #3 - verdict-stability (determinism) contract guards. A consumer cannot
 # budget around a verdict that flips on trivial rephrasing. We lock the part of
@@ -812,7 +805,18 @@ def test_verdict_is_invariant_to_generic_infra_filler(base, state) -> None:
 @pytest.mark.parametrize(
     ("paraphrases", "expected"),
     [
-        (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "high"),
+        # 0.23.0 re-derivation: under this file's fixture weights
+        # (w_kw=2.0, w_exact=3.0, w_bm25=1.0, w_sem=1.0 -- NOT the
+        # production weights), the combined scores for this group sit
+        # below SEARCH_SCORE_FLOOR (4.5): "kubernetes cluster" ->
+        # top1=eks score=3.82 cov=0.798; "managed kubernetes cluster" ->
+        # top1=eks score=3.74 cov=0.857; "kubernetes container
+        # orchestration" -> top1=app-runner score=4.06 cov=0.352 (also
+        # below the coverage theta). All three land "low" under the new
+        # rule, still a single shared verdict across every phrasing --
+        # the determinism guarantee this test exists to pin still holds,
+        # only the expected label changed.
+        (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "low"),
         (["sagemaker", "sagemaker model endpoint", "machine learning model hosting on sagemaker"], "low"),
     ],
 )
