@@ -68,37 +68,30 @@ class TestEvidenceBasedHigh:
 
 
 class TestEvidenceBasedLow:
-    def test_wrong_domain_body_mention_is_low(self, state):
-        # Top-1 is an adjacent-domain module: it asserts "monitoring" (a real
-        # keyword) but the query's rarest, defining term "trail" (idf 2.03)
-        # only ever appears in the doc body -- never in the module name,
-        # keywords, or the module's ## Description section -- so it counts
-        # at _COVERAGE_ALPHA (0.3), not in full; "audit"/"compliance" are
-        # likewise body-only mentions.
-        # Measured (post Stage R calibration, 2026-07-17): top1=cloudwatch
-        # score=3.71 sem=0.9065 cov=0.285 (< theta 0.5) -> the coverage gate
-        # (rule step 2) fires before the sem/score floors are even reached.
-        # Discriminating: under the OLD (pre-0.23.0) classifier this same
-        # query/hit resolved "high" (its single-central-token check only
-        # required "trail" to appear ANYWHERE in name/keywords/full text,
-        # which it does, in the body) -- a wrong-domain false-high the
-        # coverage rewrite fixes.
+    def test_wrong_domain_capability_absent_is_low(self, state):
+        # Top-1 is an adjacent-domain module: cloudwatch (the observability
+        # module) whose generic token "monitoring" matches its asserted domain,
+        # but the query's defining capability -- AWS CloudWatch RUM ("real user
+        # monitoring" / "web vitals"), which this Terraform module does NOT
+        # provision -- appears nowhere in the module name, keywords, or the
+        # module's ## Description section. So coverage stays below theta and the
+        # coverage gate (rule step 2) fires "low" before the sem/score floors
+        # are even reached: the plausible-but-wrong top-1 is correctly demoted
+        # rather than trusted as asserting a capability it does not have.
+        # Measured (2026-07-17, 63-module catalog): top1=cloudwatch score=3.75
+        # sem=0.9066 cov=0.288 (< theta 0.5); score 3.75 clears
+        # SEARCH_SCORE_FLOOR (2.9) and sem 0.9066 clears SEARCH_SEM_FLOOR (0.88),
+        # so the "low" is attributable purely to the coverage gate.
         #
-        # Connector-word gap: FIXED. The original phrasing of this query
-        # ("audit trail and compliance monitoring for cloud resources")
-        # used to flip to "high" for the wrong reason -- generic English
-        # connector words ("and", "for") could incidentally appear in
-        # cloudwatch's real, long Description prose and count as strong
-        # evidence, since _CAPABILITY_STOPWORDS only filtered catalog-domain
-        # filler, not general English stopwords. The Stage R fix wave added
-        # _ENGLISH_STOPWORDS (filtered alongside _CAPABILITY_STOPWORDS in
-        # _capability_coverage's token selection), closing that gap: both
-        # phrasings now filter to the identical content-token set and
-        # measure identical coverage (0.285), so both resolve "low"
-        # consistently. This test keeps the filler-free phrasing (no
-        # remaining confound to avoid); the with-filler phrasing is no
-        # longer a distinct case worth its own test.
-        out = search_modules_impl("audit trail compliance monitoring", state, top_k=3)
+        # Re-anchored in 0.24.0. The prior exemplar ("audit trail compliance
+        # monitoring" -> cloudwatch, with "trail" a body-only mention) became a
+        # legitimate cloudtrail@high once the Cloud Posse `cloudtrail` module
+        # joined the catalog -- "trail"/"audit-log" are now a real module's
+        # asserted capability, not a wrong-domain body mention. This replacement
+        # keeps the identical guard (an adjacent-domain top-1 resolves low via
+        # the coverage gate, never a false-high) with near-identical signals:
+        # cov 0.288 vs the old 0.285, sem 0.9066 vs 0.9065, score 3.75 vs 3.71.
+        out = search_modules_impl("real user monitoring web vitals", state, top_k=3)
         assert out.results[0].module_name == "cloudwatch"
         assert out.confidence == "low"
         assert out.hint is not None

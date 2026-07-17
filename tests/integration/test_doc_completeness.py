@@ -14,7 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts"))
 import lint_doc_completeness as lint  # noqa: E402 -- sys.path must be set up first
 
 ROOT = Path(__file__).resolve().parents[2]
-DOCS = ROOT / "modules/terraform-aws-modules"
+# Every vendor subdir under modules/ is part of the catalog and must satisfy the
+# same completeness guard (terraform-aws-modules plus the Cloud Posse gap-fillers).
+DOC_DIRS = [ROOT / "modules/terraform-aws-modules", ROOT / "modules/cloudposse"]
 ALLOWLIST = ROOT / "tests/fixtures/doc_completeness_allowlist.txt"
 
 
@@ -27,12 +29,19 @@ def _allowlist() -> set[str]:
     return out
 
 
+def _check_all(allowlist: set[str]) -> list[str]:
+    unresolved: list[str] = []
+    for docs in DOC_DIRS:
+        unresolved.extend(lint.check_corpus(str(docs), allowlist))
+    return unresolved
+
+
 def test_no_unlisted_opaque_rows() -> None:
-    unresolved = lint.check_corpus(str(DOCS), _allowlist())
+    unresolved = _check_all(_allowlist())
     assert unresolved == [], f"opaque input rows not expanded and not allowlisted: {unresolved}"
 
 
 def test_allowlist_has_no_stale_entries() -> None:
-    flagged = set(lint.check_corpus(str(DOCS), set()))
+    flagged = set(_check_all(set()))
     stale = _allowlist() - flagged
     assert stale == set(), f"allowlist entries that are no longer flagged (remove them): {stale}"
