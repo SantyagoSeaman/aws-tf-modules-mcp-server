@@ -117,29 +117,28 @@ class TestParaphraseDeterminism:
         #     score=9.31 sem=0.9398 cov=0.496
         #   "centralized vault for rotating sensitive application credentials":
         #     score=3.15 sem=0.9152 cov=0.205
-        # Both land "low" (coverage below theta on both phrasings) -- the
-        # point of this test is NOT that "low" is the ideal verdict here
-        # (see the extract_description note below) but that the two
-        # phrasings AGREE, unlike the old classifier: phrasing one had
-        # exact_hit=True (the ranker boundary-matched the module name
-        # inside the longer query) and kw_overlap=False, while phrasing two
-        # had both False -- the old "high" came from the exact-hit branch,
-        # flipping "high" vs "low" for the identical top-1 module. This
-        # rewrite removes that path: a name token inside a longer query no
-        # longer short-circuits the verdict.
+        # This pair previously landed "low" on both phrasings (coverage below
+        # theta) due to a description-extraction limitation: coverage
+        # undercounted because the query's highest-idf token "rotating" never
+        # matched the doc's own keyword "secret-rotation" (gerund vs noun
+        # form), and extract_description filled its 200-char budget from the
+        # preceding "## Module Information" bullet block rather than reaching
+        # the real "## Description" prose, which does contain "rotating"
+        # verbatim. That limitation has since been fixed -- the coverage
+        # mechanism now reads the real "## Description" section -- and both
+        # phrasings land "high".
         #
-        # Root-cause note (extract_description landmine, confirmed by
-        # measurement): coverage undercounts here because the query's
-        # highest-idf token "rotating" (idf 3.59) never matches the doc's
-        # own keyword "secret-rotation" (gerund vs noun form is outside the
-        # trailing-plural/prefix tolerance in _token_matches_parts) and the
-        # real "## Description" prose -- which does contain the word
-        # "rotating" verbatim -- is never reached by extract_description
-        # (it fills its 200-char budget from the preceding "## Module
-        # Information" bullet block on every doc in this catalog, confirmed
-        # across all 55 docs). Fixing either gap is out of this task's scope
-        # (Task 3 consumes _capability_coverage as shipped by Task 2) but
-        # would very likely flip this pair to "high".
+        # The point of this test is not the specific label (it was "low"
+        # before the fix, it is "high" after) but that the two phrasings
+        # AGREE, unlike the old classifier: phrasing one had exact_hit=True
+        # (the ranker boundary-matched the module name inside the longer
+        # query) and kw_overlap=False, while phrasing two had both False --
+        # the old "high" came from the exact-hit branch, flipping "high" vs
+        # "low" for the identical top-1 module. This rewrite removes that
+        # path: a name token inside a longer query no longer short-circuits
+        # the verdict. The test asserts verdict AGREEMENT (determinism), not
+        # a specific label, so it holds across mechanism improvements like
+        # the description-extraction fix above.
         a = search_modules_impl("secrets manager for rotating database credentials", state, top_k=3)
         b = search_modules_impl("centralized vault for rotating sensitive application credentials", state, top_k=3)
         assert a.results[0].module_name == b.results[0].module_name == "secrets-manager"
