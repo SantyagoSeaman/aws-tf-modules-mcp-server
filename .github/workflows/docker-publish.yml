@@ -49,7 +49,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Multi-arch since 0.15.1 (see docs/docker-container-support.md §4.5): linux/amd64 +
+      # Multi-arch since 0.15.1: linux/amd64 +
       # linux/arm64 (Apple-Silicon demand confirmed). This workflow runs on an amd64
       # GitHub-hosted runner, so QEMU emulates the arm64 leg -- slower than a native arm64
       # runner would be, but no extra infra to maintain.
