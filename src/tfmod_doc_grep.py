@@ -127,7 +127,7 @@ def _scope_matches(label: str | None, scope: list[str] | None) -> bool:
 def _find_enclosing(lines: list[str], is_marker: list[bool], sections: list[str | None], idx: int) -> str | None:
     """
     Find the nearest enclosing "- <name> | ..." list-item header for a match on
-    a continuation line (RC2 C1).
+    a continuation line.
 
     An input/output/resource row is a single logical entry that can span
     multiple physical lines when a field (e.g. a nested object/map type)

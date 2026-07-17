@@ -563,7 +563,7 @@ def cosine_sim_matrix(vec: np.ndarray, mat: np.ndarray) -> np.ndarray:
 def _strip_yaml_frontmatter(text: str) -> str:
     """Drop a leading YAML front-matter block (``---`` ... ``---``) if present.
 
-    RC4 #4: docs may open with a YAML front-matter block (``module_name`` /
+    Docs may open with a YAML front-matter block (``module_name`` /
     ``keywords``). ``extract_description`` treats the ``---`` delimiters as
     horizontal rules and skips them, but the block's key/value lines are not
     headers or rules, so they leaked verbatim into the search-result

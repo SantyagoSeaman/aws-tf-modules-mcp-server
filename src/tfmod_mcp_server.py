@@ -661,7 +661,7 @@ class UpdateNoticeMixin(BaseModel):
     Also drops any other field named `hint` or `top_module_doc` when falsy
     (None or empty string) for the same reason -- SearchOutput.hint (L2/L7/L8/
     T3 confidence signal) is only meaningful for a "low" verdict, and
-    SearchOutput.top_module_doc (L3 expand_top, default-on since RC2 T2) is
+    SearchOutput.top_module_doc (L3 expand_top, default-on) is
     only populated on a high-confidence search. Only SearchOutput currently
     defines these fields, so this is a harmless no-op on every other model
     built on this mixin.
@@ -1013,7 +1013,7 @@ def _version_pin_hint(text: str, version_override: str | None = None) -> str | N
     Args:
         text: The module document body.
         version_override: When truthy, used verbatim as the pinned version
-            instead of re-parsing the body bullet (RC2 C2: single-snapshot
+            instead of re-parsing the body bullet (single-snapshot
             version consistency -- lets a caller thread in the same metadata
             field it also reports elsewhere, so the two can never contradict
             each other in one response).
@@ -1036,8 +1036,8 @@ def _version_pin_hint(text: str, version_override: str | None = None) -> str | N
 def _reconcile_body_version(text: str, resolved: str | None) -> str:
     """Rewrite every body ``**Latest Version**`` bullet to the resolved snapshot.
 
-    RC3 #2 (single-snapshot consistency, applied to ALL version mentions): rc2
-    synced the pin banner with the caller-threaded metadata ``latest_version``,
+    Single-snapshot consistency, applied to ALL version mentions: the pin
+    banner is synced with the caller-threaded metadata ``latest_version``,
     but the curated doc body still carries its own ``**Latest Version**`` bullet
     that can be stale and contradict both the banner and ``results[].latest_version``
     in the same response. When a caller threads a resolved snapshot, rewrite the
@@ -1248,7 +1248,7 @@ def filter_module_sections(
 
     footer_lines = [
         "---",
-        # RC2 F1: compact honest-limits pointer. The curated doc is a hand-picked
+        # Compact honest-limits pointer. The curated doc is a hand-picked
         # SUBSET; anything requiring completeness/exactness escalates one tier to
         # the live registry, and resource-creation conditions live in module
         # source. Keeps the compact→full→source escalation a mechanical decision,
@@ -1349,7 +1349,7 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
         return text[: period + 1]
     if len(text) <= max_length:
         return text
-    # RC3 #3: clip on a word boundary, never mid-word. A hard char cut left a
+    # Clip on a word boundary, never mid-word. A hard char cut left a
     # dangling partial word in every non-top-1 result row.
     clipped = text[: max_length - 1].rstrip()
     return clipped.rsplit(" ", 1)[0] + "…"
@@ -1372,7 +1372,7 @@ SEARCH_SEM_FLOOR = 0.88
 # design spec (private) for the derivation table.
 SEARCH_SCORE_FLOOR = 4.5
 
-# RC4 #1: generic infrastructure words that can score a high IDF in a Terraform
+# Generic infrastructure words that can score a high IDF in a Terraform
 # catalog yet carry no capability signal -- never treat one as the query's
 # central capability term when deciding capability coverage.
 _CAPABILITY_STOPWORDS = frozenset(
@@ -1524,20 +1524,20 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
         top_k: Number of results to return (clamped to 1..10, default 3)
         expand_top: When True AND the search is high confidence, inline the
             top-1 module orientation head into the response (L3) -- collapses
-            a confident search->get_module pair into one call. Default True
-            (RC2 T2): a fleet-wide counterfactual measurement showed the
-            opt-in default was strangling the one right-direction lever (used
-            by 1/6 workers), and the residency cost of the ~1.5K-char head is
-            pennies against the ~$0.09/turn an extra get_module call costs.
-            Pass expand_top=False to suppress it (pure-browse searches).
-            Inlined iff the verdict is "high" (RC4 #2: verdict and inline are
-            one decision -- the capability-aware classifier demotes a
-            wrong-domain top hit to "low" before it can drag its doc into
-            context, so "high" reliably means the inlined doc is on-target).
+            a confident search->get_module pair into one call. Defaults to
+            True: leaving this opt-in left the one clearly right-direction
+            lever mostly unused, and the residency cost of the ~1.5K-char
+            head is small next to the cost of spending a whole extra turn on
+            a follow-up get_module call. Pass expand_top=False to suppress it
+            (pure-browse searches). Inlined iff the verdict is "high"
+            (verdict and inline are one decision -- the capability-aware
+            classifier demotes a wrong-domain top hit to "low" before it can
+            drag its doc into context, so "high" reliably means the inlined
+            doc is on-target).
 
     Returns:
         SearchOutput with top-k ranked results plus a confidence verdict
-        (L2/L7/L8/T3/RC4): "high" (trust the top hit) or "low" (no confident
+        (L2/L7/L8/T3): "high" (trust the top hit) or "low" (no confident
         catalog match). A hint accompanies a "low" verdict and is absent from
         the JSON output when confidence is "high". top_module_doc (L3) is
         populated by default whenever confidence == "high"; absent from the JSON
@@ -1596,7 +1596,7 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     top_module_doc: str | None = None
     if expand_top and confidence == "high" and hits:
         top_doc = state.index.docs[hits[0].doc_index]
-        # RC2 C2: thread the same metadata field reported in results[].latest_version
+        # Thread the same metadata field reported in results[].latest_version
         # into the head's version pin, so the two can never contradict each other in
         # one response (the body-bullet re-parse and the metadata field can drift
         # apart after a metadata-only patch).
@@ -1778,8 +1778,8 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
 
     Args:
         text: The module document body.
-        version_override: Forwarded to ``_version_pin_hint`` verbatim (RC2 C2:
-            single-snapshot version consistency). None (default) re-parses the
+        version_override: Forwarded to ``_version_pin_hint`` verbatim (single-
+            snapshot version consistency). None (default) re-parses the
             body's ``**Latest Version**`` bullet as before.
     """
     body = filter_module_sections(
@@ -1790,7 +1790,7 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
     body = _cap_head_input_table(body)
-    # RC3 #2: when a snapshot is threaded in, reconcile the body's own
+    # When a snapshot is threaded in, reconcile the body's own
     # **Latest Version** bullet to it so the inlined head cannot contradict the
     # pin banner / results[].latest_version. No override -> body bullet is the
     # snapshot, so this is a no-op and the head stays self-consistent as before.
@@ -2125,8 +2125,8 @@ def search_modules(
         top_k: Number of results to return (1-10, default 3).
         expand_top: When True and the search is high confidence, inline the
                top-1 module orientation head into top_module_doc (L3) -- one
-               call instead of search then get_module. Default True (RC2 T2).
-               Populated iff the verdict is "high" (RC4 #2: verdict and inline
+               call instead of search then get_module. Default True.
+               Populated iff the verdict is "high" (verdict and inline
                are one decision), so a wrong-domain top hit is never inlined.
 
     Returns:

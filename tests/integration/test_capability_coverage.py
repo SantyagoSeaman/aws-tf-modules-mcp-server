@@ -59,9 +59,9 @@ class TestTokenMatchesParts:
 
 class TestCapabilityCoverage:
     def test_strong_keyword_coverage_is_full(self):
-        doc = make_doc("gateway", ["jwt-authorizer", "http-api"], "body text")
-        idx = make_index([doc], {"jwt": 3.0, "authorizer": 3.0})
-        assert _capability_coverage("jwt authorizer", idx, 0) == pytest.approx(1.0)
+        doc = make_doc("gateway", ["webhook-dispatcher", "http-api"], "body text")
+        idx = make_index([doc], {"webhook": 3.0, "dispatcher": 3.0})
+        assert _capability_coverage("webhook dispatcher", idx, 0) == pytest.approx(1.0)
 
     def test_body_only_mention_is_weak(self):
         # extract_description (default max_length=200) does not stop at the
