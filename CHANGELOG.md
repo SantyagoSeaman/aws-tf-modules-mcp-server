@@ -1,5 +1,23 @@
 # Changelog
 
+## [0.23.1] - 2026-07-17
+
+[0.23.1]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.23.1
+
+Bugfix: `modules_list` failed over the HTTP transport (compact default) with an output-validation error naming `path` as a required property. The tool returns a compact catalog by default (introduced in 0.22.0) and a full listing with `detail=full`; the two shapes were modeled as a heterogeneous output union (`list[compact] | list[full]`), which a strict MCP output-schema validator — the plugin proxy and the host client that drive it — mis-resolved into requiring `path` on the compact items (which have none), rejecting the response. The `stdio` transport did not exercise the same validation, so the regression shipped in 0.22.0 unnoticed. The curated offline search (`search_modules`/`get_module`/`grep_module_docs`) was unaffected.
+
+### Fixed
+
+- **`modules_list` over HTTP no longer fails output validation.** The two output-item shapes are collapsed into a single `ModuleListItem` whose mode-specific fields (`purpose` for the compact default; `path`/`description`/`keywords` for `detail=full`) are all optional, so the advertised output-item schema carries no union and requires only `module_name`/`module_id`/`latest_version`. A field-dropping serializer keeps the compact default byte-lean (no `null` padding) and `detail=full` keeps its complete shape, so both responses are byte-identical to before — only the schema/validation changed.
+
+### Added
+
+- HTTP end-to-end regression assertion that the advertised `modules_list` output-item schema carries no union and does not require `path`, plus unit tests on the schema and the compact/full serialization contract. The prior tests exercised `modules_list` only through the in-process helper and the `stdio` transport, which did not surface the HTTP output-schema validation.
+
+### Unchanged
+
+- Response bodies for both detail levels are byte-identical to 0.23.0; the search index, the verdict layer, and all other tools are untouched. `stdio` behavior is identical to 0.23.0.
+
 ## [0.23.0] - 2026-07-17
 
 [0.23.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.23.0

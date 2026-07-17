@@ -153,7 +153,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.23.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.23.1"]
     }
   }
 }
@@ -165,7 +165,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.23.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.23.1
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -179,7 +179,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.23.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.23.1 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -199,7 +199,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.23.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.23.1 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
