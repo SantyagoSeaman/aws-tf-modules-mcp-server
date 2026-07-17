@@ -101,10 +101,13 @@ class TestParaphraseDeterminism:
         # Both land "low" (coverage below theta on both phrasings) -- the
         # point of this test is NOT that "low" is the ideal verdict here
         # (see the extract_description note below) but that the two
-        # phrasings AGREE, unlike the old classifier: its lexical-overlap
-        # gate flipped "high" (phrasing one, kw_overlap True) vs "low"
-        # (phrasing two, kw_overlap False) for the identical top-1 module --
-        # exactly the phrasing-sensitive verdict this rewrite removes.
+        # phrasings AGREE, unlike the old classifier: phrasing one had
+        # exact_hit=True (the ranker boundary-matched the module name
+        # inside the longer query) and kw_overlap=False, while phrasing two
+        # had both False -- the old "high" came from the exact-hit branch,
+        # flipping "high" vs "low" for the identical top-1 module. This
+        # rewrite removes that path: a name token inside a longer query no
+        # longer short-circuits the verdict.
         #
         # Root-cause note (extract_description landmine, confirmed by
         # measurement): coverage undercounts here because the query's

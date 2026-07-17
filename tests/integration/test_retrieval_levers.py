@@ -42,7 +42,7 @@ def _doc(module: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Minimal fake index for the capability-aware classifier unit tests (RC4). The
+# Minimal fake index for the capability-aware classifier unit tests. The
 # classifier reads only index.docs[doc_index].{module_name,keywords,text} and
 # index.bm25.idf, so a lightweight stand-in lets us drive capability coverage
 # and the sem floor precisely without depending on real doc content.
@@ -241,7 +241,8 @@ def test_cap_returns_unchanged_when_no_input_table() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# L2/L7/L8 - two-signal search confidence classifier.
+# L2/L7/L8 - four-check search confidence classifier (whole-query exact
+# match, capability coverage, semantic floor, score floor).
 # --------------------------------------------------------------------------- #
 def test_l2_absent_capability_is_low_confidence_with_hint(state) -> None:
     # sagemaker is absent from the catalog; its nearest top-1 (step-functions,
