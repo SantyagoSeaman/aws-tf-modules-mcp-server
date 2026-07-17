@@ -104,9 +104,15 @@ temp/
 !.claude/skills/
 CLAUDE.md
 /.serena/
+.mcp.json
 
 # Internal maintenance docs (not part of the published package)
 modules/UPDATE_PROMPTS.md
+
+# Internal design specs and plans live in the private evals repo
+# (evals/specs/, evals/plans/); this path stays local-only so a spec
+# written here by habit can never be committed to the public tree.
+docs/superpowers/
 
 # Private A/B evaluation harness and experiment evidence.
 # evals/ is its own independent git repo pushed to the private

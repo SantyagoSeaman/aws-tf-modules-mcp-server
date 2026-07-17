@@ -473,6 +473,42 @@ def normalize_modname(name: str) -> str:
     return n
 
 
+def _punctuation_to_hyphen_boundaries(s: str) -> str:
+    """Map every run of non-alphanumeric characters to a single hyphen and
+    strip leading/trailing hyphens, so punctuation (commas, periods, colons,
+    ...) becomes a hyphen boundary instead of defeating one."""
+    return re.sub(r"[^a-z0-9]+", "-", s.lower()).strip("-")
+
+
+def exact_name_match(module_name: str, normalized_query: str) -> bool:
+    """
+    Whether a normalized module name appears in the normalized query on
+    hyphen boundaries.
+
+    The exact-name scoring component must fire for "vpc" inside
+    "vpc-with-private-subnets" (the user named the module) but not for
+    "rds" inside "manage-dns-records-zones" (the name is an accidental
+    substring of an unrelated word). normalize_modname joins phrases with
+    hyphens, so wrapping both sides in sentinels reduces the check to a
+    boundary-safe containment test.
+
+    Punctuation tolerance: before the boundary check, every non-alphanumeric
+    character on BOTH sides (module_name and normalized_query) is mapped to
+    a hyphen and consecutive hyphens are collapsed, so a stray comma,
+    period, or colon in either string ("vpc," / "vpc." / "eks: karpenter
+    autoscaling") no longer defeats the hyphen-boundary test.
+    """
+    if not module_name:
+        return False
+    name = _punctuation_to_hyphen_boundaries(module_name)
+    query = _punctuation_to_hyphen_boundaries(normalized_query)
+    if not name:
+        return False
+    if name == query:
+        return True
+    return f"-{name}-" in f"-{query}-"
+
+
 def tokenize(text: str) -> list[str]:
     """
     Tokenize text into lowercase words using NLTK's word_tokenize.
@@ -544,7 +580,7 @@ def cosine_sim_matrix(vec: np.ndarray, mat: np.ndarray) -> np.ndarray:
 def _strip_yaml_frontmatter(text: str) -> str:
     """Drop a leading YAML front-matter block (``---`` ... ``---``) if present.
 
-    RC4 #4: docs may open with a YAML front-matter block (``module_name`` /
+    Docs may open with a YAML front-matter block (``module_name`` /
     ``keywords``). ``extract_description`` treats the ``---`` delimiters as
     horizontal rules and skips them, but the block's key/value lines are not
     headers or rules, so they leaked verbatim into the search-result
@@ -1141,9 +1177,7 @@ def compute_scores_detailed(
     q_kw = {t for t in q_tokens if t in known_keywords}
     logger.debug(f"Query keywords matching index: {q_kw}")
 
-    exact_hits = np.array(
-        [1.0 if (mn and (mn == q_norm or mn in q_norm)) else 0.0 for mn in index.module_names], dtype=np.float32
-    )
+    exact_hits = np.array([1.0 if exact_name_match(mn, q_norm) else 0.0 for mn in index.module_names], dtype=np.float32)
     exact_count = int(np.sum(exact_hits))
     if exact_count > 0:
         logger.debug(f"Found {exact_count} exact module name matches")

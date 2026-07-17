@@ -14,7 +14,9 @@ current variable names, is the deliverable.
 
 1. **Decompose** the requirement into components (network, compute, data,
    load balancing, storage, ...). For each, `search_modules` with a
-   functional query; pick the best fit from the top-3.
+   functional query; pick the best fit from the top-3. Check `confidence`
+   first — on `"low"`, the top hit is not clearly asserted as covering that
+   component; try a different phrasing for that component before picking it.
 2. **Read before writing.** `get_module` for every chosen module, pulling the
    interface for the wiring: `sections=["inputs", "outputs"]` (the default
    response is a compact head). Blocks are written from the retrieved docs,

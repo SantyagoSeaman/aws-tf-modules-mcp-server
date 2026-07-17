@@ -5,10 +5,10 @@ description: Use when writing new or modifying existing Terraform code for AWS. 
 
 # Writing Terraform with AWS community modules
 
-The tfmod-search MCP server provides current documentation for all 54 community
-terraform-aws-modules, indexed for hybrid search. Module APIs change between
-major versions, so memorized variable names and defaults are unreliable — always
-work from the retrieved documentation.
+The tfmod-search MCP server provides current documentation for the community
+terraform-aws-modules catalog, indexed for hybrid search. Module APIs change
+between major versions, so memorized variable names and defaults are
+unreliable — always work from the retrieved documentation.
 
 ## Workflow
 
@@ -39,6 +39,12 @@ work from the retrieved documentation.
      resources; eks v21 renamed many cluster inputs).
    - Pin the module `version` to the version shown in the documentation.
    - Set only the variables the requirement needs; do not restate defaults.
+   - For any nested/complex (`any`/`object(...)`) input, check the `examples`
+     section before writing it — a bare bool vs an object, a map keyed by a
+     NUMBER vs a name, a plural vs singular field, or a sub-block that
+     defaults ON is usually visible only there, not in the inputs table. Never
+     leave a required nested block as a prose comment or TODO; write the
+     exact shape the doc/examples show.
 5. **Prefer the community module** over hand-written `aws_*` resources when it
    covers the use case — modules encode hardening, tagging, and edge cases.
    Fall back to raw resources only when the module does not support the required
@@ -57,6 +63,14 @@ work from the retrieved documentation.
 - Search returns the top-3 matches by default; pass `top_k` (up to 10) for
   ambiguous queries, and if nothing fits, retry with different terms before
   concluding no module exists.
+- `search_modules` also returns a `confidence` verdict. `"high"` — the top
+  hit's own name/keywords/description assert the asked capability; trust it.
+  `"low"` — the capability is not clearly asserted; this does NOT mean "not in
+  catalog" by itself, it can still be the right module under unfamiliar
+  phrasing, so rephrase and/or check `get_module`/`modules_list` before
+  concluding no module exists. An exclusion-phrased query ("X without Y") is
+  not evaluated as a negation and can grade `"high"` on the excluded
+  technology — read the description before trusting that verdict.
 - `get_module` returns a compact orientation head by default; pass `sections`
   (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
   to pull the parts you need, or `sections=["all"]` for the whole curated doc.

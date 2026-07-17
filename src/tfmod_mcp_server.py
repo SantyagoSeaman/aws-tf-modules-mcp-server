@@ -84,6 +84,16 @@ training data.
    coordinates for chaining into `grep_module_docs`). Query by functionality
    ("s3 bucket with encryption and versioning"), technology ("kubernetes
    cluster"), or exact module name ("vpc", "eks").
+   Each result also carries a `confidence` verdict: `"high"` means the top
+   hit's own name/keywords/Description assert the asked capability — trust
+   it, and its orientation head is inlined as `top_module_doc`. `"low"` means
+   the capability is not clearly asserted by the top hit; a `"low"` does NOT
+   by itself mean "not in catalog" — it can still be the right module under
+   unfamiliar phrasing. On a `"low"`, rephrase by capability and/or check
+   `get_module`/`modules_list` BEFORE concluding no module exists. Caveat: a
+   query phrased as an exclusion ("X without Y") is not evaluated as a
+   negation and can grade `"high"` on the very technology it asked to avoid —
+   read the description before trusting a `"high"` on that kind of query.
 2. `get_module(module_identifier, sections=None)` — orient on the chosen
    module. Accepts a module name ("vpc"), a relative doc path
    ("modules/terraform-aws-modules/vpc.md"), or a submodule address
@@ -96,7 +106,12 @@ training data.
    source, or call `get_module("<name>//modules/<sub>")` for its scoped head.
    Pass `sections` (e.g. ["inputs", "examples"]) to pull specific parts, or
    `sections=["all"]` for the full document; prefer scoped `sections` over
-   "all" on large modules.
+   "all" on large modules. A nested/complex leaf shape — a bare bool vs an
+   object, a map keyed by a NUMBER vs a name, a plural vs singular field, a
+   sub-block that defaults ON — is usually visible only in `examples`: check
+   `get_module(name, sections=["examples"])` (or grep) before writing any
+   nested/complex (`any`/`object(...)`) input. Never leave a required nested
+   block as a prose comment or TODO — write the exact shape the doc shows.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 
@@ -661,7 +676,7 @@ class UpdateNoticeMixin(BaseModel):
     Also drops any other field named `hint` or `top_module_doc` when falsy
     (None or empty string) for the same reason -- SearchOutput.hint (L2/L7/L8/
     T3 confidence signal) is only meaningful for a "low" verdict, and
-    SearchOutput.top_module_doc (L3 expand_top, default-on since RC2 T2) is
+    SearchOutput.top_module_doc (L3 expand_top, default-on) is
     only populated on a high-confidence search. Only SearchOutput currently
     defines these fields, so this is a harmless no-op on every other model
     built on this mixin.
@@ -1013,7 +1028,7 @@ def _version_pin_hint(text: str, version_override: str | None = None) -> str | N
     Args:
         text: The module document body.
         version_override: When truthy, used verbatim as the pinned version
-            instead of re-parsing the body bullet (RC2 C2: single-snapshot
+            instead of re-parsing the body bullet (single-snapshot
             version consistency -- lets a caller thread in the same metadata
             field it also reports elsewhere, so the two can never contradict
             each other in one response).
@@ -1036,8 +1051,8 @@ def _version_pin_hint(text: str, version_override: str | None = None) -> str | N
 def _reconcile_body_version(text: str, resolved: str | None) -> str:
     """Rewrite every body ``**Latest Version**`` bullet to the resolved snapshot.
 
-    RC3 #2 (single-snapshot consistency, applied to ALL version mentions): rc2
-    synced the pin banner with the caller-threaded metadata ``latest_version``,
+    Single-snapshot consistency, applied to ALL version mentions: the pin
+    banner is synced with the caller-threaded metadata ``latest_version``,
     but the curated doc body still carries its own ``**Latest Version**`` bullet
     that can be stale and contradict both the banner and ``results[].latest_version``
     in the same response. When a caller threads a resolved snapshot, rewrite the
@@ -1248,7 +1263,7 @@ def filter_module_sections(
 
     footer_lines = [
         "---",
-        # RC2 F1: compact honest-limits pointer. The curated doc is a hand-picked
+        # Compact honest-limits pointer. The curated doc is a hand-picked
         # SUBSET; anything requiring completeness/exactness escalates one tier to
         # the live registry, and resource-creation conditions live in module
         # source. Keeps the compact→full→source escalation a mechanical decision,
@@ -1349,24 +1364,42 @@ def _clip_blurb(text: str, max_length: int = 140) -> str:
         return text[: period + 1]
     if len(text) <= max_length:
         return text
-    # RC3 #3: clip on a word boundary, never mid-word. A hard char cut left a
+    # Clip on a word boundary, never mid-word. A hard char cut left a
     # dangling partial word in every non-top-1 result row.
     clipped = text[: max_length - 1].rstrip()
     return clipped.rsplit(" ", 1)[0] + "…"
 
 
-# RC2 T3 / RC4 #1: floor on the raw (pre-min-max) semantic similarity, now the
-# SECONDARY demoter behind the capability-overlap check below. It still catches
-# the incidental-keyword case (an unrelated module lists the query term as a
-# related-service keyword, earning kw_overlap without the query being covered)
-# that the capability check can pass when the term sits in the doc's own keyword
-# line. Measured (production weights, 2026-07-16): real lexical-non-exact
-# matches sem 0.889..0.921; marginal gaps x-ray 0.8856 / cognito 0.8992 -- the
-# bands overlap so this is a PARTIAL signal. Do NOT raise it to chase gaps; the
-# capability check now carries the wrong-domain load.
+# Floor on the raw (pre-min-max) semantic similarity - the secondary
+# demoter behind the capability-coverage check. It catches the
+# incidental-keyword case: an unrelated module lists the query term in its
+# own keyword line, earning full coverage without the query being covered
+# semantically. Measured on production weights: genuine matches and
+# marginal catalog gaps overlap near this value, so it is a PARTIAL
+# signal - do not raise it to chase gaps; coverage and the score floor
+# carry the wrong-domain load.
 SEARCH_SEM_FLOOR = 0.88
 
-# RC4 #1: generic infrastructure words that can score a high IDF in a Terraform
+# Floor on the combined (displayed) score. SEARCH_SCORE_FLOOR = 2.9.
+# Derivation: golden-set score distribution, 2026-07-17.
+#
+# Under production weights, the ranker's min-max normalization pins the
+# top-1 combined score at >= 3.0 in both the no-keyword-match branch and
+# the multi-keyword-match branch, so this floor can fire only in the
+# single-matched-keyword branch (the one branch whose normalization can
+# legitimately land as low as 3.0 for a genuinely correct match). The
+# primary guard for no-evidence queries is the out-of-vocabulary rule in
+# _capability_coverage (an unknown, uncovered term now participates at the
+# corpus's maximum IDF weight instead of being dropped, so it can drag
+# coverage below theta on its own); the raw-semantic floor above is the
+# secondary guard. This floor is retained as a conjunct for non-default
+# weight configurations and for the single-keyword branch, where it still
+# has room to act. A residual low-score false-high class (an incidental
+# keyword line that is not a real capability) stays a known, documented
+# limitation -- coverage and the sem floor carry that load, not this one.
+SEARCH_SCORE_FLOOR = 2.9
+
+# Generic infrastructure words that can score a high IDF in a Terraform
 # catalog yet carry no capability signal -- never treat one as the query's
 # central capability term when deciding capability coverage.
 _CAPABILITY_STOPWORDS = frozenset(
@@ -1384,83 +1417,262 @@ _CAPABILITY_STOPWORDS = frozenset(
     }
 )
 
+# General English function words: connectors, prepositions, pronouns, and
+# politeness filler that carry no capability signal in any domain. Filtered
+# out of the capability-coverage token set alongside _CAPABILITY_STOPWORDS
+# (catalog-domain filler) so a query's incidental "and"/"for"/"with" cannot
+# be mistaken for -- or incidentally match -- a real capability term.
+_ENGLISH_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "as",
+        "at",
+        "be",
+        "but",
+        "by",
+        "can",
+        "do",
+        "for",
+        "from",
+        "has",
+        "have",
+        "how",
+        "i",
+        "if",
+        "in",
+        "into",
+        "is",
+        "it",
+        "its",
+        "of",
+        "on",
+        "or",
+        "that",
+        "the",
+        "this",
+        "to",
+        "up",
+        "us",
+        "use",
+        "using",
+        "via",
+        "want",
+        "was",
+        "we",
+        "what",
+        "when",
+        "where",
+        "which",
+        "who",
+        "will",
+        "with",
+        "without",
+        "you",
+        "your",
+        "need",
+    }
+)
 
-def _capability_covered(query: str, index: SearchIndex, doc_index: int) -> bool:
-    """Whether the top-1 candidate covers the query's central capability term.
 
-    RC4 #1: the wrong-domain inline failure is a CAPABILITY mismatch, not a
-    ranking-confidence one -- a wide score margin still inlines a module whose
-    doc never mentions the query's defining term (Run #10: a 12K-char doc with
-    zero occurrences of the query's central capability term, and a near-miss
-    where the correct module sat one rank behind an adjacent-domain giant). A
-    score-gap gate is structurally blind to this. This reads ONLY the query and
-    the candidate doc (answer-agnostic, ranker untouched): take the query's most
-    salient token (highest BM25 IDF -- the rarest across the catalog, skipping
-    generic-infra words) and require it to appear in the candidate's name /
-    keywords / doc text. Absent -> the query is not covered here.
+# Two-tier capability evidence weights. A term asserted in a capability
+# field (module name, keywords, or the module's own "## Description"
+# section) counts in full; a term that only appears somewhere in the doc
+# body is a mention, not a capability, and counts at a fraction. Coverage
+# below the threshold means the candidate does not assert the asked
+# capability.
+_COVERAGE_ALPHA = 0.3
+_COVERAGE_THETA = 0.5
 
-    Fails open (returns True) when there is no usable salience signal (empty
-    query, only stopwords, or no corpus IDF), so it can only ever DEMOTE a hit
-    that positively lacks the central term -- never invent confidence.
 
-    Known limitation (Run #11 defect 2, DEFERRED): the haystack is name +
-    keywords + full doc text, so a module whose body merely *mentions* an
-    adjacent service (an integration note) still passes for a query about that
-    service's core capability. Narrowing the capability evidence to the
-    capability-asserting fields (name / keywords / purpose) would catch those
-    remaining wide-margin adjacent-domain inlines, but risks demoting a real
-    match whose central term lives only in the body, so it needs its own
-    measured run -- left out of the 0.22.0 final on purpose (net wrong-domain
-    inline traffic was already flat and every judged fleet PASSes).
+def _field_parts(*field_strings: str) -> set[str]:
+    """Lowercase alphanumeric runs from capability field strings.
+
+    "jwt-authorizer" contributes {"jwt", "authorizer"}; "in-memory"
+    contributes {"in", "memory"}. Splitting keywords and names into parts
+    lets split query tokens match hyphenated catalog vocabulary.
+    """
+    parts: set[str] = set()
+    for s in field_strings:
+        run = ""
+        for ch in s.lower():
+            if ch.isalnum():
+                run += ch
+            elif run:
+                parts.add(run)
+                run = ""
+        if run:
+            parts.add(run)
+    return parts
+
+
+def _token_matches_parts(token: str, parts: set[str]) -> bool:
+    """Token-vs-field-part match: equality, trailing-plural tolerance, or
+    prefix tolerance for tokens/parts of length >= 5 (no mid-word
+    substrings - "ui" must not match inside "guide").
+
+    The plural-strip equality only fires when the stripped token has length
+    >= 3, so short function words are never conflated with a shorter stem
+    ("as" -> "a", "its" -> "it"). The prefix tolerance requires both sides
+    to be at least 5 characters (raised from 4): at 4 chars it let unrelated
+    words absorb each other ("base"/"based", "data"/"database",
+    "auto"/"automatic", "with"/"without").
+
+    Hyphenated-compound symmetry: _field_parts already splits FIELD strings
+    ("jwt-authorizer" -> {"jwt", "authorizer"}) into alnum runs, but a query
+    TOKEN that is itself a hyphenated compound written as one tokenizer
+    token ("auto-scaling-group" -- tokenize() does not split on hyphens)
+    never got the same treatment, so it could only ever strong-match via
+    the prefix-tolerance branch matching one run at a time -- exactly what
+    the old, since-tightened 4-char prefix bound was accidentally providing.
+    When the token contains punctuation, it is split into its own alnum
+    runs (len >= 2) and matches only when EVERY run matches `parts` via
+    these same rules -- a partial compound match ("data-warehouse" against
+    just "data") is not evidence of coverage.
+    """
+    if token in parts:
+        return True
+    singular = token.rstrip("s")
+    for part in parts:
+        if len(singular) >= 3 and singular == part.rstrip("s"):
+            return True
+        if len(token) >= 5 and len(part) >= 5 and (token.startswith(part) or part.startswith(token)):
+            return True
+    if any(not ch.isalnum() for ch in token):
+        runs = {r for r in _field_parts(token) if len(r) >= 2}
+        if runs and all(_token_matches_parts(r, parts) for r in runs):
+            return True
+    return False
+
+
+def _capability_description_text(text: str) -> str:
+    """Text of the module's own ``## Description`` H2 section, for capability
+    coverage's strong-evidence field.
+
+    ``extract_description()`` (tfmod_search_lib) is a header-skip-then-
+    first-N-chars heuristic tuned for the search-result blurb. On every
+    catalog doc the ``## Module Information`` bullets precede
+    ``## Description`` and consume its 200-char budget before the real
+    prose is ever reached (measured: 0/55 docs), making it an inert, noisy
+    strong-evidence source for coverage specifically. This helper instead
+    reads the actual ``## Description`` section body via
+    ``_split_h2_sections`` (exact-title match, the same idiom
+    ``_CORE_SECTIONS`` uses) -- a genuine capability-asserting source.
+
+    This is a coverage-mechanism-only fix: the search-result ``description``
+    field (the response body) still uses ``extract_description`` directly
+    and is untouched.
+
+    Falls back to ``extract_description(text)`` when the doc has no exact
+    ``## Description`` H2 heading, preserving the prior fail-open behavior
+    on non-standard docs.
+    """
+    _, sections = _split_h2_sections(text)
+    for title, block in sections:
+        if title == "Description":
+            body = block.split("\n", 1)[1] if "\n" in block else ""
+            return body.strip()
+    return extract_description(text)
+
+
+def _capability_coverage(query: str, index: SearchIndex, doc_index: int) -> float:
+    """IDF-weighted fraction of the query's capability terms the candidate
+    doc asserts.
+
+    Evidence strength per content token: 1.0 when it matches the module
+    name, keywords, or the module's ``## Description`` section text (fields
+    that assert capability); _COVERAGE_ALPHA when it only appears somewhere
+    in the body on a word boundary (a mention is not a capability); 0.0 when
+    absent. Weighted by corpus IDF so rare, query-defining terms dominate.
+
+    Out-of-corpus tokens (idf <= 0, i.e. absent from the corpus IDF table)
+    are NOT dropped: they participate at the corpus's MEAN IDF weight (C1
+    calibration, 2026-07-17 -- capped down from the corpus max), since an
+    unknown term is exactly the kind of query-defining vocabulary the
+    catalog may not serve -- if it matches nothing, that is evidence of a
+    miss, not a reason to discount it entirely. The mean, not the max, is
+    the principled prior for an unknown word's rarity ("typical", not "as
+    rare as the single rarest word in the whole corpus"): weighting at the
+    max measurably overweighed a single informal/slang/typo token enough to
+    demote otherwise-correct, otherwise-fully-covered queries ("pls create
+    s3 bucket", "hey i need a postgres database asap") to a false "low".
+
+    Two conditions are checked before scoring, in order:
+    1. An empty/absent corpus IDF table (degraded index) -- cannot judge
+       coverage either way, so this fails OPEN to 1.0.
+    2. An empty content-token set after filtering stopwords (a contentless
+       query: "", "?", "please help", "aws terraform") -- no evidence to
+       trust, so this fails CLOSED to 0.0. The whole-query-exact check in
+       _classify_confidence (rule step 1) still catches a bare module name
+       before coverage ever runs, so this cannot demote that case.
     """
     tokens = {
-        t for t in tokenize(query) if len(t) >= 2 and t not in _CAPABILITY_STOPWORDS and any(c.isalnum() for c in t)
+        t
+        for t in tokenize(query)
+        if len(t) >= 2
+        and t not in _CAPABILITY_STOPWORDS
+        and t not in _ENGLISH_STOPWORDS
+        and any(c.isalnum() for c in t)
     }
-    if not tokens:
-        return True
     idf = getattr(index.bm25, "idf", None) or {}
-    max_idf = max((idf.get(t, 0.0) for t in tokens), default=0.0)
-    if max_idf <= 0.0:
-        return True
-    central = {t for t in tokens if idf.get(t, 0.0) == max_idf}
+    if not idf:
+        return 1.0
+    if not tokens:
+        return 0.0
+    mean_idf = sum(idf.values()) / len(idf)
+    weighted = [(t, idf.get(t, 0.0) if idf.get(t, 0.0) > 0.0 else mean_idf) for t in tokens]
     doc = index.docs[doc_index]
-    hay = f"{doc.module_name or ''} {' '.join(doc.keywords or [])} {doc.text}".lower()
-    return any(t in hay for t in central)
+    strong = _field_parts(doc.module_name or "", *(doc.keywords or []), _capability_description_text(doc.text))
+    body = doc.text.lower()
+    total = 0.0
+    covered = 0.0
+    for t, w in weighted:
+        total += w
+        if _token_matches_parts(t, strong):
+            covered += w
+        elif re.search(rf"\b{re.escape(t)}\b", body):
+            covered += w * _COVERAGE_ALPHA
+    return covered / total
 
 
 def _classify_confidence(query: str, hits: list[ScoredHit], index: SearchIndex) -> str:
-    """Classify a search into a confidence verdict that also decides the inline.
+    """Classify a search into the confidence verdict that also decides the inline.
 
-    Two-verdict design ("high" / "low"). RC4 #2 unifies the verdict and the
-    expand_top inline under ONE signal: the caller inlines iff the verdict is
-    "high", so the docstring contract ("high => doc inlined") holds again.
+    Two-verdict design ("high" / "low"); the caller inlines the top-1
+    orientation head iff the verdict is "high", so "high => doc inlined"
+    holds by construction.
 
     Decision (top-1 only):
-    1. No lexical component (neither exact-name match nor keyword-IDF overlap)
-       -> "low": a semantic-only ceiling, the query is likely not in the catalog.
-    2. Exact module-name match -> "high": always decisive.
-    3. Lexical-but-not-exact -> "high" only when BOTH hold:
-       - capability-overlap (RC4 #1, primary): the query's central capability
-         term appears in the candidate -- guards the wrong-domain inline that a
-         score margin is blind to;
-       - semantic floor (RC2 T3, secondary): sem_sim >= SEARCH_SEM_FLOOR --
-         guards the incidental-keyword gap the capability check can pass.
-       Either failing -> "low".
+    0. No hits -> "high" (nothing to contest; the caller inlines nothing).
+    1. The whole normalized query IS the top-1 module name -> "high".
+       Typing exactly a module name is the strongest assertion of intent.
+    2. Capability coverage below _COVERAGE_THETA -> "low": the module does
+       not assert the asked capability in its name, keywords, or
+       description (body-only mentions count fractionally).
+    3. Raw semantic similarity below SEARCH_SEM_FLOOR -> "low": guards the
+       incidental-keyword case where coverage passes on a foreign keyword.
+    4. Combined score below SEARCH_SCORE_FLOOR -> "low": low-scoring
+       candidates do not earn an inline even with plausible coverage.
+    5. Otherwise -> "high".
 
-    An empty hit list is "high" (nothing to contest it) per the documented
-    empty-result behavior; the caller still inlines nothing (no top doc).
+    The verdict deliberately does NOT depend on whether the query contains
+    the module name as one of its words: a capability search from a user
+    who does not know the module name is exactly the case the verdict
+    exists for, and a name token inside a longer query proves nothing
+    about the remaining terms.
     """
     if not hits:
         return "high"
-
     top1 = hits[0]
-    if not (top1.exact_hit or top1.kw_overlap):
-        return "low"
-    if top1.exact_hit:
+    if index.docs[top1.doc_index].module_name == normalize_modname(query):
         return "high"
-    if not _capability_covered(query, index, top1.doc_index):
+    if _capability_coverage(query, index, top1.doc_index) < _COVERAGE_THETA:
         return "low"
     if top1.sem_sim < SEARCH_SEM_FLOOR:
+        return "low"
+    if top1.score < SEARCH_SCORE_FLOOR:
         return "low"
     return "high"
 
@@ -1478,20 +1690,20 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
         top_k: Number of results to return (clamped to 1..10, default 3)
         expand_top: When True AND the search is high confidence, inline the
             top-1 module orientation head into the response (L3) -- collapses
-            a confident search->get_module pair into one call. Default True
-            (RC2 T2): a fleet-wide counterfactual measurement showed the
-            opt-in default was strangling the one right-direction lever (used
-            by 1/6 workers), and the residency cost of the ~1.5K-char head is
-            pennies against the ~$0.09/turn an extra get_module call costs.
-            Pass expand_top=False to suppress it (pure-browse searches).
-            Inlined iff the verdict is "high" (RC4 #2: verdict and inline are
-            one decision -- the capability-aware classifier demotes a
-            wrong-domain top hit to "low" before it can drag its doc into
-            context, so "high" reliably means the inlined doc is on-target).
+            a confident search->get_module pair into one call. Defaults to
+            True: leaving this opt-in left the one clearly right-direction
+            lever mostly unused, and the residency cost of the ~1.5K-char
+            head is small next to the cost of spending a whole extra turn on
+            a follow-up get_module call. Pass expand_top=False to suppress it
+            (pure-browse searches). Inlined iff the verdict is "high"
+            (verdict and inline are one decision -- the capability-aware
+            classifier demotes a wrong-domain top hit to "low" before it can
+            drag its doc into context, so "high" reliably means the inlined
+            doc is on-target).
 
     Returns:
         SearchOutput with top-k ranked results plus a confidence verdict
-        (L2/L7/L8/T3/RC4): "high" (trust the top hit) or "low" (no confident
+        (L2/L7/L8/T3): "high" (trust the top hit) or "low" (no confident
         catalog match). A hint accompanies a "low" verdict and is absent from
         the JSON output when confidence is "high". top_module_doc (L3) is
         populated by default whenever confidence == "high"; absent from the JSON
@@ -1507,9 +1719,9 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
     weights = state.weights
     # Always fetch at least 2 hits internally even when the caller asked for
     # top_k=1, so a rank-2 hit is available to callers/tests that inspect the
-    # raw hits list. The confidence classifier (RC4) reads only hits[0]
-    # (exact_hit/kw_overlap/sem_sim + capability-overlap of the top doc) -- there
-    # is no ratio against rank-2.
+    # raw hits list. The confidence classifier reads only hits[0] (whole-query
+    # exact-name match, capability coverage, sem_sim, and score of the top
+    # doc) -- there is no ratio against rank-2.
     fetch_k = max(top_k, 2)
     hits = compute_scores_detailed(
         state.index,
@@ -1525,12 +1737,12 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
 
     confidence = _classify_confidence(query, hits, state.index)
     if hits:
-        cap = _capability_covered(query, state.index, hits[0].doc_index)
-        state.logger.debug(
-            f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
-            f"exact={hits[0].exact_hit} kw={hits[0].kw_overlap} cap={cap} "
-            f"verdict={confidence} inline={confidence == 'high'}"
-        )
+        if state.logger.isEnabledFor(logging.DEBUG):
+            cov = _capability_coverage(query, state.index, hits[0].doc_index)
+            state.logger.debug(
+                f"top1 sem_sim={hits[0].sem_sim:.4f} score={hits[0].score:.3f} "
+                f"coverage={cov:.3f} verdict={confidence} inline={confidence == 'high'}"
+            )
     else:
         state.logger.debug(f"no hits verdict={confidence}")
     hint: str | None = None
@@ -1542,15 +1754,16 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
             f"capability keyword."
         )
 
-    # L3 / RC4 #2: inline the top-1 orientation head iff the verdict is "high".
-    # The verdict itself (capability-overlap + semantic floor) now decides both
-    # the reported confidence and the inline -- one signal, so the "high => doc
-    # inlined" contract in the docstring holds and a wrong-domain top hit is
-    # demoted to "low" before it can drag its doc into context.
+    # L3: inline the top-1 orientation head iff the verdict is "high". The
+    # verdict itself (capability coverage, semantic floor, score floor) now
+    # decides both the reported confidence and the inline -- one signal, so
+    # the "high => doc inlined" contract in the docstring holds and a
+    # wrong-domain top hit is demoted to "low" before it can drag its doc
+    # into context.
     top_module_doc: str | None = None
     if expand_top and confidence == "high" and hits:
         top_doc = state.index.docs[hits[0].doc_index]
-        # RC2 C2: thread the same metadata field reported in results[].latest_version
+        # Thread the same metadata field reported in results[].latest_version
         # into the head's version pin, so the two can never contradict each other in
         # one response (the body-bullet re-parse and the metadata field can drift
         # apart after a metadata-only patch).
@@ -1732,8 +1945,8 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
 
     Args:
         text: The module document body.
-        version_override: Forwarded to ``_version_pin_hint`` verbatim (RC2 C2:
-            single-snapshot version consistency). None (default) re-parses the
+        version_override: Forwarded to ``_version_pin_hint`` verbatim (single-
+            snapshot version consistency). None (default) re-parses the
             body's ``**Latest Version**`` bullet as before.
     """
     body = filter_module_sections(
@@ -1744,7 +1957,7 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
     body = _cap_head_input_table(body)
-    # RC3 #2: when a snapshot is threaded in, reconcile the body's own
+    # When a snapshot is threaded in, reconcile the body's own
     # **Latest Version** bullet to it so the inlined head cannot contradict the
     # pin banner / results[].latest_version. No override -> body bullet is the
     # snapshot, so this is a no-op and the head stays self-consistent as before.
@@ -2079,8 +2292,8 @@ def search_modules(
         top_k: Number of results to return (1-10, default 3).
         expand_top: When True and the search is high confidence, inline the
                top-1 module orientation head into top_module_doc (L3) -- one
-               call instead of search then get_module. Default True (RC2 T2).
-               Populated iff the verdict is "high" (RC4 #2: verdict and inline
+               call instead of search then get_module. Default True.
+               Populated iff the verdict is "high" (verdict and inline
                are one decision), so a wrong-domain top hit is never inlined.
 
     Returns:

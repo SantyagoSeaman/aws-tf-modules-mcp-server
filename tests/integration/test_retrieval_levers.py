@@ -16,12 +16,12 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     _MIN_HEAD_TABLE_ROWS,
+    SEARCH_SCORE_FLOOR,
     SEARCH_SEM_FLOOR,
     SearchOutput,
     SearchWeights,
     ServerStateManager,
     _cap_head_input_table,
-    _capability_covered,
     _classify_confidence,
     _clip_blurb,
     _reconcile_body_version,
@@ -42,7 +42,7 @@ def _doc(module: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
-# Minimal fake index for the capability-aware classifier unit tests (RC4). The
+# Minimal fake index for the capability-aware classifier unit tests. The
 # classifier reads only index.docs[doc_index].{module_name,keywords,text} and
 # index.bm25.idf, so a lightweight stand-in lets us drive capability coverage
 # and the sem floor precisely without depending on real doc content.
@@ -241,13 +241,16 @@ def test_cap_returns_unchanged_when_no_input_table() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# L2/L7/L8 - two-signal search confidence classifier.
+# L2/L7/L8 - four-check search confidence classifier (whole-query exact
+# match, capability coverage, semantic floor, score floor).
 # --------------------------------------------------------------------------- #
 def test_l2_absent_capability_is_low_confidence_with_hint(state) -> None:
-    # sagemaker is absent from the catalog and shares no exact-name or keyword
-    # overlap with any indexed module (unlike "cognito", which several unrelated
-    # modules list as a related-service keyword -- see test_repro_pack.py for
-    # that near-tie case) -- a clean semantic-only-ceiling example.
+    # sagemaker is absent from the catalog; its nearest top-1 (step-functions,
+    # under this file's fixture weights) does not assert the "sagemaker"
+    # capability in its name/keywords/description (measured cov=0.3, well
+    # below _COVERAGE_THETA) -- the coverage gate demotes it to "low" (unlike
+    # "cognito", which several unrelated modules list as a related-service
+    # keyword -- see test_repro_pack.py for that near-tie case).
     out = search_modules_impl("sagemaker", state, top_k=3)
     assert out.confidence == "low"
     assert out.hint, "low confidence must carry a non-empty hint"
@@ -272,14 +275,19 @@ def _covered_index() -> _FakeIndex:
     )
 
 
-def test_rc2_classify_confidence_low_when_top1_not_lexical() -> None:
-    # No exact-name and no keyword overlap on rank 1 -> low, regardless of sem_sim
-    # (the capability gate is not even reached).
+def test_classify_confidence_ignores_stale_exact_hit_and_kw_overlap_fields() -> None:
+    # 0.23.0: the old "no exact-name and no keyword overlap on rank 1 -> low"
+    # branch is gone by design -- the new rule never reads exact_hit or
+    # kw_overlap at all. With both False here, the verdict is decided purely
+    # by coverage/sem/score, all of which are favorable (cov=1.0 -- both
+    # query terms match doc0's keywords; sem=0.95; score=5.0 clears
+    # SEARCH_SCORE_FLOOR) -> "high", proving a lexical-overlap flag no
+    # longer gates the outcome in either direction.
     hits = [
         ScoredHit(score=5.0, doc_index=0, exact_hit=False, kw_overlap=False, sem_sim=0.95),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
     ]
-    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
 def test_rc2_classify_confidence_high_on_former_near_tie_regardless_of_score_ratio() -> None:
@@ -314,14 +322,25 @@ def test_rc2_classify_confidence_high_on_lexical_top1_with_strong_sem_sim() -> N
     assert _classify_confidence("redis cache", hits, _covered_index()) == "high"
 
 
-def test_rc2_classify_confidence_high_on_exact_hit_regardless_of_sem_sim() -> None:
-    # exact_hit always wins to "high" - a name match is decisive even with a weak
-    # raw semantic similarity and even if the doc would fail the capability check.
+def test_classify_confidence_high_on_whole_query_exact_name_regardless_of_sem_sim() -> None:
+    # 0.23.0: the ScoredHit.exact_hit flag (a ranker-level boundary match that
+    # can fire inside a longer query) no longer decides the verdict by
+    # itself -- only a WHOLE-QUERY match against the top-1 module name does
+    # (rule step 1). Here the query literally IS the module name, so it wins
+    # even with a very weak raw semantic similarity and even though the doc
+    # would otherwise fail the capability/sem/score checks.
+    idx = _FakeIndex(
+        docs=[
+            _FakeDoc(text="unrelated body", keywords=[], module_name="redis"),
+            _FakeDoc(text="unrelated document body"),
+        ],
+        idf={"redis": 5.0},
+    )
     hits = [
         ScoredHit(score=9.0, doc_index=0, exact_hit=True, kw_overlap=True, sem_sim=0.10),
         ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.05),
     ]
-    assert _classify_confidence("something unrelated", hits, _covered_index()) == "high"
+    assert _classify_confidence("redis", hits, idx) == "high"
 
 
 def test_rc2_classify_confidence_high_when_no_rank2() -> None:
@@ -386,9 +405,9 @@ def test_search_output_confidence_always_present_direct_construction() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# L3/T2 - expand_top inlines the top-1 orientation head on a high-confidence
+# L3 - expand_top inlines the top-1 orientation head on a high-confidence
 # search, collapsing the confident search->get_module pair into one call.
-# RC2 T2: default-on now (the counterfactual measurement showed the opt-in
+# Default-on (a fleet-wide counterfactual measurement showed the opt-in
 # default was strangling the one right-direction lever); never inlined on a
 # non-high verdict; explicit expand_top=False still suppresses it.
 # --------------------------------------------------------------------------- #
@@ -513,9 +532,9 @@ def test_l5_a1_default_head_still_inlines_compact_inventory() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC2 T3 - sem_sim exposed on ScoredHit. cos_raw (the per-doc cosine scaled to
-# [0,1], before the per-query min-max) is comparable across queries, unlike
-# the combined score. Populated for every hit, read-only from the existing
+# sem_sim exposed on ScoredHit: the per-doc cosine scaled to [0,1], before
+# the per-query min-max, so it is comparable across queries, unlike the
+# combined score. Populated for every hit, read-only from the existing
 # embeddings - no index rebuild.
 # --------------------------------------------------------------------------- #
 def test_scored_hit_sem_sim_is_populated_float_in_unit_range(state) -> None:
@@ -543,8 +562,8 @@ def test_search_modules_impl_hits_carry_sem_sim(state) -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC2 C2/T2 gate - single-snapshot version consistency. The inlined
-# top_module_doc head's version pin must come from the same metadata field as
+# Single-snapshot version consistency gate. The inlined top_module_doc
+# head's version pin must come from the same metadata field as
 # results[].latest_version, never a re-parse of the doc body, so the two can
 # never contradict each other in one response.
 # --------------------------------------------------------------------------- #
@@ -603,9 +622,9 @@ def test_search_expand_top_version_matches_result_metadata_snapshot(state, monke
 
 
 # --------------------------------------------------------------------------- #
-# RC3 #2 - render-time single-snapshot version consistency applied to ALL
-# version mentions. rc2 synced only the pin banner; the body's own **Latest
-# Version** bullet could still be stale and contradict the banner /
+# Render-time single-snapshot version consistency applied to ALL version
+# mentions. An earlier fix synced only the pin banner; the body's own
+# **Latest Version** bullet could still be stale and contradict the banner /
 # results[].latest_version in the same response. _reconcile_body_version
 # rewrites the body bullet to the threaded snapshot at render time (drift-safe:
 # emitted text only, the indexed body/embeddings are untouched).
@@ -629,8 +648,8 @@ def test_reconcile_body_version_noop_without_bullet() -> None:
 
 
 def test_orientation_head_override_reconciles_body_bullet_not_just_banner() -> None:
-    # RC3 #2: the body's own Latest Version bullet (inside Module Information)
-    # must be rewritten to the override, not only the pin banner.
+    # The body's own Latest Version bullet (inside Module Information) must
+    # be rewritten to the override, not only the pin banner.
     doc = _doc("vpc")
     assert "- **Latest Version**: 6.6.1" in _doc("vpc"), "fixture must carry its real body bullet"
     head = orientation_head(doc, version_override="9.9.9")
@@ -640,7 +659,8 @@ def test_orientation_head_override_reconciles_body_bullet_not_just_banner() -> N
 
 def test_search_expand_top_body_bullet_matches_snapshot(state, monkeypatch) -> None:
     """The inlined head's BODY version bullet (not only the pin banner) must
-    equal results[].latest_version -- the whole point of RC3 #2."""
+    equal results[].latest_version -- the whole point of the render-time
+    reconciliation fix."""
     out = search_modules_impl("vpc", state, top_k=3, expand_top=True)
     assert out.confidence == "high" and out.top_module_doc is not None
     doc = next(d for d in state.index.docs if d.module_name == out.results[0].module_name)
@@ -654,7 +674,7 @@ def test_search_expand_top_body_bullet_matches_snapshot(state, monkeypatch) -> N
 
 
 # --------------------------------------------------------------------------- #
-# RC3 #3 - non-top-1 result blurbs must clip on a word boundary, never mid-word.
+# Non-top-1 result blurbs must clip on a word boundary, never mid-word.
 # --------------------------------------------------------------------------- #
 def test_clip_blurb_clips_on_word_boundary_no_midword_cut() -> None:
     # No early period, so the hard char-cap branch runs; it must not leave a
@@ -679,50 +699,18 @@ def test_clip_blurb_first_sentence_branch_unaffected() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC4 #1 - capability-overlap gate. The wrong-domain inline failure is a
-# capability mismatch, not a ranking-confidence one: a wide score margin still
-# inlines a module whose doc never mentions the query's defining term. The
-# classifier now demotes a lexical-non-exact top-1 to "low" when the query's
-# central capability token (highest BM25 IDF, skipping generic-infra words) is
-# absent from the candidate's name/keywords/text. Answer-agnostic; fails open.
+# Capability-coverage gate. The wrong-domain inline failure is a capability
+# mismatch, not a ranking-confidence one: a wide score margin still inlines a
+# module whose doc never asserts the query's capability terms. The classifier
+# demotes a top-1 to "low" when its IDF-weighted capability coverage falls
+# below _COVERAGE_THETA. Coverage itself (full/partial/absent evidence tiers,
+# IDF weighting, fail-open behavior) is unit-tested directly in
+# test_capability_coverage.py (Task 2); this section only covers
+# _classify_confidence's own use of that signal.
 # --------------------------------------------------------------------------- #
-def test_capability_covered_true_when_central_term_present() -> None:
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="managed redis in-memory cache clusters", keywords=["redis"])],
-        idf={"redis": 5.0, "cache": 2.0},
-    )
-    assert _capability_covered("redis cache cluster", idx, 0) is True
-
-
-def test_capability_covered_false_when_central_term_absent() -> None:
-    # "kinesis" is the rarest (highest-IDF) query token and never appears in the
-    # candidate doc -> capability mismatch even though "stream" does appear.
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="a document about data stream processing generally", keywords=["stream"])],
-        idf={"kinesis": 6.0, "stream": 2.0, "processing": 1.5},
-    )
-    assert _capability_covered("kinesis stream processing", idx, 0) is False
-
-
-def test_capability_covered_matches_in_keywords_or_name() -> None:
-    idx = _FakeIndex(
-        docs=[_FakeDoc(text="body without the term", keywords=["cognito"], module_name="auth")], idf={"cognito": 7.0}
-    )
-    assert _capability_covered("cognito", idx, 0) is True
-
-
-def test_capability_covered_fails_open_without_salience_signal() -> None:
-    idx = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={})
-    # No corpus IDF -> no salience -> do not demote (fail open).
-    assert _capability_covered("some query", idx, 0) is True
-    # Stopword-only query -> nothing salient to require -> fail open.
-    idx2 = _FakeIndex(docs=[_FakeDoc(text="anything")], idf={"aws": 3.0, "terraform": 3.0})
-    assert _capability_covered("aws terraform module", idx2, 0) is True
-
-
 def test_classify_low_on_capability_miss_despite_strong_sem() -> None:
-    # RC4 #1: a lexical-non-exact top-1 with a strong sem_sim is still "low" when
-    # the query's central term is absent from the candidate -- this is the
+    # a lexical-non-exact top-1 with a strong sem_sim is still "low" when the
+    # query's capability terms are absent from the candidate -- this is the
     # wrong-domain inline a score-margin gate was blind to.
     idx = _FakeIndex(
         docs=[
@@ -739,7 +727,7 @@ def test_classify_low_on_capability_miss_despite_strong_sem() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# RC4 #2 - verdict and inline are ONE decision: top_module_doc is present iff
+# Verdict and inline are ONE decision: top_module_doc is present iff
 # the verdict is "high". The docstring contract ("high => doc inlined") holds.
 # --------------------------------------------------------------------------- #
 def test_inline_present_iff_high_on_live_queries(state) -> None:
@@ -754,7 +742,7 @@ def test_inline_present_iff_high_on_live_queries(state) -> None:
 def test_wrong_domain_top1_is_low_and_not_inlined(state, monkeypatch) -> None:
     """Integration: force the top hit onto a real doc that does not cover the
     query's central capability term, and confirm the unified path demotes it to
-    'low' and inlines nothing (RC4 #1 + #2)."""
+    'low' and inlines nothing."""
     idf = getattr(state.index.bm25, "idf", {}) or {}
     term = "sagemaker"  # a real catalog capability term (has corpus IDF)
     assert idf.get(term, 0.0) > 0.0, "term must carry a corpus salience signal"
@@ -788,30 +776,92 @@ def test_sem_floor_constant_still_exposed() -> None:
     assert 0.0 < SEARCH_SEM_FLOOR < 1.0
 
 
+def test_score_floor_constant_is_positive() -> None:
+    # 0.23.0: the fourth (final) demoter in the truth table; derived (2026-07-17)
+    # from the full golden-set score distribution under production weights, and
+    # must always be a sane positive floor.
+    assert SEARCH_SCORE_FLOOR > 0.0
+
+
+def test_classify_low_on_score_floor_despite_full_coverage_and_strong_sem() -> None:
+    # Step 4 of the decision rule: coverage and sem_sim both clear their
+    # floors, but the combined score does not -- the score floor is still the
+    # deciding conjunct in the single-matched-keyword branch it was derived
+    # to catch. A synthetic hit (the _FakeIndex pattern), since driving the
+    # ranker itself down to a sub-floor score while holding coverage/sem fixed
+    # would require contriving a real query.
+    hits = [
+        ScoredHit(score=2.0, doc_index=0, exact_hit=False, kw_overlap=True, sem_sim=0.95),
+        ScoredHit(score=1.0, doc_index=1, exact_hit=False, kw_overlap=False, sem_sim=0.10),
+    ]
+    assert SEARCH_SCORE_FLOOR > 2.0, "fixture score must sit below the real floor for this test to be meaningful"
+    assert _classify_confidence("redis cache", hits, _covered_index()) == "low"
+
+
 # --------------------------------------------------------------------------- #
-# RC4 #3 - verdict-stability (determinism) contract guards. A consumer cannot
+# Verdict-stability (determinism) contract guards. A consumer cannot
 # budget around a verdict that flips on trivial rephrasing. We lock the part of
 # the contract the implementation can guarantee: adding generic-infra filler
 # words ("aws"/"terraform"/politeness) must NOT change the verdict, because the
 # capability check drops those as stopwords and the central term is unchanged.
 # (Broad cross-phrasing determinism -- entirely different wordings of one intent
-# -- is a known limitation on borderline catalog-gap phrasings; see the RC4
-# revision spec, deferred with defect item 2.)
+# -- is a known limitation on borderline catalog-gap phrasings, deferred as a
+# future task.)
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
     "base",
     ["kubernetes cluster", "object storage versioning"],
 )
 def test_verdict_is_invariant_to_generic_infra_filler(base, state) -> None:
+    # Only catalog-domain filler is covered by this guarantee: "aws" and
+    # "terraform"/"module"/"for" are all filtered by _CAPABILITY_STOPWORDS or
+    # _ENGLISH_STOPWORDS, so the capability-coverage token set -- and
+    # therefore the verdict -- is unchanged. A generic out-of-vocabulary
+    # filler word not on either curated list (e.g. "please") is NOT covered
+    # by this guarantee -- see test_unmatched_out_of_vocab_filler_can_flip_a_
+    # borderline_query below for the disclosed, narrow side effect of the
+    # Stage R out-of-vocabulary rule (B1).
     baseline = search_modules_impl(base, state, top_k=3).confidence
-    for filler in (f"aws {base}", f"terraform module for {base}", f"{base} please"):
+    for filler in (f"aws {base}", f"terraform module for {base}"):
         got = search_modules_impl(filler, state, top_k=3).confidence
         assert got == baseline, f"verdict flipped on generic-infra filler: {base!r} -> {baseline}, {filler!r} -> {got}"
+
+
+def test_unmatched_out_of_vocab_filler_can_flip_a_borderline_query(state) -> None:
+    # Disclosed side effect of B1 (Stage R out-of-vocabulary rule): a
+    # politeness word not on either curated stopword list ("please") is now
+    # honestly treated as unmatched vocabulary, participating at the
+    # corpus's max IDF weight instead of being silently dropped. For a query
+    # whose coverage sits only narrowly above theta on its real content
+    # tokens, one such filler word can pull it back under theta and flip
+    # "high" -> "low". This is the accepted, narrow cost of closing the
+    # out-of-catalog-vocabulary false-high hole (F1) with a curated,
+    # finite stopword list rather than an open-ended one -- it cannot be
+    # eliminated without either a broader list (which never covers every
+    # possible filler word) or a second mechanism change, both out of scope
+    # for this fix. Measured: "kubernetes cluster" -> eks, cov=1.0, high;
+    # "kubernetes cluster please" -> same top-1, cov=0.346 (below theta), low.
+    baseline = search_modules_impl("kubernetes cluster", state, top_k=3).confidence
+    assert baseline == "high"
+    got = search_modules_impl("kubernetes cluster please", state, top_k=3).confidence
+    assert got == "low"
 
 
 @pytest.mark.parametrize(
     ("paraphrases", "expected"),
     [
+        # 0.23.0 Task 5 re-derivation: SEARCH_SCORE_FLOOR was derived from the
+        # full golden-set score distribution and moved 4.5 -> 2.9 (production
+        # weights showed correct golden top-1s scoring as low as 3.0 under
+        # the ranker's min-max normalization, well below the originally
+        # expected ~4.2-4.5 landing zone). Under this file's fixture weights
+        # (w_kw=2.0, w_exact=3.0, w_bm25=1.0, w_sem=1.0 -- NOT the production
+        # weights): "kubernetes cluster" -> top1=eks score=3.82 cov=1.0;
+        # "managed kubernetes cluster" -> top1=eks score=3.74 cov=1.0;
+        # "kubernetes container orchestration" -> top1=app-runner score=4.06
+        # cov=0.657. All three now clear every gate (coverage, sem, and the
+        # re-derived score floor) and land "high" -- still a single shared
+        # verdict across every phrasing, only the expected label changed.
         (["kubernetes cluster", "managed kubernetes cluster", "kubernetes container orchestration"], "high"),
         (["sagemaker", "sagemaker model endpoint", "machine learning model hosting on sagemaker"], "low"),
     ],

@@ -9,7 +9,7 @@ disable-model-invocation: true
 Pull an exact quote from a module's current registry documentation for:
 $ARGUMENTS
 
-`get_module` gives a compact curated overview of the 54 AWS catalog modules;
+`get_module` gives a compact curated overview of the AWS catalog modules;
 this skill is for the *exact line* — the real default, the precise type, an
 output name, a submodule input — from the **live** registry docs of **any**
 module, including non-AWS ones and specific older versions.
@@ -20,10 +20,12 @@ module, including non-AWS ones and specific older versions.
    - If an argument already looks like `namespace/name/provider` (two slashes,
      e.g. `cloudposse/label/null`), use it directly.
    - Otherwise treat the first argument as a module name and call
-     `search_modules`; take the top hit's `module_id`. `search_modules` only
-     covers the AWS catalog, so if the target is a non-AWS module and no hit is
-     relevant, ask the user for the full `namespace/name/provider` coordinate
-     rather than grepping the wrong module.
+     `search_modules`; take the top hit's `module_id`. Check the `confidence`
+     verdict first — on `"low"`, the top hit may not be the intended module;
+     confirm the name against the result list before grepping. `search_modules`
+     only covers the AWS catalog, so if the target is a non-AWS module and no
+     hit is relevant, ask the user for the full `namespace/name/provider`
+     coordinate rather than grepping the wrong module.
 2. **Detect an optional version.** If an argument looks like a semver
    (`6.6.1`, `20.8.4`), pass it as `version`; otherwise omit it and the latest
    is used.
