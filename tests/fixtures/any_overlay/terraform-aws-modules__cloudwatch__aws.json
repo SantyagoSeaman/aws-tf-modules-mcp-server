@@ -1,0 +1,15 @@
+{
+  "module_id": "terraform-aws-modules/cloudwatch/aws",
+  "built_from_version": "5.7.2",
+  "vars": {
+    "root::fixture_cloudwatch_marker": {
+      "examples": [
+        "fixture_cloudwatch_marker = {\n  x = 1\n}"
+      ],
+      "field_names": [
+        "x"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

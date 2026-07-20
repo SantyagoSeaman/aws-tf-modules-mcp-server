@@ -551,6 +551,46 @@ class TestAnyOverlay:
         full = get_module_impl("s3-bucket", server_state, sections=["all"])
         assert "fixture_no_row_var" in full
 
+    # ---- full-doc appendix placement: true end, never a mid-document "---" ----
+
+    def test_full_doc_appendix_lands_after_all_real_content_not_mid_document(self, server_state, any_overlay_dir):
+        """cloudwatch.md carries a decorative "---" rule mid-document (before
+        "## Submodule 1: log-group", ~16% through the file) that is NOT
+        filter_module_sections' own generated footer -- the raw
+        sections=["all"] escape hatch returns the document verbatim, so
+        rfind-ing a bare "---" used to anchor the appendix there instead of
+        at the true end. The appendix must land after the LAST real section
+        (the final submodule), not before it."""
+        full = get_module_impl("cloudwatch", server_state, sections=["all"])
+        marker_idx = full.index("fixture_cloudwatch_marker")
+        last_submodule_idx = full.rindex("## Submodule 13: log-anomaly-detector")
+        assert marker_idx > last_submodule_idx, "appendix must land after the last submodule section, not mid-document"
+        # The decorative "---" is still present, verbatim, well before the appendix.
+        decorative_idx = full.index("\n---\n")
+        assert decorative_idx < last_submodule_idx < marker_idx
+
+    def test_insert_before_footer_full_doc_always_appends_at_strict_end(self):
+        """Unit-level: is_filtered=False (the raw full-document path) must
+        never search for a "---" marker at all -- always strict end-append,
+        even when the raw text contains a decorative mid-document rule."""
+        raw = "# Doc\n\nSome intro.\n\n---\n\n## Section\n\nBody text.\n"
+        out = tfmod_mcp_server._insert_before_footer(raw, "APPENDIX", is_filtered=False)
+        assert out.index("APPENDIX") > out.rindex("Body text.")
+
+    def test_insert_before_footer_filtered_anchors_on_real_footer_not_bare_dash(self):
+        """Unit-level: is_filtered=True must anchor on filter_module_sections'
+        own distinctive footer prefix, not a bare "---" -- so a decorative
+        rule inside KEPT section body content (a hypothetical future doc
+        shape) can never be mistaken for the real footer."""
+        rendered = (
+            "## Description\n\nSome body text with a decorative rule below.\n\n---\n\nMore body text.\n\n"
+            "---\nCurated subset. For the COMPLETE inputs/outputs ...\n"
+            "Available sections ...\n"
+        )
+        out = tfmod_mcp_server._insert_before_footer(rendered, "APPENDIX", is_filtered=True)
+        assert out.index("APPENDIX") > out.index("More body text.")
+        assert out.index("APPENDIX") < out.index("Curated subset.")
+
     # ---- --network none / no-fetch ----
 
     def test_no_network_access_serving_overlay(self, server_state, any_overlay_dir, monkeypatch):
