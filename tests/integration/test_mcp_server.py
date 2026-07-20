@@ -799,6 +799,80 @@ class TestAnyOverlay:
         assert tfmod_mcp_server._load_any_overlay("x/y/aws") is None
 
 
+class TestAnyOverlaySubmoduleAddress:
+    """MAJOR 1 fix: get_module_impl's submodule-address branch
+    (module_identifier like "s3-bucket//modules/notification") used to return
+    its scoped body BEFORE the any-overlay wiring, so a submodule with its
+    OWN any-vars (e.g. fsx's submodule-scoped vars) never got an appendix at
+    all. The fixture overlay carries a notification::-scoped var and an
+    object::-scoped var (a DIFFERENT submodule) alongside the existing
+    root::-scoped vars, so cross-scope leakage is directly testable.
+    """
+
+    @pytest.fixture
+    def any_overlay_dir(self, monkeypatch):
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", ANY_OVERLAY_FIXTURES)
+        return ANY_OVERLAY_FIXTURES
+
+    def test_submodule_inputs_view_gets_scoped_overlay_appendix(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket//modules/notification", server_state, sections=["inputs"])
+        assert "fixture_notification_var" in out
+        assert "function_arn" in out
+
+    def test_submodule_inputs_view_excludes_other_submodule_vars(self, server_state, any_overlay_dir):
+        """A different submodule's (object::) overlay vars must never leak
+        into the notification submodule's inputs view."""
+        out = get_module_impl("s3-bucket//modules/notification", server_state, sections=["inputs"])
+        assert "fixture_object_var" not in out
+        assert "fixture_object_only_field" not in out
+
+    def test_submodule_inputs_view_excludes_root_scope_vars(self, server_state, any_overlay_dir):
+        """Root-scope overlay vars must never leak into a submodule's own
+        scoped inputs view."""
+        out = get_module_impl("s3-bucket//modules/notification", server_state, sections=["inputs"])
+        assert "fixture_no_row_var" not in out
+        assert "fixture_honest_any_var" not in out
+
+    def test_different_submodule_address_gets_its_own_scoped_appendix(self, server_state, any_overlay_dir):
+        """The object submodule's own address gets ITS scoped var, and none
+        of notification's or root's."""
+        out = get_module_impl("s3-bucket//modules/object", server_state, sections=["inputs"])
+        assert "fixture_object_var" in out
+        assert "fixture_object_only_field" in out
+        assert "fixture_notification_var" not in out
+        assert "fixture_no_row_var" not in out
+
+    def test_submodule_full_doc_escape_hatch_gets_full_unscoped_appendix(self, server_state, any_overlay_dir):
+        """sections=["all"] on a submodule address returns the complete
+        PARENT document verbatim -- every scope's overlay vars belong there,
+        exactly like the non-submodule full-doc escape hatch."""
+        out = get_module_impl("s3-bucket//modules/notification", server_state, sections=["all"])
+        assert "fixture_notification_var" in out
+        assert "fixture_object_var" in out
+        assert "fixture_no_row_var" in out
+
+    def test_submodule_default_head_has_no_appendix(self, server_state, any_overlay_dir):
+        """The default scoped submodule head (no explicit sections) does not
+        request the inputs view explicitly -- mirrors the top-level default
+        orientation head, which never gets the full appendix either."""
+        out = get_module_impl("s3-bucket//modules/notification", server_state)
+        assert "fixture_notification_var" not in out
+
+    def test_submodule_unrelated_sections_have_no_appendix(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket//modules/notification", server_state, sections=["outputs"])
+        assert "fixture_notification_var" not in out
+
+    def test_submodule_without_overlay_match_is_unaffected(self, server_state, any_overlay_dir):
+        """iam has no fixture overlay file at all -- its submodule-address
+        inputs view is unaffected by this wiring."""
+        content = get_module_documentation("iam", server_state)
+        body = filter_module_sections(content, ["iam-role", "inputs"])
+        hint = tfmod_mcp_server._version_pin_hint(content)
+        baseline = f"{hint}\n\n{body}" if hint else body
+        out = get_module_impl("iam//modules/iam-role", server_state, sections=["inputs"])
+        assert out == baseline
+
+
 def test_extract_interface_h3_inputs_only():
     block = (
         "## Root Module: S3 Bucket\n\n"

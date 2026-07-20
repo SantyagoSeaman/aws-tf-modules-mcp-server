@@ -35,6 +35,23 @@
       "field_names": [],
       "provenance": "honest-any",
       "note": "no example and no observed field names found in the module source; test fixture honest-any case"
+    },
+    "notification::fixture_notification_var": {
+      "examples": [
+        "lambda_notifications = {\n  lambda1 = {\n    function_arn = aws_lambda_function.example.arn\n    events       = [\"s3:ObjectCreated:*\"]\n  }\n}"
+      ],
+      "field_names": [
+        "function_arn",
+        "events"
+      ],
+      "provenance": "example+names"
+    },
+    "object::fixture_object_var": {
+      "examples": [],
+      "field_names": [
+        "fixture_object_only_field"
+      ],
+      "provenance": "names-only"
     }
   }
 }
