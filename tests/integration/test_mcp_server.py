@@ -5,6 +5,8 @@ Tests both the search_modules tool and get_module resource.
 """
 
 import logging
+import re
+import socket
 import sys
 from pathlib import Path
 
@@ -13,6 +15,7 @@ import pytest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
+import tfmod_mcp_server
 from tests.integration import PROJECT_ROOT
 from tfmod_mcp_server import (
     ModulesListOutput,
@@ -29,6 +32,8 @@ from tfmod_mcp_server import (
     search_modules_impl,
 )
 from tfmod_search_lib import load_index
+
+ANY_OVERLAY_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "any_overlay"
 
 
 @pytest.fixture(scope="module")
@@ -467,6 +472,190 @@ class TestGetModuleSections:
         head must not report a spurious 'not found' for the silently-requested inputs key."""
         out = get_module_impl("iam", server_state)
         assert "Requested sections not found" not in out
+
+
+class TestAnyOverlay:
+    """
+    Task 3 of the any-shape overlay feature: serve the committed
+    model/any_overlay/<id>.json overlay (built by scripts/build_any_overlay.py,
+    Tasks 1-2) on the existing get_module serve path, without rewriting the
+    render subsystem. Design: evals/specs/2026-07-20-consolidated-interface-
+    any-overlay-design.md ("Integration" section).
+
+    Uses a FIXTURE overlay (tests/fixtures/any_overlay/) against the real,
+    committed s3-bucket doc -- real model/any_overlay/*.json data is built and
+    reviewed in a later step; the real directory stays .gitkeep-only.
+    """
+
+    @pytest.fixture
+    def any_overlay_dir(self, monkeypatch):
+        """Point the server at the fixture overlay directory instead of the
+        (currently empty, .gitkeep-only) real model/any_overlay/."""
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", ANY_OVERLAY_FIXTURES)
+        return ANY_OVERLAY_FIXTURES
+
+    # ---- guard: anti-silent-no-op (the primary Task 3 requirement) ----
+
+    def test_inputs_section_appends_block_for_every_overlay_var(self, server_state, any_overlay_dir):
+        """Every var key in the fixture overlay gets an appended block in
+        sections=["inputs"] output -- including fixture_no_row_var and
+        fixture_honest_any_var, which have NO row at all in s3-bucket's real
+        Main Input Variables table (appendix-anchored, not row-anchored)."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        for var_name in ("versioning", "lifecycle_rule", "fixture_no_row_var", "fixture_honest_any_var"):
+            assert var_name in out, f"overlay var {var_name!r} missing from rendered inputs section"
+
+    def test_honest_any_var_note_rendered(self, server_state, any_overlay_dir):
+        """A var with no example and no field names still gets its honest note,
+        never a fabricated example."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "test fixture honest-any case" in out
+
+    def test_example_rendered_as_fenced_hcl(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "```hcl" in out
+        assert "versioning = {" in out
+        assert "enabled = true" in out
+
+    def test_field_names_rendered_and_labeled(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "made_up_field" in out
+        assert "Field names observed in module source" in out
+        assert "not a schema" in out
+
+    def test_honesty_labels_present(self, server_state, any_overlay_dir):
+        """The mandatory example-provenance labels from the spec are present."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "Apply-verified example" in out
+        assert "one accepted form" in out
+        assert "grep_module_docs" in out
+
+    def test_appendix_adds_no_new_h2_heading(self, server_state, any_overlay_dir):
+        """The appendix is fenced content spliced into the existing response --
+        it must not introduce a new top-level (H2) heading."""
+        content = get_module_documentation("s3-bucket", server_state)
+        baseline = filter_module_sections(content, ["inputs"])
+        overlaid = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert len(overlaid) > len(baseline), "overlay content should have been appended"
+        assert re.findall(r"(?m)^## ", overlaid) == re.findall(r"(?m)^## ", baseline)
+
+    def test_appendix_absent_when_inputs_not_requested(self, server_state, any_overlay_dir):
+        """A sections request unrelated to inputs must not gain any-overlay content."""
+        out = get_module_impl("s3-bucket", server_state, sections=["outputs"])
+        assert "fixture_no_row_var" not in out
+        assert "any-overlay" not in out
+
+    def test_full_doc_view_also_gets_appendix(self, server_state, any_overlay_dir):
+        """sections=["all"] (the full-document escape hatch) also gets the
+        appendix -- it is a non-head view exactly like sections=["inputs"]."""
+        full = get_module_impl("s3-bucket", server_state, sections=["all"])
+        assert "fixture_no_row_var" in full
+
+    # ---- --network none / no-fetch ----
+
+    def test_no_network_access_serving_overlay(self, server_state, any_overlay_dir, monkeypatch):
+        """Committed overlay = static data -- get_module makes zero network
+        calls while serving it. get_module stays 100% network-decoupled; live
+        Registry access stays confined to grep_module_docs."""
+
+        def _blocked(*_args, **_kwargs):
+            raise AssertionError("network access attempted while serving get_module")
+
+        monkeypatch.setattr(socket.socket, "connect", _blocked)
+        monkeypatch.setattr(socket, "create_connection", _blocked)
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "versioning" in out
+        assert "lifecycle_rule" in out
+
+    # ---- head view: cell-substitution only, cap contract intact ----
+
+    def test_head_substitutes_any_type_cell_for_overlay_var(self, server_state, any_overlay_dir):
+        """`versioning` is within the head's capped sample rows; its `any` Type
+        cell is replaced with a sections=["inputs"] pointer."""
+        head = get_module_impl("s3-bucket", server_state)
+        assert 'sections=["inputs"]' in head
+
+    def test_head_never_inlines_example_or_field_list(self, server_state, any_overlay_dir):
+        head = get_module_impl("s3-bucket", server_state)
+        assert "```hcl" not in head, "Head must never inline example blocks (token budget)"
+        assert "field names observed" not in head.lower(), "Head must not inline the field-name checklist"
+        assert "fixture_no_row_var" not in head
+
+    def test_head_has_no_below_wording(self, server_state, any_overlay_dir):
+        head = get_module_impl("s3-bucket", server_state)
+        assert "below" not in head.lower()
+
+    def test_head_cap_contract_intact_with_overlay(self, server_state, any_overlay_dir):
+        """The head's bounded-sample cap (_cap_head_input_table) still fires
+        with an overlay present -- the substitution runs before it and does
+        not defeat it."""
+        head = get_module_impl("s3-bucket", server_state)
+        full = get_module_impl("s3-bucket", server_state, sections=["all"])
+        assert len(head) < len(full)
+        assert "more inputs" in head, "cap pointer line must still be present"
+
+    # ---- no regression: a module with no overlay is byte-identical ----
+
+    def test_module_without_overlay_is_byte_identical(self, server_state, any_overlay_dir):
+        """vpc has no matching overlay file in the fixture dir -- its rendered
+        output (head and sections=["inputs"]) is unaffected."""
+        content = get_module_documentation("vpc", server_state)
+
+        head_baseline = orientation_head(content)
+        head_with_dir = get_module_impl("vpc", server_state)
+        assert head_with_dir == head_baseline
+
+        inputs_baseline = filter_module_sections(content, ["inputs"])
+        inputs_with_dir = get_module_impl("vpc", server_state, sections=["inputs"])
+        assert inputs_with_dir == inputs_baseline
+
+    def test_no_overlay_directory_present_is_unaffected(self, server_state):
+        """Without the fixture monkeypatch, _ANY_OVERLAY_DIR is the real
+        (.gitkeep-only) model/any_overlay/ -- every module renders unchanged."""
+        for mod in ("s3-bucket", "vpc", "iam"):
+            content = get_module_documentation(mod, server_state)
+            assert get_module_impl(mod, server_state) == orientation_head(content)
+            assert get_module_impl(mod, server_state, sections=["inputs"]) == filter_module_sections(
+                content, ["inputs"]
+            )
+
+    # ---- version skew label ----
+
+    def test_version_skew_label_when_built_from_differs_from_doc_pin(self):
+        overlay = {
+            "built_from_version": "5.10.0",
+            "vars": {"root::x": {"examples": ["x = {}"], "field_names": [], "provenance": "example"}},
+        }
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert "5.10.0" in rendered
+        assert "5.14.1" in rendered
+        assert "verify" in rendered.lower()
+
+    def test_no_skew_label_when_versions_match(self):
+        overlay = {
+            "built_from_version": "5.14.1",
+            "vars": {"root::x": {"examples": ["x = {}"], "field_names": [], "provenance": "example"}},
+        }
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert "verify" not in rendered.lower()
+
+    # ---- _load_any_overlay: fail-safe on anything unexpected ----
+
+    def test_load_any_overlay_missing_file_returns_none(self, any_overlay_dir):
+        assert tfmod_mcp_server._load_any_overlay("terraform-aws-modules/does-not-exist/aws") is None
+
+    def test_load_any_overlay_no_module_id_returns_none(self, any_overlay_dir):
+        assert tfmod_mcp_server._load_any_overlay("") is None
+
+    def test_load_any_overlay_malformed_json_returns_none(self, tmp_path, monkeypatch):
+        (tmp_path / "x__y__aws.json").write_text("{not valid json", encoding="utf-8")
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
+        assert tfmod_mcp_server._load_any_overlay("x/y/aws") is None
+
+    def test_load_any_overlay_wrong_shape_returns_none(self, tmp_path, monkeypatch):
+        (tmp_path / "x__y__aws.json").write_text('["not", "a", "dict"]', encoding="utf-8")
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
+        assert tfmod_mcp_server._load_any_overlay("x/y/aws") is None
 
 
 def test_extract_interface_h3_inputs_only():
