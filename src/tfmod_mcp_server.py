@@ -2113,26 +2113,49 @@ def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | Non
     return "\n\n".join(["\n\n".join(intro_lines), *blocks])
 
 
-def _insert_before_footer(rendered: str, appendix: str) -> str:
+# The exact prefix filter_module_sections emits for its own generated footer
+# (see its footer_lines: "---" followed immediately by "Curated subset. For
+# the COMPLETE inputs/outputs ..."). Distinctive on purpose: a bare "\n\n---\n"
+# also matches any decorative horizontal rule a module doc happens to carry
+# in its body (e.g. cloudwatch.md's mid-document "---" ahead of its first
+# numbered submodule section), which used to make the appendix land there
+# instead of at the real footer / the true end of the document.
+_FILTER_FOOTER_MARKER = "\n\n---\nCurated subset."
+
+
+def _insert_before_footer(rendered: str, appendix: str, *, is_filtered: bool) -> str:
     """
-    Insert `appendix` as the final content block of `rendered`, immediately
-    before filter_module_sections's own trailing footer ("\\n\\n---\\n...")
-    when present, or at the very end otherwise (the sections=["all"/"full"]
-    escape hatch returns the raw document, which carries no such footer).
+    Insert `appendix` as the final content block of `rendered`.
 
     Deliberately appendix-anchored rather than heading-anchored: the corpus's
     heading scheme varies (split "## Main Input Variables" vs combined
     "## Root Module:"/"## Submodule N:" bundles), and guessing at a specific
     H2/H3 boundary would risk exactly the shape-mismatch class
-    _cap_head_input_table's docstring warns about. filter_module_sections's
-    footer separator is the one structurally reliable anchor across every doc
-    shape. Adds no new H2 heading.
+    _cap_head_input_table's docstring warns about.
+
+    `is_filtered` distinguishes the two shapes get_module_impl passes in:
+    - True: `rendered` is a filter_module_sections(...) result, which always
+      carries its own generated footer. The appendix is inserted immediately
+      before that footer (anchored on _FILTER_FOOTER_MARKER, NOT a bare
+      "\\n\\n---\\n" -- a kept section's own body content could otherwise carry
+      a decorative rule that gets mistaken for the real footer).
+    - False: `rendered` is the RAW, unfiltered full document (the
+      sections=["all"/"full"/"everything"] escape hatch) -- it carries no
+      generated footer at all, and a bare "---" search can misfire on a
+      decorative rule anywhere in the document body (cloudwatch.md's rule
+      ahead of "## Submodule 1: log-group", about 16% through the file, used
+      to pull the appendix there instead of after all 13 real submodules).
+      The appendix is always appended at the strict end instead.
     """
     if not appendix:
         return rendered
-    marker = "\n\n---\n"
-    idx = rendered.rfind(marker)
+    if not is_filtered:
+        return rendered.rstrip("\n") + "\n\n" + appendix + "\n"
+    idx = rendered.rfind(_FILTER_FOOTER_MARKER)
     if idx == -1:
+        # Defensive: filter_module_sections always emits this footer today.
+        # On an unforeseen shape change, fail safe to a strict end-append
+        # rather than guessing at a bare "---".
         return rendered.rstrip("\n") + "\n\n" + appendix + "\n"
     return rendered[:idx] + "\n\n" + appendix + rendered[idx:]
 
@@ -2148,7 +2171,7 @@ def _sections_request_inputs(sections: list[str]) -> bool:
     return any(entry.strip().lower() in _ANY_OVERLAY_INPUT_KEYS for entry in sections)
 
 
-def _with_any_overlay_appendix(served_text: str, content: str) -> str:
+def _with_any_overlay_appendix(served_text: str, content: str, *, is_filtered: bool, scope: str | None = None) -> str:
     """
     Splice the any-overlay appendix into `served_text` (a
     filter_module_sections(...) result, or the raw full document) when
@@ -2157,15 +2180,32 @@ def _with_any_overlay_appendix(served_text: str, content: str) -> str:
     module with a committed overlay. A pure no-op (byte-identical
     `served_text` returned unchanged) when the module has no overlay file --
     the common case.
+
+    `is_filtered` is forwarded to _insert_before_footer verbatim -- callers
+    MUST pass True for a filter_module_sections(...) result and False for the
+    raw full document, so the appendix is anchored correctly in either shape.
+
+    `scope`, when given (a submodule name), restricts the appendix to that
+    submodule's own `<scope>::`-prefixed overlay vars only -- used when
+    serving a submodule-address request, so a submodule's inputs view never
+    gains root-scope or a different submodule's overlay vars. A scope with
+    zero matching vars is treated the same as "no overlay" (served_text
+    returned unchanged).
     """
     module_id = _resolve_overlay_module_id(content)
     overlay = _load_any_overlay(module_id)
     if not overlay:
         return served_text
+    if scope is not None:
+        prefix = f"{scope}::"
+        scoped_vars = {key: entry for key, entry in overlay.get("vars", {}).items() if key.startswith(prefix)}
+        if not scoped_vars:
+            return served_text
+        overlay = {**overlay, "vars": scoped_vars}
     version_match = _LATEST_VERSION_RE.search(content)
     doc_version = version_match.group(1).strip() if version_match else None
     appendix = _render_any_overlay_appendix(overlay, doc_version)
-    return _insert_before_footer(served_text, appendix)
+    return _insert_before_footer(served_text, appendix, is_filtered=is_filtered)
 
 
 def _cell_var_name(cell: str) -> str:
@@ -2360,10 +2400,10 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return _with_any_overlay_appendix(content, content)
+            return _with_any_overlay_appendix(content, content, is_filtered=False)
         rendered = filter_module_sections(content, sections)
         if _sections_request_inputs(sections):
-            rendered = _with_any_overlay_appendix(rendered, content)
+            rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
         return rendered
     return orientation_head(content)
 
