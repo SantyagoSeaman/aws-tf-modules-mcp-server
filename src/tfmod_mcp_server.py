@@ -2390,10 +2390,19 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         parent_name, sub = sub_address
         content = get_module_documentation(parent_name, state)
         # Honor the full-doc escape hatch (all/full/everything) the same way the
-        # name/path branch does — return the complete parent document verbatim.
+        # name/path branch does — return the complete parent document verbatim,
+        # with the full (unscoped) any-overlay appendix, exactly like the
+        # non-submodule full-doc branch below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return content
+            return _with_any_overlay_appendix(content, content, is_filtered=False)
         body = filter_module_sections(content, [sub, *(sections or [])])
+        # A module WITH a committed any-shape overlay can have submodule-scoped
+        # any-vars (e.g. fsx has all 19 of its any-vars submodule-scoped) — an
+        # explicit inputs/variables request here must get its OWN appendix,
+        # scope-filtered to this submodule's `<sub>::` keys only so a different
+        # submodule's or the root's overlay vars never leak in.
+        if _sections_request_inputs(sections or []):
+            body = _with_any_overlay_appendix(body, content, is_filtered=True, scope=sub)
         hint = _version_pin_hint(content)
         return f"{hint}\n\n{body}" if hint else body
 
