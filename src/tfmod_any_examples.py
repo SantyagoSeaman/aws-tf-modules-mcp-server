@@ -388,10 +388,57 @@ def _references_any_base(expr: str, bases: set[str]) -> bool:
     return bool(pattern.search(expr)) if pattern else False
 
 
+def _strip_comments(text: str) -> str:
+    """Blank out `#`/`//` line comments and `/* ... */` block comments,
+    replacing every non-newline comment character with a space so length
+    and line numbers are preserved. String literals and heredocs are left
+    verbatim (via the same string/heredoc-aware skip primitives used
+    elsewhere in this module), so a `#` or `//` inside a quoted string is
+    never mistaken for a comment start. Used before the direct-field-name
+    regex scan so a field-name-shaped token that appears only in prose
+    (e.g. a comment describing `local.rule.X`) is never harvested as an
+    observed field name."""
+    out = []
+    i = 0
+    n = len(text)
+    while i < n:
+        c = text[i]
+        if c == '"':
+            j = _skip_string(text, i)
+            out.append(text[i:j])
+            i = j
+            continue
+        if text[i : i + 2] == "<<":
+            m = _HEREDOC_START_RE.match(text, i)
+            if m:
+                j = _skip_heredoc(text, i, m)
+                out.append(text[i:j])
+                i = j
+                continue
+        if c == "#" or text[i : i + 2] == "//":
+            nl = text.find("\n", i)
+            end = nl if nl != -1 else n
+            out.append(" " * (end - i))
+            i = end
+            continue
+        if text[i : i + 2] == "/*":
+            end = text.find("*/", i + 2)
+            end = end + 2 if end != -1 else n
+            out.append(re.sub(r"[^\n]", " ", text[i:end]))
+            i = end
+            continue
+        out.append(c)
+        i += 1
+    return "".join(out)
+
+
 def _direct_fields_for_base(text: str, base: str) -> set[str]:
     """Field names read directly off `base`: `<base>.<field>`,
     `<base>["<field>"]`, `lookup(<base>, "<field>")` (attribute-chain heads
-    only - one segment past the base, never a deeper nested chain)."""
+    only - one segment past the base, never a deeper nested chain).
+    Comment-aware: a field-name-shaped token appearing only inside a `#`/
+    `//`/`/* */` comment is never harvested (see `_strip_comments`)."""
+    text = _strip_comments(text)
     b = re.escape(base)
     lb = _NOT_WORD_BEFORE
     fields = set(re.findall(lb + b + r"\.([A-Za-z_]\w*)", text))
@@ -538,8 +585,16 @@ def observed_field_names(source_dir: str | Path, scope: str, var_name: str) -> l
     real terraform-aws-modules idiom - e.g. eventbridge's `pipes` - combines
     the loop var with a second, unrelated var in the same merge()-injecting
     expression: `merge(pipe, {"Name" = var.append_pipe_postfix ? ... :
-    index})`; a strict equality check never recognized that alias at all).
-    Not a schema.
+    index})`; a strict equality check never recognized that alias at all) -
+    EXCEPT when the RHS references >=2 DISTINCT any-vars of the same scope
+    (e.g. wafv2's `local.rule = { action = var.action, override_action =
+    var.override_action, statement = var.statement }`), in which case the
+    alias is not bound for ANY of them: attributing the same composite local
+    to every one of its source vars would give them all the identical field
+    union, which is worse than the honest-empty result each got before this
+    alias resolution existed. Only a scalar/non-any var alongside the one
+    any-var (the eventbridge case above) is exempt from this guard. Not a
+    schema.
     """
     source_dir = Path(source_dir)
     files = _scope_files(source_dir, scope)
@@ -550,6 +605,8 @@ def observed_field_names(source_dir: str | Path, scope: str, var_name: str) -> l
         except OSError:
             continue
 
+    scope_any_vars = {name for s, name in find_any_vars(source_dir) if s == scope}
+
     bases = {f"var.{var_name}"}
     synthetic: set[str] = set()
     for text in texts:
@@ -557,7 +614,19 @@ def observed_field_names(source_dir: str | Path, scope: str, var_name: str) -> l
             body, _ = _grab_balanced(text, lm.end() - 1)
             for key, rhs, *_rest in _iter_top_level_assignments(body):
                 refs = set(re.findall(r"var\.([A-Za-z_]\w*)", rhs))
-                if var_name in refs:
+                any_refs = refs & scope_any_vars
+                # A locals RHS referencing >=2 DISTINCT any-vars of the same
+                # scope (e.g. wafv2's `local.rule = { action = var.action,
+                # override_action = var.override_action, statement =
+                # var.statement }`) must not bind as an alias for any of
+                # them - otherwise every one of those vars would share the
+                # SAME field union, which is worse than the honest-empty
+                # result each got before the alias loosening. A scalar
+                # (non-any) var referenced alongside the one any-var (the
+                # real eventbridge idiom: var.pipes + var.append_pipe_postfix)
+                # never counts toward this guard, so that single-any-var case
+                # still binds.
+                if var_name in any_refs and len(any_refs) == 1:
                     bases.add(f"local.{key}")
                     synthetic |= _merge_injected_keys(rhs)
 
