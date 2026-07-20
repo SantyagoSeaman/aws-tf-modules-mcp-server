@@ -2018,80 +2018,99 @@ def _cap_any_overlay_example(example: str) -> tuple[str, bool]:
     return example[:_ANY_OVERLAY_EXAMPLE_CHAR_CAP].rstrip(), True
 
 
-def _render_any_overlay_var_block(
-    scope_var: str, entry: dict[str, Any], built_from_version: str, doc_version: str | None
-) -> str:
+def _render_any_overlay_var_block(scope_var: str, entry: dict[str, Any], built_from_version: str) -> str:
     """
-    One appendix block for a single overlay var (mandatory honesty labels per
-    the design's "Honesty labels" section): the verbatim example as fenced
-    HCL, the observed-field-name checklist, and (when the overlay's
-    built_from_version differs from the doc's own pinned version) a
-    version-skew callout. Rendered regardless of provenance -- even
-    "honest-any" (no example, no names) still gets a block, carrying its
-    note -- so no overlay var is ever silently dropped.
+    One appendix block for a single overlay var: the verbatim example(s) as
+    fenced HCL, the observed-field-name list, and a provenance tag. Rendered
+    regardless of provenance -- even "honest-any" (no example, no names)
+    still gets a block, carrying its note -- so no overlay var is ever
+    silently dropped.
+
+    The SHARED honesty labels (the example-provenance sentence, the
+    field-name disclaimer, and the version-skew notice -- mandatory per the
+    design's "Honesty labels" section) are identical for every var in one
+    module (same built_from_version, same doc pin), so they are rendered
+    ONCE in the appendix intro instead (see _render_any_overlay_appendix)
+    rather than repeated here -- on a module with ~20 any-vars (e.g.
+    s3-bucket) that repetition was the dominant token cost of the appendix.
+    No honesty loss: every label still appears, just once per appendix
+    instead of once per var.
     """
     scope, _, var_name = scope_var.partition("::")
     scope = scope or "root"
-    lines = [f"**any-overlay `{var_name}`** (scope: {scope}; type = `any`):"]
+    provenance = entry.get("provenance")
+    header = f"**any-overlay `{var_name}`** (scope: {scope}; type = `any`"
+    header += f"; provenance: {provenance})" if provenance else ")"
+    lines = [header + ":"]
 
     examples = entry.get("examples") or []
     field_names = entry.get("field_names") or []
 
-    if examples:
-        lines.append(
-            f"Apply-verified example from `{built_from_version}`; references resources defined in "
-            "that example; shown form is one accepted form; other fields may be valid -- see the "
-            "field-name list / `grep_module_docs`."
-        )
-        for example in examples:
-            capped, truncated = _cap_any_overlay_example(example)
-            lines.append(f"```hcl\n{capped}\n```")
-            if truncated:
-                lines.append(
-                    f"_(truncated at {_ANY_OVERLAY_EXAMPLE_CHAR_CAP} chars -- fuller example in "
-                    "examples/<dir> -- grep_module_docs)_"
-                )
+    for example in examples:
+        capped, truncated = _cap_any_overlay_example(example)
+        lines.append(f"```hcl\n{capped}\n```")
+        if truncated:
+            lines.append(
+                f"_(truncated at {_ANY_OVERLAY_EXAMPLE_CHAR_CAP} chars -- fuller example in "
+                "examples/<dir> -- grep_module_docs)_"
+            )
 
     if field_names:
-        lines.append(
-            f"Field names observed in module source `@{built_from_version}`: "
-            + ", ".join(field_names)
-            + " (not a schema; confirm shapes via the example / `grep_module_docs`)."
-        )
+        lines.append("Field names: " + ", ".join(field_names))
 
     if not examples and not field_names:
         lines.append(
             entry.get("note") or "Honest `any` -- no example or observed field names found in the module source."
         )
 
-    if doc_version and built_from_version and doc_version.strip() != built_from_version.strip():
-        lines.append(f"Version skew: example/fields from `{built_from_version}`, doc pins `{doc_version}` -- verify.")
-
     return "\n\n".join(lines)
 
 
 def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | None) -> str:
     """
-    The full any-overlay appendix for one module: one block per overlay var,
-    keyed by var name, appended REGARDLESS of whether a matching table row
-    exists in the served document (appendix-anchored, not row-anchored --
-    curated docs are a subset and table schemes vary across the corpus).
-    Sorted by var key for deterministic output.
+    The full any-overlay appendix for one module: a ONE-TIME intro carrying
+    the mandatory honesty labels (design's "Honesty labels" section), plus
+    one block per overlay var, keyed by var name, appended REGARDLESS of
+    whether a matching table row exists in the served document
+    (appendix-anchored, not row-anchored -- curated docs are a subset and
+    table schemes vary across the corpus). Sorted by var key for
+    deterministic output.
+
+    The example-provenance sentence, the field-name disclaimer, and the
+    version-skew notice are IDENTICAL for every var in one module (same
+    built_from_version, same doc_version), so they are rendered ONCE here
+    rather than once per var -- on s3-bucket's ~20 any-vars the repeated
+    ~230-char example sentence alone was the dominant cost. No honesty loss:
+    every label still appears, just once instead of per-block.
     """
     built_from_version = overlay.get("built_from_version", "")
     vars_obj = overlay.get("vars") or {}
-    blocks = [
-        _render_any_overlay_var_block(key, entry, built_from_version, doc_version)
-        for key, entry in sorted(vars_obj.items())
-    ]
-    if not blocks:
+    if not vars_obj:
         return ""
-    intro = (
+
+    intro_lines = [
         "**any-typed input overlay** -- committed example HCL / observed field names for this "
         "module's `any`-typed inputs, appended here regardless of whether the input table above "
-        "has a matching row; each block is keyed by var name."
-    )
-    return "\n\n".join([intro, *blocks])
+        "has a matching row; each block is keyed by var name and tagged with its provenance."
+    ]
+    if any(entry.get("examples") for entry in vars_obj.values()):
+        intro_lines.append(
+            f"Apply-verified example from `{built_from_version}`; references resources defined in "
+            "that example; shown form is one accepted form; other fields may be valid -- see the "
+            "field-name list / `grep_module_docs`."
+        )
+    if any(entry.get("field_names") for entry in vars_obj.values()):
+        intro_lines.append(
+            f"Field names observed in module source `@{built_from_version}`: not a schema; confirm "
+            "shapes via the example / `grep_module_docs`."
+        )
+    if doc_version and built_from_version and doc_version.strip() != built_from_version.strip():
+        intro_lines.append(
+            f"Version skew: example/fields from `{built_from_version}`, doc pins `{doc_version}` -- verify."
+        )
+
+    blocks = [_render_any_overlay_var_block(key, entry, built_from_version) for key, entry in sorted(vars_obj.items())]
+    return "\n\n".join(["\n\n".join(intro_lines), *blocks])
 
 
 def _insert_before_footer(rendered: str, appendix: str) -> str:
