@@ -14,6 +14,7 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 
 import argparse
 import ipaddress
+import json
 import logging
 import os
 import re
@@ -45,6 +46,7 @@ from tfmod_doc_grep import grep_document
 from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
+    ModuleDocumentParser,
     ScoredHit,
     SearchIndex,
     compute_scores,
@@ -1936,6 +1938,306 @@ def _cap_head_input_table(head_text: str) -> str:
     return "".join(new_lines)
 
 
+# --------------------------------------------------------------------------- #
+# any-shape overlay (examples-primary) -- serve the committed per-module
+# any-var overlay (model/any_overlay/<id>.json, built by
+# scripts/build_any_overlay.py) on the EXISTING serve path, without touching
+# the render subsystem (filter_module_sections/_split_h2_sections/the head
+# caps above are all untouched). Design (authoritative for the mechanics
+# below): evals/specs/2026-07-20-consolidated-interface-any-overlay-design.md,
+# "Integration" section.
+#
+# Committed overlay = static build-time data -> a plain file read, never a
+# network call. get_module's network-decoupled contract is preserved by
+# construction: live Registry access stays confined to grep_module_docs.
+# --------------------------------------------------------------------------- #
+
+_ANY_OVERLAY_DIR = _PROJECT_ROOT / "model" / "any_overlay"
+
+# Per-var example cap (spec token policy: "smallest-covering example, per-var
+# cap ~2k chars, fuller example -> grep_module_docs trailer").
+_ANY_OVERLAY_EXAMPLE_CHAR_CAP = 2000
+
+# Cell-substitution-only pointer for the default orientation HEAD (never the
+# example/field-list themselves -- that would blow the head's token budget).
+# No "below" wording: the head has nothing "below" it to point at.
+_ANY_TYPE_HEAD_POINTER = 'any — see sections=["inputs"]'
+
+# Reused for module_id resolution straight from raw doc text (an explicit
+# Module ID bullet, falling back to the root Source bullet) -- the exact same
+# fallback get_module/search_modules already rely on for module_id/
+# latest_version, so any-overlay filename lookup can never disagree with
+# those fields. A logger is required by the constructor, but
+# parse_module_info() itself never logs.
+_ANY_OVERLAY_INFO_PARSER = ModuleDocumentParser(logging.getLogger(__name__))
+
+
+def _resolve_overlay_module_id(text: str) -> str:
+    """Best-effort module_id parsed straight from `text`, for any-overlay
+    filename resolution only. Pure text parsing -- no network, no index/state
+    dependency -- so this works uniformly whether the doc arrived via
+    name/path/submodule-address lookup. Empty string when unparseable."""
+    return _ANY_OVERLAY_INFO_PARSER.parse_module_info(text).module_id
+
+
+def _any_overlay_path(module_id: str) -> Path:
+    return _ANY_OVERLAY_DIR / (module_id.replace("/", "__") + ".json")
+
+
+def _load_any_overlay(module_id: str) -> dict[str, Any] | None:
+    """
+    Read the committed any-overlay JSON for `module_id`, if one exists.
+
+    Static file read only (scripts/build_any_overlay.py's committed output) --
+    never a network call. Fails closed to None on anything unexpected: no
+    module_id, missing file, unreadable, malformed JSON, or the wrong shape --
+    the caller then serves the honest `any` exactly as it did before this
+    feature existed. A broken/missing overlay is never a hard error for
+    get_module; only ~30 of the 63 catalog modules have any `any` inputs at
+    all, so None is the overwhelmingly common case.
+    """
+    if not module_id:
+        return None
+    path = _any_overlay_path(module_id)
+    try:
+        if not path.is_file():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict) or not isinstance(data.get("vars"), dict):
+        return None
+    return data
+
+
+def _cap_any_overlay_example(example: str) -> tuple[str, bool]:
+    """Cap one example block to _ANY_OVERLAY_EXAMPLE_CHAR_CAP chars (token
+    policy). Returns (possibly-truncated text, whether it was truncated)."""
+    if len(example) <= _ANY_OVERLAY_EXAMPLE_CHAR_CAP:
+        return example, False
+    return example[:_ANY_OVERLAY_EXAMPLE_CHAR_CAP].rstrip(), True
+
+
+def _render_any_overlay_var_block(
+    scope_var: str, entry: dict[str, Any], built_from_version: str, doc_version: str | None
+) -> str:
+    """
+    One appendix block for a single overlay var (mandatory honesty labels per
+    the design's "Honesty labels" section): the verbatim example as fenced
+    HCL, the observed-field-name checklist, and (when the overlay's
+    built_from_version differs from the doc's own pinned version) a
+    version-skew callout. Rendered regardless of provenance -- even
+    "honest-any" (no example, no names) still gets a block, carrying its
+    note -- so no overlay var is ever silently dropped.
+    """
+    scope, _, var_name = scope_var.partition("::")
+    scope = scope or "root"
+    lines = [f"**any-overlay `{var_name}`** (scope: {scope}; type = `any`):"]
+
+    examples = entry.get("examples") or []
+    field_names = entry.get("field_names") or []
+
+    if examples:
+        lines.append(
+            f"Apply-verified example from `{built_from_version}`; references resources defined in "
+            "that example; shown form is one accepted form; other fields may be valid -- see the "
+            "field-name list / `grep_module_docs`."
+        )
+        for example in examples:
+            capped, truncated = _cap_any_overlay_example(example)
+            lines.append(f"```hcl\n{capped}\n```")
+            if truncated:
+                lines.append(
+                    f"_(truncated at {_ANY_OVERLAY_EXAMPLE_CHAR_CAP} chars -- fuller example in "
+                    "examples/<dir> -- grep_module_docs)_"
+                )
+
+    if field_names:
+        lines.append(
+            f"Field names observed in module source `@{built_from_version}`: "
+            + ", ".join(field_names)
+            + " (not a schema; confirm shapes via the example / `grep_module_docs`)."
+        )
+
+    if not examples and not field_names:
+        lines.append(
+            entry.get("note") or "Honest `any` -- no example or observed field names found in the module source."
+        )
+
+    if doc_version and built_from_version and doc_version.strip() != built_from_version.strip():
+        lines.append(f"Version skew: example/fields from `{built_from_version}`, doc pins `{doc_version}` -- verify.")
+
+    return "\n\n".join(lines)
+
+
+def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | None) -> str:
+    """
+    The full any-overlay appendix for one module: one block per overlay var,
+    keyed by var name, appended REGARDLESS of whether a matching table row
+    exists in the served document (appendix-anchored, not row-anchored --
+    curated docs are a subset and table schemes vary across the corpus).
+    Sorted by var key for deterministic output.
+    """
+    built_from_version = overlay.get("built_from_version", "")
+    vars_obj = overlay.get("vars") or {}
+    blocks = [
+        _render_any_overlay_var_block(key, entry, built_from_version, doc_version)
+        for key, entry in sorted(vars_obj.items())
+    ]
+    if not blocks:
+        return ""
+    intro = (
+        "**any-typed input overlay** -- committed example HCL / observed field names for this "
+        "module's `any`-typed inputs, appended here regardless of whether the input table above "
+        "has a matching row; each block is keyed by var name."
+    )
+    return "\n\n".join([intro, *blocks])
+
+
+def _insert_before_footer(rendered: str, appendix: str) -> str:
+    """
+    Insert `appendix` as the final content block of `rendered`, immediately
+    before filter_module_sections's own trailing footer ("\\n\\n---\\n...")
+    when present, or at the very end otherwise (the sections=["all"/"full"]
+    escape hatch returns the raw document, which carries no such footer).
+
+    Deliberately appendix-anchored rather than heading-anchored: the corpus's
+    heading scheme varies (split "## Main Input Variables" vs combined
+    "## Root Module:"/"## Submodule N:" bundles), and guessing at a specific
+    H2/H3 boundary would risk exactly the shape-mismatch class
+    _cap_head_input_table's docstring warns about. filter_module_sections's
+    footer separator is the one structurally reliable anchor across every doc
+    shape. Adds no new H2 heading.
+    """
+    if not appendix:
+        return rendered
+    marker = "\n\n---\n"
+    idx = rendered.rfind(marker)
+    if idx == -1:
+        return rendered.rstrip("\n") + "\n\n" + appendix + "\n"
+    return rendered[:idx] + "\n\n" + appendix + rendered[idx:]
+
+
+# Logical keys whose presence in a get_module `sections` request means the
+# response includes (or resolves to) the inputs view -- the only view the
+# any-overlay appendix is spliced into (a request for unrelated sections, e.g.
+# sections=["outputs"], must not gain input-var content it never asked for).
+_ANY_OVERLAY_INPUT_KEYS = frozenset({"inputs", "variables"})
+
+
+def _sections_request_inputs(sections: list[str]) -> bool:
+    return any(entry.strip().lower() in _ANY_OVERLAY_INPUT_KEYS for entry in sections)
+
+
+def _with_any_overlay_appendix(served_text: str, content: str) -> str:
+    """
+    Splice the any-overlay appendix into `served_text` (a
+    filter_module_sections(...) result, or the raw full document) when
+    `content` (the raw, unfiltered doc -- always used for module_id/version
+    resolution regardless of how `served_text` was produced) resolves to a
+    module with a committed overlay. A pure no-op (byte-identical
+    `served_text` returned unchanged) when the module has no overlay file --
+    the common case.
+    """
+    module_id = _resolve_overlay_module_id(content)
+    overlay = _load_any_overlay(module_id)
+    if not overlay:
+        return served_text
+    version_match = _LATEST_VERSION_RE.search(content)
+    doc_version = version_match.group(1).strip() if version_match else None
+    appendix = _render_any_overlay_appendix(overlay, doc_version)
+    return _insert_before_footer(served_text, appendix)
+
+
+def _cell_var_name(cell: str) -> str:
+    """The bare variable name inside a Variable-column table cell, stripping
+    the Markdown backticks the corpus always wraps names in (e.g.
+    "`lifecycle_rule`" -> "lifecycle_rule")."""
+    match = re.search(r"`([A-Za-z_][\w-]*)`", cell)
+    return match.group(1) if match else cell.strip()
+
+
+def _root_any_var_names(text: str) -> frozenset[str]:
+    """Root-scope any-var names from `text`'s committed overlay (if any) --
+    used only to decide which head Type cells are eligible for the
+    sections=["inputs"] pointer substitution. Empty when the module has no
+    overlay."""
+    overlay = _load_any_overlay(_resolve_overlay_module_id(text))
+    if not overlay:
+        return frozenset()
+    return frozenset(key.split("::", 1)[1] for key in overlay.get("vars", {}) if key.startswith("root::"))
+
+
+def _substitute_any_type_head_cells(head_text: str, any_var_names: frozenset[str]) -> str:
+    """
+    Cell-substitution ONLY, for the default orientation HEAD's inlined
+    ``### Main Input Variables`` table: when a row's Variable name is in
+    `any_var_names` (a module WITH a committed overlay) and its Type cell is
+    exactly ``any``, replace that Type cell with a pointer to
+    ``sections=["inputs"]``. Never inlines the example/field-list themselves
+    (token budget) and never adds "below" wording (nothing is "below" in the
+    head). Emits a pipe-table-compatible cell (same column count, no literal
+    ``|``/newline) and MUST run before ``_cap_head_input_table`` so the cap's
+    own row/column parsing is unaffected.
+
+    Reuses exactly the heading/header/separator detection
+    ``_cap_head_input_table`` already relies on, so whenever that cap
+    correctly identifies the table, this substitution does too -- and on any
+    parse mismatch (no heading, no recognizable table, no Variable/Type
+    column) this returns `head_text` unchanged rather than guessing, the same
+    fail-safe contract the cap function documents. A module with no overlay
+    (``any_var_names`` empty) short-circuits to a no-op without even
+    attempting to locate the table.
+    """
+    if not any_var_names:
+        return head_text
+    heading_match = _INPUT_TABLE_HEADING_RE.search(head_text)
+    if heading_match is None:
+        return head_text
+
+    lines = head_text.splitlines(keepends=True)
+    heading_line_idx = head_text.count("\n", 0, heading_match.start())
+
+    idx = heading_line_idx + 1
+    while idx < len(lines) and lines[idx].strip() == "":
+        idx += 1
+    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+        return head_text
+    header_line_idx = idx
+    header_cells = _split_table_row(lines[header_line_idx])
+
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return head_text
+
+    lower_headers = [c.lower() for c in header_cells]
+    if "variable" not in lower_headers or "type" not in lower_headers:
+        return head_text
+    var_idx = lower_headers.index("variable")
+    type_idx = lower_headers.index("type")
+
+    row_start = sep_idx + 1
+    row_end = row_start
+    changed = False
+    new_lines = lines[:row_start]
+    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
+        row = lines[row_end]
+        cells = _split_table_row(row)
+        if (
+            len(cells) > max(var_idx, type_idx)
+            and _cell_var_name(cells[var_idx]) in any_var_names
+            and cells[type_idx].strip().strip("`").strip().lower() == "any"
+        ):
+            cells[type_idx] = _ANY_TYPE_HEAD_POINTER
+            newline = "\n" if row.endswith("\n") else ""
+            row = "| " + " | ".join(cells) + " |" + newline
+            changed = True
+        new_lines.append(row)
+        row_end += 1
+    new_lines.extend(lines[row_end:])
+    return "".join(new_lines) if changed else head_text
+
+
 def orientation_head(text: str, version_override: str | None = None) -> str:
     """
     Build the compact orientation view returned by get_module by default.
@@ -1961,6 +2263,12 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
     ``_cap_head_input_table`` (L4) — the full table remains one
     ``sections=["inputs"]`` call away.
 
+    For a module with a committed any-shape overlay (``model/any_overlay/``),
+    any root-scope ``any``-typed row's Type cell is substituted with a
+    pointer to ``sections=["inputs"]`` (cell-substitution only, BEFORE the
+    cap below — never the example/field-list themselves, which would blow the
+    head's token budget; see ``_substitute_any_type_head_cells``).
+
     Args:
         text: The module document body.
         version_override: Forwarded to ``_version_pin_hint`` verbatim (single-
@@ -1974,6 +2282,7 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
         interface_scope="root",
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
+    body = _substitute_any_type_head_cells(body, _root_any_var_names(text))
     body = _cap_head_input_table(body)
     # When a snapshot is threaded in, reconcile the body's own
     # **Latest Version** bullet to it so the inlined head cannot contradict the
@@ -2004,6 +2313,15 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         The compact orientation head by default, a filtered subset when specific
         sections are requested, or the full document when an all/full key is given
 
+    For a module with a committed any-shape overlay (``model/any_overlay/``),
+    a non-head response (an explicit ``sections`` request that resolves to
+    the inputs view, or the full-document escape hatch) gets an
+    appendix-anchored block per overlay var appended to the end of the
+    response, regardless of whether a matching input-table row exists (see
+    ``_with_any_overlay_appendix``). The default orientation head instead gets
+    only a cell-substitution pointer (see ``orientation_head``) — never the
+    example/field-list content. A module with no overlay is unaffected.
+
     See get_module() tool documentation for full details.
     """
     # A submodule address ("iam//modules/iam-role") resolves to the parent doc,
@@ -2023,8 +2341,11 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return content
-        return filter_module_sections(content, sections)
+            return _with_any_overlay_appendix(content, content)
+        rendered = filter_module_sections(content, sections)
+        if _sections_request_inputs(sections):
+            rendered = _with_any_overlay_appendix(rendered, content)
+        return rendered
     return orientation_head(content)
 
 
