@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.25.0] - 2026-07-20
+
+[0.25.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.25.0
+
+Any-typed input overlay: `get_module` now closes a recurring gap for the catalog modules whose Terraform Registry schema declares an input as `type = any` — where the curated doc's input table can name the variable but not its shape. For the 22 catalog modules that have at least one `any`-typed input, the inputs view (`sections=["inputs"]`/`variables`, an `all`/`full` request, or a submodule-scoped inputs view) now appends, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (extracted from the module's committed `examples/` at build time) plus a list of field names observed in the module source. This closes the cost driver where an agent used to fall back to `grep_module_docs` — or the wider module source — just to confirm a nested `any` shape or check whether an off-example field exists. The overlay is offline (a static file read of data committed ahead of time; `get_module` stays fully network-decoupled — live Registry access remains confined to `grep_module_docs`), additive (a module with no `any`-typed inputs is served byte-identical to 0.24.0), and honestly labeled: every appendix states the example is apply-verified from a specific module version and is not a schema, points to `grep_module_docs` for complete confirmation, and a version-skew note fires when the overlay's source version differs from the doc's pinned version. A variable with no extractable example or field names ("honest any") still renders its own block rather than being silently dropped.
+
+### Added
+
+- **`src/tfmod_any_examples.py`**: extraction library that reads a module's own `examples/*.tf` and, for a given `any`-typed variable, pulls the assigned block verbatim together with the field names referenced inside it.
+- **`scripts/build_any_overlay.py`**: build-time script that runs the extraction library over the curated catalog and writes one committed JSON file per module under `model/any_overlay/`. Currently 22 of the 63 catalog modules — every module that declares at least one `any`-typed input — carry a committed overlay file.
+- The default orientation head gains a one-line `any -- see sections=["inputs"]` pointer on `any`-typed Type cells for overlaid modules, so the head stays aware the overlay exists without pulling the example/field-name content into the head's own token budget.
+
+### Changed
+
+- **`get_module`'s inputs view now includes the any-overlay appendix for the 22 overlaid modules.** The appendix is appendix-anchored (inserted before the existing footer, or at the strict end of the raw document for the `all`/`full` escape hatch) rather than tied to a specific heading, since the corpus's input-table heading scheme varies. A submodule-address request is scoped to that submodule's own overlay variables only, never root-scope or a different submodule's.
+
+### Unchanged
+
+- The search index is not rebuilt and no existing module doc's text changed; `search_modules`, `modules_list`, and `grep_module_docs` are untouched. `get_module`'s response for the 41 catalog modules with no `any`-typed input is byte-identical to 0.24.0. `get_module` remains fully offline — the overlay is a static file read, never a network call.
+
 ## [0.24.0] - 2026-07-17
 
 [0.24.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.24.0

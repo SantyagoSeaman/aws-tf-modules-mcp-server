@@ -26,6 +26,7 @@ Think of it as an always-available, searchable reference card for every terrafor
 ## 🚀 Features
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
+- **Any-Typed Input Overlay**: for catalog modules with `type = any` inputs, `get_module`'s inputs view appends the module maintainers' own apply-verified example HCL and a list of field names observed in the module source — offline, additive, and honestly labeled as an example rather than a schema
 - **Live Registry Grep**: `grep_module_docs` regex-searches the full, current docs of *any* Terraform Registry module (version-pinnable, cached), returning only matching lines with context — pinpoint lookups without dumping 100k-token documents
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
 - **Fast & Efficient**: Pre-built search index with CPU-only inference using `intfloat/e5-small-v2` model
@@ -660,6 +661,8 @@ Get documentation for a specific Terraform module. **By default returns a compac
   - **`["all"]`** (or `"full"`/`"everything"`) → the complete document verbatim.
 
 **Returns**: The compact orientation head by default, a filtered subset when specific sections are requested, or the complete markdown document when an `all`/`full` key is given.
+
+**Any-typed input overlay**: some Registry module inputs are declared `type = any`, so the curated input table can name the variable but not its shape. For the catalog modules that have at least one such input, requesting the inputs view (`sections=["inputs"]`/`"variables"`, an `all`/`full` request, or a submodule-scoped inputs view) appends, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (pulled from the module's own `examples/`) plus a list of field names observed in the module source. It is committed, static data (`model/any_overlay/`, built by `scripts/build_any_overlay.py`) — a plain file read, so `get_module` stays fully offline; live Registry access remains confined to `grep_module_docs`. Every appendix is honestly labeled: an apply-verified example from a named module version, explicitly **not a schema**, with a pointer to `grep_module_docs` for complete confirmation and a version-skew note when the overlay's source version differs from the doc's pinned version. A module with no `any`-typed inputs is served byte-identical to before; the default orientation head only gets a lightweight pointer (`any — see sections=["inputs"]`) rather than the full appendix, to keep the head small.
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
