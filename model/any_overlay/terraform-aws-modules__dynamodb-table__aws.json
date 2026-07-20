@@ -1,0 +1,89 @@
+{
+  "built_from_version": "5.5.0",
+  "module_id": "terraform-aws-modules/dynamodb-table/aws",
+  "vars": {
+    "root::global_secondary_indexes": {
+      "examples": [
+        "global_secondary_indexes = [\n    {\n      name               = \"TitleIndex\"\n      hash_key           = \"title\"\n      range_key          = \"age\"\n      projection_type    = \"INCLUDE\"\n      non_key_attributes = [\"id\"]\n    }\n  ]",
+        "global_secondary_indexes = [\n    {\n      name               = \"TitleIndex\"\n      hash_key           = \"title\"\n      range_key          = \"age\"\n      projection_type    = \"INCLUDE\"\n      non_key_attributes = [\"id\"]\n      write_capacity     = 10\n      read_capacity      = 10\n    }\n  ]",
+        "global_secondary_indexes = [\n    {\n      name               = \"TitleIndex\"\n      hash_key           = \"title\"\n      range_key          = \"age\"\n      projection_type    = \"INCLUDE\"\n      non_key_attributes = [\"id\"]\n\n      on_demand_throughput = {\n        max_write_request_units = 1\n        max_read_request_units  = 1\n      }\n    }\n  ]"
+      ],
+      "field_names": [
+        "hash_key",
+        "max_read_request_units",
+        "max_write_request_units",
+        "name",
+        "non_key_attributes",
+        "on_demand_throughput",
+        "projection_type",
+        "range_key",
+        "read_capacity",
+        "read_units_per_second",
+        "warm_throughput",
+        "write_capacity",
+        "write_units_per_second"
+      ],
+      "provenance": "example+names"
+    },
+    "root::import_table": {
+      "examples": [
+        "import_table = {\n    input_format           = \"DYNAMODB_JSON\"\n    input_compression_type = \"NONE\"\n    bucket                 = module.s3_bucket.s3_bucket_id\n    key_prefix             = \"import-json-${random_pet.this.id}\"\n  }",
+        "import_table = {\n    input_format           = \"CSV\"\n    input_compression_type = \"NONE\"\n    bucket                 = module.s3_bucket.s3_bucket_id\n    key_prefix             = \"import-csv-${random_pet.this.id}\"\n    input_format_options = {\n      csv = {\n        delimiter = \";\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "bucket",
+        "bucket_owner",
+        "csv",
+        "delimiter",
+        "header_list",
+        "input_compression_type",
+        "input_format",
+        "input_format_options",
+        "key_prefix"
+      ],
+      "provenance": "example+names"
+    },
+    "root::local_secondary_indexes": {
+      "examples": [],
+      "field_names": [
+        "name",
+        "non_key_attributes",
+        "projection_type",
+        "range_key"
+      ],
+      "provenance": "names-only"
+    },
+    "root::on_demand_throughput": {
+      "examples": [
+        "on_demand_throughput = {\n    max_read_request_units  = 1\n    max_write_request_units = 1\n  }"
+      ],
+      "field_names": [
+        "max_read_request_units",
+        "max_write_request_units"
+      ],
+      "provenance": "example"
+    },
+    "root::replica_regions": {
+      "examples": [
+        "replica_regions = [{\n    region_name            = \"us-east-1\"\n    kms_key_arn            = aws_kms_key.secondary.arn\n    propagate_tags         = true\n    point_in_time_recovery = true\n  }]"
+      ],
+      "field_names": [
+        "consistency_mode",
+        "deletion_protection_enabled",
+        "kms_key_arn",
+        "point_in_time_recovery",
+        "propagate_tags",
+        "region_name"
+      ],
+      "provenance": "example+names"
+    },
+    "root::warm_throughput": {
+      "examples": [],
+      "field_names": [
+        "read_units_per_second",
+        "write_units_per_second"
+      ],
+      "provenance": "names-only"
+    }
+  }
+}

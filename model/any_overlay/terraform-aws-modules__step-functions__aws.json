@@ -1,0 +1,48 @@
+{
+  "built_from_version": "5.1.0",
+  "module_id": "terraform-aws-modules/step-functions/aws",
+  "vars": {
+    "root::encryption_configuration": {
+      "examples": [
+        "encryption_configuration = {\n    type                              = \"CUSTOMER_MANAGED_KMS_KEY\"\n    kms_key_id                        = module.kms.key_arn\n    kms_data_key_reuse_period_seconds = 600\n  }"
+      ],
+      "field_names": [
+        "kms_data_key_reuse_period_seconds",
+        "kms_key_id",
+        "type"
+      ],
+      "provenance": "example"
+    },
+    "root::policy_statements": {
+      "examples": [
+        "policy_statements = {\n    dynamodb = {\n      effect    = \"Allow\",\n      actions   = [\"dynamodb:BatchWriteItem\"],\n      resources = [\"arn:aws:dynamodb:eu-west-1:052212379155:table/Test\"]\n    },\n    s3_read = {\n      effect    = \"Deny\",\n      actions   = [\"s3:HeadObject\", \"s3:GetObject\"],\n      resources = [\"arn:aws:s3:::my-bucket/*\"]\n    }\n    kms = {\n      effect    = \"Allow\"\n      actions   = [\"kms:Decrypt\", \"kms:GenerateDataKey\"]\n      resources = [module.kms.key_arn]\n      condition = [{\n        test     = \"StringEquals\"\n        variable = \"kms:EncryptionContext:aws:states:stateMachineArn\"\n        values   = [\"arn:aws:states:${data.aws_region.current.id}:${data.aws_caller_identity.current.account_id}:stateMachine:${random_pet.this.id}\"]\n      }]\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::service_integrations": {
+      "examples": [
+        "service_integrations = {\n\n    batch_Sync = {\n      events = true\n    }\n\n    dynamodb = {\n      dynamodb = [\"arn:aws:dynamodb:eu-west-1:052212379155:table/Test\"]\n    }\n\n    athena_StartQueryExecution_Sync = {\n      athena        = [\"arn:aws:athena:eu-west-1:123456789012:something1:test1\"]\n      glue          = [\"arn:aws:glue:eu-west-1:123456789012:something2:test1\"]\n      s3            = true # options: true (use default value from `aws_service_policies`) or provide a list of ARNs\n      lakeformation = [\"arn:aws:lakeformation:eu-west-1:123456789012:something3:test1\"]\n    }\n\n    lambda = {\n      lambda = [\n      module.lambda_function.lambda_function_arn, \"arn:aws:lambda:eu-west-1:123456789012:function:test2\"]\n    }\n\n    xray = {\n      xray = true\n    }\n\n    stepfunction_Sync = {\n      stepfunction          = [\"arn:aws:states:eu-west-1:123456789012:stateMachine:test1\"]\n      stepfunction_Wildcard = [\"arn:aws:states:eu-west-1:123456789012:stateMachine:test1\"]\n\n      # Set to true to use the default events (otherwise, set this to a list of ARNs; see the docs linked in locals.tf\n      # for more information). Without events permissions, you will get an error similar to this:\n      #   Error: AccessDeniedException: 'arn:aws:iam::xxxx:role/step-functions-role' is not authorized to\n      #   create managed-rule\n      events = true\n    }\n\n    #    # NB: This will \"Deny\" everything (including logging)!\n    #    no_tasks = {\n    #      deny_all = true\n    #    }\n  }"
+      ],
+      "field_names": [
+        "xray"
+      ],
+      "provenance": "example"
+    }
+  }
+}

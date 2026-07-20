@@ -1,0 +1,18 @@
+{
+  "built_from_version": "6.6.1",
+  "module_id": "terraform-aws-modules/iam/aws",
+  "vars": {
+    "iam-role-for-service-accounts::oidc_providers": {
+      "examples": [
+        "oidc_providers = {\n    this = {\n      provider_arn               = module.eks.oidc_provider_arn\n      namespace_service_accounts = [\"velero:velero\"]\n    }\n  }",
+        "oidc_providers = {\n    ex = {\n      provider_arn               = module.eks.oidc_provider_arn\n      namespace_service_accounts = [\"kube-system:s3-csi-driver-sa\"]\n    }\n  }",
+        "oidc_providers = {\n    one = {\n      provider_arn               = module.eks.oidc_provider_arn\n      namespace_service_accounts = [\"default:my-app\", \"canary:my-app\"]\n    }\n    two = {\n      provider_arn               = module.eks.oidc_provider_arn\n      namespace_service_accounts = [\"default:blue\", \"canary:blue\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "namespace_service_accounts",
+        "provider_arn"
+      ],
+      "provenance": "example"
+    }
+  }
+}

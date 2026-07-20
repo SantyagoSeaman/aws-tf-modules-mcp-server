@@ -1,0 +1,32 @@
+{
+  "built_from_version": "3.3.0",
+  "module_id": "terraform-aws-modules/transit-gateway/aws",
+  "vars": {
+    "root::vpc_attachments": {
+      "examples": [
+        "vpc_attachments = {\n    vpc1 = {\n      tgw_id       = module.tgw.ec2_transit_gateway_id\n      vpc_id       = module.vpc1.vpc_id\n      subnet_ids   = module.vpc1.private_subnets\n      dns_support  = true\n      ipv6_support = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      vpc_route_table_ids  = module.vpc1.private_route_table_ids\n      tgw_destination_cidr = \"0.0.0.0/0\"\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n  }",
+        "vpc_attachments = {\n    vpc1 = {\n      vpc_id       = module.vpc1.vpc_id\n      subnet_ids   = module.vpc1.private_subnets\n      dns_support  = true\n      ipv6_support = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n    vpc2 = {\n      vpc_id     = module.vpc2.vpc_id\n      subnet_ids = module.vpc2.private_subnets\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"50.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"10.10.10.10/32\"\n        }\n      ]\n    },\n  }",
+        "vpc_attachments = {\n    vpc1 = {\n      vpc_id                             = module.vpc1.vpc_id\n      subnet_ids                         = module.vpc1.private_subnets\n      security_group_referencing_support = true\n      dns_support                        = true\n      ipv6_support                       = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n    vpc2 = {\n      vpc_id     = module.vpc2.vpc_id\n      subnet_ids = module.vpc2.private_subnets\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"50.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"10.10.10.10/32\"\n        }\n      ]\n      tags = {\n        Name = \"${local.name}-vpc2\"\n      }\n    },\n  }"
+      ],
+      "field_names": [
+        "appliance_mode_support",
+        "cidr",
+        "dns_support",
+        "ipv6_support",
+        "rtb_id",
+        "security_group_referencing_support",
+        "subnet_ids",
+        "tags",
+        "tgw_destination_cidr",
+        "tgw_id",
+        "tgw_routes",
+        "transit_gateway_default_route_table_association",
+        "transit_gateway_default_route_table_propagation",
+        "transit_gateway_route_table_id",
+        "vpc_id",
+        "vpc_route_table_ids"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

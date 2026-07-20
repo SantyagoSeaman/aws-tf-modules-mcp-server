@@ -1,0 +1,22 @@
+{
+  "built_from_version": "6.3.0",
+  "module_id": "terraform-aws-modules/acm/aws",
+  "vars": {
+    "root::acm_certificate_domain_validation_options": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::validation_option": {
+      "examples": [
+        "validation_option = {\n    (var.domain_name) = {\n      validation_domain = var.validation_domain\n    }\n  }"
+      ],
+      "field_names": [
+        "domain_name",
+        "validation_domain"
+      ],
+      "provenance": "example"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "built_from_version": "7.2.0",
+  "module_id": "terraform-aws-modules/datadog-forwarders/aws",
+  "vars": {
+    "root::agent_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::api_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::log_forwarder_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::metrics_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::processes_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::traces_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    }
+  }
+}

@@ -1,0 +1,138 @@
+{
+  "built_from_version": "1.2.2",
+  "module_id": "terraform-aws-modules/app-runner/aws",
+  "vars": {
+    "root::auto_scaling_configurations": {
+      "examples": [
+        "auto_scaling_configurations = {\n    mini = {\n      name            = \"mini\"\n      max_concurrency = 20\n      max_size        = 5\n      min_size        = 1\n\n      tags = {\n        Type = \"Mini\"\n      }\n    }\n\n    mega = {\n      name            = \"mega\"\n      max_concurrency = 200\n      max_size        = 25\n      min_size        = 5\n\n      tags = {\n        Type = \"MEGA\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "max_concurrency",
+        "max_size",
+        "min_size",
+        "name",
+        "tags"
+      ],
+      "provenance": "example"
+    },
+    "root::connections": {
+      "examples": [
+        "connections = {\n    # The AWS Connector for GitHub connects to your GitHub account is a one-time setup,\n    # You can reuse the connection for creating multiple App Runner services based on repositories in this account.\n    # After creation, you must complete the authentication handshake using the App Runner console.\n    github = {\n      provider_type = \"GITHUB\"\n    }\n  }"
+      ],
+      "field_names": [
+        "max_concurrency",
+        "max_size",
+        "min_size",
+        "name",
+        "provider_type",
+        "tags"
+      ],
+      "provenance": "example+names"
+    },
+    "root::encryption_configuration": {
+      "examples": [],
+      "field_names": [
+        "kms_key"
+      ],
+      "provenance": "names-only"
+    },
+    "root::health_check_configuration": {
+      "examples": [],
+      "field_names": [
+        "healthy_threshold",
+        "interval",
+        "path",
+        "protocol",
+        "timeout",
+        "unhealthy_threshold"
+      ],
+      "provenance": "names-only"
+    },
+    "root::hosted_zone_id": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::instance_configuration": {
+      "examples": [],
+      "field_names": [
+        "cpu",
+        "memory"
+      ],
+      "provenance": "names-only"
+    },
+    "root::instance_policy_statements": {
+      "examples": [
+        "instance_policy_statements = {\n    GetSecretValue = {\n      actions   = [\"secretsmanager:GetSecretValue\"]\n      resources = [aws_secretsmanager_secret.this.arn]\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::network_configuration": {
+      "examples": [
+        "network_configuration = {\n    egress_configuration = {\n      egress_type = \"VPC\"\n    }\n  }",
+        "network_configuration = {\n    ingress_configuration = {\n      is_publicly_accessible = false\n    }\n    egress_configuration = {\n      egress_type = \"VPC\"\n    }\n  }"
+      ],
+      "field_names": [
+        "egress_type",
+        "ingress_configuration",
+        "is_publicly_accessible",
+        "vpc_connector_arn"
+      ],
+      "provenance": "example+names"
+    },
+    "root::observability_configuration": {
+      "examples": [],
+      "field_names": [
+        "value"
+      ],
+      "provenance": "names-only"
+    },
+    "root::source_configuration": {
+      "examples": [
+        "source_configuration = {\n    authentication_configuration = {\n      # Pulling from shared configs\n      connection_arn = module.app_runner_shared_configs.connections[\"github\"].arn\n    }\n    auto_deployments_enabled = false\n    code_repository = {\n      code_configuration = {\n        configuration_source = \"REPOSITORY\"\n      }\n      repository_url = var.repository_url\n      source_code_version = {\n        type  = \"BRANCH\"\n        value = \"main\"\n      }\n    }\n  }",
+        "source_configuration = {\n    auto_deployments_enabled = false\n    image_repository = {\n      image_configuration = {\n        port = 8000\n        runtime_environment_variables = {\n          MY_VARIABLE = \"hello!\"\n        }\n        runtime_environment_secrets = {\n          MY_SECRET = aws_secretsmanager_secret.this.arn\n        }\n      }\n      image_identifier      = \"public.ecr.aws/aws-containers/hello-app-runner:latest\"\n      image_repository_type = \"ECR_PUBLIC\"\n    }\n  }"
+      ],
+      "field_names": [
+        "access_role_arn",
+        "auto_deployments_enabled",
+        "build_command",
+        "code_configuration",
+        "code_configuration_values",
+        "code_repository",
+        "configuration_source",
+        "connection_arn",
+        "image_configuration",
+        "image_identifier",
+        "image_repository",
+        "image_repository_type",
+        "port",
+        "repository_url",
+        "runtime",
+        "runtime_environment_secrets",
+        "runtime_environment_variables",
+        "source_code_version",
+        "start_command",
+        "type",
+        "value"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

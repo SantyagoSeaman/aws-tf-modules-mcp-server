@@ -1,0 +1,46 @@
+{
+  "built_from_version": "3.0.0",
+  "module_id": "terraform-aws-modules/global-accelerator/aws",
+  "vars": {
+    "custom-routing::listeners": {
+      "examples": [
+        "listeners = {\n    listener_1 = {\n      endpoint_groups = {\n        one = {\n          endpoint_group_region = \"us-west-2\"\n          destination_configuration = [\n            {\n              from_port = 80\n              protocols = [\"TCP\"]\n              to_port   = 81\n            },\n            {\n              from_port = 443\n              protocols = [\"TCP\"]\n              to_port   = 443\n            }\n          ]\n\n          endpoint_configuration = [for subnet in module.secondary_vpc.public_subnets : { endpoint_id = subnet }]\n        }\n        two = {\n          destination_configuration = [\n            {\n              from_port = 8080\n              protocols = [\"TCP\"]\n              to_port   = 8081\n            },\n            {\n              from_port = 8443\n              protocols = [\"TCP\"]\n              to_port   = 8443\n            }\n          ]\n\n          endpoint_configuration = [for subnet in module.vpc.private_subnets : { endpoint_id = subnet }]\n        }\n      }\n\n\n      port_ranges = [\n        {\n          from_port = 80\n          to_port   = 200\n        },\n        {\n          from_port = 8081\n          to_port   = 9091\n        }\n      ]\n    }\n\n    listener_2 = {\n\n      endpoint_groups = {\n        my_group = {\n          destination_configuration = [\n            {\n              from_port = 8080\n              protocols = [\"TCP\"]\n              to_port   = 8081\n            },\n            {\n              from_port = 8091\n              protocols = [\"TCP\"]\n              to_port   = 8091\n            }\n          ]\n\n          endpoint_configuration = [for subnet in module.vpc.private_subnets : { endpoint_id = subnet }]\n        }\n      }\n\n      port_ranges = [\n        {\n          from_port = 201\n          to_port   = 300\n        },\n        {\n          from_port = 301\n          to_port   = 400\n        }\n      ]\n    }\n  }"
+      ],
+      "field_names": [
+        "endpoint_group",
+        "endpoint_group_configs",
+        "endpoint_groups",
+        "endpoint_id",
+        "from_port",
+        "listener",
+        "port_ranges",
+        "protocols",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "root::listeners": {
+      "examples": [
+        "listeners = {\n    listener_1 = {\n      client_affinity = \"SOURCE_IP\"\n\n      endpoint_groups = {\n        my_group_1 = {\n          health_check_port             = 80\n          health_check_protocol         = \"HTTP\"\n          health_check_path             = \"/\"\n          health_check_interval_seconds = 10\n          health_check_timeout_seconds  = 5\n          healthy_threshold_count       = 2\n          unhealthy_threshold_count     = 2\n          traffic_dial_percentage       = 100\n\n          # Health checks will show as unhealthy in this example because there\n          # are obviously no healthy instances in the target group\n          endpoint_configuration = [{\n            client_ip_preservation_enabled = true\n            endpoint_id                    = module.alb.lb_arn\n            weight                         = 50\n            }, {\n            client_ip_preservation_enabled = false\n            endpoint_id                    = module.alb.lb_arn\n            weight                         = 50\n          }]\n\n          port_override = [{\n            endpoint_port = 82\n            listener_port = 80\n            }, {\n            endpoint_port = 8082\n            listener_port = 8080\n            }, {\n            endpoint_port = 8083\n            listener_port = 8081\n          }]\n        }\n        my_group_2 = {\n          endpoint_group_region         = local.secondary_region\n          health_check_port             = 80\n          health_check_protocol         = \"HTTP\"\n          health_check_path             = \"/\"\n          health_check_interval_seconds = 10\n          health_check_timeout_seconds  = 5\n          healthy_threshold_count       = 2\n          unhealthy_threshold_count     = 2\n          traffic_dial_percentage       = 100\n\n          # Health checks will show as unhealthy in this example because there\n          # are obviously no healthy instances in the target group\n          endpoint_configuration = [{\n            client_ip_preservation_enabled = true\n            endpoint_id                    = module.secondary_alb.lb_arn\n            weight                         = 50\n            }, {\n            client_ip_preservation_enabled = false\n            endpoint_id                    = module.secondary_alb.lb_arn\n            weight                         = 50\n          }]\n\n          port_override = [{\n            endpoint_port = 82\n            listener_port = 80\n            }, {\n            endpoint_port = 8082\n            listener_port = 8080\n            }, {\n            endpoint_port = 8083\n            listener_port = 8081\n          }]\n        }\n      }\n\n      port_ranges = [\n        {\n          from_port = 80\n          to_port   = 81\n        },\n        {\n          from_port = 8080\n          to_port   = 8081\n        }\n      ]\n      protocol = \"TCP\"\n    }\n\n    listener_2 = {\n      port_ranges = [\n        {\n          from_port = 443\n          to_port   = 443\n        },\n        {\n          from_port = 8443\n          to_port   = 8443\n        }\n      ]\n      protocol = \"TCP\"\n    }\n\n    listener_3 = {\n      port_ranges = [\n        {\n          from_port = 53\n          to_port   = 53\n        }\n      ]\n      protocol = \"UDP\"\n    }\n  }"
+      ],
+      "field_names": [
+        "attachment_arn",
+        "client_affinity",
+        "client_ip_preservation_enabled",
+        "endpoint_group",
+        "endpoint_group_configs",
+        "endpoint_groups",
+        "endpoint_id",
+        "endpoint_port",
+        "from_port",
+        "listener",
+        "listener_port",
+        "port_ranges",
+        "protocol",
+        "to_port",
+        "weight"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "built_from_version": "5.2.2",
+  "module_id": "terraform-aws-modules/sqs/aws",
+  "vars": {
+    "root::dlq_redrive_allow_policy": {
+      "examples": [
+        "dlq_redrive_allow_policy = {\n    sourceQueueArns = [module.sse_encrypted_sqs.queue_arn]\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::redrive_allow_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "root::redrive_policy": {
+      "examples": [
+        "redrive_policy = {\n    # default is 5 for this module\n    maxReceiveCount = 10\n  }",
+        "redrive_policy = {\n    deadLetterTargetArn = module.sse_encrypted_dlq_sqs.queue_arn\n    maxReceiveCount     = 10\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    }
+  }
+}

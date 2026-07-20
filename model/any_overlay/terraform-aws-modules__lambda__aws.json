@@ -1,0 +1,178 @@
+{
+  "built_from_version": "8.8.0",
+  "module_id": "terraform-aws-modules/lambda/aws",
+  "vars": {
+    "alias::event_source_mapping": {
+      "examples": [
+        "event_source_mapping = {\n    sqs = {\n      service          = \"sqs\"\n      event_source_arn = module.sqs_events.sqs_queue_arn\n    }\n  }",
+        "event_source_mapping = {\n    sqs = {\n      service             = \"sqs\"\n      event_source_arn    = module.sqs_events.sqs_queue_arn\n      maximum_concurrency = 10\n    }\n  }"
+      ],
+      "field_names": [
+        "amazon_managed_kafka_event_source_config",
+        "batch_size",
+        "bisect_batch_on_function_error",
+        "consumer_group_id",
+        "destination_arn_on_failure",
+        "enabled",
+        "endpoints",
+        "event_source_arn",
+        "filter_criteria",
+        "function_response_types",
+        "maximum_batching_window_in_seconds",
+        "maximum_concurrency",
+        "maximum_record_age_in_seconds",
+        "maximum_retry_attempts",
+        "parallelization_factor",
+        "pattern",
+        "queues",
+        "scaling_config",
+        "self_managed_event_source",
+        "self_managed_kafka_event_source_config",
+        "source_access_configuration",
+        "starting_position",
+        "starting_position_timestamp",
+        "topics",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::assume_role_policy_statements": {
+      "examples": [
+        "assume_role_policy_statements = {\n    account_root = {\n      effect  = \"Allow\",\n      actions = [\"sts:AssumeRole\"],\n      principals = {\n        account_principal = {\n          type        = \"AWS\",\n          identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n        }\n      }\n      condition = {\n        stringequals_condition = {\n          test     = \"StringEquals\"\n          variable = \"sts:ExternalId\"\n          values   = [\"12345\"]\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "principals",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::cors": {
+      "examples": [
+        "cors = {\n    allow_credentials = true\n    allow_origins     = [\"*\"]\n    allow_methods     = [\"*\"]\n    allow_headers     = [\"date\", \"keep-alive\"]\n    expose_headers    = [\"keep-alive\", \"date\"]\n    max_age           = 86400\n  }"
+      ],
+      "field_names": [
+        "allow_credentials",
+        "allow_headers",
+        "allow_methods",
+        "allow_origins",
+        "expose_headers",
+        "max_age"
+      ],
+      "provenance": "example"
+    },
+    "root::docker_pip_cache": {
+      "examples": [
+        "docker_pip_cache      = true"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::event_source_mapping": {
+      "examples": [
+        "event_source_mapping = {\n    sqs = {\n      event_source_arn        = aws_sqs_queue.this.arn\n      function_response_types = [\"ReportBatchItemFailures\"]\n      scaling_config = {\n        maximum_concurrency = 20\n      }\n      metrics_config = {\n        metrics = [\"EventCount\"]\n      }\n    }\n    dynamodb = {\n      event_source_arn           = aws_dynamodb_table.this.stream_arn\n      starting_position          = \"LATEST\"\n      destination_arn_on_failure = aws_sqs_queue.failure.arn\n      filter_criteria = [\n        {\n          pattern = jsonencode({\n            eventName : [\"INSERT\"]\n          })\n        },\n        {\n          pattern = jsonencode({\n            data : {\n              Temperature : [{ numeric : [\">\", 0, \"<=\", 100] }]\n              Location : [\"Oslo\"]\n            }\n          })\n        }\n      ]\n    }\n    kinesis = {\n      event_source_arn  = aws_kinesis_stream.this.arn\n      starting_position = \"LATEST\"\n      filter_criteria = {\n        pattern = jsonencode({\n          data : {\n            Temperature : [{ numeric : [\">\", 0, \"<=\", 100] }]\n            Location : [\"Oslo\"]\n          }\n        })\n      }\n    }\n    mq = {\n      event_source_arn = aws_mq_broker.this.arn\n      queues           = [\"my-queue\"]\n      source_access_configuration = [\n        {\n          type = \"BASIC_AUTH\"\n          uri  = aws_secretsmanager_secret.this.arn\n        },\n        {\n          type = \"VIRTUAL_HOST\"\n          uri  = \"/\"\n        }\n      ]\n      tags = { mapping = \"amq\" }\n    }\n    #    self_managed_kafka = {\n    #      batch_size        = 1\n    #      starting_position = \"TRIM_HORIZON\"\n    #      topics            = [\"topic1\", \"topic2\"]\n    #      self_managed_event_source = [\n    #        {\n    #          endpoints = {\n    #            KAFKA_BOOTSTRAP_SERVERS = \"kafka1.example.com:9092,kafka2.example.com:9092\"\n    #          }\n    #        }\n    #      ]\n    #      self_managed_kafka_event_source_config = [\n    #        {\n    #          consumer_group_id = \"example-consumer-group\"\n    #        }\n    #      ]\n    #      source_access_configuration = [\n    #        {\n    #          type = \"SASL_SCRAM_512_AUTH\",\n    #          uri  = \"SECRET_AUTH_INFO\"\n    #        },\n    #        {\n    #          type = \"VPC_SECURITY_GROUP\",\n    #          uri  = \"security_group:sg-12345678\"\n    #        },\n    #        {\n    #          type = \"VPC_SUBNET\"\n    #          uri  = \"subnet:subnet-12345678\"\n    #        }\n    #      ]\n    #    }\n  }"
+      ],
+      "field_names": [
+        "amazon_managed_kafka_event_source_config",
+        "batch_size",
+        "bisect_batch_on_function_error",
+        "collection_name",
+        "consumer_group_id",
+        "database_name",
+        "destination_arn_on_failure",
+        "document_db_event_source_config",
+        "enabled",
+        "endpoints",
+        "event_source_arn",
+        "filter_criteria",
+        "full_document",
+        "function_response_types",
+        "maximum_batching_window_in_seconds",
+        "maximum_concurrency",
+        "maximum_pollers",
+        "maximum_record_age_in_seconds",
+        "maximum_retry_attempts",
+        "metrics",
+        "metrics_config",
+        "minimum_pollers",
+        "parallelization_factor",
+        "pattern",
+        "provisioned_poller_config",
+        "queues",
+        "scaling_config",
+        "self_managed_event_source",
+        "self_managed_kafka_event_source_config",
+        "source_access_configuration",
+        "starting_position",
+        "starting_position_timestamp",
+        "tags",
+        "topics",
+        "tumbling_window_in_seconds",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::policy_statements": {
+      "examples": [
+        "policy_statements = {\n    dynamodb = {\n      effect    = \"Allow\",\n      actions   = [\"dynamodb:BatchWriteItem\"],\n      resources = [\"arn:aws:dynamodb:eu-west-1:052212379155:table/Test\"]\n    },\n    s3_read = {\n      effect    = \"Deny\",\n      actions   = [\"s3:HeadObject\", \"s3:GetObject\"],\n      resources = [\"arn:aws:s3:::my-bucket/*\"]\n    }\n  }",
+        "policy_statements = {\n    # Allow failures to be sent to SQS queue\n    sqs_failure = {\n      effect    = \"Allow\",\n      actions   = [\"sqs:SendMessage\"],\n      resources = [aws_sqs_queue.failure.arn]\n    },\n    # Execution role permissions to read records from an Amazon MQ broker\n    # https://docs.aws.amazon.com/lambda/latest/dg/with-mq.html#events-mq-permissions\n    mq_event_source = {\n      effect    = \"Allow\",\n      actions   = [\"ec2:DescribeSubnets\", \"ec2:DescribeSecurityGroups\", \"ec2:DescribeVpcs\"],\n      resources = [\"*\"]\n    },\n    mq_describe_broker = {\n      effect    = \"Allow\",\n      actions   = [\"mq:DescribeBroker\"],\n      resources = [aws_mq_broker.this.arn]\n    },\n    secrets_manager_get_value = {\n      effect    = \"Allow\",\n      actions   = [\"secretsmanager:GetSecretValue\"],\n      resources = [aws_secretsmanager_secret.this.arn]\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::source_path": {
+      "examples": [
+        "source_path = \"${path.module}/../fixtures/python-app1\"",
+        "source_path = [\n    {\n      path       = \"${path.module}/../fixtures/python-app-uv\"\n      uv_install = true\n    }\n  ]",
+        "source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n    }\n  ]",
+        "source_path = [\n    {\n      path          = \"${path.module}/../fixtures/python-app-uv\"\n      uv_install    = true\n      prefix_in_zip = \"python\"\n    }\n  ]",
+        "source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n      poetry_tmp_dir = \"${path.cwd}/../fixtures\"\n    }\n  ]",
+        "source_path = [\n    {\n      path = \"${path.module}/../fixtures/runtimes/java21\"\n      commands = [\n        \"gradle build -i\",\n        \"cd build/output\",\n        \":zip\",\n      ]\n    }\n  ]",
+        "source_path = [\n    {\n      path             = \"${path.module}/../fixtures/python-app1\"\n      pip_requirements = true\n      prefix_in_zip    = \"python\" # required to get the path correct\n    }\n  ]",
+        "source_path = [\n    {\n      path             = \"${path.module}/../fixtures/nodejs14.x-app1\"\n      npm_requirements = false\n      # npm_requirements = true  # Will run \"npm install\" with package.json\n    }\n  ]",
+        "source_path = [{\n    path             = \"${path.module}/../fixtures/python-app1\"\n    pip_tmp_dir      = \"${path.cwd}/../fixtures\"\n    pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n  }]",
+        "source_path = [\n    {\n      path = \"${path.module}/../fixtures/runtimes/go\"\n      commands = [\n        \"GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o bootstrap main.go\",\n        \":zip\",\n      ]\n      patterns = [\n        \"!.*\",\n        \"bootstrap\",\n      ]\n    }\n  ]",
+        "source_path = [\n    #    {\n    #      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    #      pip_requirements = \"${path.module}/../deploy/requirements.txt\"\n    #    },\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    #    {\n    #      path = \"${path.module}/../fixtures/python-app1/index.py\"\n    #      patterns = <<END\n    #        # To use comments in heredoc patterns set the env var:\n    #        # export TF_LAMBDA_PACKAGE_PATTERN_COMMENTS=true\n    #        # The intent for comments just to use in examples and demo snippets.\n    #        # To write a comment start it with double spaces and the # sign\n    #        # if it follows a pattern.\n    #\n    #        !index\\.py         # Exclude a file with 'index.py' name\n    #        index\\..*          # Re-include\n    #      END\n    #    },\n    #    {\n    #      path = \"${path.module}/../fixtures/dirtree\"\n    #      #      prefix_in_zip = \"vendor\"\n    #      patterns = <<END\n    #        # To see step by step output how files and folders was skipped or added\n    #        # set an env var in your shell by a command similar to:\n    #        # export TF_LAMBDA_PACKAGE_LOG_LEVEL=DEBUG\n    #\n    #        # To play with this demo pattern you can go to a ../fixtures folder\n    #        # and run there a dirtree.sh script to create a demo dirs tree\n    #        # matchable by following patterns.\n    #\n    #      # !abc/.*           # Filter out everything in an abc folder with the folder itself\n    #      # !abc/.+           # Filter out just all folder's content but keep the folder even if it's empty\n    #         abc/def/.*       # Re-include everything in abc/def sub folder\n    #      # !abc/def/ghk/.*   # Filter out again in abc/def/ghk sub folder\n    #        !.*/fiv.*\n    #        !.*/zi--.*\n    #\n    #        ########################################################################\n    #        # Special cases\n    #\n    #        # !.*/  # Removes all explicit directories from a zip file, mean while\n    #                # the zip file still valid and unpacks correctly but will not\n    #                # contain any empty directories.\n    #\n    #        # !.*/bar/  # To remove just some directory use more qualified path to it.\n    #\n    #        # !([^/]+/){3,}  # Remove all directories more than 3 folders in depth.\n    #      END\n    #    }\n  ]",
+        "source_path = [\n    {\n      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    },\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    {\n      path     = \"${path.module}/../fixtures/python-app1/index.py\"\n      patterns = <<END\n            # To use comments in heredoc patterns set the env var:\n            # export TF_LAMBDA_PACKAGE_PATTERN_COMMENTS=true\n            # The intent for comments just to use in examples and demo snippets.\n            # To write a comment start it with double spaces and the # sign\n            # if it follows a pattern.\n\n            !index\\.py         # Exclude a file with 'index.py' name\n            index\\..*          # Re-include\n          END\n    },\n    {\n      path          = \"${path.module}/../fixtures/dirtree\"\n      prefix_in_zip = \"vendor\"\n      patterns      = <<END\n            # To see step by step output how files and folders was skipped or added\n            # set an env var in your shell by a command similar to:\n            # export TF_LAMBDA_PACKAGE_LOG_LEVEL=DEBUG\n\n            # To play with this demo pattern you can go to a ../fixtures folder\n            # and run there a dirtree.sh script to create a demo dirs tree\n            # matchable by following patterns.\n\n            !abc/.*           # Filter out everything in an abc folder with the folder itself\n            !abc/.+           # Filter out just all folder's content but keep the folder even if it's empty\n            abc/def/.*        # Re-include everything in abc/def sub folder\n            !abc/def/ghk/.*   # Filter out again in abc/def/ghk sub folder\n            !.*/fiv.*\n            !.*/zi--.*\n\n            ########################################################################\n            # Special cases\n\n            # !.*/  # Removes all explicit directories from a zip file, mean while\n                    # the zip file still valid and unpacks correctly but will not\n                    # contain any empty directories.\n\n            # !.*/bar/  # To remove just some directory use more qualified path to it.\n\n            # !([^/]+/){3,}  # Remove all directories more than 3 folders in depth.\n          END\n    }\n  ]\n}\n\n# Create zip-archive with the dependencies specified in requirements.txt\n# which will be building in a docker container where SSH agent will be available\n# (to access private repositories, for example).\nmodule \"package_with_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime = \"python3.12\"\n  source_path = [\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    \"${path.module}/../fixtures/python-app1/dir1/dir2\",\n    {\n      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    }\n  ]\n  hash_extra = \"something-unique-to-not-conflict-with-module.package_with_pip_requirements_in_docker\"\n\n  build_in_docker       = true\n  docker_pip_cache      = true\n  docker_with_ssh_agent = true\n  #  docker_file           = \"${path.module}/../fixtures/python-app1/docker/Dockerfile\"\n  docker_build_root = \"${path.module}/../fixtures/python-app1/docker\"\n  docker_image      = \"public.ecr.aws/sam/build-python3.12:latest\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be executed (default for nodejs runtime)\nmodule \"package_dir_with_npm_install\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime     = \"nodejs14.x\"\n  source_path = \"${path.module}/../fixtures/nodejs14.x-app1\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be\n# executed (default for nodejs runtime). This example has package-lock.json which\n# is respected when installing dependencies.\nmodule \"package_dir_with_npm_install_lock_file\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime     = \"nodejs14.x\"\n  source_path = \"${path.module}/../fixtures/nodejs14.x-app2\"\n}\n\n# Create zip-archive of a single directory without running \"npm install\" (which is the default for nodejs runtime)\nmodule \"package_dir_without_npm_install\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime = \"nodejs14.x\"\n  source_path = [\n    {\n      path             = \"${path.module}/../fixtures/nodejs14.x-app1\"\n      npm_requirements = false\n      # npm_requirements = true  # Will run \"npm install\" with package.json\n    }\n  ]\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be executed using docker\nmodule \"package_with_npm_requirements_in_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime         = \"nodejs14.x\"\n  source_path     = \"${path.module}/../fixtures/nodejs14.x-app1\"\n  build_in_docker = true\n  hash_extra      = \"something-unique-to-not-conflict-with-module.package_dir_with_npm_install\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be\n# executed using docker. This example has package-lock.json which is respected\n# when installing dependencies.\nmodule \"package_with_npm_lock_in_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime         = \"nodejs14.x\"\n  source_path     = \"${path.module}/../fixtures/nodejs14.x-app2\"\n  build_in_docker = true\n  hash_extra      = \"something-unique-to-not-conflict-with-module.package_dir_with_npm_install\"\n}\n\n################################\n# Build package in Docker and\n# use it to deploy Lambda Layer\n################################\n\nmodule \"lambda_layer\" {\n  source = \"../../\"\n\n  create_layer        = true\n  layer_name          = \"${random_pet.this.id}-layer-dockerfile\"\n  compatible_runtimes = [\"python3.12\"]\n\n  source_path = \"${path.module}/../fixtures/python-app1\"\n  hash_extra  = \"extra-hash-to-prevent-conflicts-with-module.package_dir\"\n\n  build_in_docker = true\n  runtime         = \"python3.12\"\n  docker_image    = \"public.ecr.aws/sam/build-python3.12:latest\"\n  docker_file     = \"${path.module}/../fixtures/python-app1/docker/Dockerfile\"\n  artifacts_dir   = \"${path.root}/builds/lambda_layer/\"\n}\n\nmodule \"lambda_layer_poetry\" {\n  source = \"../../\"\n\n  create_layer        = true\n  layer_name          = \"${random_pet.this.id}-layer-poetry-dockerfile\"\n  compatible_runtimes = [\"python3.12\"]\n\n  source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n      poetry_tmp_dir = \"${path.cwd}/../fixtures\"\n    }\n  ]\n  hash_extra = \"extra-hash-to-prevent-conflicts-with-module.package_dir\"\n\n  build_in_docker = true\n  runtime         = \"python3.12\"\n  docker_image    = \"build-python-poetry\"\n  docker_file     = \"${path.module}/../fixtures/python-app-poetry/docker/Dockerfile\"\n  artifacts_dir   = \"${path.root}/builds/lambda_layer_poetry/\"\n}\n\n#######################\n# Deploy from packaged\n#######################\n\nmodule \"lambda_function_from_package\" {\n  source = \"../../\"\n\n  create_package         = false\n  local_existing_package = module.package_with_commands_and_patterns.local_filename\n\n  function_name = \"${random_pet.this.id}-function-packaged\"\n  handler       = \"index.lambda_handler\"\n  runtime       = \"python3.12\"\n\n  layers = [\n    module.lambda_layer.lambda_layer_arn\n  ]\n}\n\n################################################\n# Layer that supports requirements.txt install #\n###############################################\nmodule \"lambda_layer_pip_requirements\" {\n  source = \"../..\"\n\n  create_function = false\n  create_layer    = true\n\n  layer_name          = \"${random_pet.this.id}-layer-pip-requirements\"\n  compatible_runtimes = [\"python3.12\"]\n  runtime             = \"python3.12\" # required to force layers to do pip install\n\n  source_path = [\n    {\n      path             = \"${path.module}/../fixtures/python-app1\"\n      pip_requirements = true\n      prefix_in_zip    = \"python\" # required to get the path correct\n    }\n  ]\n}"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::trusted_entities": {
+      "examples": [
+        "trusted_entities = [\n    \"appsync.amazonaws.com\",\n    {\n      type = \"AWS\",\n      identifiers = [\n        \"arn:aws:iam::307990089504:root\",\n      ]\n    },\n    {\n      type = \"Service\",\n      identifiers = [\n        \"codedeploy.amazonaws.com\",\n        \"ecs.amazonaws.com\"\n      ]\n    }\n  ]"
+      ],
+      "field_names": [
+        "identifiers",
+        "type"
+      ],
+      "provenance": "example"
+    }
+  }
+}

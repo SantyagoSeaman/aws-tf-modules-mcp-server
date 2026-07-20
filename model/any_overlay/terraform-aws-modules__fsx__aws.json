@@ -1,0 +1,336 @@
+{
+  "built_from_version": "1.3.1",
+  "module_id": "terraform-aws-modules/fsx/aws",
+  "vars": {
+    "lustre::data_read_cache_configuration": {
+      "examples": [
+        "data_read_cache_configuration = {\n    sizing_mode = \"USER_PROVISIONED\"\n    size        = 32\n  }"
+      ],
+      "field_names": [
+        "size",
+        "sizing_mode"
+      ],
+      "provenance": "example"
+    },
+    "lustre::data_repository_associations": {
+      "examples": [
+        "data_repository_associations = {\n    example = {\n      batch_import_meta_data_on_create = true\n      data_repository_path             = \"s3://${module.s3_bucket.s3_bucket_id}\"\n      delete_data_in_filesystem        = false\n      file_system_path                 = \"/persistent1/data\"\n      imported_file_chunk_size         = 128\n\n      s3 = {\n        auto_export_policy = {\n          events = [\"NEW\", \"CHANGED\", \"DELETED\"]\n        }\n\n        auto_import_policy = {\n          events = [\"NEW\", \"CHANGED\", \"DELETED\"]\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "auto_export_policy",
+        "auto_import_policy",
+        "batch_import_meta_data_on_create",
+        "create_file_cache",
+        "data_repository_path",
+        "data_repository_subdirectories",
+        "delete_data_in_filesystem",
+        "dns_ips",
+        "events",
+        "file_cache_path",
+        "file_system_path",
+        "imported_file_chunk_size",
+        "nfs",
+        "s3",
+        "tags",
+        "version"
+      ],
+      "provenance": "example+names"
+    },
+    "lustre::file_cache_lustre_configuration": {
+      "examples": [],
+      "field_names": [
+        "deployment_type",
+        "metadata_configuration",
+        "per_unit_storage_throughput",
+        "storage_capacity",
+        "weekly_maintenance_start_time"
+      ],
+      "provenance": "names-only"
+    },
+    "lustre::metadata_configuration": {
+      "examples": [
+        "metadata_configuration = {\n    mode = \"USER_PROVISIONED\"\n    iops = 1500\n  }"
+      ],
+      "field_names": [
+        "iops",
+        "mode"
+      ],
+      "provenance": "example"
+    },
+    "lustre::root_squash_configuration": {
+      "examples": [
+        "root_squash_configuration = {\n    root_squash = \"365534:65534\"\n  }"
+      ],
+      "field_names": [
+        "no_squash_nids",
+        "root_squash"
+      ],
+      "provenance": "example+names"
+    },
+    "lustre::security_group_egress_rules": {
+      "examples": [
+        "security_group_egress_rules = {\n    out = {\n      cidr_ipv4   = \"0.0.0.0/0\"\n      description = \"Allow all traffic\"\n      ip_protocol = \"-1\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "lustre::security_group_ingress_rules": {
+      "examples": [
+        "security_group_ingress_rules = {\n    in = {\n      cidr_ipv4   = module.vpc.vpc_cidr_block\n      description = \"Allow all traffic from the VPC\"\n      from_port   = 0\n      to_port     = 0\n      protocol    = \"tcp\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "ontap::security_group_egress_rules": {
+      "examples": [
+        "security_group_egress_rules = {\n    out = {\n      cidr_ipv4   = \"0.0.0.0/0\"\n      description = \"Allow all traffic\"\n      ip_protocol = \"-1\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "ontap::security_group_ingress_rules": {
+      "examples": [
+        "security_group_ingress_rules = {\n    in = {\n      cidr_ipv4   = module.vpc.vpc_cidr_block\n      description = \"Allow all traffic from the VPC\"\n      from_port   = 0\n      to_port     = 0\n      ip_protocol = \"tcp\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "ontap::storage_virtual_machines": {
+      "examples": [
+        "storage_virtual_machines = {\n    ex-basic = {\n      name = \"basic\"\n\n      volumes = {\n        ex-basic = {\n          name                       = \"basic\"\n          junction_path              = \"/test\"\n          size_in_megabytes          = 1024\n          storage_efficiency_enabled = true\n        }\n      }\n    }\n    ex-flexgroup = {\n      name = \"flexgroup\"\n\n      volumes = {\n        ex-flexgroup = {\n          name                       = \"flexgroup\"\n          junction_path              = \"/test\"\n          size_in_bytes              = 1024000000000\n          storage_efficiency_enabled = true\n          volume_style               = \"FLEXGROUP\"\n          aggregate_configuration = {\n            constituents_per_aggregate = 9\n          }\n        }\n      }\n    }\n    ex-other = {\n      name                       = \"one\"\n      root_volume_security_style = \"NTFS\"\n      svm_admin_password         = \"avoid-plaintext-passwords1\"\n\n      volumes = {\n        ex-other = {\n          name                       = \"other\"\n          junction_path              = \"/test\"\n          size_in_megabytes          = 1024\n          storage_efficiency_enabled = true\n\n          tiering_policy = {\n            name           = \"AUTO\"\n            cooling_period = 31\n          }\n        }\n        ex-snaplock = {\n          name                       = \"snaplock\"\n          junction_path              = \"/snaplock_audit_log\"\n          size_in_megabytes          = 1024\n          storage_efficiency_enabled = true\n\n          bypass_snaplock_enterprise_retention = true\n          snaplock_configuration = {\n            audit_log_volume           = true\n            privileged_delete          = \"PERMANENTLY_DISABLED\"\n            snaplock_type              = \"ENTERPRISE\"\n            volume_append_mode_enabled = false\n\n            autocommit_period = {\n              type  = \"DAYS\"\n              value = 14\n            }\n\n            retention_period = {\n              default_retention = {\n                type  = \"DAYS\"\n                value = 30\n              }\n\n              maximum_retention = {\n                type  = \"MONTHS\"\n                value = 9\n              }\n\n              minimum_retention = {\n                type  = \"HOURS\"\n                value = 24\n              }\n            }\n          }\n        }\n      }\n    }\n    ex-active-directory = {\n      active_directory_configuration = {\n        netbios_name = \"mysvm\"\n        self_managed_active_directory_configuration = {\n          dns_ips     = aws_directory_service_directory.this.dns_ip_addresses\n          domain_name = aws_directory_service_directory.this.name\n          password    = aws_directory_service_directory.this.password\n          username    = \"Admin\"\n        }\n      }\n\n      volumes = {\n        ex-snaplock-ent = {\n          name                       = \"snaplock_ent\"\n          junction_path              = \"/log\"\n          size_in_megabytes          = 1024\n          storage_efficiency_enabled = true\n\n          bypass_snaplock_enterprise_retention = true\n          snaplock_configuration = {\n            snaplock_type = \"ENTERPRISE\"\n          }\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "active_directory_configuration",
+        "aggregate_configuration",
+        "aggregates",
+        "audit_log_volume",
+        "autocommit_period",
+        "bypass_snaplock_enterprise_retention",
+        "constituents_per_aggregate",
+        "cooling_period",
+        "copy_tags_to_backups",
+        "default_retention",
+        "dns_ips",
+        "domain_name",
+        "file_system_administrators_group",
+        "junction_path",
+        "maximum_retention",
+        "minimum_retention",
+        "name",
+        "netbios_name",
+        "ontap_volume_type",
+        "organizational_unit_distinguished_name",
+        "password",
+        "privileged_delete",
+        "retention_period",
+        "root_volume_security_style",
+        "security_style",
+        "self_managed_active_directory_configuration",
+        "size_in_bytes",
+        "size_in_megabytes",
+        "skip_final_backup",
+        "snaplock_configuration",
+        "snaplock_type",
+        "snapshot_policy",
+        "storage_efficiency_enabled",
+        "svm_admin_password",
+        "tags",
+        "tiering_policy",
+        "type",
+        "username",
+        "value",
+        "volume_append_mode_enabled",
+        "volume_style",
+        "volumes"
+      ],
+      "provenance": "example+names"
+    },
+    "openzfs::root_volume_configuration": {
+      "examples": [
+        "root_volume_configuration = {\n    copy_tags_to_snapshots = true\n    data_compression_type  = \"LZ4\"\n\n    nfs_exports = {\n      client_configurations = [\n        {\n          clients = \"10.0.1.0/24\"\n          options = [\"async\", \"rw\"]\n        },\n        {\n          clients = \"*\"\n          options = [\"sync\", \"rw\"]\n        }\n      ]\n    }\n\n    read_only       = false\n    record_size_kib = 128\n\n    user_and_group_quotas = [\n      {\n        id                         = 0\n        storage_capacity_quota_gib = 128\n        type                       = \"GROUP\"\n      },\n      {\n        id                         = 0\n        storage_capacity_quota_gib = 64\n        type                       = \"USER\"\n      },\n    ]\n  }"
+      ],
+      "field_names": [
+        "client_configurations",
+        "clients",
+        "copy_tags_to_snapshots",
+        "data_compression_type",
+        "id",
+        "nfs_exports",
+        "options",
+        "read_only",
+        "record_size_kib",
+        "storage_capacity_quota_gib",
+        "type",
+        "user_and_group_quotas"
+      ],
+      "provenance": "example"
+    },
+    "openzfs::security_group_egress_rules": {
+      "examples": [],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "names-only"
+    },
+    "openzfs::security_group_ingress_rules": {
+      "examples": [
+        "security_group_ingress_rules = {\n    in = {\n      cidr_ipv4   = module.vpc.vpc_cidr_block\n      description = \"Allow all traffic from the VPC\"\n      from_port   = 0\n      to_port     = 0\n      ip_protocol = \"tcp\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "openzfs::volumes": {
+      "examples": [
+        "volumes = {\n    ex-one = {\n      copy_tags_to_snapshots = true\n      data_compression_type  = \"LZ4\"\n      delete_volume_options  = [\"DELETE_CHILD_VOLUMES_AND_SNAPSHOTS\"]\n      name                   = \"example\"\n\n      nfs_exports = {\n        client_configurations = [\n          {\n            clients = \"10.0.1.0/24\"\n            options = [\"async\", \"rw\"]\n          },\n          {\n            clients = \"*\"\n            options = [\"sync\", \"rw\"]\n          }\n        ]\n      }\n\n      read_only                        = false\n      record_size_kib                  = 128\n      storage_capacity_quota_gib       = 30\n      storage_capacity_reservation_gib = 20\n\n      user_and_group_quotas = [\n        {\n          id                         = 0\n          storage_capacity_quota_gib = 128\n          type                       = \"GROUP\"\n        },\n        {\n          id                         = 0\n          storage_capacity_quota_gib = 64\n          type                       = \"USER\"\n        },\n      ]\n\n      tags = {\n        ExtraTags = \"yes\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "client_configurations",
+        "clients",
+        "copy_strategy",
+        "copy_tags_to_snapshots",
+        "create_snapshot",
+        "data_compression_type",
+        "delete_volume_options",
+        "id",
+        "name",
+        "nfs_exports",
+        "options",
+        "origin_snapshot",
+        "parent_volume_id",
+        "read_only",
+        "record_size_kib",
+        "snapshot_arn",
+        "snapshot_name",
+        "storage_capacity_quota_gib",
+        "storage_capacity_reservation_gib",
+        "tags",
+        "type",
+        "user_and_group_quotas"
+      ],
+      "provenance": "example+names"
+    },
+    "windows::audit_log_configuration": {
+      "examples": [
+        "audit_log_configuration = {\n    file_access_audit_log_level       = \"SUCCESS_AND_FAILURE\"\n    file_share_access_audit_log_level = \"SUCCESS_AND_FAILURE\"\n  }"
+      ],
+      "field_names": [
+        "audit_log_destination",
+        "file_access_audit_log_level",
+        "file_share_access_audit_log_level"
+      ],
+      "provenance": "example+names"
+    },
+    "windows::disk_iops_configuration": {
+      "examples": [
+        "disk_iops_configuration = {\n    iops = 3072\n    mode = \"USER_PROVISIONED\"\n  }"
+      ],
+      "field_names": [
+        "iops",
+        "mode"
+      ],
+      "provenance": "example"
+    },
+    "windows::security_group_egress_rules": {
+      "examples": [],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "names-only"
+    },
+    "windows::security_group_ingress_rules": {
+      "examples": [
+        "security_group_ingress_rules = {\n    in = {\n      cidr_ipv4   = module.vpc.vpc_cidr_block\n      description = \"Allow all traffic from the VPC\"\n      from_port   = 0\n      to_port     = 0\n      ip_protocol = \"tcp\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    },
+    "windows::self_managed_active_directory": {
+      "examples": [],
+      "field_names": [
+        "dns_ips",
+        "domain_name",
+        "file_system_administrators_group",
+        "organizational_unit_distinguished_name",
+        "password",
+        "username"
+      ],
+      "provenance": "names-only"
+    }
+  }
+}

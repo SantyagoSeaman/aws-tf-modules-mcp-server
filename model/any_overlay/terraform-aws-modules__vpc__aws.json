@@ -1,0 +1,53 @@
+{
+  "built_from_version": "6.6.1",
+  "module_id": "terraform-aws-modules/vpc/aws",
+  "vars": {
+    "vpc-endpoints::endpoints": {
+      "examples": [
+        "endpoints = {\n    s3 = {\n      service             = \"s3\"\n      private_dns_enabled = true\n      dns_options = {\n        private_dns_only_for_inbound_resolver_endpoint = false\n      }\n      tags = { Name = \"s3-vpc-endpoint\" }\n    },\n    dynamodb = {\n      service         = \"dynamodb\"\n      service_type    = \"Gateway\"\n      route_table_ids = flatten([module.vpc.intra_route_table_ids, module.vpc.private_route_table_ids, module.vpc.public_route_table_ids])\n      policy          = data.aws_iam_policy_document.dynamodb_endpoint_policy.json\n      tags            = { Name = \"dynamodb-vpc-endpoint\" }\n    },\n    ecs = {\n      service             = \"ecs\"\n      private_dns_enabled = true\n      subnet_ids          = module.vpc.private_subnets\n      subnet_configurations = [\n        for v in module.vpc.private_subnet_objects :\n        {\n          ipv4      = cidrhost(v.cidr_block, 10)\n          subnet_id = v.id\n        }\n      ]\n    },\n    ecs_telemetry = {\n      create              = false\n      service             = \"ecs-telemetry\"\n      private_dns_enabled = true\n      subnet_ids          = module.vpc.private_subnets\n    },\n    ecr_api = {\n      service             = \"ecr.api\"\n      private_dns_enabled = true\n      subnet_ids          = module.vpc.private_subnets\n      policy              = data.aws_iam_policy_document.generic_endpoint_policy.json\n    },\n    ecr_dkr = {\n      service             = \"ecr.dkr\"\n      private_dns_enabled = true\n      subnet_ids          = module.vpc.private_subnets\n      policy              = data.aws_iam_policy_document.generic_endpoint_policy.json\n    },\n    rds = {\n      service             = \"rds\"\n      private_dns_enabled = true\n      subnet_ids          = module.vpc.private_subnets\n      security_group_ids  = [aws_security_group.rds.id]\n    },\n  }"
+      ],
+      "field_names": [
+        "auto_accept",
+        "create",
+        "dns_options",
+        "dns_record_ip_type",
+        "ip_address_type",
+        "ipv4",
+        "ipv6",
+        "policy",
+        "private_dns_enabled",
+        "private_dns_only_for_inbound_resolver_endpoint",
+        "route_table_ids",
+        "security_group_ids",
+        "service",
+        "service_endpoint",
+        "service_name",
+        "service_region",
+        "service_type",
+        "subnet_configurations",
+        "subnet_id",
+        "subnet_ids",
+        "tags"
+      ],
+      "provenance": "example+names"
+    },
+    "vpc-endpoints::security_group_rules": {
+      "examples": [
+        "security_group_rules = {\n    ingress_https = {\n      description = \"HTTPS from VPC\"\n      cidr_blocks = [module.vpc.vpc_cidr_block]\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_blocks",
+        "description",
+        "from_port",
+        "ipv6_cidr_blocks",
+        "prefix_list_ids",
+        "protocol",
+        "self",
+        "source_security_group_id",
+        "to_port",
+        "type"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

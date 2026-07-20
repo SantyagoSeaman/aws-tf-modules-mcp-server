@@ -1,0 +1,93 @@
+{
+  "built_from_version": "4.1.0",
+  "module_id": "terraform-aws-modules/appsync/aws",
+  "vars": {
+    "root::additional_authentication_provider": {
+      "examples": [
+        "additional_authentication_provider = {\n    iam = {\n      authentication_type = \"AWS_IAM\"\n    }\n    openid_connect_2 = {\n      authentication_type = \"OPENID_CONNECT\"\n\n      openid_connect_config = {\n        issuer    = \"https://www.issuer2.com/\"\n        client_id = \"client_id2\"\n      }\n    }\n\n    my_user_pool = {\n      authentication_type = \"AMAZON_COGNITO_USER_POOLS\"\n\n      user_pool_config = {\n        user_pool_id        = aws_cognito_user_pool.this.id\n        app_id_client_regex = aws_cognito_user_pool_client.this.id\n      }\n    }\n\n    lambda = {\n      authentication_type = \"AWS_LAMBDA\"\n      lambda_authorizer_config = {\n        authorizer_uri = \"arn:aws:lambda:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:function:appsync_auth_2\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "app_id_client_regex",
+        "auth_ttl",
+        "authentication_type",
+        "authorizer_result_ttl_in_seconds",
+        "authorizer_uri",
+        "aws_region",
+        "client_id",
+        "iat_ttl",
+        "identity_validation_expression",
+        "issuer",
+        "lambda_authorizer_config",
+        "openid_connect_config",
+        "user_pool_config",
+        "user_pool_id"
+      ],
+      "provenance": "example+names"
+    },
+    "root::datasources": {
+      "examples": [],
+      "field_names": [
+        "aws_account_id",
+        "cluster_arn",
+        "create_service_role",
+        "database_name",
+        "description",
+        "endpoint",
+        "event_bus_arn",
+        "function_arn",
+        "policy_actions",
+        "region",
+        "schema",
+        "secret_arn",
+        "service_role_arn",
+        "source_type",
+        "table_name",
+        "type",
+        "use_caller_credentials"
+      ],
+      "provenance": "names-only"
+    },
+    "root::functions": {
+      "examples": [
+        "functions = {\n    None = {\n      kind                     = \"PIPELINE\"\n      type                     = \"Query\"\n      data_source              = \"None\"\n      request_mapping_template = <<EOF\n      {\n          \"payload\": $util.toJson($context.args)\n      }\n      EOF\n\n      response_mapping_template = \"$util.toJson($context.result)\"\n    }\n\n    Javascript = {\n      data_source    = \"lambda1\"\n      max_batch_size = 10\n      runtime = {\n        name = \"APPSYNC_JS\"\n      }\n      code = file(\"src/function.js\")\n    }\n  }\n\n  datasources = {\n    registry_terraform_io = {\n      type     = \"HTTP\"\n      endpoint = \"https://registry.terraform.io\"\n    }\n\n    None = {\n      type = \"NONE\"\n    }\n\n    lambda1 = {\n      type = \"AWS_LAMBDA\"\n\n      # Note: dynamic references (module.aws_lambda_function1.lambda_function_arn) do not work unless you create this resource in advance\n      function_arn = \"arn:aws:lambda:eu-west-1:835367859851:function:index_1\"\n    }\n\n    lambda2 = {\n      type = \"AWS_LAMBDA\"\n\n      # Note: dynamic references (module.aws_lambda_function2.lambda_function_arn) do not work unless you create this resource in advance\n      function_arn = \"arn:aws:lambda:eu-west-1:835367859851:function:index_2\"\n      # service_role_arn = \"arn:aws:iam::835367859851:role/lambda1-service\"\n    }\n\n    dynamodb1 = {\n      type = \"AMAZON_DYNAMODB\"\n\n      # Note: dynamic references (module.dynamodb_table1.dynamodb_table_id) do not work unless you create this resource in advance\n      table_name = \"my-table\"\n      region     = \"eu-west-1\"\n    }\n\n    # Elasticsearch support has not been finished & tested\n    elasticsearch1 = {\n      type = \"AMAZON_ELASTICSEARCH\"\n\n      # Note: dynamic references (module.elasticsearch1.id) do not work do not work unless you create this resource in advance\n      endpoint = \"https://search-my-domain.eu-west-1.es.amazonaws.com\"\n      region   = \"eu-west-1\"\n    }\n\n    # Opensearch Service support has not been finished & tested\n    opensearchservice1 = {\n      type = \"AMAZON_OPENSEARCH_SERVICE\"\n\n      # Note: dynamic references (module.opensearchservice1.id) do not work do not work unless you create this resource in advance\n      endpoint = \"https://search-my-domain-2.eu-west-1.es.amazonaws.com\"\n      region   = \"eu-west-1\"\n    }\n\n    eventbridge1 = {\n      type          = \"AMAZON_EVENTBRIDGE\"\n      event_bus_arn = \"arn:aws:events:us-west-1:135367859850:event-bus/eventbridge1\"\n    }\n\n    rds1 = {\n      type          = \"RELATIONAL_DATABASE\"\n      cluster_arn   = \"arn:aws:rds:us-west-1:135367859850:cluster:rds1\"\n      secret_arn    = \"arn:aws:secretsmanager:us-west-1:135367859850:secret:rds-secret1\"\n      database_name = \"mydb\"\n      schema        = \"myschema\"\n    }\n  }\n\n  resolvers = {\n    \"Mutation.putPost\" = {\n      data_source   = \"lambda1\"\n      direct_lambda = true\n    }\n\n    \"Post.id\" = {\n      data_source    = \"lambda2\"\n      direct_lambda  = true\n      max_batch_size = 10\n    }\n\n    \"Post.title\" = {\n      data_source      = \"registry_terraform_io\"\n      request_template = <<EOF\n{\n    \"version\": \"2018-05-29\",\n    \"method\": \"GET\",\n    \"resourcePath\": \"/\",\n    \"params\":{\n        \"headers\": $utils.http.copyheaders($ctx.request.headers)\n    }\n}\nEOF\n\n      response_template = <<EOF\n#if($ctx.result.statusCode == 200)\n    $ctx.result.body\n#else\n    $utils.appendError($ctx.result.body, $ctx.result.statusCode)\n#end\nEOF\n    }\n\n    \"Query.singlePost\" = {\n      data_source   = \"lambda1\"\n      direct_lambda = true\n      caching_keys = [\n        \"$context.identity.sub\",\n        \"$context.arguments.id\",\n      ]\n    }\n\n    \"Query.none\" = {\n      response_template = \"{}\"\n      request_template  = \"$util.toJson($context.result)\"\n      kind              = \"PIPELINE\"\n      type              = \"Query\"\n      field             = \"none\"\n      functions = [\n        \"None\",\n      ]\n    }\n\n    \"Query.singleComment\" = {\n      kind  = \"UNIT\"\n      type  = \"Query\"\n      field = \"singleComment\"\n      code  = file(\"src/function.js\")\n      runtime = {\n        name            = \"APPSYNC_JS\"\n        runtime_version = \"1.0.0\"\n      }\n      data_source = \"dynamodb1\"\n    }\n\n    \"Query.user\" = {\n      kind  = \"PIPELINE\"\n      type  = \"Query\"\n      field = \"user\"\n      runtime = {\n        name = \"APPSYNC_JS\"\n      }\n      code = file(\"src/index.js\")\n      functions = [\n        \"None\",\n      ]\n    }\n\n    \"Query.user\" = {\n      kind  = \"PIPELINE\"\n      type  = \"Query\"\n      field = \"user\"\n      runtime = {\n        name = \"APPSYNC_JS\"\n      }\n      code = file(\"src/function.js\")\n      functions = [\n        \"Javascript\",\n      ]\n    }\n  }"
+      ],
+      "field_names": [
+        "code",
+        "conflict_detection",
+        "conflict_handler",
+        "data_source",
+        "description",
+        "function_version",
+        "lambda_conflict_handler_arn",
+        "max_batch_size",
+        "name",
+        "request_mapping_template",
+        "response_mapping_template",
+        "runtime",
+        "runtime_version",
+        "sync_config"
+      ],
+      "provenance": "example+names"
+    },
+    "root::resolvers": {
+      "examples": [],
+      "field_names": [
+        "caching_keys",
+        "caching_ttl",
+        "code",
+        "data_source",
+        "data_source_arn",
+        "direct_lambda",
+        "functions",
+        "kind",
+        "max_batch_size",
+        "name",
+        "request_template",
+        "response_template",
+        "runtime",
+        "runtime_version"
+      ],
+      "provenance": "names-only"
+    }
+  }
+}

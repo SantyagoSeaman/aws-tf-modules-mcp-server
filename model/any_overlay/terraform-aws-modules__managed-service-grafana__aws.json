@@ -1,0 +1,94 @@
+{
+  "built_from_version": "2.3.1",
+  "module_id": "terraform-aws-modules/managed-service-grafana/aws",
+  "vars": {
+    "root::network_access_control": {
+      "examples": [],
+      "field_names": [
+        "prefix_list_ids",
+        "vpce_ids"
+      ],
+      "provenance": "names-only"
+    },
+    "root::role_associations": {
+      "examples": [],
+      "field_names": [
+        "group_ids",
+        "role",
+        "user_ids"
+      ],
+      "provenance": "names-only"
+    },
+    "root::security_group_rules": {
+      "examples": [
+        "security_group_rules = {\n    egress_postgresql = {\n      description = \"Allow egress to PostgreSQL\"\n      from_port   = 5432\n      to_port     = 5432\n      protocol    = \"tcp\"\n      cidr_blocks = module.vpc.private_subnets_cidr_blocks\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_blocks",
+        "description",
+        "from_port",
+        "ipv6_cidr_blocks",
+        "prefix_list_ids",
+        "protocol",
+        "self",
+        "source_security_group_id",
+        "to_port",
+        "type"
+      ],
+      "provenance": "example+names"
+    },
+    "root::vpc_configuration": {
+      "examples": [
+        "vpc_configuration = {\n    subnet_ids = module.vpc.private_subnets\n  }"
+      ],
+      "field_names": [
+        "cidr_blocks",
+        "description",
+        "from_port",
+        "ipv6_cidr_blocks",
+        "prefix_list_ids",
+        "protocol",
+        "security_group_ids",
+        "self",
+        "source_security_group_id",
+        "subnet_ids",
+        "to_port",
+        "type"
+      ],
+      "provenance": "example+names"
+    },
+    "root::workspace_api_keys": {
+      "examples": [
+        "workspace_api_keys = {\n    viewer = {\n      key_name        = \"viewer\"\n      key_role        = \"VIEWER\"\n      seconds_to_live = 3600\n    }\n    editor = {\n      key_name        = \"editor\"\n      key_role        = \"EDITOR\"\n      seconds_to_live = 3600\n    }\n    admin = {\n      key_name        = \"admin\"\n      key_role        = \"ADMIN\"\n      seconds_to_live = 3600\n    }\n  }"
+      ],
+      "field_names": [
+        "key_name",
+        "key_role",
+        "seconds_to_live"
+      ],
+      "provenance": "example"
+    },
+    "root::workspace_service_account_tokens": {
+      "examples": [
+        "workspace_service_account_tokens = {\n    viewer = {\n      service_account_key = \"viewer\"\n      seconds_to_live     = 3600\n    }\n    editor = {\n      name                = \"editor-example\"\n      service_account_key = \"editor\"\n      seconds_to_live     = 3600\n    }\n    admin = {\n      service_account_key = \"admin\"\n      seconds_to_live     = 3600\n    }\n  }"
+      ],
+      "field_names": [
+        "name",
+        "seconds_to_live",
+        "service_account_id",
+        "service_account_key"
+      ],
+      "provenance": "example+names"
+    },
+    "root::workspace_service_accounts": {
+      "examples": [
+        "workspace_service_accounts = {\n    viewer = {\n      grafana_role = \"VIEWER\"\n    }\n    editor = {\n      name         = \"editor-example\"\n      grafana_role = \"EDITOR\"\n    }\n    admin = {\n      grafana_role = \"ADMIN\"\n    }\n  }"
+      ],
+      "field_names": [
+        "grafana_role",
+        "name"
+      ],
+      "provenance": "example"
+    }
+  }
+}

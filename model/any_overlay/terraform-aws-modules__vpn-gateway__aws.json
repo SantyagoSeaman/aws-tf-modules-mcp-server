@@ -1,0 +1,28 @@
+{
+  "built_from_version": "4.0.0",
+  "module_id": "terraform-aws-modules/vpn-gateway/aws",
+  "vars": {
+    "root::tunnel1_log_options": {
+      "examples": [
+        "tunnel1_log_options = {\n    cloudwatch_log_options = {\n      log_enabled       = true\n      log_group_arn     = aws_cloudwatch_log_group.tunnel1_logs.arn\n      log_output_format = \"text\"\n    }\n  }"
+      ],
+      "field_names": [
+        "log_enabled",
+        "log_group_arn",
+        "log_output_format"
+      ],
+      "provenance": "example"
+    },
+    "root::tunnel2_log_options": {
+      "examples": [
+        "tunnel2_log_options = {\n    cloudwatch_log_options = {\n      log_enabled       = true\n      log_group_arn     = aws_cloudwatch_log_group.tunnel2_logs.arn\n      log_output_format = \"text\"\n    }\n  }"
+      ],
+      "field_names": [
+        "log_enabled",
+        "log_group_arn",
+        "log_output_format"
+      ],
+      "provenance": "example"
+    }
+  }
+}
