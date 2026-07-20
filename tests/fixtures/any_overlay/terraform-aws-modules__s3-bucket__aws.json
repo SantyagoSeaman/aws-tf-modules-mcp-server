@@ -1,0 +1,40 @@
+{
+  "module_id": "terraform-aws-modules/s3-bucket/aws",
+  "built_from_version": "5.14.1",
+  "vars": {
+    "root::versioning": {
+      "examples": [
+        "versioning = {\n  enabled = true\n}"
+      ],
+      "field_names": [
+        "enabled",
+        "mfa_delete"
+      ],
+      "provenance": "example"
+    },
+    "root::lifecycle_rule": {
+      "examples": [
+        "lifecycle_rule = [\n  {\n    id      = \"log\"\n    enabled = true\n  }\n]"
+      ],
+      "field_names": [
+        "id",
+        "enabled",
+        "abort_incomplete_multipart_upload_days"
+      ],
+      "provenance": "example+names"
+    },
+    "root::fixture_no_row_var": {
+      "examples": [],
+      "field_names": [
+        "made_up_field"
+      ],
+      "provenance": "names-only"
+    },
+    "root::fixture_honest_any_var": {
+      "examples": [],
+      "field_names": [],
+      "provenance": "honest-any",
+      "note": "no example and no observed field names found in the module source; test fixture honest-any case"
+    }
+  }
+}
