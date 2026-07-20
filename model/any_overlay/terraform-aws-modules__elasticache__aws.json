@@ -1,0 +1,83 @@
+{
+  "built_from_version": "1.11.0",
+  "module_id": "terraform-aws-modules/elasticache/aws",
+  "vars": {
+    "root::log_delivery_configuration": {
+      "examples": [
+        "log_delivery_configuration = {\n    create_cloudwatch_log_group = false\n  }",
+        "log_delivery_configuration = {\n    slow-log = {\n      cloudwatch_log_group_name = \"repl-grp-with-cluster-replica\"\n      destination_type          = \"cloudwatch-logs\"\n      log_format                = \"json\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cloudwatch_log_group_class",
+        "cloudwatch_log_group_kms_key_id",
+        "cloudwatch_log_group_name",
+        "cloudwatch_log_group_retention_in_days",
+        "cloudwatch_log_group_skip_destroy",
+        "create_cloudwatch_log_group",
+        "destination",
+        "destination_type",
+        "log_format",
+        "log_type",
+        "tags"
+      ],
+      "provenance": "example+names"
+    },
+    "root::security_group_rules": {
+      "examples": [
+        "security_group_rules = {\n    ingress_vpc = {\n      # Default type is `ingress`\n      # Default port is based on the default engine port\n      description = \"VPC traffic\"\n      cidr_ipv4   = module.vpc.vpc_cidr_block\n    }\n  }",
+        "security_group_rules = {\n    ingress-self-redis = {\n      type                         = \"ingress\"\n      referenced_security_group_id = \"self\"\n      description                  = \"Allow traffic from this security group to itself.\"\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "tags",
+        "to_port",
+        "type"
+      ],
+      "provenance": "example+names"
+    },
+    "user-group::default_user": {
+      "examples": [
+        "default_user = {\n    user_id   = \"default${lower(replace(local.name, \"-\", \"\"))}\"\n    passwords = [\"password123456789\"]\n  }",
+        "default_user = {\n    user_id = \"${local.name}-default\"\n    authentication_mode = {\n      type = \"no-password-required\"\n    }\n  }"
+      ],
+      "field_names": [
+        "access_string",
+        "authentication_mode",
+        "engine",
+        "no_password_required",
+        "passwords",
+        "type",
+        "user_id"
+      ],
+      "provenance": "example+names"
+    },
+    "user-group::users": {
+      "examples": [
+        "users = {\n    redis = {\n      user_id       = local.name\n      user_name     = \"redis\"\n      access_string = \"on ~* -@all +@read\"\n      authentication_mode = {\n        type = \"no-password-required\"\n      }\n      timeouts = {\n        create = \"20m\"\n      }\n    }\n  }",
+        "users = {\n    moe = {\n      access_string = \"on ~* +@all\"\n      passwords     = [\"password123456789\"]\n    }\n\n    larry = {\n      access_string = \"on ~* +@all\"\n\n      authentication_mode = {\n        type = \"iam\"\n      }\n    }\n\n    curly = {\n      access_string = \"on ~* +@all\"\n\n      authentication_mode = {\n        type      = \"password\"\n        passwords = [\"password123456789\", \"password987654321\"]\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "access_string",
+        "authentication_mode",
+        "create",
+        "delete",
+        "engine",
+        "no_password_required",
+        "passwords",
+        "tags",
+        "timeouts",
+        "type",
+        "user_group_id",
+        "user_id",
+        "user_name"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

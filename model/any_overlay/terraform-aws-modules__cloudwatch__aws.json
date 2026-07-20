@@ -1,0 +1,116 @@
+{
+  "built_from_version": "5.7.2",
+  "module_id": "terraform-aws-modules/cloudwatch/aws",
+  "vars": {
+    "cis-alarms::control_overrides": {
+      "examples": [
+        "control_overrides = {\n    NoMFAConsoleSignin = {\n      pattern = \"{($.eventName=\\\"ConsoleLogin\\\") && ($.additionalEventData.MFAUsed != \\\"Yes\\\") && ($.userIdentity.sessionContext.sessionIssuer.arn != \\\"arn:aws:iam::*:role/aws-reserved/sso.amazonaws.com/*\\\")}\"\n    }\n\n    AWSOrganizationsChanges = {\n      alarm_actions = [module.second_aws_sns_topic.sns_topic_arn]\n    }\n  }"
+      ],
+      "field_names": [
+        "actions_enabled",
+        "alarm_actions",
+        "comparison_operator",
+        "datapoints_to_alarm",
+        "description",
+        "dimensions",
+        "evaluate_low_sample_count_percentiles",
+        "evaluation_periods",
+        "insufficient_data_actions",
+        "log_group_name",
+        "namespace",
+        "ok_actions",
+        "pattern",
+        "period",
+        "statistic",
+        "threshold",
+        "treat_missing_data",
+        "unit"
+      ],
+      "provenance": "example+names"
+    },
+    "metric-alarm::dimensions": {
+      "examples": [
+        "dimensions = {\n    FunctionName = module.aws_lambda_function1.lambda_function_name\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "metric-alarm::metric_query": {
+      "examples": [
+        "metric_query = [{\n    id = \"e1\"\n\n    return_data = true\n    expression  = \"TIME_SERIES(1)\"\n    label       = \"deployment\"\n    period      = 60\n  }]",
+        "metric_query = [{\n    id = \"ad1\"\n\n    expression = \"ANOMALY_DETECTION_BAND(m1, 2)\"\n    label      = \"Invocations (expected)\"\n    },\n    {\n      id = \"m1\"\n\n      metric = [{\n        namespace   = \"AWS/Lambda\"\n        metric_name = \"Invocations\"\n        period      = 60\n        stat        = \"Sum\"\n        unit        = \"Count\"\n\n        dimensions = {\n          FunctionName = module.aws_lambda_function2.lambda_function_name\n        }\n      }]\n      return_data = true\n  }]"
+      ],
+      "field_names": [
+        "account_id",
+        "dimensions",
+        "expression",
+        "id",
+        "label",
+        "metric",
+        "metric_name",
+        "namespace",
+        "period",
+        "return_data",
+        "stat",
+        "unit"
+      ],
+      "provenance": "example+names"
+    },
+    "metric-alarms-by-multiple-dimensions::dimensions": {
+      "examples": [
+        "dimensions = {\n    \"lambda1\" = {\n      FunctionName = module.aws_lambda_function1.lambda_function_name\n    },\n    \"lambda2\" = {\n      FunctionName = module.aws_lambda_function2.lambda_function_name\n    },\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "metric-alarms-by-multiple-dimensions::metric_query": {
+      "examples": [],
+      "field_names": [
+        "dimensions",
+        "expression",
+        "id",
+        "label",
+        "metric",
+        "metric_name",
+        "namespace",
+        "period",
+        "return_data",
+        "stat",
+        "unit"
+      ],
+      "provenance": "names-only"
+    },
+    "metric-stream::exclude_filter": {
+      "examples": [
+        "exclude_filter = {\n    logs = {\n      namespace = \"AWS/Logs\"\n    }\n    usage = {\n      namespace    = \"AWS/Usage\"\n      metric_names = [\"CallCount\", \"ResourceCount\"]\n    }\n    kms = {\n      namespace    = \"AWS/Firehose\"\n      metric_names = [\"KMSKeyDisabled\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "metric_names",
+        "namespace"
+      ],
+      "provenance": "example"
+    },
+    "metric-stream::include_filter": {
+      "examples": [
+        "include_filter = {\n    ec2 = {\n      namespace    = \"AWS/EC2\"\n      metric_names = [\"CPUUtilization\", \"NetworkIn\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "metric_names",
+        "namespace"
+      ],
+      "provenance": "example"
+    },
+    "metric-stream::statistics_configuration": {
+      "examples": [
+        "statistics_configuration = [\n    {\n      additional_statistics = [\"p99\"]\n      include_metric = [\n        {\n          namespace   = \"AWS/EC2\"\n          metric_name = \"CPUUtilization\"\n        },\n        {\n          namespace   = \"AWS/EC2\"\n          metric_name = \"NetworkIn\"\n        }\n      ]\n    },\n    {\n      additional_statistics = [\"p90\", \"TM(10%:90%)\"]\n      include_metric = [\n        {\n          namespace   = \"AWS/EC2\"\n          metric_name = \"CPUUtilization\"\n        }\n      ]\n    }\n  ]"
+      ],
+      "field_names": [
+        "additional_statistics",
+        "include_metric",
+        "metric_name",
+        "namespace"
+      ],
+      "provenance": "example"
+    }
+  }
+}

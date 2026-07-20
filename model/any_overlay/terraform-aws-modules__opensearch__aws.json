@@ -1,0 +1,285 @@
+{
+  "built_from_version": "2.11.0",
+  "module_id": "terraform-aws-modules/opensearch/aws",
+  "vars": {
+    "collection::access_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "collection::encryption_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "provenance": "honest-any"
+    },
+    "collection::network_policy": {
+      "examples": [
+        "network_policy = {\n    AllowFromPublic = false\n    SourceVPCEs = [\n      aws_opensearchserverless_vpc_endpoint.example.id\n    ]\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::access_policy_statements": {
+      "examples": [
+        "access_policy_statements = [\n    {\n      effect = \"Allow\"\n\n      principals = [{\n        type        = \"*\"\n        identifiers = [\"*\"]\n      }]\n\n      actions = [\"es:*\"]\n\n      conditions = [{\n        test     = \"IpAddress\"\n        variable = \"aws:SourceIp\"\n        values   = [\"127.0.0.1/32\"]\n      }]\n    }\n  ]"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resource_paths",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::advanced_security_options": {
+      "examples": [
+        "advanced_security_options = {\n    enabled                        = true\n    anonymous_auth_enabled         = false\n    internal_user_database_enabled = true\n\n    master_user_options = {\n      master_user_name     = \"example\"\n      master_user_password = \"Barbarbarbar1!\"\n    }\n\n    jwt_options = {\n      enabled     = true\n      public_key  = data.aws_kms_public_key.jwt.public_key_pem\n      roles_key   = \"roles\"\n      subject_key = \"sub\"\n    }\n  }"
+      ],
+      "field_names": [
+        "anonymous_auth_enabled",
+        "enabled",
+        "internal_user_database_enabled",
+        "jwks_url",
+        "jwt_options",
+        "master_user_arn",
+        "master_user_name",
+        "master_user_options",
+        "master_user_password",
+        "public_key",
+        "roles_key",
+        "subject_key"
+      ],
+      "provenance": "example+names"
+    },
+    "root::auto_tune_options": {
+      "examples": [
+        "auto_tune_options = {\n    desired_state = \"ENABLED\"\n\n    maintenance_schedule = [\n      {\n        start_at                       = \"2028-05-13T07:44:12Z\"\n        cron_expression_for_recurrence = \"cron(0 0 ? * 1 *)\"\n        duration = {\n          value = \"2\"\n          unit  = \"HOURS\"\n        }\n      }\n    ]\n\n    rollback_on_disable = \"NO_ROLLBACK\"\n  }"
+      ],
+      "field_names": [
+        "cron_expression_for_recurrence",
+        "desired_state",
+        "duration",
+        "maintenance_schedule",
+        "rollback_on_disable",
+        "start_at",
+        "unit",
+        "use_off_peak_window",
+        "value"
+      ],
+      "provenance": "example+names"
+    },
+    "root::cluster_config": {
+      "examples": [
+        "cluster_config = {\n    instance_count           = 3\n    dedicated_master_enabled = true\n    dedicated_master_type    = \"c6g.large.search\"\n    instance_type            = \"r6g.large.search\"\n\n    node_options = {\n      coordinator = {\n        node_config = {\n          enabled = true\n          count   = 3\n          type    = \"m6g.large.search\"\n        }\n      }\n    }\n\n    zone_awareness_config = {\n      availability_zone_count = 3\n    }\n\n    zone_awareness_enabled = true\n  }"
+      ],
+      "field_names": [
+        "availability_zone_count",
+        "cold_storage_options",
+        "count",
+        "dedicated_master_count",
+        "dedicated_master_enabled",
+        "dedicated_master_type",
+        "enabled",
+        "instance_count",
+        "instance_type",
+        "multi_az_with_standby_enabled",
+        "node_config",
+        "node_options",
+        "node_type",
+        "type",
+        "warm_count",
+        "warm_enabled",
+        "warm_type",
+        "zone_awareness_config",
+        "zone_awareness_enabled"
+      ],
+      "provenance": "example+names"
+    },
+    "root::cognito_options": {
+      "examples": [],
+      "field_names": [
+        "enabled",
+        "identity_pool_id",
+        "role_arn",
+        "user_pool_id"
+      ],
+      "provenance": "names-only"
+    },
+    "root::domain_endpoint_options": {
+      "examples": [
+        "domain_endpoint_options = {\n    enforce_https       = true\n    tls_security_policy = \"Policy-Min-TLS-1-2-2019-07\"\n  }"
+      ],
+      "field_names": [
+        "custom_endpoint",
+        "custom_endpoint_certificate_arn",
+        "custom_endpoint_enabled",
+        "enforce_https",
+        "tls_security_policy"
+      ],
+      "provenance": "example+names"
+    },
+    "root::ebs_options": {
+      "examples": [
+        "ebs_options = {\n    ebs_enabled = true\n    iops        = 3000\n    throughput  = 125\n    volume_type = \"gp3\"\n    volume_size = 20\n  }"
+      ],
+      "field_names": [
+        "ebs_enabled",
+        "iops",
+        "throughput",
+        "volume_size",
+        "volume_type"
+      ],
+      "provenance": "example"
+    },
+    "root::encrypt_at_rest": {
+      "examples": [
+        "encrypt_at_rest = {\n    enabled = true\n  }"
+      ],
+      "field_names": [
+        "enabled",
+        "kms_key_id"
+      ],
+      "provenance": "example+names"
+    },
+    "root::log_publishing_options": {
+      "examples": [
+        "log_publishing_options = [\n    { log_type = \"INDEX_SLOW_LOGS\" },\n    { log_type = \"SEARCH_SLOW_LOGS\" },\n  ]"
+      ],
+      "field_names": [
+        "cloudwatch_log_group_arn",
+        "enabled",
+        "log_group_class",
+        "log_group_kms_key_id",
+        "log_group_name",
+        "log_group_retention_in_days",
+        "log_group_skip_destroy",
+        "log_group_tags",
+        "log_type",
+        "region"
+      ],
+      "provenance": "example+names"
+    },
+    "root::node_to_node_encryption": {
+      "examples": [
+        "node_to_node_encryption = {\n    enabled = true\n  }"
+      ],
+      "field_names": [
+        "enabled"
+      ],
+      "provenance": "example"
+    },
+    "root::off_peak_window_options": {
+      "examples": [],
+      "field_names": [
+        "enabled",
+        "hours",
+        "minutes",
+        "off_peak_window",
+        "window_start_time"
+      ],
+      "provenance": "names-only"
+    },
+    "root::outbound_connections": {
+      "examples": [],
+      "field_names": [
+        "accept_connection",
+        "connection_alias",
+        "connection_mode",
+        "connection_properties",
+        "cross_cluster_search",
+        "local_domain_info",
+        "region",
+        "remote_domain_info",
+        "skip_unavailable"
+      ],
+      "provenance": "names-only"
+    },
+    "root::saml_options": {
+      "examples": [],
+      "field_names": [
+        "enabled",
+        "entity_id",
+        "idp",
+        "master_backend_role",
+        "master_user_name",
+        "metadata_content",
+        "roles_key",
+        "session_timeout_minutes",
+        "subject_key"
+      ],
+      "provenance": "names-only"
+    },
+    "root::security_group_rules": {
+      "examples": [
+        "security_group_rules = {\n    ingress_443 = {\n      type        = \"ingress\"\n      description = \"HTTPS access from VPC\"\n      from_port   = 443\n      to_port     = 443\n      ip_protocol = \"tcp\"\n      cidr_ipv4   = local.vpc_cidr\n    }\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "region",
+        "tags",
+        "to_port",
+        "type"
+      ],
+      "provenance": "example+names"
+    },
+    "root::software_update_options": {
+      "examples": [
+        "software_update_options = {\n    auto_software_update_enabled = true\n  }"
+      ],
+      "field_names": [
+        "auto_software_update_enabled"
+      ],
+      "provenance": "example"
+    },
+    "root::vpc_endpoints": {
+      "examples": [
+        "vpc_endpoints = {\n    one = {\n      subnet_ids = module.vpc.private_subnets\n    }\n  }"
+      ],
+      "field_names": [
+        "region",
+        "security_group_ids",
+        "subnet_ids"
+      ],
+      "provenance": "example+names"
+    },
+    "root::vpc_options": {
+      "examples": [
+        "vpc_options = {\n    subnet_ids = module.vpc.private_subnets\n  }"
+      ],
+      "field_names": [
+        "cidr_ipv4",
+        "cidr_ipv6",
+        "description",
+        "from_port",
+        "ip_protocol",
+        "prefix_list_id",
+        "referenced_security_group_id",
+        "region",
+        "security_group_ids",
+        "subnet_ids",
+        "tags",
+        "to_port"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

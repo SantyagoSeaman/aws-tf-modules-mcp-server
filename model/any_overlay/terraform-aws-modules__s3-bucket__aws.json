@@ -1,0 +1,324 @@
+{
+  "built_from_version": "5.14.1",
+  "module_id": "terraform-aws-modules/s3-bucket/aws",
+  "vars": {
+    "notification::lambda_notifications": {
+      "examples": [
+        "lambda_notifications = {\n    lambda1 = {\n      function_arn  = module.lambda_function1.lambda_function_arn\n      function_name = module.lambda_function1.lambda_function_name\n      events        = [\"s3:ObjectCreated:Put\"]\n      filter_prefix = \"prefix/\"\n      filter_suffix = \".json\"\n    }\n\n    lambda2 = {\n      function_arn  = module.lambda_function2.lambda_function_arn\n      function_name = module.lambda_function2.lambda_function_name\n      events        = [\"s3:ObjectCreated:Post\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "function_arn",
+        "function_name",
+        "id",
+        "qualifier",
+        "source_account"
+      ],
+      "provenance": "example+names"
+    },
+    "notification::sns_notifications": {
+      "examples": [
+        "sns_notifications = {\n    sns1 = {\n      topic_arn     = module.sns_topic1.sns_topic_arn\n      events        = [\"s3:ObjectRemoved:Delete\"]\n      filter_prefix = \"prefix3/\"\n      filter_suffix = \".csv\"\n    }\n\n    sns2 = {\n      topic_arn = module.sns_topic2.sns_topic_arn\n      events    = [\"s3:ObjectRemoved:DeleteMarkerCreated\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "id",
+        "topic_arn"
+      ],
+      "provenance": "example+names"
+    },
+    "notification::sqs_notifications": {
+      "examples": [
+        "sqs_notifications = {\n    sqs1 = {\n      queue_arn     = aws_sqs_queue.this[0].arn\n      events        = [\"s3:ObjectCreated:Put\"]\n      filter_prefix = \"prefix2/\"\n      filter_suffix = \".txt\"\n\n      #      queue_id =  aws_sqs_queue.this[0].id // optional\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "id",
+        "queue_arn",
+        "queue_id"
+      ],
+      "provenance": "example"
+    },
+    "root::analytics_configuration": {
+      "examples": [
+        "analytics_configuration = {\n\n    # No exporting\n    prefix_documents = {\n      filter = {\n        prefix = \"documents/\"\n      }\n    }\n\n    # Same source and destination bucket\n    tags = {\n      filter = {\n        tags = {\n          production = \"true\"\n        }\n      }\n      storage_class_analysis = {\n        output_schema_version = \"V_1\"\n      }\n    }\n\n    # Different destination bucket\n    all = {\n      storage_class_analysis = {\n        destination_bucket_arn = module.analytics_destination_bucket.s3_bucket_arn\n        prefix                 = \"analytics\"\n      }\n    }\n\n    # Different destination shared with inventory destination\n    example = {\n      storage_class_analysis = {\n        destination_bucket_arn = module.analytics_and_inventory_destination_bucket.s3_bucket_arn\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "filter",
+        "storage_class_analysis"
+      ],
+      "provenance": "example"
+    },
+    "root::cors_rule": {
+      "examples": [
+        "cors_rule = [\n    {\n      allowed_methods = [\"PUT\", \"POST\"]\n      allowed_origins = [\"https://modules.tf\", \"https://terraform-aws-modules.modules.tf\"]\n      allowed_headers = [\"*\"]\n      expose_headers  = [\"ETag\"]\n      max_age_seconds = 3000\n      }, {\n      allowed_methods = [\"PUT\"]\n      allowed_origins = [\"https://example.com\"]\n      allowed_headers = [\"*\"]\n      expose_headers  = [\"ETag\"]\n      max_age_seconds = 3000\n    }\n  ]"
+      ],
+      "field_names": [
+        "allowed_headers",
+        "allowed_methods",
+        "allowed_origins",
+        "expose_headers",
+        "id",
+        "max_age_seconds"
+      ],
+      "provenance": "example+names"
+    },
+    "root::grant": {
+      "examples": [
+        "grant = [{\n    type       = \"CanonicalUser\"\n    permission = \"FULL_CONTROL\"\n    id         = data.aws_canonical_user_id.current.id\n    }, {\n    type       = \"CanonicalUser\"\n    permission = \"FULL_CONTROL\"\n    id         = data.aws_cloudfront_log_delivery_canonical_user_id.cloudfront.id # Ref. https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html\n    }\n  ]"
+      ],
+      "field_names": [
+        "email",
+        "id",
+        "permission",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::intelligent_tiering": {
+      "examples": [
+        "intelligent_tiering = {\n    general = {\n      status = \"Enabled\"\n      filter = {\n        prefix = \"/\"\n        tags = {\n          Environment = \"dev\"\n        }\n      }\n      tiering = {\n        ARCHIVE_ACCESS = {\n          days = 180\n        }\n      }\n    },\n    documents = {\n      status = false\n      filter = {\n        prefix = \"documents/\"\n      }\n      tiering = {\n        ARCHIVE_ACCESS = {\n          days = 125\n        }\n        DEEP_ARCHIVE_ACCESS = {\n          days = 200\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "days",
+        "filter",
+        "status",
+        "tiering"
+      ],
+      "provenance": "example"
+    },
+    "root::inventory_configuration": {
+      "examples": [
+        "inventory_configuration = {\n    destination_other = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.analytics_and_inventory_destination_bucket.s3_bucket_arn\n        format     = \"CSV\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency       = \"Daily\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n  }",
+        "inventory_configuration = {\n    weekly = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.inventory_destination_bucket.s3_bucket_arn\n        format     = \"Parquet\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      filter = {\n        prefix = \"documents/\"\n      }\n      frequency       = \"Weekly\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n  }",
+        "inventory_configuration = {\n\n    # Same source and destination buckets\n    daily = {\n      included_object_versions = \"Current\"\n      destination = {\n        format = \"CSV\"\n        encryption = {\n          encryption_type = \"sse_kms\"\n          kms_key_id      = module.kms.key_arn\n        }\n      }\n      filter = {\n        prefix = \"documents/\"\n      }\n      frequency = \"Daily\"\n    }\n\n    weekly = {\n      included_object_versions = \"All\"\n      destination = {\n        format = \"CSV\"\n      }\n      frequency = \"Weekly\"\n    }\n\n    # Different destination bucket\n    destination_other = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.inventory_destination_bucket.s3_bucket_arn\n        format     = \"Parquet\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency       = \"Weekly\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n\n    # Different source bucket\n    source_other = {\n      included_object_versions = \"Current\"\n      bucket                   = module.inventory_source_bucket.s3_bucket_id\n      destination = {\n        format = \"ORC\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency = \"Daily\"\n    }\n  }"
+      ],
+      "field_names": [
+        "bucket",
+        "destination",
+        "enabled",
+        "filter",
+        "frequency",
+        "included_object_versions",
+        "optional_fields"
+      ],
+      "provenance": "example+names"
+    },
+    "root::lifecycle_rule": {
+      "examples": [
+        "lifecycle_rule = [\n    {\n      id     = \"test\"\n      status = \"Enabled\"\n      expiration = {\n        days = 7\n      }\n    },\n    {\n      id     = \"logs\"\n      status = \"Enabled\"\n      expiration = {\n        days = 5\n      }\n      filter = {\n        prefix                = \"logs/\"\n        object_size_less_than = 10\n      }\n    },\n    {\n      id     = \"other\"\n      status = \"Enabled\"\n      expiration = {\n        days = 2\n      }\n      filter = {\n        prefix = \"other/\"\n      }\n    }\n  ]",
+        "lifecycle_rule = [\n    {\n      id      = \"log\"\n      enabled = true\n\n      filter = {\n        tags = {\n          some    = \"value\"\n          another = \"value2\"\n        }\n      }\n\n      transition = [\n        {\n          days          = 30\n          storage_class = \"ONEZONE_IA\"\n          }, {\n          days          = 60\n          storage_class = \"GLACIER\"\n        }\n      ]\n\n      #        expiration = {\n      #          days = 90\n      #          expired_object_delete_marker = true\n      #        }\n\n      #        noncurrent_version_expiration = {\n      #          newer_noncurrent_versions = 5\n      #          days = 30\n      #        }\n    },\n    {\n      id                                     = \"log1\"\n      enabled                                = true\n      abort_incomplete_multipart_upload_days = 7\n\n      noncurrent_version_transition = [\n        {\n          days          = 30\n          storage_class = \"STANDARD_IA\"\n        },\n        {\n          days          = 60\n          storage_class = \"ONEZONE_IA\"\n        },\n        {\n          days          = 90\n          storage_class = \"GLACIER\"\n        },\n      ]\n\n      noncurrent_version_expiration = {\n        days = 300\n      }\n    },\n    {\n      id      = \"log2\"\n      enabled = true\n\n      filter = {\n        prefix                   = \"log1/\"\n        object_size_greater_than = 200000\n        object_size_less_than    = 500000\n        tags = {\n          some    = \"value\"\n          another = \"value2\"\n        }\n      }\n\n      noncurrent_version_transition = [\n        {\n          days          = 30\n          storage_class = \"STANDARD_IA\"\n        },\n      ]\n\n      noncurrent_version_expiration = {\n        days = 300\n      }\n    },\n  ]"
+      ],
+      "field_names": [
+        "abort_incomplete_multipart_upload_days",
+        "date",
+        "days",
+        "enabled",
+        "expiration",
+        "expired_object_delete_marker",
+        "filter",
+        "id",
+        "newer_noncurrent_versions",
+        "noncurrent_days",
+        "noncurrent_version_expiration",
+        "noncurrent_version_transition",
+        "object_size_greater_than",
+        "object_size_less_than",
+        "prefix",
+        "status",
+        "storage_class",
+        "tag",
+        "tags",
+        "transition"
+      ],
+      "provenance": "example+names"
+    },
+    "root::logging": {
+      "examples": [
+        "logging = {\n    target_bucket = module.log_bucket.s3_bucket_id\n    target_prefix = \"log/\"\n    target_object_key_format = {\n      partitioned_prefix = {\n        partition_date_source = \"DeliveryTime\" # \"EventTime\"\n      }\n      # simple_prefix = {}\n    }\n  }"
+      ],
+      "field_names": [
+        "partitioned_prefix",
+        "simple_prefix",
+        "target_bucket",
+        "target_object_key_format",
+        "target_prefix"
+      ],
+      "provenance": "example"
+    },
+    "root::metadata_encryption_configuration": {
+      "examples": [],
+      "field_names": [
+        "kms_key_arn",
+        "sse_algorithm"
+      ],
+      "provenance": "names-only"
+    },
+    "root::metric_configuration": {
+      "examples": [
+        "metric_configuration = {\n    all_objects = {\n      name = \"AllObjects\"\n    },\n    logs = {\n      name = \"Logs\"\n      filter = {\n        prefix = \"logs/\"\n      }\n    }\n  }",
+        "metric_configuration = [\n    {\n      name = \"documents\"\n      filter = {\n        prefix = \"documents/\"\n        tags = {\n          priority = \"high\"\n        }\n      }\n    },\n    {\n      name = \"other\"\n      filter = {\n        tags = {\n          production = \"true\"\n        }\n      }\n    },\n    {\n      name = \"all\"\n    }\n  ]"
+      ],
+      "field_names": [
+        "filter",
+        "name"
+      ],
+      "provenance": "example"
+    },
+    "root::object_lock_configuration": {
+      "examples": [
+        "object_lock_configuration = {\n    rule = {\n      default_retention = {\n        mode = \"GOVERNANCE\"\n        days = 1\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "rule",
+        "token"
+      ],
+      "provenance": "example+names"
+    },
+    "root::replication_configuration": {
+      "examples": [
+        "replication_configuration = {\n    role = aws_iam_role.replication.arn\n\n    rules = [\n      {\n        id       = \"something-with-kms-and-filter\"\n        status   = true\n        priority = 10\n\n        delete_marker_replication = false\n\n        source_selection_criteria = {\n          replica_modifications = {\n            status = \"Enabled\"\n          }\n          sse_kms_encrypted_objects = {\n            enabled = true\n          }\n        }\n\n        filter = {\n          prefix = \"one\"\n          tags = {\n            ReplicateMe = \"Yes\"\n          }\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n\n          replica_kms_key_id = aws_kms_key.replica.arn\n          account_id         = data.aws_caller_identity.current.account_id\n\n          access_control_translation = {\n            owner = \"Destination\"\n          }\n\n          replication_time = {\n            status  = \"Enabled\"\n            minutes = 15\n          }\n\n          metrics = {\n            status  = \"Enabled\"\n            minutes = 15\n          }\n        }\n      },\n      {\n        id       = \"something-with-filter\"\n        priority = 20\n\n        delete_marker_replication = false\n\n        filter = {\n          prefix = \"two\"\n          tags = {\n            ReplicateMe = \"Yes\"\n          }\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n      {\n        id       = \"everything-with-filter\"\n        status   = \"Enabled\"\n        priority = 30\n\n        delete_marker_replication = true\n\n        filter = {\n          prefix = \"\"\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n      {\n        id     = \"everything-without-filters\"\n        status = \"Enabled\"\n\n        delete_marker_replication = true\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n    ]\n  }"
+      ],
+      "field_names": [
+        "access_control_translation",
+        "account",
+        "account_id",
+        "bucket",
+        "delete_marker_replication",
+        "delete_marker_replication_status",
+        "destination",
+        "encryption_configuration",
+        "existing_object_replication",
+        "existing_object_replication_status",
+        "filter",
+        "id",
+        "metrics",
+        "minutes",
+        "owner",
+        "prefix",
+        "priority",
+        "replica_kms_key_id",
+        "replica_modifications",
+        "replication_time",
+        "role",
+        "rule",
+        "rules",
+        "source_selection_criteria",
+        "sse_kms_encrypted_objects",
+        "status",
+        "storage_class",
+        "tag",
+        "tags"
+      ],
+      "provenance": "example+names"
+    },
+    "root::server_side_encryption_configuration": {
+      "examples": [
+        "server_side_encryption_configuration = {\n    rule = {\n      bucket_key_enabled = true # required for directory buckets\n      apply_server_side_encryption_by_default = {\n        sse_algorithm = \"AES256\"\n      }\n    }\n  }",
+        "server_side_encryption_configuration = {\n    rule = {\n      apply_server_side_encryption_by_default = {\n        kms_master_key_id = aws_kms_key.objects.arn\n        sse_algorithm     = \"aws:kms\"\n      }\n      blocked_encryption_types = [\"SSE-C\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "apply_server_side_encryption_by_default",
+        "blocked_encryption_types",
+        "bucket_key_enabled",
+        "kms_master_key_id",
+        "rule",
+        "sse_algorithm"
+      ],
+      "provenance": "example"
+    },
+    "root::website": {
+      "examples": [
+        "website = {\n    # conflicts with \"error_document\"\n    #        redirect_all_requests_to = {\n    #          host_name = \"https://modules.tf\"\n    #        }\n\n    index_document = \"index.html\"\n    error_document = \"error.html\"\n    routing_rules = [{\n      condition = {\n        key_prefix_equals = \"docs/\"\n      },\n      redirect = {\n        replace_key_prefix_with = \"documents/\"\n      }\n      }, {\n      condition = {\n        http_error_code_returned_equals = 404\n        key_prefix_equals               = \"archive/\"\n      },\n      redirect = {\n        host_name          = \"archive.myhost.com\"\n        http_redirect_code = 301\n        protocol           = \"https\"\n        replace_key_with   = \"not_found.html\"\n      }\n    }]\n  }"
+      ],
+      "field_names": [
+        "condition",
+        "error_document",
+        "host_name",
+        "index_document",
+        "protocol",
+        "redirect",
+        "redirect_all_requests_to",
+        "routing_rules"
+      ],
+      "provenance": "example"
+    },
+    "table-bucket::encryption_configuration": {
+      "examples": [
+        "encryption_configuration = {\n    kms_key_arn   = module.kms.key_arn\n    sse_algorithm = \"aws:kms\"\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "table-bucket::maintenance_configuration": {
+      "examples": [
+        "maintenance_configuration = {\n    iceberg_unreferenced_file_removal = {\n      status = \"enabled\"\n\n      settings = {\n        non_current_days  = 7\n        unreferenced_days = 3\n      }\n    }\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "table-bucket::table_bucket_policy_statements": {
+      "examples": [
+        "table_bucket_policy_statements = [\n    {\n      effect = \"Allow\"\n      principals = [{\n        type        = \"AWS\"\n        identifiers = [data.aws_caller_identity.this.account_id]\n      }]\n      actions = [\n        \"s3tables:GetTableData\",\n        \"s3tables:GetTableMetadataLocation\"\n      ]\n    }\n  ]"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "table-bucket::tables": {
+      "examples": [
+        "tables = {\n    table1 = {\n      format    = \"ICEBERG\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n\n      encryption_configuration = {\n        kms_key_arn   = module.kms.key_arn\n        sse_algorithm = \"aws:kms\"\n      }\n\n      maintenance_configuration = {\n        iceberg_compaction = {\n          status = \"enabled\"\n          settings = {\n            target_file_size_mb = 64\n          }\n        }\n        iceberg_snapshot_management = {\n          status = \"enabled\"\n          settings = {\n            max_snapshot_age_hours = 40\n            min_snapshots_to_keep  = 3\n          }\n        }\n      }\n\n      create_table_policy = true\n      policy_statements = [\n        {\n          sid    = \"DeleteTable\"\n          effect = \"Allow\"\n          principals = [{\n            type        = \"AWS\"\n            identifiers = [data.aws_caller_identity.this.account_id]\n          }]\n          actions = [\n            \"s3tables:DeleteTable\",\n            \"s3tables:UpdateTableMetadataLocation\",\n            \"s3tables:PutTableData\",\n            \"s3tables:GetTableMetadataLocation\"\n          ]\n        }\n      ]\n\n      tags = {\n        table_name = \"table1\"\n      }\n    }\n    table2 = {\n      format    = \"ICEBERG\"\n      name      = \"table2\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n    }\n    table3 = {\n      format    = \"ICEBERG\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n\n      metadata = {\n        iceberg = {\n          schema = {\n            field = {\n              created_at = {\n                name     = \"created_at\"\n                type     = \"timestamp\"\n                required = false\n              }\n              price = {\n                type     = \"decimal(10,2)\"\n                required = false\n              }\n            }\n          }\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "create_table_policy",
+        "effect",
+        "encryption_configuration",
+        "field",
+        "format",
+        "iceberg",
+        "identifiers",
+        "maintenance_configuration",
+        "metadata",
+        "name",
+        "namespace",
+        "not_actions",
+        "not_principals",
+        "policy_statements",
+        "principals",
+        "required",
+        "schema",
+        "sid",
+        "table_name",
+        "tags",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}
