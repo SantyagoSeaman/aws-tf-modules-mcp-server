@@ -10,6 +10,8 @@ OS_DIR = FIXTURES / "opensearch"
 HELPER_DIR = FIXTURES / "helper_module"
 MERGE_DIR = FIXTURES / "merge_synthetic"
 FOREACH_DIR = FIXTURES / "merge_synthetic_foreach"
+WAFV2_DIR = FIXTURES / "wafv2_composite"
+SINGLE_ALIAS_DIR = FIXTURES / "single_any_var_alias"
 
 
 def _looks_balanced(block: str) -> bool:
@@ -275,6 +277,72 @@ def test_merge_injected_key_subtracted_from_direct_for_each_rhs():
     fields = observed_field_names(FOREACH_DIR, "root", "pipes")
     assert "arn" in fields
     assert "Direct" not in fields
+
+
+# --------------------------------------------------------------------------- #
+# wafv2-composite regression - a locals RHS referencing >=2 distinct any-vars
+# of the same scope must NOT bind as an alias for any of them. Mirrors the
+# real terraform-aws-modules/wafv2 `web-acl-rule` idiom exactly:
+# `local.rule = { action = var.action, override_action = var.override_action,
+# statement = var.statement }` - under the loosened `var_name in refs` check
+# this bound local.rule as an alias for ALL THREE vars, so
+# observed_field_names returned the SAME ~full-document union for `action`,
+# `override_action`, AND `statement` - wrong-is-worse-than-missing.
+# --------------------------------------------------------------------------- #
+
+
+def test_wafv2_composite_all_three_vars_are_honest_empty():
+    action_fields = observed_field_names(WAFV2_DIR, "root", "action")
+    override_fields = observed_field_names(WAFV2_DIR, "root", "override_action")
+    statement_fields = observed_field_names(WAFV2_DIR, "root", "statement")
+    # None of the three actually reads a field directly off var.<name> -
+    # every real access goes through local.rule, which must not be bound as
+    # an alias for any of them once its RHS references >=2 distinct any-vars
+    # of the same scope.
+    assert action_fields == []
+    assert override_fields == []
+    assert statement_fields == []
+
+
+def test_wafv2_composite_no_shared_union_across_the_three_vars():
+    # Pre-fix, all three returned the SAME non-empty union (the whole
+    # local.rule field tree). Guard against that shape even if a future
+    # change makes any single one of them legitimately non-empty again.
+    results = {
+        observed_field_names(WAFV2_DIR, "root", "action").__repr__(),
+        observed_field_names(WAFV2_DIR, "root", "override_action").__repr__(),
+        observed_field_names(WAFV2_DIR, "root", "statement").__repr__(),
+    }
+    non_empty = [r for r in results if r != "[]"]
+    assert len(non_empty) <= 1, "action/override_action/statement must not share an identical non-empty union"
+
+
+def test_wafv2_composite_comment_only_field_names_never_leak():
+    """A field-name-shaped token that appears only inside an HCL comment
+    (`... local.rule.X ...`, `... var.action.commented_direct ...`) must
+    never be harvested by the direct-field-name regex scan - the real
+    web-acl-rule source carries exactly this comment
+    ("rewriting every `rule.value.X` reference...")."""
+    for var_name in ("action", "override_action", "statement"):
+        fields = observed_field_names(WAFV2_DIR, "root", var_name)
+        assert "X" not in fields
+        assert "commented_direct" not in fields
+
+
+# --------------------------------------------------------------------------- #
+# Regression guard - a locals RHS referencing exactly ONE any-var of the
+# scope alongside an unrelated scalar (non-any) var must still bind as an
+# alias and collect fields. This is the real eventbridge idiom the
+# `var_name in refs` loosening was meant to fix in the first place; the
+# same-scope multi-any-var guard added for the wafv2 regression must not
+# regress it.
+# --------------------------------------------------------------------------- #
+
+
+def test_single_any_var_alias_with_scalar_guard_still_binds():
+    fields = observed_field_names(SINGLE_ALIAS_DIR, "root", "targets")
+    assert "arn" in fields
+    assert "role_arn" in fields
 
 
 # --------------------------------------------------------------------------- #
