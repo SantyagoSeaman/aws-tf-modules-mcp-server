@@ -451,14 +451,23 @@ def _generic_for_expr_fields(text: str, bases: set[str]) -> set[str]:
     return fields
 
 
-def _scan_scope_for_var(text: str, bases: set[str]) -> set[str]:
+def _scan_scope_for_var(text: str, bases: set[str]) -> tuple[set[str], set[str]]:
     """Recursively scan `text` (a file, or a nested dynamic/resource block
     body) for direct field access on any current base, plus dynamic/
     resource/data blocks whose `for_each` references a current base -
     scoping any newly-discovered iterator base (`<label>.value`/
     `each.value`) to that block's own body so same-named iterators in
-    unrelated blocks never leak fields into each other."""
+    unrelated blocks never leak fields into each other.
+
+    Returns (fields, synthetic). `synthetic` accumulates merge()-injected
+    literal keys (idiom N2) found in any dynamic/resource/data `for_each`
+    comprehension RHS that references a current base - not just the
+    locals-block RHS observed_field_names itself scans - so a key injected
+    directly at the for_each level (`for_each = { for k, v in var.X : k =>
+    merge(v, {"Name" = k}) }`) is subtracted exactly like the locals-block
+    idiom already was."""
     fields: set[str] = set()
+    synthetic: set[str] = set()
     for base in bases:
         fields |= _direct_fields_for_base(text, base)
     fields |= _generic_for_expr_fields(text, bases)
@@ -468,15 +477,21 @@ def _scan_scope_for_var(text: str, bases: set[str]) -> set[str]:
         body, _ = _grab_balanced(text, dm.end() - 1)
         fe_rhs = _for_each_rhs(body)
         if fe_rhs is not None and _references_any_base(fe_rhs, bases):
-            fields |= _scan_scope_for_var(body, bases | {f"{label}.value"})
+            synthetic |= _merge_injected_keys(fe_rhs)
+            sub_fields, sub_synthetic = _scan_scope_for_var(body, bases | {f"{label}.value"})
+            fields |= sub_fields
+            synthetic |= sub_synthetic
 
     for rm in re.finditer(r'(?:resource|data)\s+"[^"]+"\s+"[^"]+"\s*\{', text):
         body, _ = _grab_balanced(text, rm.end() - 1)
         fe_rhs = _for_each_rhs(body)
         if fe_rhs is not None and _references_any_base(fe_rhs, bases):
-            fields |= _scan_scope_for_var(body, bases | {"each.value"})
+            synthetic |= _merge_injected_keys(fe_rhs)
+            sub_fields, sub_synthetic = _scan_scope_for_var(body, bases | {"each.value"})
+            fields |= sub_fields
+            synthetic |= sub_synthetic
 
-    return fields
+    return fields, synthetic
 
 
 def _merge_injected_keys(rhs: str) -> set[str]:
@@ -516,7 +531,14 @@ def observed_field_names(source_dir: str | Path, scope: str, var_name: str) -> l
     NAMES ONLY - no nesting/tree reconstruction, so a field nested two
     levels deep and a top-level field of the same name are not
     distinguished; the checklist answers "does field X exist somewhere",
-    not "where". Merge()-injected synthetic keys (idiom N2) are subtracted.
+    not "where". Merge()-injected synthetic keys (idiom N2) are subtracted -
+    both from a locals-block RHS and from a for_each-comprehension RHS
+    (dynamic/resource/data), and a locals alias qualifies as long as its RHS
+    REFERENCES var_name, not only when var_name is its SOLE var reference (a
+    real terraform-aws-modules idiom - e.g. eventbridge's `pipes` - combines
+    the loop var with a second, unrelated var in the same merge()-injecting
+    expression: `merge(pipe, {"Name" = var.append_pipe_postfix ? ... :
+    index})`; a strict equality check never recognized that alias at all).
     Not a schema.
     """
     source_dir = Path(source_dir)
@@ -535,13 +557,15 @@ def observed_field_names(source_dir: str | Path, scope: str, var_name: str) -> l
             body, _ = _grab_balanced(text, lm.end() - 1)
             for key, rhs, *_rest in _iter_top_level_assignments(body):
                 refs = set(re.findall(r"var\.([A-Za-z_]\w*)", rhs))
-                if refs == {var_name}:
+                if var_name in refs:
                     bases.add(f"local.{key}")
                     synthetic |= _merge_injected_keys(rhs)
 
     fields: set[str] = set()
     for text in texts:
-        fields |= _scan_scope_for_var(text, bases)
+        text_fields, text_synthetic = _scan_scope_for_var(text, bases)
+        fields |= text_fields
+        synthetic |= text_synthetic
 
     return sorted(fields - synthetic)
 
