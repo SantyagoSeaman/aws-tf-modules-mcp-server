@@ -487,7 +487,10 @@ def test_l5_submodules_key_alone_is_scoped_to_compact_inventory(state) -> None:
     assert "## Submodule 2:" not in filtered, "numbered deep-dive sections must not be bundled"
 
 
-def test_l5_submodules_combined_with_inputs_is_scoped_not_full_bundle(state) -> None:
+def test_l5_submodules_combined_with_inputs_is_scoped_not_full_bundle(state, monkeypatch, tmp_path) -> None:
+    # Isolate from committed any-overlays: this guards submodule SCOPING, not overlay size
+    # (the overlay appendix is bound-tested in TestAnyOverlay). Overlay content is orthogonal here.
+    monkeypatch.setattr("tfmod_mcp_server._ANY_OVERLAY_DIR", tmp_path)
     filtered = get_module_impl("vpc", state, sections=["submodules", "inputs"])
 
     # Absolute upper bound well under the pre-fix ~18,972 char over-fetch.

@@ -649,9 +649,10 @@ class TestAnyOverlay:
         inputs_with_dir = get_module_impl("vpc", server_state, sections=["inputs"])
         assert inputs_with_dir == inputs_baseline
 
-    def test_no_overlay_directory_present_is_unaffected(self, server_state):
-        """Without the fixture monkeypatch, _ANY_OVERLAY_DIR is the real
-        (.gitkeep-only) model/any_overlay/ -- every module renders unchanged."""
+    def test_no_overlay_directory_present_is_unaffected(self, server_state, monkeypatch, tmp_path):
+        """When _ANY_OVERLAY_DIR holds no matching overlay file, every module
+        renders unchanged (isolated from the committed model/any_overlay/ data)."""
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
         for mod in ("s3-bucket", "vpc", "iam"):
             content = get_module_documentation(mod, server_state)
             assert get_module_impl(mod, server_state) == orientation_head(content)
@@ -1038,8 +1039,11 @@ class TestSubmoduleAddress:
         with pytest.raises(ValueError):
             get_module_impl("iam//modules/", server_state)
 
-    def test_submodule_address_honors_full_doc_escape_hatch(self, server_state):
-        """A submodule address + sections=['all'] returns the complete parent doc verbatim."""
+    def test_submodule_address_honors_full_doc_escape_hatch(self, server_state, monkeypatch, tmp_path):
+        """A submodule address + sections=['all'] returns the complete parent doc verbatim
+        (isolated from committed overlays; the overlay-appendix interaction on the
+        submodule-address path is covered by the TestAnyOverlay submodule tests)."""
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
         for key in ("all", "full", "everything"):
             out = get_module_impl("iam//modules/iam-role", server_state, sections=[key])
             assert out == get_module_documentation("iam", server_state), f"['{key}'] should return the full parent doc"
