@@ -639,6 +639,101 @@ class TestAnyOverlay:
         rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
         assert "verify" not in rendered.lower()
 
+    # ---- token bloat: shared honesty labels hoisted once, not per var ----
+
+    def test_shared_example_label_rendered_once_not_per_var(self):
+        """The example-provenance honesty sentence must be hoisted to a
+        one-time appendix intro, not repeated once per var -- on a module
+        with many any-vars (s3-bucket has ~20) the repeated ~230-char
+        sentence was the dominant token cost."""
+        vars_obj = {
+            f"root::v{i}": {"examples": [f"v{i} = {{}}"], "field_names": [], "provenance": "example"} for i in range(5)
+        }
+        overlay = {"built_from_version": "5.14.1", "vars": vars_obj}
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert rendered.count("Apply-verified example from") == 1
+        for i in range(5):
+            assert f"v{i} = {{}}" in rendered
+
+    def test_shared_field_names_label_rendered_once_not_per_var(self):
+        vars_obj = {
+            f"root::v{i}": {"examples": [], "field_names": [f"field_{i}"], "provenance": "names-only"} for i in range(5)
+        }
+        overlay = {"built_from_version": "5.14.1", "vars": vars_obj}
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert rendered.count("Field names observed in module source") == 1
+        for i in range(5):
+            assert f"field_{i}" in rendered
+
+    def test_version_skew_notice_rendered_once_not_per_var(self):
+        vars_obj = {
+            f"root::v{i}": {"examples": [f"v{i} = {{}}"], "field_names": [], "provenance": "example"} for i in range(5)
+        }
+        overlay = {"built_from_version": "5.10.0", "vars": vars_obj}
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert rendered.count("Version skew") == 1
+
+    def test_per_var_block_has_no_repeated_boilerplate(self):
+        """A single var's own rendered block must not carry the shared
+        honesty sentences -- those live only in the appendix intro now."""
+        entry = {"examples": ["x = 1"], "field_names": ["a", "b"], "provenance": "example+names"}
+        block = tfmod_mcp_server._render_any_overlay_var_block("root::x", entry, "5.14.1")
+        assert "Apply-verified example from" not in block
+        assert "Field names observed in module source" not in block
+        assert "a" in block
+        assert "b" in block
+        assert "example+names" in block  # provenance tag now carried per block
+
+    def test_appendix_overhead_drops_materially_on_heavy_module(self):
+        """Re-measurement per the MAJOR 3 fix: on a heavy module
+        (s3-bucket-shaped, 19 any-vars each with a real-sized example +
+        field-name list), hoisting the shared honesty labels out of the
+        per-var loop must cut the total appendix size materially (target:
+        roughly halve on the heaviest module). Measured before this fix:
+        16041 chars for this exact synthetic shape."""
+        example = (
+            "lifecycle_rule = [\n"
+            "  {\n"
+            '    id      = "log"\n'
+            "    enabled = true\n\n"
+            "    filter = {\n"
+            '      prefix = "log/"\n'
+            "    }\n\n"
+            "    transition = [\n"
+            "      {\n"
+            "        days          = 30\n"
+            '        storage_class = "STANDARD_IA"\n'
+            "      }\n"
+            "    ]\n\n"
+            "    expiration = {\n"
+            "      days = 365\n"
+            "    }\n"
+            "  }\n"
+            "]"
+        )
+        field_names = [
+            "id",
+            "enabled",
+            "status",
+            "expiration",
+            "transition",
+            "storage_class",
+            "noncurrent_version_expiration",
+            "noncurrent_version_transition",
+            "filter",
+            "prefix",
+            "tags",
+            "tag",
+            "abort_incomplete_multipart_upload_days",
+        ]
+        vars_obj = {
+            f"root::any_var_{i}": {"examples": [example], "field_names": field_names, "provenance": "example+names"}
+            for i in range(19)
+        }
+        overlay = {"built_from_version": "5.14.1", "vars": vars_obj}
+        rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
+        assert len(rendered) < 16041 * 0.6
+
     # ---- _load_any_overlay: fail-safe on anything unexpected ----
 
     def test_load_any_overlay_missing_file_returns_none(self, any_overlay_dir):
