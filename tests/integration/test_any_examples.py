@@ -9,6 +9,7 @@ EC_DIR = FIXTURES / "elasticache"
 OS_DIR = FIXTURES / "opensearch"
 HELPER_DIR = FIXTURES / "helper_module"
 MERGE_DIR = FIXTURES / "merge_synthetic"
+FOREACH_DIR = FIXTURES / "merge_synthetic_foreach"
 
 
 def _looks_balanced(block: str) -> bool:
@@ -239,6 +240,41 @@ def test_merge_injected_synthetic_key_subtracted():
     assert "arn" in fields
     assert "role_arn" in fields
     assert "name" not in fields  # merge(t, {"name" = i}) - synthetic, not user-supplied
+
+
+# --------------------------------------------------------------------------- #
+# for_each-comprehension merge-injection - the real terraform-aws-modules/
+# eventbridge `pipes` bug: MERGE_DIR only covers a locals RHS that references
+# var_name and NOTHING else; eventbridge's real locals RHS references
+# var.pipes AND a second var in the same expression, and the merge-injected
+# key is read back via a RESOURCE for_each comprehension chained through that
+# locals alias - two gaps neither of which MERGE_DIR exercises.
+# --------------------------------------------------------------------------- #
+
+
+def test_merge_injected_key_subtracted_when_locals_rhs_references_extra_var():
+    """Mirrors the real terraform-aws-modules/eventbridge `pipes` idiom: the
+    locals RHS that merge()-injects the synthetic "Name" key also references
+    a SECOND var (a postfix-toggle flag) in the same expression, and the
+    injected key is read back off `each.value` inside a resource whose
+    for_each comprehension is chained through that locals alias. A strict
+    "RHS references ONLY var_name" check never recognizes the alias, so
+    "Name" used to survive subtraction and leak through as a bogus observed
+    field name."""
+    fields = observed_field_names(FOREACH_DIR, "root", "pipes")
+    assert "source" in fields
+    assert "target" in fields
+    assert "Name" not in fields
+
+
+def test_merge_injected_key_subtracted_from_direct_for_each_rhs():
+    """The merge() call can also live directly in a resource's own for_each
+    comprehension RHS (no locals indirection at all): `for_each = { for k, v
+    in var.pipes : k => merge(v, {"Direct" = k}) }`. The injected key must be
+    subtracted here too."""
+    fields = observed_field_names(FOREACH_DIR, "root", "pipes")
+    assert "arn" in fields
+    assert "Direct" not in fields
 
 
 # --------------------------------------------------------------------------- #
