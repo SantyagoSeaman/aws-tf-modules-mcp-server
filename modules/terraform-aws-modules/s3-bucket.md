@@ -108,7 +108,7 @@ The root module creates the S3 bucket itself (standard or S3 Express directory b
 | `server_side_encryption_configuration` | `any` | `{}` | SSE-S3 / SSE-KMS / dual-layer encryption — keys (from examples): `rule` > `apply_server_side_encryption_by_default` > { `sse_algorithm`, `kms_master_key_id` }, `bucket_key_enabled` |
 | `object_lock_enabled` | `bool` | `false` | Enable Object Lock (requires versioning) |
 | `object_lock_configuration` | `any` | `{}` | Default retention mode (`GOVERNANCE`/`COMPLIANCE`) and period |
-| `lifecycle_rule` | `any` | `[]` | List of lifecycle rules (transitions, expirations, abort incomplete uploads) — keys (from examples): `id`, `status`, `transition`, `expiration`, `abort_incomplete_multipart_upload` |
+| `lifecycle_rule` | `any` | `[]` | List of lifecycle rules (transitions, expirations, abort incomplete uploads) — keys (from examples): `id`, `status`, `transition`, `expiration`, `abort_incomplete_multipart_upload_days` |
 | `replication_configuration` | `any` | `{}` | Cross-region/same-region replication rules, role, RTC, metrics — keys (from examples): `role`, `rules` |
 | `website` | `any` | `{}` | Static website hosting (index/error documents, redirects) — keys (from examples): `index_document`, `error_document` |
 | `logging` | `any` | `{}` | Server access logging target bucket/prefix |
@@ -257,9 +257,7 @@ module "log_bucket" {
         days = 365
       }
 
-      abort_incomplete_multipart_upload = {
-        days_after_initiation = 7
-      }
+      abort_incomplete_multipart_upload_days = 7
     }
   ]
 

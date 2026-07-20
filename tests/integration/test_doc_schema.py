@@ -146,3 +146,24 @@ def test_submodule_inventory_surfaced_in_head(doc):
         pytest.skip(f"{doc.name}: no submodule inventory")
     head = orientation_head(text)
     assert "## Submodules" in head, f"{doc.name}: submodule inventory not surfaced in the orientation head"
+
+
+def test_s3_bucket_abort_incomplete_multipart_upload_is_scalar():
+    """Regression guard: `terraform-aws-modules/s3-bucket` only ever reads the
+    SCALAR `rule.value.abort_incomplete_multipart_upload_days` off a
+    `lifecycle_rule` entry (see `main.tf`'s `dynamic "abort_incomplete_multipart_upload"`
+    block, verified against the module source at the doc's pinned version); the
+    module never reads an `abort_incomplete_multipart_upload` OBJECT sub-field, so
+    that object form silently creates no block. The doc previously documented
+    (field hint and an example) the object form. Guards against that regressing."""
+    doc = Path(__file__).parent.parent.parent / "modules/terraform-aws-modules/s3-bucket.md"
+    text = doc.read_text()
+    assert "abort_incomplete_multipart_upload =" not in text, (
+        "s3-bucket.md: documents abort_incomplete_multipart_upload as an object "
+        "(`abort_incomplete_multipart_upload = { ... }`), but the module only reads "
+        "the scalar `abort_incomplete_multipart_upload_days` — the object form "
+        "silently creates no block"
+    )
+    assert "abort_incomplete_multipart_upload_days" in text, (
+        "s3-bucket.md: expected the scalar abort_incomplete_multipart_upload_days " "field to be documented"
+    )
