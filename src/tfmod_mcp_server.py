@@ -2076,12 +2076,21 @@ def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | Non
     table schemes vary across the corpus). Sorted by var key for
     deterministic output.
 
-    The example-provenance sentence, the field-name disclaimer, and the
+    The example-provenance sentence, the field-name usage note, and the
     version-skew notice are IDENTICAL for every var in one module (same
     built_from_version, same doc_version), so they are rendered ONCE here
     rather than once per var -- on s3-bucket's ~20 any-vars the repeated
     ~230-char example sentence alone was the dominant cost. No honesty loss:
     every label still appears, just once instead of per-block.
+
+    2026-07-21 discoverability fix: both labels below were reworded away from
+    "confirm shapes via grep_module_docs" phrasing, which measurably invited
+    the very grep round-trip the overlay exists to remove (an A/B eval worker
+    read a field list this label was attached to and still went to grep
+    "to confirm" it). The field-name label now says the names are directly
+    usable input fields; grep_module_docs is reserved for inspecting a
+    complex field's own nested sub-shape, not for re-confirming what this
+    label already states.
     """
     built_from_version = overlay.get("built_from_version", "")
     vars_obj = overlay.get("vars") or {}
@@ -2096,13 +2105,14 @@ def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | Non
     if any(entry.get("examples") for entry in vars_obj.values()):
         intro_lines.append(
             f"Apply-verified example from `{built_from_version}`; references resources defined in "
-            "that example; shown form is one accepted form; other fields may be valid -- see the "
-            "field-name list / `grep_module_docs`."
+            "that example; shown form is one accepted form -- copy and adapt this; consult "
+            "`grep_module_docs` only for fields beyond this example."
         )
     if any(entry.get("field_names") for entry in vars_obj.values()):
         intro_lines.append(
-            f"Field names observed in module source `@{built_from_version}`: not a schema; confirm "
-            "shapes via the example / `grep_module_docs`."
+            f"Field names read by the module source `@{built_from_version}` -- these are the "
+            "accepted input fields; use them directly. Use `grep_module_docs` only to inspect "
+            "the deep nested sub-shape of a specific complex field."
         )
     if doc_version and built_from_version and doc_version.strip() != built_from_version.strip():
         intro_lines.append(

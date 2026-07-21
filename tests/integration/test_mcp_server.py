@@ -520,8 +520,8 @@ class TestAnyOverlay:
     def test_field_names_rendered_and_labeled(self, server_state, any_overlay_dir):
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
         assert "made_up_field" in out
-        assert "Field names observed in module source" in out
-        assert "not a schema" in out
+        assert "Field names read by the module source" in out
+        assert "use them directly" in out
 
     def test_honesty_labels_present(self, server_state, any_overlay_dir):
         """The mandatory example-provenance labels from the spec are present."""
@@ -634,6 +634,26 @@ class TestAnyOverlay:
         assert len(head) < len(full)
         assert "more inputs" in head, "cap pointer line must still be present"
 
+    # ---- Fix 2 (2026-07-21): reworded appendix labels no longer invite a
+    # confirmatory grep_module_docs round-trip. ----
+
+    def test_appendix_labels_no_longer_say_confirm_shapes_via_grep(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "confirm shapes via" not in out
+        assert "not a schema" not in out
+
+    def test_appendix_field_name_label_says_use_them_directly(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "Field names read by the module source" in out
+        assert "use them directly" in out
+        assert "deep nested sub-shape" in out
+
+    def test_appendix_example_label_says_copy_and_adapt(self, server_state, any_overlay_dir):
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert "copy and adapt this" in out
+        assert "one accepted form" in out, "one-accepted-form caveat must survive the reword"
+        assert "consult `grep_module_docs` only for fields beyond this example" in out
+
     # ---- no regression: a module with no overlay is byte-identical ----
 
     def test_module_without_overlay_is_byte_identical(self, server_state, any_overlay_dir):
@@ -702,7 +722,7 @@ class TestAnyOverlay:
         }
         overlay = {"built_from_version": "5.14.1", "vars": vars_obj}
         rendered = tfmod_mcp_server._render_any_overlay_appendix(overlay, "5.14.1")
-        assert rendered.count("Field names observed in module source") == 1
+        assert rendered.count("Field names read by the module source") == 1
         for i in range(5):
             assert f"field_{i}" in rendered
 
