@@ -1001,6 +1001,8 @@ def filter_module_sections(
     extra_exact_titles: tuple[str, ...] = (),
     interface_scope: str = "all",
     silent_keys: frozenset[str] = frozenset(),
+    submodule_scope: str | None = None,
+    served_complete_root_interface: bool = False,
 ) -> str:
     """
     Reduce a module document to core sections plus the requested ones.
@@ -1028,6 +1030,25 @@ def filter_module_sections(
             and skips ``## Submodule N:`` bundles.
         silent_keys: Requested keys (lowercased) that should not be reported
             in the "Requested sections not found" footer line when unmatched.
+        submodule_scope: When given (a submodule name, e.g. "karpenter"), the
+            interface-key H3 fallback is restricted to ONLY the combined
+            bundle whose title contains this name — every other bundle (root
+            AND every other submodule) is excluded, regardless of
+            interface_scope. Used by the submodule-address branch of
+            get_module_impl so a single submodule's interface request (e.g.
+            ``get_module("eks//modules/karpenter", sections=["inputs"])``)
+            cannot drag sibling submodules' or root's curated tables in
+            alongside it — that request already gets the addressed
+            submodule's FULL bundle via the exact/substring heading match
+            above; the fallback below is otherwise redundant for it and was
+            the actual source of the over-fetch.
+        served_complete_root_interface: True when the caller has already
+            guaranteed (via the D7 Change A complete-table supersede or its
+            A2 append fallback) that this response carries the module's
+            COMPLETE, current root-scope inputs/outputs interface for every
+            view actually requested. Changes the footer's escalation wording
+            so it does not send the agent back for
+            ``sections=["inputs","outputs"]`` to get what it already has.
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
@@ -1037,6 +1058,7 @@ def filter_module_sections(
     """
     if interface_scope not in _INTERFACE_SCOPES:
         raise ValueError(f"interface_scope must be one of {sorted(_INTERFACE_SCOPES)}, got {interface_scope!r}")
+    submodule_scope_lower = submodule_scope.strip().lower() if submodule_scope else None
     preamble, sections = _split_h2_sections(text)
     if not sections:
         return text
@@ -1084,7 +1106,10 @@ def filter_module_sections(
                 tl = title.lower()
                 if not _matches_combined_interface(tl):
                     continue
-                if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
+                if submodule_scope_lower is not None:
+                    if submodule_scope_lower not in tl:
+                        continue
+                elif (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                     continue
                 combined_titles.append(title)
                 if _extract_interface_h3(block, {key}):
@@ -1110,7 +1135,10 @@ def filter_module_sections(
             continue
         tl = title.lower()
         if fallback_keys and _matches_combined_interface(tl):
-            if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
+            if submodule_scope_lower is not None:
+                if submodule_scope_lower not in tl:
+                    continue
+            elif (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                 continue
             extracted = _extract_interface_h3(block, fallback_keys)
             if extracted:
@@ -1122,9 +1150,30 @@ def filter_module_sections(
     all_titles = [title for title, _ in sections]
     omitted = [title for title in all_titles if title not in wanted]
 
-    footer_lines = [
-        "---",
-        # Compact honest-limits pointer. The curated doc is a hand-picked
+    # Compact honest-limits pointer. `_FILTER_FOOTER_MARKER` anchors on the
+    # literal "---\nCurated subset." opening below (used by
+    # `_insert_before_footer` to splice the any-overlay appendix in before
+    # this footer) -- both branches below MUST keep that exact opening so the
+    # anchor stays valid regardless of which wording follows.
+    if served_complete_root_interface:
+        # This response already carries the module's COMPLETE, current
+        # root-scope inputs/outputs (the D7 Change A supersede, or its A2
+        # append fallback, fired for every view actually requested) --
+        # sending the agent back for sections=["inputs","outputs"] would just
+        # hand it the same data again. Point it at what is genuinely still
+        # NOT included instead: a submodule's own interface, or the module
+        # source for out-of-catalog/pinned/nested-shape/creation-condition
+        # detail.
+        disclaimer = (
+            "Curated subset. The inputs/outputs above already ARE the COMPLETE inputs/outputs "
+            "interface for the root scope (Registry-declared) — no need to re-call `get_module` "
+            'with `sections=["inputs","outputs"]` for it. For a submodule\'s own complete interface, '
+            'call `get_module` with the `"<name>//modules/<submodule>"` address. For a module outside '
+            "this catalog, a pinned older version, or a `map(object)`/`any` field's nested TYPE/SHAPE, "
+            "consult the module source. Resource-creation (`count`/`for_each`) conditions live in the "
+            "module source, not here."
+        )
+    else:
         # SUBSET; completeness AND name-confirmation both resolve with ONE
         # offline get_module(sections=["inputs","outputs"]) call. (2026-07-21
         # D7: grep_module_docs -- the tool this footer used to route the
@@ -1136,11 +1185,16 @@ def filter_module_sections(
         # Resource-creation conditions live in module source. Keeps the
         # compact→full→source escalation a mechanical decision, not a guess,
         # without repeating a long paragraph verbatim on every call.
-        "Curated subset. For the COMPLETE inputs/outputs or to confirm a name exists, "
-        'call `get_module` with `sections=["inputs","outputs"]` — one offline call. '
-        "For a module outside this catalog, a pinned older version, or a "
-        "`map(object)`/`any` field's nested TYPE/SHAPE, consult the module source. "
-        "Resource-creation (`count`/`for_each`) conditions live in the module source, not here.",
+        disclaimer = (
+            "Curated subset. For the COMPLETE inputs/outputs or to confirm a name exists, "
+            'call `get_module` with `sections=["inputs","outputs"]` — one offline call. '
+            "For a module outside this catalog, a pinned older version, or a "
+            "`map(object)`/`any` field's nested TYPE/SHAPE, consult the module source. "
+            "Resource-creation (`count`/`for_each`) conditions live in the module source, not here."
+        )
+    footer_lines = [
+        "---",
+        disclaimer,
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -3045,7 +3099,16 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
             if _sections_request_outputs(sections or [])
             else working_content
         )
-        body = filter_module_sections(working_content, [sub, *(sections or [])])
+        # submodule_scope=sub restricts the interface-key H3 fallback to
+        # ONLY this submodule's own bundle -- without it, an explicit
+        # inputs/outputs (or examples/usage) request would also walk every
+        # OTHER combined bundle (root and every sibling submodule) and drag
+        # their curated tables in alongside the one actually addressed (the
+        # measured over-fetch: get_module("eks//modules/karpenter",
+        # sections=["inputs"]) returned ~110 rows, only ~48 of them
+        # karpenter's own -- see TestD7ChangeARootScopeDefault /
+        # test_submodule_address_does_not_drag_sibling_curated_tables).
+        body = filter_module_sections(working_content, [sub, *(sections or [])], submodule_scope=sub)
         # A module WITH a committed any-shape overlay can have submodule-scoped
         # any-vars (e.g. fsx has all 19 of its any-vars submodule-scoped) — an
         # explicit inputs/variables request here must get its OWN appendix,
@@ -3099,6 +3162,14 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         restrict_to_root = (requests_inputs or requests_outputs) and _doc_has_resolvable_root_bundle(content)
         scope_filter = frozenset({"root"}) if restrict_to_root else None
 
+        # Loaded up front (rather than after filter_module_sections, as
+        # before) so the root-availability check below can run BEFORE the
+        # footer is built -- the footer needs to know, ahead of time, whether
+        # the A2 append fallback is about to fire.
+        overlay = (
+            _load_any_overlay(_resolve_overlay_module_id(content)) if (requests_inputs or requests_outputs) else None
+        )
+
         input_superseded_scopes: frozenset[str] = frozenset()
         output_superseded_scopes: frozenset[str] = frozenset()
         working_content = content
@@ -3110,13 +3181,38 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
             working_content, output_superseded_scopes = _content_with_complete_output_tables_ex(
                 working_content, only_scopes=scope_filter
             )
+
+        # #5 (independent review, 2026-07-21): whether this response will end
+        # up carrying the module's COMPLETE root-scope inputs/outputs --
+        # either the inline supersede above fired for "root", or the A2
+        # append fallback below will fire because the overlay genuinely has
+        # root data the inline supersede could not locate a table for.
+        # Computed BEFORE filter_module_sections so its footer can be worded
+        # honestly instead of sending the agent back for data it will
+        # already have. Only asserted for the dimension(s) actually
+        # requested -- e.g. sections=["inputs"] alone never claims
+        # completeness for outputs it was never asked to serve.
+        root_inputs_available = bool((overlay.get("all_inputs") or {}).get("root")) if overlay else False
+        root_outputs_available = bool((overlay.get("all_outputs") or {}).get("root")) if overlay else False
+        served_complete_inputs = requests_inputs and (("root" in input_superseded_scopes) or root_inputs_available)
+        served_complete_outputs = requests_outputs and (("root" in output_superseded_scopes) or root_outputs_available)
+        served_complete_root_interface = (
+            (requests_inputs or requests_outputs)
+            and (not requests_inputs or served_complete_inputs)
+            and (not requests_outputs or served_complete_outputs)
+        )
+
         interface_scope = "root" if restrict_to_root else "all"
-        rendered = filter_module_sections(working_content, sections, interface_scope=interface_scope)
+        rendered = filter_module_sections(
+            working_content,
+            sections,
+            interface_scope=interface_scope,
+            served_complete_root_interface=served_complete_root_interface,
+        )
         if requests_inputs:
             rendered = _inline_any_overlay_input_cells(rendered, content)
             rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
         if requests_inputs or requests_outputs:
-            overlay = _load_any_overlay(_resolve_overlay_module_id(content))
             # D7 Change A2 (2026-07-21 grouped-H3 completeness fix): the
             # inline supersede above only replaces a table it can actually
             # locate immediately under a resolved root heading. On docs where
@@ -3398,10 +3494,12 @@ def search_modules(
         "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
         "for the complete document (prefer scoped sections on large modules — they run to "
         "10k+ tokens in full). "
+        "`sections=['inputs']`, `['outputs']`, or `['inputs','outputs']` serve the module's "
+        "COMPLETE, current interface (root scope by default) — not just the curated subset — "
+        "entirely offline. A submodule's own complete interface is reached the same way via "
+        "the '<name>//modules/<submodule>' address (e.g. 'eks//modules/karpenter'). "
         "The variable names, defaults, and version in the head and in `sections` are the "
-        "authoritative values from the curated catalog — use them directly. "
-        "To get original documentation including full lists of inputs/outputs for each sub-module, "
-        "use direct links to registry.terraform.io from documentation."
+        "authoritative values from the curated catalog — use them directly."
     ),
     tags={"documentation", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="Get compacted documentation for a Terraform module"),

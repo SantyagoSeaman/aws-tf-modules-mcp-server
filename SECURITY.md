@@ -18,8 +18,8 @@ and coordinate disclosure once a fix is available.
 
 `tfmodsearch` has no networked tools — `search_modules`, `get_module`, and
 `modules_list` are fully offline, served from the local pre-built index and
-committed per-module artifacts. The one exception is an opt-in background
-thread, active only in HTTP transport mode, that checks the public PyPI JSON
-API (`pypi.org`) once a day for a newer release (`TFMODSEARCH_UPDATE_CHECK=0`
-disables it). Reports concerning that network path or the `get_module`
+committed per-module artifacts. The one exception is a background thread,
+default-on in HTTP transport mode (opt-out via `TFMODSEARCH_UPDATE_CHECK=0`),
+that checks the public PyPI JSON API (`pypi.org`) once a day for a newer
+release. Reports concerning that network path or the `get_module`
 path-traversal guards are especially welcome.

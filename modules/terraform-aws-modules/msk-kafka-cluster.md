@@ -95,7 +95,7 @@ The `serverless` submodule provides a simplified interface for creating MSK Serv
 | `subnet_ids` | `list(string)` | `null` | List of subnets in at least two different Availability Zones |
 | `security_group_ids` | `list(string)` | `null` | Up to five security groups controlling inbound and outbound traffic |
 | `create_cluster_policy` | `bool` | `false` | Determines whether to create an MSK cluster policy |
-| `cluster_policy_statements` | `map(object)` | `null` | Map of policy statements for the cluster policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
+| `cluster_policy_statements` | `map(object)` | `null` | Map of policy statements for the cluster policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module("msk-kafka-cluster//modules/serverless", sections=["inputs"]) for the complete list) |
 | `cluster_source_policy_documents` | `list(string)` | `null` | Source policy documents for cluster policy |
 | `cluster_override_policy_documents` | `list(string)` | `null` | Override policy documents for cluster policy |
 | `tags` | `map(string)` | `{}` | Map of tags to assign to the resources created |

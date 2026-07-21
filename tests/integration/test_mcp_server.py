@@ -425,6 +425,51 @@ class TestGetModuleSections:
         assert "Do not assert an exact default" not in out
         assert "confirm it in the full doc first" not in out
 
+    # ---- #5 (independent review, 2026-07-21): context-aware footer ----
+
+    def test_footer_served_complete_does_not_invite_a_redundant_recall(self):
+        """When the caller has already guaranteed a complete root interface
+        (served_complete_root_interface=True), the footer must NOT tell the
+        agent to call sections=["inputs","outputs"] to get what it already
+        has -- that used to invite a pointless re-call."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [], served_complete_root_interface=True)
+        assert "or to confirm a name exists, call" not in out, "Must not invite a redundant re-call"
+        assert "COMPLETE inputs/outputs" in out, "Footer must still name what it already serves"
+        assert "already" in out.lower(), "Footer must state the interface is already complete"
+        assert "module source" in out, "Footer must still reserve escalation for what is genuinely missing"
+
+    def test_footer_served_complete_preserves_marker_anchor(self):
+        """The appendix-splice anchor (_FILTER_FOOTER_MARKER) must still
+        match verbatim on a served_complete_root_interface=True footer, or
+        the any-overlay appendix would silently land in the wrong place
+        (see _insert_before_footer)."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [], served_complete_root_interface=True)
+        assert tfmod_mcp_server._FILTER_FOOTER_MARKER in out
+        appended = tfmod_mcp_server._insert_before_footer(out, "APPENDIX", is_filtered=True)
+        assert appended.index("APPENDIX") < appended.index("Curated subset.")
+
+    def test_footer_not_served_complete_keeps_existing_wording(self):
+        """served_complete_root_interface defaults to False -- byte-identical
+        to the pre-#5 footer wording for every existing caller that does not
+        pass it explicitly (orientation_head, and any non-inputs/outputs
+        sections request)."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        default_out = filter_module_sections(doc, [])
+        explicit_false_out = filter_module_sections(doc, [], served_complete_root_interface=False)
+        assert default_out == explicit_false_out
+        assert 'call `get_module` with `sections=["inputs","outputs"]`' in default_out
+
     def test_orientation_head_lists_available_sections_menu(self, server_state):
         """The head advertises the full section inventory + logical-key legend as a follow-up menu."""
         head = get_module_impl("eks", server_state)
@@ -1091,7 +1136,12 @@ class TestAnyOverlaySubmoduleAddress:
         """iam has no fixture overlay file at all -- its submodule-address
         inputs view is unaffected by this wiring."""
         content = get_module_documentation("iam", server_state)
-        body = filter_module_sections(content, ["iam-role", "inputs"])
+        # submodule_scope="iam-role" mirrors get_module_impl's own call (#6
+        # fix, independent review): the interface-key "inputs" fallback is
+        # restricted to iam-role's own bundle only, so it no longer drags
+        # every OTHER iam submodule's curated "Main Input Variables" table
+        # in alongside it.
+        body = filter_module_sections(content, ["iam-role", "inputs"], submodule_scope="iam-role")
         hint = tfmod_mcp_server._version_pin_hint(content)
         baseline = f"{hint}\n\n{body}" if hint else body
         out = get_module_impl("iam//modules/iam-role", server_state, sections=["inputs"])
@@ -1753,6 +1803,50 @@ class TestD7ChangeARootScopeDefault:
         out = get_module_impl("eks//modules/karpenter", server_state, sections=["inputs"])
         assert "| `launch_template_id` |" not in out
 
+    def test_submodule_address_does_not_drag_sibling_curated_tables(self, server_state):
+        """#6 (independent review): get_module("eks//modules/karpenter",
+        sections=["inputs"]) used to return ~110 rows -- only ~48 of them
+        karpenter's own -- because filter_module_sections' interface-key
+        fallback walked EVERY combined bundle (root + every other
+        submodule), not just the addressed one. The response must now carry
+        only karpenter's own bundle (plus core sections), not the root
+        bundle or any sibling submodule bundle."""
+        out = get_module_impl("eks//modules/karpenter", server_state, sections=["inputs"])
+        headings = re.findall(r"(?m)^## .+$", out)
+        assert headings.count("## Submodule 4: karpenter") == 1
+        for other in (
+            "## Submodule 1: eks-managed-node-group",
+            "## Submodule 2: self-managed-node-group",
+            "## Submodule 3: fargate-profile",
+            "## Submodule 5: hybrid-node-role",
+            "## Submodule 6: capability",
+            "## Main Module: EKS Cluster",
+        ):
+            assert other not in headings, f"sibling bundle {other!r} must not leak into a karpenter address response"
+        row_count = out.count("\n| `")
+        assert row_count < 60, f"response carries {row_count} table rows -- karpenter's overlay has only 48"
+
+    def test_submodule_address_complete_interface_footer_stays_curated_subset(self, server_state):
+        """#5 scope check: the submodule-address branch is intentionally left
+        out of the served_complete_root_interface wording (it names the ROOT
+        scope specifically, which would be wrong for a submodule response) --
+        its footer keeps the existing curated-subset wording."""
+        out = get_module_impl("eks//modules/karpenter", server_state, sections=["inputs"])
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
+        assert "already ARE the COMPLETE" not in disclaimer_line
+
+    def test_root_scoped_inputs_footer_states_completeness_when_supersede_fires(self, server_state):
+        """#5 (independent review): eks's root inputs supersede inline (its
+        table sits directly under "### Main Input Variables"), so the
+        default sections=["inputs"] response already carries the COMPLETE
+        root interface -- the footer must say so instead of inviting a
+        redundant sections=["inputs","outputs"] re-call."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
+        assert "already ARE the COMPLETE" in disclaimer_line
+        assert "or to confirm a name exists, call" not in disclaimer_line, "Must not invite a redundant re-call"
+        assert '"<name>//modules/<submodule>"' in disclaimer_line
+
     def test_footer_lists_submodule_scope_names(self, server_state):
         """The default root-scoped response advertises the reachable
         submodule scopes and how to reach them."""
@@ -1875,6 +1969,34 @@ class TestD7ChangeA2GroupedH3Completeness:
         out = get_module_impl("sso", server_state, sections=["inputs", "outputs"])
         assert "## Complete Root Inputs" not in out
         assert "## Complete Root Outputs" not in out
+
+    @pytest.mark.parametrize("module_name", ["sso", "cloudwatch", "fsx", "iam"])
+    def test_empty_root_scope_footer_never_claims_completeness(self, server_state, module_name):
+        """Nit (independent review): an empty-root-scope overlay (sso,
+        cloudwatch, fsx, iam -- every real field belongs to a submodule, not
+        root) must never emit a false "complete" footer claim alongside the
+        BLOCKER 2 fallback that already keeps it from appending an empty
+        table. The footer must keep the genuinely-still-a-subset wording and
+        must still route the agent to sections=["inputs","outputs"] (a
+        harmless no-op re-call, not a false completeness claim) or the
+        submodule address / module source."""
+        out = get_module_impl(module_name, server_state, sections=["inputs", "outputs"])
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
+        assert (
+            "already ARE the COMPLETE" not in disclaimer_line
+        ), f"{module_name}: footer must not claim a complete root interface it never served"
+        assert "## Complete Root Inputs" not in out
+        assert "## Complete Root Outputs" not in out
+
+    def test_grouped_h3_append_fired_footer_states_completeness(self, server_state):
+        """#5 (independent review): eventbridge's root inputs are grouped
+        under H3 subsections, so the inline supersede cannot fire and the A2
+        append fallback serves the complete table instead -- the footer must
+        recognize THAT path too, not only the inline-supersede path."""
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
+        assert "already ARE the COMPLETE" in disclaimer_line
+        assert "or to confirm a name exists, call" not in disclaimer_line, "Must not invite a redundant re-call"
 
     def test_appended_table_respects_byte_cap(self, server_state, monkeypatch):
         """Synthetic oversized case: with the byte cap lowered far below the

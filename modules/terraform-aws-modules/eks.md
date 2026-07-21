@@ -652,7 +652,7 @@ Creates an `aws_eks_capability` resource — an AWS-managed operator/controller 
 | `type` | `string` | `""` | Capability type: `ACK`, `ARGOCD`, or `KRO` |
 | `configuration` | `object` | `null` | Type-specific configuration (e.g. `argo_cd.aws_idc`, `argo_cd.rbac_role_mapping`) |
 | `iam_role_policies` | `map(string)` | `{}` | Managed policy ARNs to attach to the capability's IAM role |
-| `iam_policy_statements` | `map(object)` | `null` | Inline IAM policy statements for the capability's IAM role — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
+| `iam_policy_statements` | `map(object)` | `null` | Inline IAM policy statements for the capability's IAM role — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module("eks//modules/capability", sections=["inputs"]) for the complete list) |
 
 ### Main Outputs
 
