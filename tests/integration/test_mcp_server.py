@@ -354,13 +354,55 @@ class TestGetModuleSections:
             assert "module source" in resp, "Response must name source as the creation-condition tier"
 
     def test_footer_grep_hint_mentions_shapes(self):
-        """Footer broadens the grep pointer from names to names AND type/shape verification."""
+        """Footer still carries the TYPE/SHAPE phrase -- now scoped to grep's one
+        remaining reserved case (a map(object)/any field's nested sub-shape),
+        not to names (D1, 2026-07-21)."""
         doc = (
             "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
             "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
         )
         out = filter_module_sections(doc, [])
         assert "TYPE/SHAPE" in out, "Footer must carry the explicit type/shape verification phrase"
+
+    def test_footer_routes_completeness_and_name_confirmation_to_get_module(self):
+        """D1: the footer's COMPLETE/name-confirmation escalation routes to ONE
+        offline get_module(sections=["inputs","outputs"]) call, not to
+        grep_module_docs -- the old wording invited an unnecessary live
+        round-trip for data get_module already serves authoritatively."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        assert (
+            'sections=["inputs","outputs"]' in out
+        ), "Footer must point completeness/name-confirmation at the full interface call"
+        assert "confirm a name exists, grep" not in out, "Footer must not route name-confirmation to grep"
+        assert (
+            "to confirm a name exists, grep the live doc" not in out
+        ), "Old name-confirmation-to-grep phrasing must be gone"
+
+    def test_footer_still_reserves_grep_for_version_non_catalog_nested_cases(self):
+        """D1: grep_module_docs stays the pointer for the three cases only it
+        serves -- a module outside the catalog, a pinned/older version, or a
+        map(object)/any field's nested sub-shape."""
+        doc = (
+            "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
+            "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
+        )
+        out = filter_module_sections(doc, [])
+        assert "grep_module_docs" in out, "Footer must still name grep_module_docs for its reserved cases"
+        assert "outside this catalog" in out, "Footer must still reserve grep for non-catalog modules"
+        assert "pinned" in out.lower(), "Footer must still reserve grep for pinned/older versions"
+        assert "nested" in out.lower(), "Footer must still reserve grep for a nested map(object)/any sub-shape"
+
+    def test_head_cap_pointer_mentions_full_interface(self, server_state):
+        """D1: the capped head input-table pointer (fires when a module's root
+        input table is wider than the head's bounded sample) now points at
+        the full interface (inputs AND outputs), not inputs alone."""
+        head = get_module_impl("s3-bucket", server_state)
+        assert "more inputs" in head, "s3-bucket has more inputs than the head cap -- pointer must fire"
+        assert 'get_module(sections=["inputs","outputs"]) for the full interface' in head
 
     def test_footer_disclaimer_is_compact(self):
         """RC2 F1: the honest-limits disclaimer is a 1-2 line pointer, not a long
@@ -1846,3 +1888,111 @@ class TestMCPServerIntegration:
             # Each path should be accessible via get_module
             content = get_module_documentation(hit.path, server_state)
             assert len(content) > 0, f"Path {hit.path} should be accessible"
+
+
+class TestResponseByteMetering:
+    """D2: opt-in per-tool-call response-size logging, gated by
+    TFMODSEARCH_LOG_RESPONSE_BYTES. Unset/falsy must be a true no-op
+    (byte-identical to pre-D2 behavior); truthy must emit exactly one
+    'response_bytes tool=<name> bytes=<N>' INFO line per tool call, with N
+    the true UTF-8 byte length of the serialized response. Exercises the
+    actual @app.tool-decorated wrapper functions (not the _impl helpers) so
+    the hook at each tool's real return point is covered.
+    """
+
+    @pytest.fixture
+    def cache_tmp_state(self, mcp_index, search_weights, test_logger, tmp_path):
+        """Same as the module's `server_state` fixture, but with an isolated
+        doc_cache_dir so a grep_module_docs call never touches the real
+        on-disk cache."""
+        index_path = PROJECT_ROOT / "model" / "tfmod_e5_small_index.pkl"
+        ServerStateManager.reset()
+        state = ServerStateManager.initialize(
+            index=mcp_index,
+            weights=search_weights,
+            index_path=index_path,
+            logger=test_logger,
+            doc_cache_dir=tmp_path,
+        )
+        yield state
+        ServerStateManager.reset()
+
+    def test_flag_unset_emits_no_response_bytes_lines(self, server_state, caplog, monkeypatch):
+        """Default (env var unset) must be a true no-op: no response_bytes
+        line from any of the four tools, behavior otherwise unchanged."""
+        monkeypatch.delenv("TFMODSEARCH_LOG_RESPONSE_BYTES", raising=False)
+        with caplog.at_level(logging.INFO):
+            tfmod_mcp_server.modules_list()
+            tfmod_mcp_server.search_modules("vpc")
+            tfmod_mcp_server.get_module("vpc")
+        assert not any(
+            "response_bytes" in record.message for record in caplog.records
+        ), "No response_bytes line must be logged while the flag is unset"
+
+    def test_flag_falsy_emits_no_response_bytes_lines(self, server_state, caplog, monkeypatch):
+        """Explicit falsy values (not just unset) must also disable logging."""
+        for falsy in ("0", "false", "False", "no", "off", ""):
+            monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", falsy)
+            with caplog.at_level(logging.INFO):
+                tfmod_mcp_server.modules_list()
+            assert not any(
+                "response_bytes" in record.message for record in caplog.records
+            ), f"No response_bytes line must be logged for falsy value {falsy!r}"
+
+    def test_modules_list_logs_true_byte_length(self, server_state, caplog, monkeypatch):
+        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
+        caplog.clear()
+        with caplog.at_level(logging.INFO):
+            result = tfmod_mcp_server.modules_list()
+        lines = [r.message for r in caplog.records if r.message.startswith("response_bytes tool=modules_list")]
+        assert len(lines) == 1, "Exactly one response_bytes line must be logged per tool call"
+        expected_bytes = len(result.model_dump_json().encode("utf-8"))
+        assert lines[0] == f"response_bytes tool=modules_list bytes={expected_bytes}"
+
+    def test_search_modules_logs_true_byte_length(self, server_state, caplog, monkeypatch):
+        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
+        caplog.clear()
+        with caplog.at_level(logging.INFO):
+            result = tfmod_mcp_server.search_modules("vpc")
+        lines = [r.message for r in caplog.records if r.message.startswith("response_bytes tool=search_modules")]
+        assert len(lines) == 1, "Exactly one response_bytes line must be logged per tool call"
+        expected_bytes = len(result.model_dump_json().encode("utf-8"))
+        assert lines[0] == f"response_bytes tool=search_modules bytes={expected_bytes}"
+
+    def test_get_module_logs_true_byte_length(self, server_state, caplog, monkeypatch):
+        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
+        caplog.clear()
+        with caplog.at_level(logging.INFO):
+            result = tfmod_mcp_server.get_module("vpc")
+        lines = [r.message for r in caplog.records if r.message.startswith("response_bytes tool=get_module")]
+        assert len(lines) == 1, "Exactly one response_bytes line must be logged per tool call"
+        assert isinstance(result, str), "get_module returns a plain string -- measured directly, no re-serialization"
+        expected_bytes = len(result.encode("utf-8"))
+        assert lines[0] == f"response_bytes tool=get_module bytes={expected_bytes}"
+
+    def test_grep_module_docs_logs_true_byte_length(self, cache_tmp_state, caplog, monkeypatch):
+        import json
+
+        import tfmod_registry_docs as rd
+
+        fixture = json.loads((PROJECT_ROOT / "tests" / "fixtures" / "registry_vpc_min.json").read_text())
+        monkeypatch.setattr(rd, "_http_fetch", lambda ns, n, p, v: fixture)
+        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
+        caplog.clear()
+        with caplog.at_level(logging.INFO):
+            result = tfmod_mcp_server.grep_module_docs(
+                "terraform-aws-modules/vpc/aws", "enable_nat_gateway", version="6.6.1"
+            )
+        lines = [r.message for r in caplog.records if r.message.startswith("response_bytes tool=grep_module_docs")]
+        assert len(lines) == 1, "Exactly one response_bytes line must be logged per tool call"
+        expected_bytes = len(result.model_dump_json().encode("utf-8"))
+        assert lines[0] == f"response_bytes tool=grep_module_docs bytes={expected_bytes}"
+
+    def test_flag_on_does_not_change_response_content(self, server_state, monkeypatch):
+        """D2 must never alter what a tool returns -- only whether a log line
+        is emitted alongside it."""
+        monkeypatch.delenv("TFMODSEARCH_LOG_RESPONSE_BYTES", raising=False)
+        off_result = tfmod_mcp_server.get_module("vpc")
+        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
+        on_result = tfmod_mcp_server.get_module("vpc")
+        assert off_result == on_result, "Response content must be identical regardless of the metering flag"

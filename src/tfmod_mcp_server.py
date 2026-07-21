@@ -1284,14 +1284,22 @@ def filter_module_sections(
     footer_lines = [
         "---",
         # Compact honest-limits pointer. The curated doc is a hand-picked
-        # SUBSET; anything requiring completeness/exactness escalates one tier to
-        # the live registry, and resource-creation conditions live in module
-        # source. Keeps the compact→full→source escalation a mechanical decision,
-        # not a guess, without repeating a long paragraph verbatim on every call.
-        "Curated subset. For the COMPLETE inputs/outputs (exact types/defaults, nested "
-        "map(object)/any TYPE/SHAPE) or to confirm a name exists, grep the live doc via "
-        "`grep_module_docs` using the Module ID above. Resource-creation (`count`/`for_each`) "
-        "conditions live in the module source, not here.",
+        # SUBSET; completeness AND name-confirmation both resolve with ONE
+        # offline get_module(sections=["inputs","outputs"]) call (2026-07-21
+        # D1: the old wording routed name-confirmation to grep_module_docs,
+        # contradicting the "Call economy" server instructions and measurably
+        # inviting an extra live round-trip). grep_module_docs stays reserved
+        # for the three cases only IT can serve: a module outside this
+        # catalog, a pinned/older version, or a map(object)/any field's
+        # nested sub-shape. Resource-creation conditions live in module
+        # source. Keeps the compact→full→source escalation a mechanical
+        # decision, not a guess, without repeating a long paragraph verbatim
+        # on every call.
+        "Curated subset. For the COMPLETE inputs/outputs or to confirm a name exists, "
+        'call `get_module` with `sections=["inputs","outputs"]` — one offline call, '
+        "no grep needed. Use `grep_module_docs` only for a module outside this catalog, "
+        "a pinned older version, or a `map(object)`/`any` field's nested TYPE/SHAPE. "
+        "Resource-creation (`count`/`for_each`) conditions live in the module source, not here.",
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -1933,7 +1941,7 @@ def _cap_head_input_table(head_text: str) -> str:
     if dropped <= 0:
         return head_text
 
-    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs"]) for the full table)_\n'
+    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs","outputs"]) for the full interface)_\n'
     new_lines = lines[:row_start] + kept_rows + [pointer_line] + lines[row_end:]
     return "".join(new_lines)
 
@@ -3198,6 +3206,7 @@ def modules_list(detail: str = "compact") -> ModulesListOutput:
     state = ServerStateManager.get()
     result = modules_list_impl(state, detail=detail)
     result.update_notice = _update_notice()
+    _log_response_bytes(state.logger, "modules_list", result)
     return result
 
 
@@ -3306,6 +3315,7 @@ def search_modules(
     state = ServerStateManager.get()
     result = search_modules_impl(query, state, top_k=top_k, expand_top=expand_top)
     result.update_notice = _update_notice()
+    _log_response_bytes(state.logger, "search_modules", result)
     return result
 
 
@@ -3429,7 +3439,9 @@ def get_module(
                (or get_module("<name>//modules/<sub>") for a submodule)
     """
     state = ServerStateManager.get()
-    return get_module_impl(module_identifier, state, sections=sections)
+    result = get_module_impl(module_identifier, state, sections=sections)
+    _log_response_bytes(state.logger, "get_module", result)
+    return result
 
 
 @app.tool(
@@ -3504,9 +3516,13 @@ def grep_module_docs(
     over it — returning only matching lines with surrounding context rather than
     the whole (often 10k+ token) document.
 
-    Use this not only to confirm resource/variable NAMES but to verify the exact
-    TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure)
-    before writing it — the curated doc's table often abbreviates these.
+    Use this to verify the exact TYPE/SHAPE of a `map(object)`/`any`-typed input
+    (its nested field structure) before writing it — the curated doc's table
+    often abbreviates these — or to confirm resource/variable NAMES for a
+    module or version outside the curated catalog's reach (not in this catalog,
+    or pinned to an older version). For a catalog module's current interface,
+    `get_module(sections=["inputs","outputs"])` is the authoritative, offline
+    call — no re-confirmation via grep needed.
 
     Args:
         module_id: Terraform Registry coordinates "namespace/name/provider".
@@ -3562,6 +3578,7 @@ def grep_module_docs(
         ttl_hours=ttl_hours,
     )
     result.update_notice = _update_notice()
+    _log_response_bytes(state.logger, "grep_module_docs", result)
     return result
 
 
@@ -3618,6 +3635,46 @@ def _update_notice() -> str | None:
     if state["update_available"]:
         return _UPDATE_NOTICE_TEMPLATE.format(latest=state["latest_version"], current=_SERVER_VERSION)
     return None
+
+
+# D2: opt-in per-tool-call response-size metering (observability only -- see
+# evals/specs/2026-07-21-d1-d2-signage-bytes-design.md). Gated on
+# TFMODSEARCH_LOG_RESPONSE_BYTES so the default (unset/falsy) stays
+# byte-identical to pre-D2 behavior: no env lookup result changes control
+# flow, nothing is serialized twice, nothing is logged. Reuses the same
+# falsy-value set as TFMODSEARCH_UPDATE_CHECK for a consistent env-flag
+# convention across the server.
+_RESPONSE_BYTES_ENV = "TFMODSEARCH_LOG_RESPONSE_BYTES"
+
+
+def _response_bytes_logging_enabled(env: Mapping[str, str]) -> bool:
+    """Whether D2 response-byte metering is on. Unset/falsy = OFF (default)."""
+    return env.get(_RESPONSE_BYTES_ENV, "").strip().lower() not in _UPDATE_CHECK_FALSY
+
+
+def _log_response_bytes(logger: logging.Logger | None, tool_name: str, response: Any) -> None:
+    """Log one INFO line 'response_bytes tool=<name> bytes=<N>', N being the
+    UTF-8 byte length of `response` serialized the way it goes on the wire:
+    pydantic response models (SearchOutput/ModulesListOutput/GrepOutput) via
+    `model_dump_json()` (which already applies UpdateNoticeMixin's
+    None-field-dropping serializer, matching what FastMCP actually sends);
+    get_module's plain string response is measured directly.
+
+    True no-op when TFMODSEARCH_LOG_RESPONSE_BYTES is unset/falsy: returns
+    before any serialization or logging happens, so response content,
+    ordering, and timing are unaffected.
+    """
+    if not _response_bytes_logging_enabled(os.environ):
+        return
+    if logger is None:
+        return
+    if isinstance(response, str):
+        serialized = response
+    elif isinstance(response, BaseModel):
+        serialized = response.model_dump_json()
+    else:
+        serialized = json.dumps(response)
+    logger.info(f"response_bytes tool={tool_name} bytes={len(serialized.encode('utf-8'))}")
 
 
 def _start_update_checker_thread() -> threading.Thread:
