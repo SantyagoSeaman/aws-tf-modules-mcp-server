@@ -17,7 +17,7 @@
 # runtime network call is still baked in at build time: the ONNX model + tokenizer, the NLTK
 # punkt_tab tokenizer, the prebuilt search index, and the module docs corpus (the last two are
 # already force-included in the wheel). Verify with `docker run --network none -i --rm <image>
-# --warmup`. There are no networked TOOLS (grep_module_docs was removed in 0.27.0); the only
+# --warmup`. There are no networked TOOLS (grep_module_docs was removed in 0.25.0); the only
 # network use anywhere in the server is the opt-in daily PyPI update check in HTTP mode.
 
 # --- builder ---
@@ -102,7 +102,7 @@ COPY --from=builder --chown=app:app /opt/nltk_data /opt/nltk_data
 # mounted over it (docker-compose.yml) initializes with this ownership instead of
 # root:root -- Docker copies content AND ownership from the image only when the
 # volume is empty on first mount. Historically backed grep_module_docs's registry-doc
-# cache (found live on 0.19.0); that tool was removed in 0.27.0, so this directory is
+# cache (found live on 0.19.0); that tool was removed in 0.25.0, so this directory is
 # currently unused, but is kept app-owned for forward compatibility with any future
 # on-disk cache.
 RUN mkdir -p /usr/local/lib/python3.12/site-packages/nltk_data /usr/local/lib/python3.12/logs \

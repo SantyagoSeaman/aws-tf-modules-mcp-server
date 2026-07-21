@@ -149,7 +149,7 @@ class TestSkills:
 
     @pytest.mark.parametrize("skill_name", sorted(EXPECTED_SKILLS - USER_INVOKED_SKILLS))
     def test_model_invoked_skills_do_not_reference_grep_tool(self, skill_name):
-        """grep_module_docs was removed outright in 0.27.0 (D7). Regression
+        """grep_module_docs was removed outright in 0.25.0 (D7). Regression
         guard: no skill should reference a tool this server no longer ships."""
         _, body = _parse_frontmatter(SKILLS_DIR / skill_name / "SKILL.md")
         assert "grep_module_docs" not in body, f"{skill_name} must not reference removed grep_module_docs tool"
@@ -201,7 +201,7 @@ class TestAgents:
 
     @pytest.mark.parametrize("agent_name", sorted(EXPECTED_AGENTS))
     def test_agents_do_not_reference_grep_tool(self, agent_name):
-        """grep_module_docs was removed outright in 0.27.0 (D7). Regression
+        """grep_module_docs was removed outright in 0.25.0 (D7). Regression
         guard: no subagent should reference a tool this server no longer
         ships."""
         _, body = _parse_frontmatter(self.AGENTS_DIR / f"{agent_name}.md")
