@@ -2597,6 +2597,64 @@ def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str
     return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
 
 
+def _content_with_complete_input_tables_ex(
+    content: str, *, only_scopes: frozenset[str] | None = None
+) -> tuple[str, frozenset[str]]:
+    """
+    Core implementation of `_content_with_complete_input_tables` that also
+    reports WHICH overlay scopes were ACTUALLY superseded (a table was
+    located immediately under the resolved heading and replaced) -- distinct
+    from merely "resolvable" (the heading title matched, e.g. a bare "Main
+    Input Variables" H2, but no single pipe table sits immediately under it,
+    e.g. root inputs grouped under several `### <Category>` H3 subsections
+    instead -- the D7 Change A2 grouped-H3 completeness gap). Used by
+    `get_module_impl` to decide whether the root scope still needs its
+    complete table appended separately when the inline supersede silently
+    could not fire. `_content_with_complete_input_tables` below is a thin
+    wrapper that drops the second value, preserving its existing contract for
+    every other caller.
+
+    Returns `(content, frozenset())` unchanged when the module has no
+    committed overlay, the overlay carries no `all_inputs`, or nothing was
+    actually superseded.
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content, frozenset()
+    all_inputs = overlay.get("all_inputs")
+    if not isinstance(all_inputs, dict) or not all_inputs:
+        return content, frozenset()
+    candidate_scopes = frozenset(all_inputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content, frozenset()
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content, frozenset()
+
+    superseded: set[str] = set()
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        if scope is None:
+            new_blocks.append(block)
+            continue
+        items = all_inputs.get(scope)
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_input_table(block, items)
+        if new_block != block:
+            superseded.add(scope)
+        new_blocks.append(new_block)
+
+    if not superseded:
+        return content, frozenset()
+    return preamble + "".join(new_blocks), frozenset(superseded)
+
+
 def _content_with_complete_input_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
     """
     Return `content` with every "Main Input Variables" table -- the H2 split-
@@ -2622,39 +2680,11 @@ def _content_with_complete_input_tables(content: str, *, only_scopes: frozenset[
     The default orientation head is NEVER passed through this function -- it
     stays a cheap, unchanged first look; only an explicit sections=["inputs"]
     request (or the full-document escape hatch) gets the complete table.
+
+    See `_content_with_complete_input_tables_ex` for a variant that also
+    reports which scopes were actually superseded (vs. merely resolvable).
     """
-    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
-    if not overlay:
-        return content
-    all_inputs = overlay.get("all_inputs")
-    if not isinstance(all_inputs, dict) or not all_inputs:
-        return content
-    candidate_scopes = frozenset(all_inputs)
-    if only_scopes is not None:
-        candidate_scopes = candidate_scopes & only_scopes
-        if not candidate_scopes:
-            return content
-
-    preamble, sections = _split_h2_sections(content)
-    if not sections:
-        return content
-
-    changed = False
-    new_blocks: list[str] = []
-    for title, block in sections:
-        scope = _scope_for_h2_title(title, candidate_scopes)
-        items = all_inputs.get(scope) if scope else None
-        if not items:
-            new_blocks.append(block)
-            continue
-        new_block = _supersede_block_input_table(block, items)
-        if new_block != block:
-            changed = True
-        new_blocks.append(new_block)
-
-    if not changed:
-        return content
-    return preamble + "".join(new_blocks)
+    return _content_with_complete_input_tables_ex(content, only_scopes=only_scopes)[0]
 
 
 # --------------------------------------------------------------------------- #
@@ -2725,6 +2755,52 @@ def _sections_request_outputs(sections: list[str]) -> bool:
     return any(entry.strip().lower() in _OUTPUT_TABLE_SECTION_KEYS for entry in sections)
 
 
+def _content_with_complete_output_tables_ex(
+    content: str, *, only_scopes: frozenset[str] | None = None
+) -> tuple[str, frozenset[str]]:
+    """
+    Outputs mirror of `_content_with_complete_input_tables_ex` -- same
+    contract, reports which overlay scopes were ACTUALLY superseded (not just
+    resolvable). `_content_with_complete_output_tables` below is a thin
+    wrapper that drops the second value.
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content, frozenset()
+    all_outputs = overlay.get("all_outputs")
+    if not isinstance(all_outputs, dict) or not all_outputs:
+        return content, frozenset()
+    candidate_scopes = frozenset(all_outputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content, frozenset()
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content, frozenset()
+
+    superseded: set[str] = set()
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        if scope is None:
+            new_blocks.append(block)
+            continue
+        items = all_outputs.get(scope)
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_output_table(block, items)
+        if new_block != block:
+            superseded.add(scope)
+        new_blocks.append(new_block)
+
+    if not superseded:
+        return content, frozenset()
+    return preamble + "".join(new_blocks), frozenset(superseded)
+
+
 def _content_with_complete_output_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
     """
     Return `content` with every "Main Outputs"/"Key Outputs" table -- the H2
@@ -2744,39 +2820,87 @@ def _content_with_complete_output_tables(content: str, *, only_scopes: frozenset
     outputs are not part of the head at all (only Key Features/Main Use
     Cases/root inputs are), so this is only reached by an explicit
     sections=["outputs"] request (or the full-document escape hatch).
+
+    See `_content_with_complete_output_tables_ex` for a variant that also
+    reports which scopes were actually superseded (vs. merely resolvable).
     """
-    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    return _content_with_complete_output_tables_ex(content, only_scopes=only_scopes)[0]
+
+
+# D7 Change A2 (2026-07-21 grouped-H3 completeness fix): heading text for the
+# appended complete-root-table fallback -- distinct from the curated
+# "## Main Input Variables"/"## Main Outputs" headings so it is obvious which
+# table is the authoritative complete one when both are present in a
+# response.
+_MISSING_ROOT_INPUTS_HEADING = "## Complete Root Inputs"
+_MISSING_ROOT_OUTPUTS_HEADING = "## Complete Root Outputs"
+
+
+def _append_missing_root_complete_tables(
+    rendered: str,
+    overlay: dict[str, Any] | None,
+    *,
+    requests_inputs: bool,
+    input_superseded: bool,
+    requests_outputs: bool,
+    output_superseded: bool,
+) -> str:
+    """
+    D7 Change A2 (2026-07-21 grouped-H3 completeness fix): guarantee the
+    module's COMPLETE root inputs/outputs list is present in `rendered`
+    whenever the overlay actually has it, even when the inline table-
+    supersede (`_content_with_complete_input_tables_ex`/`_content_with_
+    complete_output_tables_ex`) could not find a single replaceable table
+    under the root heading to swap in place. That gap affects roughly a
+    dozen catalog docs (e.g. datadog-forwarders, autoscaling, eventbridge,
+    eks-pod-identity, emr, appsync, batch, msk-kafka-cluster, atlantis, efs)
+    where root inputs and/or outputs sit under several `### <Category>` H3
+    subsections instead of one table directly beneath the inputs/outputs H2.
+    With `grep_module_docs` removed (D7 Change B), those docs had no
+    fallback left for confirming a variable exists, and were silently
+    serving the curated (possibly PARTIAL) subset under a "COMPLETE
+    inputs/outputs" footer claim -- a false claim.
+
+    Never double-serves: when the inline supersede DID fire for root
+    (`input_superseded`/`output_superseded` True), nothing is appended for
+    that view. Never fabricates completeness either: when the overlay's own
+    root scope is empty or absent (e.g. sso, whose root carries zero inputs
+    and zero outputs -- every field belongs to a submodule), nothing is
+    appended and `rendered` is returned unchanged -- no crash, no empty
+    "complete" table.
+
+    Appended tables reuse `_build_all_inputs_table`/`_build_all_outputs_
+    table`, so they respect the same `_COMPLETE_TABLE_BYTE_CAP` truncation
+    the inline supersede uses.
+    """
     if not overlay:
-        return content
-    all_outputs = overlay.get("all_outputs")
-    if not isinstance(all_outputs, dict) or not all_outputs:
-        return content
-    candidate_scopes = frozenset(all_outputs)
-    if only_scopes is not None:
-        candidate_scopes = candidate_scopes & only_scopes
-        if not candidate_scopes:
-            return content
-
-    preamble, sections = _split_h2_sections(content)
-    if not sections:
-        return content
-
-    changed = False
-    new_blocks: list[str] = []
-    for title, block in sections:
-        scope = _scope_for_h2_title(title, candidate_scopes)
-        items = all_outputs.get(scope) if scope else None
-        if not items:
-            new_blocks.append(block)
-            continue
-        new_block = _supersede_block_output_table(block, items)
-        if new_block != block:
-            changed = True
-        new_blocks.append(new_block)
-
-    if not changed:
-        return content
-    return preamble + "".join(new_blocks)
+        return rendered
+    pieces: list[str] = []
+    if requests_inputs and not input_superseded:
+        root_inputs = (overlay.get("all_inputs") or {}).get("root")
+        if root_inputs:
+            table = _build_all_inputs_table(root_inputs, {})
+            pieces.append(
+                f"{_MISSING_ROOT_INPUTS_HEADING}\n\n"
+                "The curated table above did not carry every root-scope input (inputs are "
+                "grouped under multiple subsections in this doc) -- this is the COMPLETE, "
+                "registry-declared root-scope input list, appended in full:\n\n"
+                f"{table}"
+            )
+    if requests_outputs and not output_superseded:
+        root_outputs = (overlay.get("all_outputs") or {}).get("root")
+        if root_outputs:
+            table = _build_all_outputs_table(root_outputs, {})
+            pieces.append(
+                f"{_MISSING_ROOT_OUTPUTS_HEADING}\n\n"
+                "The curated table above did not carry every root-scope output (outputs are "
+                "grouped under multiple subsections in this doc) -- this is the COMPLETE, "
+                "registry-declared root-scope output list, appended in full:\n\n"
+                f"{table}"
+            )
+    if not pieces:
+        return rendered
+    return _insert_before_footer(rendered, "\n\n".join(pieces), is_filtered=True)
 
 
 def orientation_head(text: str, version_override: str | None = None) -> str:
@@ -2964,30 +3088,62 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # collection doc with no root section at all (cloudwatch, fsx, iam,
         # network-firewall today) has no root content to scope to, so the
         # interface-key fallback stays free to walk every submodule bundle,
-        # unchanged (the pre-existing BUG-1 fix this must not regress).
+        # unchanged (the pre-existing BUG-1 fix this must not regress). Of
+        # these four, network-firewall is the one exception with genuine
+        # root-level overlay data despite the doc having no root heading at
+        # all -- the unconditional _append_missing_root_complete_tables call
+        # below (D7 Change A2) covers it too; cloudwatch/fsx/iam have an
+        # empty overlay root scope, so that call is a no-op for them.
         requests_inputs = _sections_request_inputs(sections)
         requests_outputs = _sections_request_outputs(sections)
         restrict_to_root = (requests_inputs or requests_outputs) and _doc_has_resolvable_root_bundle(content)
         scope_filter = frozenset({"root"}) if restrict_to_root else None
 
-        working_content = (
-            _content_with_complete_input_tables(content, only_scopes=scope_filter) if requests_inputs else content
-        )
-        working_content = (
-            _content_with_complete_output_tables(working_content, only_scopes=scope_filter)
-            if requests_outputs
-            else working_content
-        )
+        input_superseded_scopes: frozenset[str] = frozenset()
+        output_superseded_scopes: frozenset[str] = frozenset()
+        working_content = content
+        if requests_inputs:
+            working_content, input_superseded_scopes = _content_with_complete_input_tables_ex(
+                working_content, only_scopes=scope_filter
+            )
+        if requests_outputs:
+            working_content, output_superseded_scopes = _content_with_complete_output_tables_ex(
+                working_content, only_scopes=scope_filter
+            )
         interface_scope = "root" if restrict_to_root else "all"
         rendered = filter_module_sections(working_content, sections, interface_scope=interface_scope)
         if requests_inputs:
             rendered = _inline_any_overlay_input_cells(rendered, content)
             rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
-        if restrict_to_root:
+        if requests_inputs or requests_outputs:
             overlay = _load_any_overlay(_resolve_overlay_module_id(content))
-            menu = _submodule_interface_menu(content, overlay)
-            if menu:
-                rendered = _insert_before_footer(rendered, menu, is_filtered=True)
+            # D7 Change A2 (2026-07-21 grouped-H3 completeness fix): the
+            # inline supersede above only replaces a table it can actually
+            # locate immediately under a resolved root heading. On docs where
+            # root inputs/outputs are grouped under multiple
+            # `### <Category>` H3 subsections instead of one table (or --
+            # network-firewall -- there is no resolvable root heading at all
+            # even though the module genuinely has root-level inputs), that
+            # inline supersede silently no-ops. Guarantee completeness by
+            # appending the complete root table whenever the overlay HAS root
+            # data but the inline supersede did not fire for root -- checked
+            # unconditionally, not just under `restrict_to_root`, so a
+            # rootless-by-heading-shape doc with real root overlay data (only
+            # network-firewall today) is covered too. A pure no-op for a
+            # genuinely rootless module (cloudwatch, fsx, iam), whose overlay
+            # root scope is empty.
+            rendered = _append_missing_root_complete_tables(
+                rendered,
+                overlay,
+                requests_inputs=requests_inputs,
+                input_superseded="root" in input_superseded_scopes,
+                requests_outputs=requests_outputs,
+                output_superseded="root" in output_superseded_scopes,
+            )
+            if restrict_to_root:
+                menu = _submodule_interface_menu(content, overlay)
+                if menu:
+                    rendered = _insert_before_footer(rendered, menu, is_filtered=True)
         return rendered
     return orientation_head(content)
 

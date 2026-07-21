@@ -1809,6 +1809,122 @@ class TestD7ChangeARootScopeDefault:
         assert "more rows omitted" not in out
 
 
+class TestD7ChangeA2GroupedH3Completeness:
+    """
+    D7 Change A2 (2026-07-21, release-blocker fix). Root cause: on modules
+    whose curated root inputs/outputs are grouped under multiple
+    `### <Category>` H3 subsections instead of sitting in one table directly
+    under the inputs/outputs H2, the D7 Change A inline complete-table
+    supersede could not locate a single replaceable table and silently
+    no-opped -- serving the curated (possibly PARTIAL) subset under a
+    "COMPLETE inputs/outputs" footer claim. With grep_module_docs removed (D7
+    Change B), an agent confirming a variable name on one of these modules
+    got a false "does not exist", with no fallback left. The fix appends the
+    complete root table (from the same committed overlay, same byte cap)
+    whenever the overlay has root data but the inline supersede did not
+    actually fire for root -- detected explicitly via
+    `_content_with_complete_input_tables_ex`/`_content_with_complete_output_
+    tables_ex` reporting which scopes were superseded, not re-derived by
+    guessing at heading shape a second time.
+
+    Uses REAL committed docs/overlays (not fixtures) -- these are actual
+    catalog gaps, not synthetic ones.
+    """
+
+    def test_grouped_h3_module_gains_previously_absent_root_input(self, server_state):
+        """eventbridge groups its root inputs under 5 H3 subsections (Core
+        Toggles, Bus/Rules/Targets, Scheduler & Pipes, ...);
+        `append_rule_postfix` had NO row at all anywhere in the curated doc.
+        It must now be present."""
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        assert "`append_rule_postfix`" in out
+
+    def test_grouped_h3_module_appends_a_labeled_complete_table(self, server_state):
+        """The fallback is clearly labeled as its own section, not silently
+        blended into the curated table."""
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        assert "## Complete Root Inputs" in out
+
+    def test_grouped_h3_module_output_side_also_completes(self, server_state):
+        """datadog-forwarders groups its root outputs under 4 H3
+        subsections -- the outputs view gets the mirrored appended-table
+        treatment, under its own labeled heading."""
+        out = get_module_impl("datadog-forwarders", server_state, sections=["outputs"])
+        assert "## Complete Root Outputs" in out
+
+    def test_already_superseded_module_gets_no_duplicate_table(self, server_state):
+        """eks supersedes correctly inline (its root table sits directly
+        under "### Main Input Variables" inside the "## Main Module: EKS
+        Cluster" bundle) -- the fallback must not also append a second,
+        duplicate complete table for the same (already-complete) scope."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert "## Complete Root Inputs" not in out
+
+    def test_split_scheme_module_gets_no_duplicate_table(self, server_state):
+        """rds (split-scheme doc: a single root table sits directly under
+        its own top-level "## Main Input Variables" H2) also supersedes
+        inline -- no duplicate appended table either."""
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert "## Complete Root Inputs" not in out
+
+    def test_sso_empty_root_scope_does_not_crash_or_emit_empty_table(self, server_state):
+        """sso's overlay has a "root" key present in both all_inputs and
+        all_outputs, but with ZERO entries (every real field belongs to one
+        of its two submodules) -- must not crash, and must not claim
+        completeness by appending an empty table."""
+        out = get_module_impl("sso", server_state, sections=["inputs", "outputs"])
+        assert "## Complete Root Inputs" not in out
+        assert "## Complete Root Outputs" not in out
+
+    def test_appended_table_respects_byte_cap(self, server_state, monkeypatch):
+        """Synthetic oversized case: with the byte cap lowered far below the
+        real table's size, the APPENDED complete table truncates with an
+        explicit pointer instead of emitting the whole (much larger) table --
+        same guarantee `TestD7ChangeARootScopeDefault` already exercises for
+        the inline-superseded case."""
+        monkeypatch.setattr(tfmod_mcp_server, "_COMPLETE_TABLE_BYTE_CAP", 2000)
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        assert "## Complete Root Inputs" in out
+        assert "more rows omitted" in out
+        assert f"{tfmod_mcp_server._COMPLETE_TABLE_BYTE_CAP}-byte safety cap" in out
+
+    def test_full_catalog_sweep_root_interface_is_complete(self, server_state):
+        """SWEEP VERIFICATION: render sections=["inputs","outputs"] (or
+        whichever half applies) for every one of the 63 catalog modules;
+        for each whose overlay has a non-empty root-scope input and/or
+        output list, every one of those names must appear in the response,
+        and the response must stay well clear of the byte cap -- the
+        release-blocker regression this fix exists to close, checked across
+        the whole catalog rather than the handful of modules measured by
+        hand."""
+        cap = tfmod_mcp_server._COMPLETE_TABLE_BYTE_CAP
+        short: list[tuple[str, list[str]]] = []
+        overflow: list[tuple[str, int]] = []
+        checked = 0
+        for doc in server_state.index.docs:
+            content = get_module_documentation(doc.path, server_state)
+            overlay = tfmod_mcp_server._load_any_overlay(tfmod_mcp_server._resolve_overlay_module_id(content))
+            if not overlay:
+                continue
+            root_inputs = (overlay.get("all_inputs") or {}).get("root") or []
+            root_outputs = (overlay.get("all_outputs") or {}).get("root") or []
+            if not root_inputs and not root_outputs:
+                continue
+            checked += 1
+            sections = [key for key, items in (("inputs", root_inputs), ("outputs", root_outputs)) if items]
+            out = get_module_impl(doc.path, server_state, sections=sections)
+            missing = [i["name"] for i in root_inputs if f"`{i['name']}`" not in out]
+            missing += [o["name"] for o in root_outputs if f"`{o['name']}`" not in out]
+            if missing:
+                short.append((doc.path, missing))
+            byte_len = len(out.encode("utf-8"))
+            if byte_len > cap * 4:
+                overflow.append((doc.path, byte_len))
+        assert checked >= 55, "sanity check: the sweep must have actually walked the real catalog"
+        assert not short, f"modules still missing root interface rows: {short}"
+        assert not overflow, f"modules whose response overflowed a generous byte multiple of the cap: {overflow}"
+
+
 class TestCapCompleteTableRowsUnit:
     """Unit-level: _cap_complete_table_rows, the shared truncation helper
     behind both _build_all_inputs_table and _build_all_outputs_table."""
