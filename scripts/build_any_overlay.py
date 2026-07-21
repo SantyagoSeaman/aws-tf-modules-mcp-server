@@ -4,19 +4,32 @@ Build committed any-var overlay JSON files (`model/any_overlay/`) from catalog
 module source.
 
 Design: evals/specs/2026-07-20-consolidated-interface-any-overlay-design.md
-("examples-primary"). For each catalog module that has `type = any` inputs,
-fetches its source at the doc's pinned Latest Version (network confined to
-tfmod_registry_docs.fetch_module_source), runs the pure/offline extractors in
-tfmod_any_examples.py, and writes one deterministic JSON file per module:
+("examples-primary"), extended by evals/specs/2026-07-21-complete-interface-
+one-call-design.md ("complete-interface-in-one-call"). For EVERY catalog
+module, fetches the registry detail at the doc's pinned Latest Version
+(network confined to tfmod_registry_docs.fetch_module_detail/
+fetch_module_source) and writes one deterministic JSON file per module:
 
     { module_id, built_from_version,
+      all_inputs: { "<scope>": [ {name, type, required, default, description} ] },
+      all_outputs: { "<scope>": [ {name, description} ] },
       vars: { "<scope>::<var>": { examples, field_names, provenance, note? } } }
 
-Modules with zero `type = any` variables get no overlay file at all - the
-existing render path already serves them unchanged. A module whose source
-cannot be fetched (network error, no matching GitHub tag, etc.) is skipped the
-same way: no overlay, so `get_module` keeps serving the honest `any` it does
-today.
+`all_inputs`/`all_outputs` (the complete root+submodule input/output lists)
+are attached for every module - this is the primary artifact now, giving
+`get_module` a complete interface table for all 63 catalog modules, not just
+the ones with `type = any` inputs. `vars` (any-typed input examples/observed
+field names) is attached ADDITIONALLY, only for modules that have at least
+one `type = any` input AND whose GitHub source could be fetched and
+extracted; a module with zero any-vars gets no `vars` key at all.
+
+The two halves fail independently: a module whose GitHub source cannot be
+resolved (network error, no matching GitHub tag, non-GitHub source, etc.)
+still gets an overlay carrying all_inputs/all_outputs, just no `vars`. Only a
+module for which NEITHER half could be built (e.g. total network failure, or
+an unresolvable module_id) gets no overlay file at all - `get_module` then
+keeps serving the honest curated doc exactly as it did before this feature
+existed.
 
 This script only orchestrates; it never opens a socket itself - all HTTP goes
 through the injectable `fetch` callable threaded down into
@@ -249,38 +262,52 @@ def build_module_overlay(
     workdir: str | Path | None = None,
 ) -> dict | None:
     """
-    Fetch `module_id`@`version` source (real GitHub network unless `fetch` is
-    injected) and build its overlay. Returns None on fetch failure -
-    unresolvable module_id, non-GitHub source, network error, no matching tag
-    (see tfmod_registry_docs.fetch_module_source) - or when the module has
-    zero any-vars. `workdir`, when given, is used as the extraction directory
-    directly (and NOT cleaned up by this function); otherwise a temp directory
-    is created and removed automatically.
+    Build the full committed overlay for `module_id`@`version` (real network
+    unless `fetch` is injected). `workdir`, when given, is used as the source
+    extraction directory directly (and NOT cleaned up by this function);
+    otherwise a temp directory is created and removed automatically.
 
-    When an overlay is built, its complete `all_inputs`/`all_outputs` (every
-    root+submodule input/output, not just any-typed ones) is also attached
-    from a second registry detail fetch (see `_attach_all_interface`) -
-    best-effort, never turning a successful vars-only build into a failure.
+    Two independent halves, in this order:
+
+    1. `vars` (any-typed input examples/observed field names): fetches the
+       module's GitHub source (`fetch_module_source`) and, if that succeeds,
+       runs the pure/offline extractors via `build_overlay_from_source`. Set
+       only when the source fetch succeeds AND the module has at least one
+       `type = any` input.
+    2. `all_inputs`/`all_outputs` (every root+submodule input/output, not
+       just any-typed ones): a registry detail fetch, always attempted
+       regardless of whether step 1 succeeded (see `_attach_all_interface`).
+
+    A failure in either half never fails the other - a module whose GitHub
+    source cannot be resolved (network error, non-GitHub source, no matching
+    tag) still gets all_inputs/all_outputs with no `vars` key; a transient
+    failure on the second (all_inputs/all_outputs) detail fetch leaves `vars`
+    intact with neither key set. Returns None only when NEITHER half produced
+    anything - nothing at all to write; the caller then keeps serving the
+    honest curated doc exactly as before this feature existed.
     """
+    overlay = {"module_id": module_id, "built_from_version": version}
 
-    def _finish(source_dir: Path) -> dict | None:
-        overlay = build_overlay_from_source(module_id, version, source_dir)
-        if overlay is None:
-            return None
-        _attach_all_interface(overlay, module_id, version, fetch=fetch)
-        return overlay
+    def _attach_vars(source_dir: Path) -> None:
+        vars_overlay = build_overlay_from_source(module_id, version, source_dir)
+        if vars_overlay is not None:
+            overlay["vars"] = vars_overlay["vars"]
 
     if workdir is not None:
         source_dir = fetch_module_source(module_id, version, Path(workdir), fetch=fetch)
-        if source_dir is None:
-            return None
-        return _finish(source_dir)
+        if source_dir is not None:
+            _attach_vars(source_dir)
+    else:
+        with tempfile.TemporaryDirectory(prefix="tfmod_any_overlay_") as tmp:
+            source_dir = fetch_module_source(module_id, version, Path(tmp), fetch=fetch)
+            if source_dir is not None:
+                _attach_vars(source_dir)
 
-    with tempfile.TemporaryDirectory(prefix="tfmod_any_overlay_") as tmp:
-        source_dir = fetch_module_source(module_id, version, Path(tmp), fetch=fetch)
-        if source_dir is None:
-            return None
-        return _finish(source_dir)
+    _attach_all_interface(overlay, module_id, version, fetch=fetch)
+
+    if "vars" not in overlay and "all_inputs" not in overlay:
+        return None
+    return overlay
 
 
 # --------------------------------------------------------------------------- #
@@ -321,15 +348,16 @@ def _sum_coverage(reports: list[dict]) -> dict[str, int]:
 
 def _print_summary(
     written: list[str],
-    no_any_vars: list[str],
+    no_vars: list[str],
     fetch_failed: list[str],
     coverage_totals: dict[str, int],
     out=sys.stdout,
 ) -> None:
+    with_vars = len(written) - len(no_vars)
     print(
-        f"any-overlay build: {len(written)} overlay(s) written, "
-        f"{len(no_any_vars)} module(s) with zero any-vars skipped, "
-        f"{len(fetch_failed)} module(s) skipped (source fetch failed)",
+        f"any-overlay build: {len(written)} overlay(s) written "
+        f"({with_vars} with vars, {len(no_vars)} without vars), "
+        f"{len(fetch_failed)} module(s) skipped (both source and registry detail fetch failed)",
         file=out,
     )
     if fetch_failed:
@@ -389,30 +417,42 @@ def main(argv: list[str] | None = None) -> int:
             targets.append((module_id, catalog[module_id]))
 
     written: list[str] = []
-    no_any_vars: list[str] = []
+    no_vars: list[str] = []
     fetch_failed: list[str] = []
     reports: list[dict] = []
 
     for module_id, version in targets:
         with tempfile.TemporaryDirectory(prefix="tfmod_any_overlay_") as tmp:
             source_dir = fetch_module_source(module_id, version, Path(tmp))
-            if source_dir is None:
-                fetch_failed.append(module_id)
-                logger.warning(f"{module_id}@{version}: source fetch failed; skipping (served as honest any)")
-                continue
+            overlay = {"module_id": module_id, "built_from_version": version}
 
-            reports.append(coverage_report(source_dir))
-            overlay = build_overlay_from_source(module_id, version, source_dir)
-            if overlay is None:
-                no_any_vars.append(module_id)
-                continue
+            if source_dir is None:
+                logger.warning(f"{module_id}@{version}: source fetch failed; vars omitted for this module")
+            else:
+                reports.append(coverage_report(source_dir))
+                vars_overlay = build_overlay_from_source(module_id, version, source_dir)
+                if vars_overlay is not None:
+                    overlay["vars"] = vars_overlay["vars"]
 
             _attach_all_interface(overlay, module_id, version, fetch=None)
+
+            if "vars" not in overlay and "all_inputs" not in overlay:
+                fetch_failed.append(module_id)
+                logger.warning(
+                    f"{module_id}@{version}: source and registry detail fetch both failed; "
+                    "skipping (no artifact written, served as honest curated doc)"
+                )
+                continue
+
+            if "vars" not in overlay:
+                no_vars.append(module_id)
+
             path = write_overlay(overlay, args.out_dir)
             written.append(module_id)
-            logger.info(f"{module_id}@{version}: wrote {path} ({len(overlay['vars'])} any-var(s))")
+            var_count = len(overlay.get("vars", {}))
+            logger.info(f"{module_id}@{version}: wrote {path} ({var_count} any-var(s))")
 
-    _print_summary(written, no_any_vars, fetch_failed, _sum_coverage(reports))
+    _print_summary(written, no_vars, fetch_failed, _sum_coverage(reports))
     return 0
 
 

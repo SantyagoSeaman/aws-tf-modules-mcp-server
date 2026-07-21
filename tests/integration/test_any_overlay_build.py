@@ -176,7 +176,7 @@ def test_write_overlay_filename_from_module_id(tmp_path):
 def test_discover_catalog_modules_finds_real_catalog():
     catalog = bao.discover_catalog_modules(REPO_ROOT / "modules")
     catalog_dict = dict(catalog)
-    assert catalog_dict.get(S3_ID) == S3_VERSION
+    assert catalog_dict.get(S3_ID) == "5.14.1"
     assert len(catalog) == 63  # matches the documented catalog size
     assert catalog == sorted(catalog)  # deterministic ordering
 
@@ -397,6 +397,102 @@ def test_build_module_overlay_degrades_gracefully_when_detail_fetch_fails_after_
     assert "root::log_delivery_configuration" in overlay["vars"]
     assert "all_inputs" not in overlay
     assert "all_outputs" not in overlay
+
+
+# --------------------------------------------------------------------------- #
+# Full-catalog extension (2026-07-21): every one of the 63 catalog modules
+# gets an overlay now, not just the ones with `type = any` inputs. The two
+# halves (vars via GitHub source, all_inputs/all_outputs via registry detail)
+# must fail independently.
+# --------------------------------------------------------------------------- #
+
+
+def test_build_module_overlay_zero_any_vars_still_gets_all_inputs(tmp_path):
+    """A module with zero `type = any` variables (the common case, 41 of 63
+    catalog modules) must still get all_inputs/all_outputs from the registry
+    detail -- with no `vars` key at all."""
+    plain_src = tmp_path / "plain_src"
+    plain_src.mkdir()
+    (plain_src / "variables.tf").write_text('variable "name" {\n  type = string\n}\n')
+
+    module_id = "someorg/plain/aws"
+    version = "1.0.0"
+    archive = _tar_gz_of_tf_files(plain_src, "terraform-aws-plain-1.0.0")
+    detail_url = f"https://registry.terraform.io/v1/modules/{module_id}/{version}"
+    v_tag_url = "https://codeload.github.com/someorg/terraform-aws-plain/tar.gz/refs/tags/v1.0.0"
+    detail_payload = {
+        "source": "https://github.com/someorg/terraform-aws-plain",
+        "root": {
+            "inputs": [
+                {"name": "name", "type": "string", "required": True, "default": "", "description": "Name"},
+            ],
+            "outputs": [{"name": "name_out", "description": "Name output"}],
+        },
+        "submodules": [],
+    }
+    detail_bytes = json.dumps(detail_payload).encode()
+
+    def fetch(url):
+        if url == detail_url:
+            return detail_bytes
+        if url == v_tag_url:
+            return archive
+        raise RuntimeError(f"unexpected url in test fetch: {url}")
+
+    overlay = bao.build_module_overlay(module_id, version, fetch=fetch, workdir=tmp_path / "work")
+
+    assert overlay is not None
+    assert overlay["module_id"] == module_id
+    assert overlay["built_from_version"] == version
+    assert overlay["all_inputs"]["root"] == [
+        {"name": "name", "type": "string", "required": True, "default": "", "description": "Name"}
+    ]
+    assert overlay["all_outputs"]["root"] == [{"name": "name_out", "description": "Name output"}]
+    assert "vars" not in overlay
+
+
+def test_build_module_overlay_source_fetch_fails_still_gets_all_inputs(tmp_path):
+    """The GitHub source cannot be resolved (a non-GitHub `source` field, so
+    `fetch_module_source` fails outright) but the registry detail (all_inputs/
+    all_outputs) still succeeds -- the module still gets an overlay, just
+    without vars. Proves the two halves are decoupled failures."""
+    module_id = "someorg/nogithub/aws"
+    version = "1.0.0"
+    detail_url = f"https://registry.terraform.io/v1/modules/{module_id}/{version}"
+    detail_payload = {
+        "source": "https://gitlab.com/someorg/terraform-nogithub",
+        "root": {
+            "inputs": [
+                {"name": "x", "type": "string", "required": False, "default": '"y"', "description": "X"},
+            ],
+            "outputs": [],
+        },
+        "submodules": [],
+    }
+    detail_bytes = json.dumps(detail_payload).encode()
+
+    def fetch(url):
+        if url == detail_url:
+            return detail_bytes
+        raise RuntimeError(f"unexpected url in test fetch: {url}")
+
+    overlay = bao.build_module_overlay(module_id, version, fetch=fetch, workdir=tmp_path)
+
+    assert overlay is not None
+    assert "vars" not in overlay
+    assert overlay["all_inputs"]["root"][0]["name"] == "x"
+    assert overlay["all_outputs"] == {"root": []}
+
+
+def test_build_module_overlay_returns_none_when_both_halves_fail(tmp_path):
+    """Total failure (source AND registry detail both unreachable) -> no
+    overlay at all, matching the pre-existing fetch-failure contract."""
+
+    def always_raises(url):
+        raise RuntimeError("simulated network failure")
+
+    overlay = bao.build_module_overlay("someorg/whatever/aws", "1.0.0", fetch=always_raises, workdir=tmp_path)
+    assert overlay is None
 
 
 # --------------------------------------------------------------------------- #
