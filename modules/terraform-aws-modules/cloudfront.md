@@ -137,7 +137,7 @@ The root module creates the `aws_cloudfront_distribution` and its directly-attac
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
 | `create` | `bool` | `true` | Controls whether resources are created |
-| `default_cache_behavior` | `object` | **Required** | Default cache behavior configuration — fields: `allowed_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `cached_methods`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; see grep_module_docs) |
+| `default_cache_behavior` | `object` | **Required** | Default cache behavior configuration — fields: `allowed_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `cached_methods`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `aliases` | `list(string)` | `null` | Alternate domain names (CNAMEs) for the distribution |
 | `comment` | `string` | `null` | Distribution description/comment |
 | `enabled` | `bool` | `true` | Whether distribution accepts end user requests |
@@ -150,7 +150,7 @@ The root module creates the `aws_cloudfront_distribution` and its directly-attac
 | `origin_access_control` | `map(object)` | S3 default | Origin access control settings with SigV4 signing (OAC only; OAI is not supported) — fields: `description`, `name`, `origin_type`, `signing_behavior`, `signing_protocol` |
 | `vpc_origin` | `map(object)` | `null` | VPC origin configurations for private ALB/NLB/EC2 resources — fields: `arn`, `http_port`, `https_port`, `name`, `origin_protocol_policy`, `origin_ssl_protocols`, `timeouts`, `tags` |
 | `origin_group` | `map(object)` | `null` | Origin group failover configurations — fields: `failover_criteria`, `member`, `origin_id` |
-| `ordered_cache_behavior` | `list(object)` | `[]` | Ordered list of cache behaviors by path pattern — fields: `allowed_methods`, `cached_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; see grep_module_docs) |
+| `ordered_cache_behavior` | `list(object)` | `[]` | Ordered list of cache behaviors by path pattern — fields: `allowed_methods`, `cached_methods`, `cache_policy_id`, `cache_policy_key`, `cache_policy_name`, `compress`, `default_ttl`, `field_level_encryption_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `cache_policies` | `map(object)` | `null` | Cache policies to create and reference via `cache_policy_key` |
 | `origin_request_policies` | `map(object)` | `null` | Origin request policies to create and reference via `origin_request_policy_key` |
 | `response_headers_policies` | `map(object)` | `null` | Response headers policies to create (CORS, security headers, custom headers) — fields: `name`, `comment`, `cors_config`, `custom_headers_config`, `remove_headers_config`, `security_headers_config`, `server_timing_headers_config` |

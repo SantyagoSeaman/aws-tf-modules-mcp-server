@@ -108,7 +108,7 @@ The root module (`terraform-aws-modules/ecs/aws`) wraps `modules/cluster` and `m
 | `cloudwatch_log_group_retention_in_days` | `number` | `90` | Retention for the cluster log group |
 | `services` | `map(object)` | `null` | Map of service definitions to create; each value mirrors the `service` submodule's inputs (see below) |
 | `vpc_id` | `string` | `null` | VPC ID for the (cluster-level, Managed Instances) security group |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | egress: allow-all | Security group rules for the cluster-level security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | egress: allow-all | Security group rules for the cluster-level security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `create_task_exec_iam_role` | `bool` | `false` (root) | Whether to create a shared task execution IAM role at the cluster level (per-service roles are created by default instead) |
 | `tags` | `map(string)` | `{}` | Tags applied to all resources |
 
@@ -371,7 +371,7 @@ Creates an ECS service, its task definition (or task set, for external deploymen
 | `deployment_minimum_healthy_percent` / `deployment_maximum_percent` | `number` | `66` / `200` | Rolling deployment bounds |
 | `subnet_ids` | `list(string)` | `[]` | Subnets for `awsvpc` network mode |
 | `security_group_ids` | `list(string)` | `[]` | Additional security groups; module also creates its own by default |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` / allow-all | Rules for the service's security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` / allow-all | Rules for the service's security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `assign_public_ip` | `bool` | `false` | Assign a public IP to the task ENI (Fargate) |
 | `enable_execute_command` | `bool` | `false` | Enable ECS Exec for interactive debugging |
 | `volume` | `map(object)` | `null` | Volume definitions (Docker/EFS/FSx/managed EBS) attached to the task — fields: `configure_at_launch`, `docker_volume_configuration`, `efs_volume_configuration`, `fsx_windows_file_server_volume_configuration`, `host_path`, `name` |
@@ -690,7 +690,7 @@ Deploys an `aws_ecs_express_gateway_service` — a simplified ECS service type t
 | `scaling_target` | `object({auto_scaling_metric,auto_scaling_target_value,min_task_count,max_task_count})` | `null` | Autoscaling target configuration |
 | `health_check_path` | `string` | `null` (`/ping`) | Path used for the service's health check |
 | `vpc_id` | `string` | `null` | VPC ID for the security group |
-| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Security group rule maps — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
+| `security_group_ingress_rules` / `security_group_egress_rules` | `map(object)` | `{}` | Security group rule maps — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `create_execution_iam_role` / `create_task_iam_role` / `create_infrastructure_iam_role` | `bool` | `true` | Toggle creation of each IAM role |
 
 ### Key Outputs

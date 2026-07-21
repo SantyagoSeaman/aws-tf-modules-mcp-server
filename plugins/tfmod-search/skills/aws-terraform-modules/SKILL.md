@@ -28,11 +28,12 @@ unreliable — always work from the retrieved documentation.
    - **Reproducing an existing resource** (migration/brownfield), or you need an
      input that is **not in the curated table**, an input's **exact type or
      default**, the **complete** inputs/outputs, or a concrete shape of a complex
-     (`any`/`object(...)`) input: the curated table is a subset — get the exact,
-     complete answer from the live registry doc with `grep_module_docs` (grep by
-     the variable name, or the `examples` section). Never assert an exact default,
-     type, or that an input exists from the summary or from memory when a wrong
-     value would break `apply`.
+     (`any`/`object(...)`) input: the curated table is a subset — get the
+     complete root-scope interface with ONE offline call,
+     `get_module(name, sections=["inputs", "outputs"])`. For a submodule's
+     interface, call `get_module("<name>//modules/<submodule>", sections=[...])`.
+     Never assert an exact default, type, or that an input exists from the
+     summary or from memory when a wrong value would break `apply`.
 4. **Write from the doc, not from memory.**
    - Use exact variable names as documented. Modules rename variables between
      major versions (for example, security-group v6 rearchitected per-rule
@@ -51,11 +52,12 @@ unreliable — always work from the retrieved documentation.
    configuration (verify in the documentation first) or would over-abstract a
    single trivial resource.
 6. **Verify.** After writing, cross-check every variable used against the
-   documentation. When you are unsure a variable exists, or the project pins an
-   older major than the doc describes, confirm it with `grep_module_docs` — an
-   exact quote from the live registry docs at that version — instead of
-   shipping the uncertainty. Run `terraform validate` and `terraform fmt` when
-   available.
+   documentation. When you are unsure a variable exists, confirm it with
+   `get_module(name, sections=["inputs", "outputs"])` — the complete root-scope
+   interface, one offline call. When the project pins an older major than the
+   doc describes, confirm against that version's docs via your other Terraform
+   Registry tooling instead of shipping the uncertainty. Run `terraform
+   validate` and `terraform fmt` when available.
 
 ## Notes
 
@@ -74,13 +76,14 @@ unreliable — always work from the retrieved documentation.
 - `get_module` returns a compact orientation head by default; pass `sections`
   (e.g. `["inputs", "examples"]`, or a heading substring like `"karpenter"`)
   to pull the parts you need, or `sections=["all"]` for the whole curated doc.
-  Version pins, agent notes, and gotchas are always included. The head and
-  `sections=[...]` responses carry a footer that names every available section
-  and points to `grep_module_docs` for the complete, exact inputs/outputs; the
-  `sections=["all"]` escape hatch returns the curated doc verbatim (no footer).
+  Version pins, agent notes, and gotchas are always included.
+  `sections=["inputs"]`/`["outputs"]`/`["inputs", "outputs"]` render the
+  **complete** interface of the module's root scope — not a subset — and the
+  footer lists any submodule scopes by name for `get_module("<name>//modules/
+  <sub>", sections=[...])` follow-ups; the `sections=["all"]` escape hatch
+  returns the curated doc verbatim (no footer).
 - The curated corpus covers the terraform-aws-modules organization only, so
   `search_modules`/`get_module` will not find other namespaces (cloudposse,
-  project-specific). You are not stuck: `grep_module_docs` greps the live
-  registry docs of *any* module — derive its `module_id` from the block's
-  `source` and grep the variable you need. Say the module is outside the
-  curated catalog, then verify against its live docs rather than guessing.
+  project-specific). You are not stuck: say the module is outside the curated
+  catalog, then verify it against its live docs via your other Terraform
+  Registry tooling rather than guessing.

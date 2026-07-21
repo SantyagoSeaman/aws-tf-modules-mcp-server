@@ -190,8 +190,8 @@ resource "aws_lb_listener" "mtls_https" {
 | `additional_target_group_attachments` | `map(object)` | `null` | Extra targets attached to a target group created in `target_groups`, keyed by `target_group_key` |
 | `create_security_group` | `bool` | `true` | Create a new security group for the load balancer |
 | `security_groups` | `list(string)` | `[]` | Existing security group IDs to attach instead of/in addition to the created one |
-| `security_group_ingress_rules` | `map(any)` | `null` | Ingress rules for the created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
-| `security_group_egress_rules` | `map(any)` | `null` | Egress rules for the created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; see grep_module_docs) |
+| `security_group_ingress_rules` | `map(any)` | `null` | Ingress rules for the created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
+| `security_group_egress_rules` | `map(any)` | `null` | Egress rules for the created security group — fields: `name`, `cidr_ipv4`, `cidr_ipv6`, `description`, `from_port`, `ip_protocol`, `prefix_list_id`, `referenced_security_group_id`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `access_logs` | `object` | `null` | Access logging config: `{bucket, enabled, prefix}` |
 | `connection_logs` | `object` | `null` | Connection logging config (NLB) — fields: `bucket`, `enabled`, `prefix` |
 | `health_check_logs` | `object` | `null` | Health check logging config (ALB) — fields: `bucket`, `enabled`, `prefix` |

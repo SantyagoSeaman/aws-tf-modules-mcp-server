@@ -18,13 +18,15 @@ naming, or general Terraform hygiene — other tooling owns those.
    table; relay that table. Where subagents are unavailable, do the same
    inline: read only the `.tf` hunks, then for each touched
    terraform-aws-modules block check against the current doc:
-   - every variable set exists in the current inputs (absence in the curated
-     doc = *suspicious*; confirm with `grep_module_docs` at the version the
-     block pins before calling it dead)
+   - every variable set exists in the current inputs (absence in the compact
+     head = *suspicious*, not proof — confirm with `get_module(name,
+     sections=["inputs", "outputs"])`, the module's complete root-scope
+     interface, before calling it dead)
    - required inputs present, `version` pinned and not a major behind
    - deprecated arguments per the doc's notes
    Blocks whose `source` is outside the curated catalog are verified the same
-   way — grep their live docs — rather than skipped.
+   way — against their live docs via your other Terraform Registry tooling —
+   rather than skipped.
 3. **Raw-resource suggestion.** New clusters of hand-written `aws_*`
    resources that a catalog module covers get flagged as a `suggestion`
    with the module name (the full replacement analysis belongs to the

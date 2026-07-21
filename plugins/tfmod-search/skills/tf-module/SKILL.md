@@ -19,14 +19,17 @@ Look up Terraform AWS community module documentation for: $ARGUMENTS
 2. Call `get_module` for the best match. It returns a compact orientation head
    by default, so pull the interface for the block: `sections=["inputs",
    "examples"]` (version pins and gotchas are always included). If a variable
-   you need is missing from the curated table or you need its exact type/default,
-   the footer points to `grep_module_docs` for the complete, live inputs.
+   you need is missing from the curated table or you need its exact type/
+   default, `get_module(name, sections=["inputs", "outputs"])` renders the
+   module's **complete** root-scope interface in one offline call; for a
+   submodule's interface, call `get_module("<name>//modules/<submodule>",
+   sections=[...])`.
 3. Reply with:
    - The module source and current version, pinned.
    - A minimal working `module` block for the stated requirement, using exact
      documented variable names: all required inputs plus the optional inputs
      relevant to the request. For any nested/complex (`any`/`object(...)`)
-     input, check `sections=["examples"]` (or grep) for the exact shape — a
+     input, check `sections=["examples"]` for the exact shape — a
      bare bool vs an object, a map keyed by a NUMBER vs a name, a plural vs
      singular field — before writing it; never leave a required nested block
      as a prose comment or TODO.
@@ -39,5 +42,5 @@ Look up Terraform AWS community module documentation for: $ARGUMENTS
    exist.
 5. If the request is really about one specific variable, default, or output
    ("what's the default of `X` in vpc?") rather than a whole module, skip the
-   full doc and answer with an exact `grep_module_docs` quote — that is what
-   the `/tf-grep` command is for, and you can call the same tool here.
+   orientation head and go straight to `get_module(name, sections=["inputs",
+   "outputs"])` for the complete interface, then quote the exact row.

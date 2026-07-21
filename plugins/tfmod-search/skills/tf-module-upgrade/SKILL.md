@@ -13,27 +13,29 @@ change — *before* a version bump or `terraform plan` does.
 
 1. **Inventory.** Scan `*.tf` files for `module` blocks whose `source` is
    `terraform-aws-modules/...`. For each block record: file:line, source,
-   pinned `version` (or its absence), and every variable set. Blocks from other
-   namespaces (cloudposse, project-specific) are not in the curated catalog but
-   can still be audited via `grep_module_docs` against their live docs — include
-   them, marked as live-doc-verified rather than curated-doc-verified.
+   pinned `version` (or its absence), and every variable set. Blocks from
+   namespaces outside the curated catalog (project-specific, or a namespace
+   this server does not carry) are not in scope for `get_module` — audit
+   them against their live docs via your other Terraform Registry tooling,
+   marked as live-doc-verified rather than curated-doc-verified.
 2. **Ground truth.** For each distinct module: `get_module` with
-   `sections=["inputs", "outputs"]` → current version and input schema (the
+   `sections=["inputs", "outputs"]` → current version and the module's
+   **complete** root-scope input/output schema, in one offline call (the
    default response is a compact head, so pull the interface). One call per
-   module, reused across blocks — version pins and gotchas are always included. When a block pins an older version than the
-   doc, `grep_module_docs` at the pinned `version` shows what the code
-   currently relies on and at the latest shows what changed — that diff is the
-   audit.
+   module, reused across blocks — version pins and gotchas are always
+   included. The catalog carries the latest documented version only; when a
+   block pins an older version, what changed since then is not resolvable
+   offline — confirm against that specific version via your other Terraform
+   Registry tooling.
 3. **Compare, per block:**
    - **Version drift** — pinned version vs current; flag major-version gaps
      loudest; flag missing pins.
    - **Dead variables** — variables set that do not appear in the current
-     doc. The curated doc is a summary, so absence there is *suspicious, not
-     proven*. Confirm with `grep_module_docs`: grep the variable at the latest
-     version (a hit ⇒ not dead, just unsummarized) and at the pinned version
-     (a hit there but not at latest ⇒ genuinely removed or renamed — report it
-     with the quoted line). Mark a finding unconfirmed only if the grep itself
-     is inconclusive.
+     doc. `get_module(name, sections=["inputs", "outputs"])` is the module's
+     complete interface, not a summary, so a variable missing there at the
+     latest version is a real finding, not a suspicion. Confirm whether it
+     was ever valid at the block's pinned (older) version via your other
+     Terraform Registry tooling before calling it removed vs renamed.
    - **Deprecations** — arguments the doc notes as deprecated/renamed, with
      the replacement.
    - **Default drift** — variables the block omits whose documented defaults

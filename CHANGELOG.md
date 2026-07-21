@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.27.0] - 2026-07-21
+
+[0.27.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.27.0
+
+`grep_module_docs` is removed outright — it was the only networked tool, the measured cost driver in eval runs, and a persistent signage headache. The server is now a sharp, fully offline, curated AWS-catalog server exposing exactly three tools: `search_modules`, `modules_list`, `get_module`. Non-catalog, version-pinned, or otherwise live lookups are punted to the agent's other Terraform Registry tooling (e.g. the HashiCorp MCP) instead of a bundled grep. This ships together with a coupled fix: `get_module`'s inputs/outputs views now render the module's COMPLETE interface for the **root scope only** by default, instead of concatenating every scope. Serving all scopes was the root cause of two large modules (`eks` `sections=["inputs"]`/`["inputs","outputs"]`) overflowing the MCP tool output cap once grep's regex-narrowed fallback was no longer available — root-scoping fixes the overflow outright and is leaner than the old curated doc besides. A submodule's complete interface is still one call away via the existing submodule address (`get_module("eks//modules/karpenter", sections=["inputs"])`), and the root response's footer now lists the reachable submodule scopes by name. A byte-based safety cap on the rendered table guarantees no single response can trip the output cap, truncating with an explicit "+N more rows" pointer instead.
+
+### Added
+
+- **Root-scope-by-default rendering** for `get_module`'s complete inputs/outputs tables (`sections=["inputs"]`/`["outputs"]`/`["inputs","outputs"]`): only the module's own root-level interface renders by default, no longer every submodule's interface concatenated together.
+- **Submodule-scope menu**: the root-scoped inputs/outputs footer lists every submodule scope reachable from the doc's own headings, by name, with the exact `get_module("<name>//modules/<sub>", sections=[...])` call to pull that submodule's complete interface.
+- **A byte-ceiling safety net** on the rendered complete table (48,000 bytes): if even a root-scope render is unexpectedly large, the response truncates with an explicit "+N more rows" pointer — narrow with a `sections` entry or a submodule address — rather than ever emitting a response large enough to overflow the MCP tool output cap.
+
+### Changed
+
+- **`grep_module_docs` removed outright** — the tool, its pydantic output models, and its helper functions are gone from `tfmod_mcp_server.py`. `tfmod_doc_grep.py` (the pure grep engine) is deleted. `tfmod_registry_docs.py` is stripped of the grep-only registry-docs cache machinery (document assembly, disk cache, the live HTTP fetch path); it now holds only the PyPI update-check functions and the build-time-only overlay-builder fetch helpers used by `scripts/build_any_overlay.py` (never called at MCP-server runtime). The now-unused `doc_cache_dir`/`doc_cache_ttl_hours` config plumbing is dropped from `config.yaml` and the server's config loader.
+- **Every remaining server instruction, footer, and escalation pointer that used to route an agent to `grep_module_docs`** now points completeness and name-confirmation at `get_module(sections=["inputs","outputs"])` instead — one offline call. A module outside the catalog, a pinned older version, or a `map(object)`/`any` field's exact nested type/shape is now punted to the module source or the agent's other Terraform Registry tooling, never to a tool this server no longer ships.
+- **Plugin skills and subagents reworded to match**: the `tf-grep` skill is removed entirely (it existed only to call the now-gone tool); the other model-invoked skills (`aws-terraform-modules`, `tf-module`, `tf-stack`, `tf-migrate`, `tf-module-upgrade`, `tf-review`, `tf-troubleshoot`) and the two subagents (`tf-log-analyst`, `tf-diff-reviewer`) drop their grep guidance and route the same escalation cases to `get_module` or the agent's other tooling.
+- **Module docs**: every `modules/**/*.md` "Notes for AI Agents" / escalation mention of `grep_module_docs` is reworded to the same `get_module`-first routing. The search index and every doc's curated Markdown content are otherwise untouched.
+
+### Unchanged
+
+- `search_modules` and `modules_list` are byte-identical. The search index is not rebuilt — this release is entirely a serve-time and documentation change; no embedding drift. The any-overlay data (`model/any_overlay/`) and the update-check / overlay-build code paths are untouched, so a future "universal reach" (a `get_module` that live-fetches a non-catalog module's structured interface, no regex) remains buildable without resurrecting the grep engine.
+
 ## [0.26.0] - 2026-07-21
 
 [0.26.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.26.0

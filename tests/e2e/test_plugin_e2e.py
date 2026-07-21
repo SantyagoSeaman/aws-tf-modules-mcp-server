@@ -96,10 +96,9 @@ EXPECTED_SKILLS = {
     "tf-review",
     "tf-stack",
     "tf-troubleshoot",
-    "tf-grep",
 }
 # user-invoked only; everything else may be model-invoked
-USER_INVOKED_SKILLS = {"tf-module", "tf-stack", "tf-grep"}
+USER_INVOKED_SKILLS = {"tf-module", "tf-stack"}
 # skills that declare the MCP dependency for Codex (all but the pure-lookup one)
 CODEX_BOUND_SKILLS = EXPECTED_SKILLS - {"tf-module"}
 EXPECTED_AGENTS = {"tf-log-analyst", "tf-diff-reviewer"}
@@ -149,12 +148,11 @@ class TestSkills:
         assert "extract_tf_errors.py" in body
 
     @pytest.mark.parametrize("skill_name", sorted(EXPECTED_SKILLS - USER_INVOKED_SKILLS))
-    def test_model_invoked_skills_reference_grep_tool(self, skill_name):
-        """Every model-invoked skill must teach the compact-doc -> grep
-        escalation. Regression guard for the grep_module_docs skills
-        integration: future skill edits cannot silently drop the guidance."""
+    def test_model_invoked_skills_do_not_reference_grep_tool(self, skill_name):
+        """grep_module_docs was removed outright in 0.27.0 (D7). Regression
+        guard: no skill should reference a tool this server no longer ships."""
         _, body = _parse_frontmatter(SKILLS_DIR / skill_name / "SKILL.md")
-        assert "grep_module_docs" in body, f"{skill_name} must reference grep_module_docs"
+        assert "grep_module_docs" not in body, f"{skill_name} must not reference removed grep_module_docs tool"
 
     def test_trigger_descriptions_are_disjoint(self):
         """Each description must own its trigger vocabulary: the review/upgrade/
@@ -202,11 +200,12 @@ class TestAgents:
         assert "tf-diff-reviewer" in review
 
     @pytest.mark.parametrize("agent_name", sorted(EXPECTED_AGENTS))
-    def test_agents_reference_grep_tool(self, agent_name):
-        """Both subagents must verify findings against live docs via
-        grep_module_docs, not only the curated get_module doc."""
+    def test_agents_do_not_reference_grep_tool(self, agent_name):
+        """grep_module_docs was removed outright in 0.27.0 (D7). Regression
+        guard: no subagent should reference a tool this server no longer
+        ships."""
         _, body = _parse_frontmatter(self.AGENTS_DIR / f"{agent_name}.md")
-        assert "grep_module_docs" in body, f"{agent_name} must reference grep_module_docs"
+        assert "grep_module_docs" not in body, f"{agent_name} must not reference removed grep_module_docs tool"
 
 
 class TestMaintainerSkills:
