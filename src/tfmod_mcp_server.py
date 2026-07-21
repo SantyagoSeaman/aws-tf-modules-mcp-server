@@ -2460,6 +2460,11 @@ _ALL_INPUTS_DESCRIPTION_CHAR_CAP = 200
 # Module:"/"## Root Module:"/"## Submodule N: <name>" H2 bundle).
 _ANY_LEVEL_INPUT_HEADING_RE = re.compile(r"^#{2,3} Main Input Variables[ \t]*$", re.MULTILINE)
 
+# Same EITHER-H2-or-H3 matching as _ANY_LEVEL_INPUT_HEADING_RE, for the
+# outputs table -- the corpus titles it "Main Outputs" almost everywhere, and
+# "Key Outputs" on a handful of docs (e.g. ecs.md).
+_ANY_LEVEL_OUTPUT_HEADING_RE = re.compile(r"^#{2,3} (?:Main|Key) Outputs[ \t]*$", re.MULTILINE)
+
 _SUBMODULE_H2_TITLE_RE = re.compile(r"(?i)^submodule\s+\d+\s*:\s*(.+)$")
 
 
@@ -2525,27 +2530,28 @@ def _locate_input_table(text: str, heading_re: "re.Pattern[str]") -> tuple[int, 
 
 
 def _curated_descriptions_from_rows(
-    lines: list[str], row_start: int, row_end: int, header_cells: list[str]
+    lines: list[str], row_start: int, row_end: int, header_cells: list[str], *, name_col: str = "variable"
 ) -> dict[str, str]:
     """
-    Map each Variable name (a curated row's Variable cell can bundle several
+    Map each name in `name_col` (a curated row's name cell can bundle several
     names via "name_a / name_b") to its curated Description cell text, so the
     complete-table rebuild can preserve the human-written description for any
-    input the curated table already documents. Empty when the table has no
-    recognizable Variable/Description columns.
+    input/output the curated table already documents. `name_col` is
+    "variable" for an inputs table, "output" for an outputs table. Empty when
+    the table has no recognizable `name_col`/Description columns.
     """
     lower_headers = [c.lower() for c in header_cells]
-    if "variable" not in lower_headers or "description" not in lower_headers:
+    if name_col not in lower_headers or "description" not in lower_headers:
         return {}
-    var_idx = lower_headers.index("variable")
+    name_idx = lower_headers.index(name_col)
     desc_idx = lower_headers.index("description")
     out: dict[str, str] = {}
     for i in range(row_start, row_end):
         cells = _split_table_row(lines[i])
-        if len(cells) <= max(var_idx, desc_idx):
+        if len(cells) <= max(name_idx, desc_idx):
             continue
         description = cells[desc_idx].strip()
-        for raw_name in cells[var_idx].split("/"):
+        for raw_name in cells[name_idx].split("/"):
             name = _cell_var_name(raw_name)
             if name and name not in out:
                 out[name] = description
@@ -2658,6 +2664,120 @@ def _content_with_complete_input_tables(content: str) -> str:
     return preamble + "".join(new_blocks)
 
 
+# --------------------------------------------------------------------------- #
+# Complete output table (outputs half of the 2026-07-21 "complete interface in
+# one call" fix) -- supersede the curated (possibly PARTIAL) "Main Outputs"
+# table with the module's COMPLETE output list from the committed overlay's
+# `all_outputs` (built by scripts/build_any_overlay.py from the same Registry
+# API detail all_inputs comes from). Mirrors _content_with_complete_input_
+# tables exactly, one column narrower (outputs carry no type/required/default
+# in the Registry API -- name + description only). A pure no-op when the
+# module has no overlay, the overlay carries no `all_outputs`, or a given
+# table's scope cannot be confidently resolved -- never guesses, falls back
+# to the curated table exactly as served before this feature existed.
+# --------------------------------------------------------------------------- #
+
+_ALL_OUTPUTS_TABLE_HEADER = "| Output | Description |\n"
+_ALL_OUTPUTS_TABLE_SEP = "|--------|-------------|\n"
+_ALL_OUTPUTS_DESCRIPTION_CHAR_CAP = 200
+
+
+def _format_all_outputs_row(item: dict[str, Any], description: str) -> str:
+    name = _sanitize_table_cell(str(item.get("name", "")))
+    desc = _sanitize_table_cell(description) if description else ""
+    return f"| `{name}` | {desc} |\n"
+
+
+def _build_all_outputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
+    rows = [_ALL_OUTPUTS_TABLE_HEADER, _ALL_OUTPUTS_TABLE_SEP]
+    for item in items:
+        name = item.get("name", "")
+        curated = curated_descriptions.get(name)
+        description = (
+            curated
+            if curated
+            else _clip_blurb(item.get("description") or "", max_length=_ALL_OUTPUTS_DESCRIPTION_CHAR_CAP)
+        )
+        rows.append(_format_all_outputs_row(item, description))
+    return "".join(rows)
+
+
+def _supersede_block_output_table(block: str, items: list[dict[str, Any]]) -> str:
+    """Replace ONE "Main Outputs"/"Key Outputs" table's header+rows within
+    `block` (a single H2 bundle's text) with the complete table built from
+    `items`. Leaves `block` unchanged (fails safe) when no recognizable table
+    is found, or `items` is empty (nothing to supersede with)."""
+    if not items:
+        return block
+    located = _locate_input_table(block, _ANY_LEVEL_OUTPUT_HEADING_RE)
+    if located is None:
+        return block
+    header_line_idx, _sep_idx, row_start, row_end = located
+    lines = block.splitlines(keepends=True)
+    header_cells = _split_table_row(lines[header_line_idx])
+    curated = _curated_descriptions_from_rows(lines, row_start, row_end, header_cells, name_col="output")
+    new_table = _build_all_outputs_table(items, curated)
+    return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
+
+
+# Logical key(s) whose presence in a get_module `sections` request means the
+# response includes (or resolves to) the outputs view -- gates the complete-
+# output-table supersede the same way _sections_request_inputs gates the
+# complete-input-table one. Only "outputs" maps to the Main Outputs heading
+# in _SECTION_ALIASES (unlike inputs, which also has "variables").
+_OUTPUT_TABLE_SECTION_KEYS = frozenset({"outputs"})
+
+
+def _sections_request_outputs(sections: list[str]) -> bool:
+    return any(entry.strip().lower() in _OUTPUT_TABLE_SECTION_KEYS for entry in sections)
+
+
+def _content_with_complete_output_tables(content: str) -> str:
+    """
+    Return `content` with every "Main Outputs"/"Key Outputs" table -- the H2
+    split-scheme root table, or an H3 combined-scheme root/submodule bundle
+    table -- superseded by the module's COMPLETE output list from the
+    committed overlay's `all_outputs` (see build_any_overlay.py and the
+    complete-interface-in-one-call design). Byte-identical to `content` when
+    the module has no committed overlay, the overlay carries no
+    `all_outputs`, or a given H2 bundle's scope cannot be resolved against
+    `all_outputs`' keys (fails safe to the curated table -- never guesses).
+
+    The default orientation head is NEVER passed through this function --
+    outputs are not part of the head at all (only Key Features/Main Use
+    Cases/root inputs are), so this is only reached by an explicit
+    sections=["outputs"] request (or the full-document escape hatch).
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content
+    all_outputs = overlay.get("all_outputs")
+    if not isinstance(all_outputs, dict) or not all_outputs:
+        return content
+    candidate_scopes = frozenset(all_outputs)
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content
+
+    changed = False
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        items = all_outputs.get(scope) if scope else None
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_output_table(block, items)
+        if new_block != block:
+            changed = True
+        new_blocks.append(new_block)
+
+    if not changed:
+        return content
+    return preamble + "".join(new_blocks)
+
+
 def orientation_head(text: str, version_override: str | None = None) -> str:
     """
     Build the compact orientation view returned by get_module by default.
@@ -2754,6 +2874,15 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     field-list content. A module with no overlay (or an overlay with no
     ``all_inputs``) is unaffected.
 
+    A non-head response that resolves to the OUTPUTS view gets the mirrored
+    treatment for ``all_outputs`` (the outputs half of the same fix): the
+    curated — possibly PARTIAL — outputs table is SUPERSEDED with the
+    module's COMPLETE output list (see ``_content_with_complete_output_
+    tables``). Outputs carry no ``any``-typed enrichment (that concept
+    applies only to input variables), so this is table-completeness only —
+    no cell-substitution, no appendix. A module with no overlay (or an
+    overlay with no ``all_outputs``) is unaffected.
+
     See get_module() tool documentation for full details.
     """
     # A submodule address ("iam//modules/iam-role") resolves to the parent doc,
@@ -2769,14 +2898,21 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
             full_content = _content_with_complete_input_tables(content)
+            full_content = _content_with_complete_output_tables(full_content)
             served = _inline_any_overlay_input_cells(full_content, content)
             return _with_any_overlay_appendix(served, content, is_filtered=False)
-        # An explicit inputs/variables request supersedes the curated (possibly
-        # PARTIAL) table with the module's COMPLETE input list BEFORE section
-        # filtering (2026-07-21 fix), so the extracted submodule bundle already
-        # carries every input — a no-op when the module has no `all_inputs`.
+        # An explicit inputs/variables (resp. outputs) request supersedes the
+        # curated (possibly PARTIAL) table with the module's COMPLETE input
+        # (resp. output) list BEFORE section filtering (2026-07-21 fix), so the
+        # extracted submodule bundle already carries every input/output — a
+        # no-op when the module has no `all_inputs`/`all_outputs`.
         working_content = (
             _content_with_complete_input_tables(content) if _sections_request_inputs(sections or []) else content
+        )
+        working_content = (
+            _content_with_complete_output_tables(working_content)
+            if _sections_request_outputs(sections or [])
+            else working_content
         )
         body = filter_module_sections(working_content, [sub, *(sections or [])])
         # A module WITH a committed any-shape overlay can have submodule-scoped
@@ -2798,13 +2934,21 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
             full_content = _content_with_complete_input_tables(content)
+            full_content = _content_with_complete_output_tables(full_content)
             served = _inline_any_overlay_input_cells(full_content, content)
             return _with_any_overlay_appendix(served, content, is_filtered=False)
-        # Complete-input-table supersede (2026-07-21 fix) runs BEFORE section
-        # filtering so the extracted inputs H2/H3 already carries every input —
-        # a no-op when the module has no committed `all_inputs`.
+        # Complete-input-table / complete-output-table supersede (2026-07-21
+        # fix, and its outputs-half follow-up) run BEFORE section filtering so
+        # the extracted inputs/outputs H2/H3 already carries every input/
+        # output — a no-op when the module has no committed
+        # `all_inputs`/`all_outputs`.
         working_content = (
             _content_with_complete_input_tables(content) if _sections_request_inputs(sections) else content
+        )
+        working_content = (
+            _content_with_complete_output_tables(working_content)
+            if _sections_request_outputs(sections)
+            else working_content
         )
         rendered = filter_module_sections(working_content, sections)
         if _sections_request_inputs(sections):

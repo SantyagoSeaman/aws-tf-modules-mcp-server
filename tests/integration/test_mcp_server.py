@@ -47,6 +47,13 @@ def _input_row_cells(rendered: str, var_name: str) -> list[str]:
     return tfmod_mcp_server._split_table_row(matched)
 
 
+def _output_row_cells(rendered: str, output_name: str) -> list[str]:
+    """Same as `_input_row_cells`, for a Main Outputs table row (the Output
+    column, not Variable)."""
+    matched = next(row for row in rendered.splitlines() if row.startswith(f"| `{output_name}`"))
+    return tfmod_mcp_server._split_table_row(matched)
+
+
 @pytest.fixture(scope="module")
 def test_logger():
     """Provide a logger for tests."""
@@ -1173,6 +1180,168 @@ class TestElasticacheRealAllInputs:
         content = get_module_documentation("rds", server_state)
         baseline = filter_module_sections(content, ["inputs"])
         out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert out == baseline
+
+
+class TestCompleteOutputTable:
+    """
+    complete-interface-in-one-call, outputs half: sections=["outputs"] serves
+    the module's COMPLETE output list from the committed overlay's
+    `all_outputs`, superseding the curated (possibly PARTIAL) table -- the
+    same fix TestCompleteInputTable exercises for inputs, mirrored for
+    outputs. Design: evals/specs/2026-07-21-complete-interface-one-call-
+    design.md.
+
+    Uses the FIXTURE overlay (tests/fixtures/any_overlay/cloudwatch), whose
+    all_outputs["log-group"] mirrors cloudwatch.md's real "Submodule 1:
+    log-group" curated table PLUS one field (`fixture_extra_output`) absent
+    from that curated table -- the anti-silent-no-op guard for this feature.
+    """
+
+    @pytest.fixture
+    def any_overlay_dir(self, monkeypatch):
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", ANY_OVERLAY_FIXTURES)
+        return ANY_OVERLAY_FIXTURES
+
+    def test_complete_table_includes_field_absent_from_curated_doc(self, server_state, any_overlay_dir):
+        """The primary anti-silent-no-op guard: an output with NO row at all
+        in the curated cloudwatch.md doc now appears, because it is present
+        in the overlay's all_outputs."""
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        assert "| `fixture_extra_output` |" in out
+
+    def test_complete_table_still_includes_every_curated_field(self, server_state, any_overlay_dir):
+        """Every output the curated table already had is preserved -- the
+        supersede is a superset, not a replacement that drops rows."""
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        for name in ("cloudwatch_log_group_name", "cloudwatch_log_group_arn"):
+            assert f"| `{name}` |" in out, f"{name} missing from the complete table"
+
+    def test_complete_table_has_two_columns(self, server_state, any_overlay_dir):
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        cells = _output_row_cells(out, "fixture_extra_output")
+        assert len(cells) == 2, "Output | Description"
+        assert cells[0] == "`fixture_extra_output`"
+        assert cells[1] == "Fixture-only output absent from the curated table, proving supersede completeness"
+
+    def test_complete_table_preserves_curated_description(self, server_state, any_overlay_dir):
+        """`cloudwatch_log_group_arn`'s row keeps the human-curated
+        description verbatim (the overlay fixture's own description text is
+        identical to the curated one on purpose, so a passing assertion
+        here really exercises the curated-description lookup rather than a
+        coincidence)."""
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        cells = _output_row_cells(out, "cloudwatch_log_group_arn")
+        assert cells[1] == "ARN of the log group"
+
+    def test_other_submodule_tables_unaffected(self, server_state, any_overlay_dir):
+        """log-stream has no all_outputs entry -- its curated table is
+        untouched by the log-group supersede."""
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        start = out.index("## Submodule 2: log-stream")
+        end = out.index("## Submodule 3: log-metric-filter")
+        block = out[start:end]
+        header_line = next(line for line in block.splitlines() if line.startswith("| Output"))
+        assert header_line == "| Output | Description |"
+
+    def test_head_unchanged_byte_identical(self, server_state, any_overlay_dir):
+        """The default orientation head never carries outputs at all, let
+        alone the complete table -- byte identical to the pre-feature head."""
+        content = get_module_documentation("cloudwatch", server_state)
+        baseline = orientation_head(content)
+        head = get_module_impl("cloudwatch", server_state)
+        assert head == baseline
+
+    def test_full_doc_escape_hatch_also_gets_complete_table(self, server_state, any_overlay_dir):
+        full = get_module_impl("cloudwatch", server_state, sections=["all"])
+        assert "| `fixture_extra_output` |" in full
+
+    def test_submodule_address_outputs_gets_complete_table(self, server_state, any_overlay_dir):
+        """A submodule-address request (e.g. cloudwatch//modules/log-group)
+        also gets the complete output table for its own scope."""
+        out = get_module_impl("cloudwatch//modules/log-group", server_state, sections=["outputs"])
+        assert "| `fixture_extra_output` |" in out
+
+    def test_module_with_no_all_outputs_key_is_byte_identical(self, server_state, any_overlay_dir):
+        """s3-bucket's FIXTURE overlay has vars but no all_outputs key at
+        all -- its sections=["outputs"] output is unaffected (graceful
+        fallback)."""
+        content = get_module_documentation("s3-bucket", server_state)
+        baseline = filter_module_sections(content, ["outputs"])
+        out = get_module_impl("s3-bucket", server_state, sections=["outputs"])
+        assert out == baseline
+
+    def test_no_overlay_module_byte_identical(self, server_state, any_overlay_dir):
+        """A module with no overlay file at all (vpc, in the fixture dir) is
+        completely unaffected."""
+        content = get_module_documentation("vpc", server_state)
+        baseline = filter_module_sections(content, ["outputs"])
+        out = get_module_impl("vpc", server_state, sections=["outputs"])
+        assert out == baseline
+
+    def test_no_network_access_with_complete_output_table(self, server_state, any_overlay_dir, monkeypatch):
+        """The complete-output-table supersede (all_outputs) is a static
+        file read only -- zero network calls, same as the rest of
+        get_module."""
+
+        def _blocked(*_args, **_kwargs):
+            raise AssertionError("network access attempted while serving the complete output table")
+
+        monkeypatch.setattr(socket.socket, "connect", _blocked)
+        monkeypatch.setattr(socket, "create_connection", _blocked)
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        assert "| `fixture_extra_output` |" in out
+
+    def test_inputs_only_request_unaffected_by_output_fixture(self, server_state, any_overlay_dir):
+        """A pure sections=["inputs"] request must not gain any output-table
+        content -- the two supersedes are independent."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        assert "fixture_extra_output" not in out
+
+    def test_outputs_only_request_unaffected_by_input_fixture(self, server_state, any_overlay_dir):
+        """A pure sections=["outputs"] request must not gain any input-table
+        content (nor the any-overlay input appendix) -- the two supersedes
+        are independent."""
+        out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
+        assert "fixture_extra_field" not in out
+        assert "fixture_cloudwatch_marker" not in out
+
+
+class TestElasticacheRealAllOutputs:
+    """Real-data check (not fixture): the committed
+    model/any_overlay/terraform-aws-modules__elasticache__aws.json now also
+    carries all_outputs, so sections=["outputs"] must include output names
+    the curated .md table omits entirely."""
+
+    def test_previously_missing_outputs_now_present(self, server_state):
+        out = get_module_impl("elasticache", server_state, sections=["outputs"])
+        for name in (
+            "cloudwatch_log_group_arn",
+            "cloudwatch_log_group_name",
+            "global_replication_group_engine_version_actual",
+        ):
+            assert f"| `{name}` |" in out, f"{name} still missing from sections=['outputs']"
+
+    def test_measured_names_present_as_individual_rows(self, server_state):
+        """The exact output names this fix was reported against -- already
+        present in the curated doc (some bundled two-per-row via `/`), now
+        guaranteed as their OWN row via the complete table, so an exact-name
+        grep always finds them."""
+        out = get_module_impl("elasticache", server_state, sections=["outputs"])
+        for name in (
+            "replication_group_primary_endpoint_address",
+            "replication_group_id",
+            "subnet_group_name",
+        ):
+            assert f"| `{name}` |" in out, f"{name} missing from sections=['outputs']"
+
+    def test_real_no_overlay_module_still_byte_identical(self, server_state):
+        """rds has zero any-vars and no committed overlay file at all -- the
+        REAL (non-fixture) model/any_overlay/ directory must leave it
+        completely unaffected by this rollout."""
+        content = get_module_documentation("rds", server_state)
+        baseline = filter_module_sections(content, ["outputs"])
+        out = get_module_impl("rds", server_state, sections=["outputs"])
         assert out == baseline
 
 
