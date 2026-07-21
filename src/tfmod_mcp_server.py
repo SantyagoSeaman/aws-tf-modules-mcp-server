@@ -2466,6 +2466,44 @@ def _inline_any_overlay_input_cells(rendered: str, content: str) -> str:
 # curated table exactly as served before this feature existed.
 # --------------------------------------------------------------------------- #
 
+# D7 Change A safety net: ceiling (in bytes) for ONE rendered complete inputs
+# or outputs table. Root-scoping the default response (see get_module_impl)
+# keeps ordinary modules well under this in the first place -- eks's root
+# scope alone renders to ~24-29K -- but this is the backstop for whatever
+# root interface is unexpectedly large, so no single table can grow large
+# enough to risk tripping the MCP tool output cap. Truncates with an explicit
+# "+N more rows" pointer instead of silently dropping rows or overflowing.
+_COMPLETE_TABLE_BYTE_CAP = 48000
+
+
+def _cap_complete_table_rows(header_and_sep: str, row_texts: list[str], *, cap: int | None = None) -> str:
+    """
+    Append `row_texts` onto `header_and_sep` up to `cap` bytes total (default
+    `_COMPLETE_TABLE_BYTE_CAP`, read at call time so tests can monkeypatch the
+    module constant). When the running total would exceed the cap, stops and
+    appends an explicit pointer line naming how many rows were omitted,
+    rather than emitting a table large enough to risk overflowing the MCP
+    tool output cap. A pure no-op (every row kept, no pointer line) when the
+    full table already fits.
+    """
+    effective_cap = _COMPLETE_TABLE_BYTE_CAP if cap is None else cap
+    total = len(header_and_sep.encode("utf-8"))
+    kept: list[str] = []
+    for i, row in enumerate(row_texts):
+        row_bytes = len(row.encode("utf-8"))
+        if total + row_bytes > effective_cap:
+            remaining = len(row_texts) - i
+            pointer = (
+                f"\n_(+{remaining} more rows omitted at the {effective_cap}-byte safety cap -- "
+                "narrow with a single `sections` entry, or request a submodule complete interface via "
+                '`get_module("<name>//modules/<submodule>", sections=[...])`.)_\n'
+            )
+            return header_and_sep + "".join(kept) + pointer
+        kept.append(row)
+        total += row_bytes
+    return header_and_sep + "".join(kept)
+
+
 _ALL_INPUTS_TABLE_HEADER = "| Variable | Type | Required | Default | Description |\n"
 _ALL_INPUTS_TABLE_SEP = "|----------|------|----------|---------|-------------|\n"
 _ALL_INPUTS_DEFAULT_CHAR_CAP = 80
@@ -2525,6 +2563,72 @@ def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | N
         if scope.lower() in name_lower:
             return scope
     return None
+
+
+def _doc_has_resolvable_root_bundle(content: str) -> bool:
+    """
+    True when `content` has an H2 bundle `_scope_for_h2_title` would resolve
+    to "root": a "Main Module:"/"Root Module:" combined bundle, or (split-
+    scheme) a bare top-level "Main Input Variables"/"Main Outputs"/"Key
+    Outputs" heading with no enclosing bundle.
+
+    D7 Change A: this gates whether get_module_impl's default (non-submodule-
+    address) inputs/outputs render scopes to root only. False for a pure
+    submodule-collection doc with no root section at all (cloudwatch, fsx,
+    iam, network-firewall as of this writing) -- for those, the interface-key
+    fallback must stay free to walk every submodule bundle (the BUG-1 fix),
+    since there is no root content to scope to instead.
+    """
+    _, sections = _split_h2_sections(content)
+    root_only = frozenset({"root"})
+    return any(_scope_for_h2_title(title, root_only) == "root" for title, _ in sections)
+
+
+def _reachable_submodule_scope_names(content: str, overlay: dict[str, Any]) -> list[str]:
+    """
+    Non-root overlay scope names (the union of `all_inputs`/`all_outputs`
+    keys) that resolve to an actual "## Submodule N: <name>" bundle in
+    `content` -- i.e. reachable via
+    ``get_module("<name>//modules/<scope>", ...)``. An overlay scope with no
+    matching heading in this doc (e.g. an internal helper scope the doc never
+    surfaces as its own submodule section) is excluded -- pointing an agent
+    at an address with nothing behind it would be a dead end. Returned in
+    document order, first occurrence, for a stable and readable footer.
+    """
+    scope_keys = (set(overlay.get("all_inputs") or {}) | set(overlay.get("all_outputs") or {})) - {"root"}
+    if not scope_keys:
+        return []
+    candidates = frozenset(scope_keys | {"root"})
+    _, sections = _split_h2_sections(content)
+    seen: list[str] = []
+    for title, _ in sections:
+        scope = _scope_for_h2_title(title, candidates)
+        if scope and scope != "root" and scope not in seen:
+            seen.append(scope)
+    return seen
+
+
+def _submodule_interface_menu(content: str, overlay: dict[str, Any] | None) -> str:
+    """
+    Build the "Submodule interfaces available on demand" footer line (D7
+    Change A point 3) for the default root-scoped inputs/outputs render.
+    Empty when there is no overlay, or the overlay has no non-root scope
+    reachable from this doc's own headings (see
+    `_reachable_submodule_scope_names`) -- never advertises a dead-end
+    address.
+    """
+    if not overlay:
+        return ""
+    scopes = _reachable_submodule_scope_names(content, overlay)
+    if not scopes:
+        return ""
+    module_id = _resolve_overlay_module_id(content)
+    parts = [p for p in module_id.split("/") if p]
+    name = parts[1] if len(parts) >= 3 else (parts[-1] if parts else "<name>")
+    return (
+        f"Submodule interfaces available on demand ({len(scopes)}): {', '.join(scopes)} -- call "
+        f'get_module("{name}//modules/<submodule>", sections=[...]) for a submodule complete interface.'
+    )
 
 
 def _locate_input_table(text: str, heading_re: "re.Pattern[str]") -> tuple[int, int, int, int] | None:
@@ -2619,7 +2723,7 @@ def _format_all_inputs_row(item: dict[str, Any], description: str) -> str:
 
 
 def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
-    rows = [_ALL_INPUTS_TABLE_HEADER, _ALL_INPUTS_TABLE_SEP]
+    row_texts: list[str] = []
     for item in items:
         name = item.get("name", "")
         curated = curated_descriptions.get(name)
@@ -2628,8 +2732,8 @@ def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: d
             if curated
             else _clip_blurb(item.get("description") or "", max_length=_ALL_INPUTS_DESCRIPTION_CHAR_CAP)
         )
-        rows.append(_format_all_inputs_row(item, description))
-    return "".join(rows)
+        row_texts.append(_format_all_inputs_row(item, description))
+    return _cap_complete_table_rows(_ALL_INPUTS_TABLE_HEADER + _ALL_INPUTS_TABLE_SEP, row_texts)
 
 
 def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str:
@@ -2650,7 +2754,7 @@ def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str
     return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
 
 
-def _content_with_complete_input_tables(content: str) -> str:
+def _content_with_complete_input_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
     """
     Return `content` with every "Main Input Variables" table -- the H2 split-
     scheme root table, or an H3 combined-scheme root/submodule bundle table --
@@ -2660,6 +2764,17 @@ def _content_with_complete_input_tables(content: str) -> str:
     module has no committed overlay, the overlay carries no `all_inputs`, or
     a given H2 bundle's scope cannot be resolved against `all_inputs`' keys
     (fails safe to the curated table -- never guesses).
+
+    Args:
+        only_scopes: when given, restricts which overlay scopes may supersede
+            a block's table -- e.g. ``frozenset({"root"})`` for the D7
+            Change A root-scoped-by-default render, or a single submodule
+            scope name for a submodule-address request. ``None`` (default)
+            supersedes every resolvable scope, unchanged -- used by the
+            full-document escape hatch, and by modules with no resolvable
+            root bundle (see ``_doc_has_resolvable_root_bundle``), where the
+            interface-key fallback must still be free to walk every
+            submodule (the BUG-1 fix).
 
     The default orientation head is NEVER passed through this function -- it
     stays a cheap, unchanged first look; only an explicit sections=["inputs"]
@@ -2672,6 +2787,10 @@ def _content_with_complete_input_tables(content: str) -> str:
     if not isinstance(all_inputs, dict) or not all_inputs:
         return content
     candidate_scopes = frozenset(all_inputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content
 
     preamble, sections = _split_h2_sections(content)
     if not sections:
@@ -2720,7 +2839,7 @@ def _format_all_outputs_row(item: dict[str, Any], description: str) -> str:
 
 
 def _build_all_outputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
-    rows = [_ALL_OUTPUTS_TABLE_HEADER, _ALL_OUTPUTS_TABLE_SEP]
+    row_texts: list[str] = []
     for item in items:
         name = item.get("name", "")
         curated = curated_descriptions.get(name)
@@ -2729,8 +2848,8 @@ def _build_all_outputs_table(items: list[dict[str, Any]], curated_descriptions: 
             if curated
             else _clip_blurb(item.get("description") or "", max_length=_ALL_OUTPUTS_DESCRIPTION_CHAR_CAP)
         )
-        rows.append(_format_all_outputs_row(item, description))
-    return "".join(rows)
+        row_texts.append(_format_all_outputs_row(item, description))
+    return _cap_complete_table_rows(_ALL_OUTPUTS_TABLE_HEADER + _ALL_OUTPUTS_TABLE_SEP, row_texts)
 
 
 def _supersede_block_output_table(block: str, items: list[dict[str, Any]]) -> str:
@@ -2763,7 +2882,7 @@ def _sections_request_outputs(sections: list[str]) -> bool:
     return any(entry.strip().lower() in _OUTPUT_TABLE_SECTION_KEYS for entry in sections)
 
 
-def _content_with_complete_output_tables(content: str) -> str:
+def _content_with_complete_output_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
     """
     Return `content` with every "Main Outputs"/"Key Outputs" table -- the H2
     split-scheme root table, or an H3 combined-scheme root/submodule bundle
@@ -2773,6 +2892,10 @@ def _content_with_complete_output_tables(content: str) -> str:
     the module has no committed overlay, the overlay carries no
     `all_outputs`, or a given H2 bundle's scope cannot be resolved against
     `all_outputs`' keys (fails safe to the curated table -- never guesses).
+
+    Args:
+        only_scopes: same contract as ``_content_with_complete_input_tables``
+            -- restricts which overlay scopes may supersede a block's table.
 
     The default orientation head is NEVER passed through this function --
     outputs are not part of the head at all (only Key Features/Main Use
@@ -2786,6 +2909,10 @@ def _content_with_complete_output_tables(content: str) -> str:
     if not isinstance(all_outputs, dict) or not all_outputs:
         return content
     candidate_scopes = frozenset(all_outputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content
 
     preamble, sections = _split_h2_sections(content)
     if not sections:
@@ -2936,12 +3063,18 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # curated (possibly PARTIAL) table with the module's COMPLETE input
         # (resp. output) list BEFORE section filtering (2026-07-21 fix), so the
         # extracted submodule bundle already carries every input/output — a
-        # no-op when the module has no `all_inputs`/`all_outputs`.
+        # no-op when the module has no `all_inputs`/`all_outputs`. D7 Change A:
+        # restricted to THIS submodule's own overlay scope only — a submodule
+        # address must never pull another submodule's (or root's) complete
+        # table in alongside the one actually requested.
+        sub_scope = frozenset({sub})
         working_content = (
-            _content_with_complete_input_tables(content) if _sections_request_inputs(sections or []) else content
+            _content_with_complete_input_tables(content, only_scopes=sub_scope)
+            if _sections_request_inputs(sections or [])
+            else content
         )
         working_content = (
-            _content_with_complete_output_tables(working_content)
+            _content_with_complete_output_tables(working_content, only_scopes=sub_scope)
             if _sections_request_outputs(sections or [])
             else working_content
         )
@@ -2973,18 +3106,45 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # the extracted inputs/outputs H2/H3 already carries every input/
         # output — a no-op when the module has no committed
         # `all_inputs`/`all_outputs`.
+        #
+        # D7 Change A: an ordinary (non-submodule-address) request for the
+        # inputs and/or outputs view is scoped to the module's ROOT overlay
+        # scope only by default — concatenating every submodule scope's
+        # COMPLETE interface alongside root is what overflowed the MCP tool
+        # output cap on wide modules (eks: 456 inputs / 120 outputs across 8
+        # scopes). A submodule's own complete interface is reached on demand
+        # via its address (get_module("<name>//modules/<submodule>", ...)),
+        # and the footer below advertises which submodule scopes exist.
+        #
+        # Root-scoping only applies when this doc actually HAS a resolvable
+        # root bundle (_doc_has_resolvable_root_bundle) — a pure submodule-
+        # collection doc with no root section at all (cloudwatch, fsx, iam,
+        # network-firewall today) has no root content to scope to, so the
+        # interface-key fallback stays free to walk every submodule bundle,
+        # unchanged (the pre-existing BUG-1 fix this must not regress).
+        requests_inputs = _sections_request_inputs(sections)
+        requests_outputs = _sections_request_outputs(sections)
+        restrict_to_root = (requests_inputs or requests_outputs) and _doc_has_resolvable_root_bundle(content)
+        scope_filter = frozenset({"root"}) if restrict_to_root else None
+
         working_content = (
-            _content_with_complete_input_tables(content) if _sections_request_inputs(sections) else content
+            _content_with_complete_input_tables(content, only_scopes=scope_filter) if requests_inputs else content
         )
         working_content = (
-            _content_with_complete_output_tables(working_content)
-            if _sections_request_outputs(sections)
+            _content_with_complete_output_tables(working_content, only_scopes=scope_filter)
+            if requests_outputs
             else working_content
         )
-        rendered = filter_module_sections(working_content, sections)
-        if _sections_request_inputs(sections):
+        interface_scope = "root" if restrict_to_root else "all"
+        rendered = filter_module_sections(working_content, sections, interface_scope=interface_scope)
+        if requests_inputs:
             rendered = _inline_any_overlay_input_cells(rendered, content)
             rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
+        if restrict_to_root:
+            overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+            menu = _submodule_interface_menu(content, overlay)
+            if menu:
+                rendered = _insert_before_footer(rendered, menu, is_filtered=True)
         return rendered
     return orientation_head(content)
 

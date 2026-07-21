@@ -609,7 +609,9 @@ class TestAnyOverlay:
         """The appendix is fenced content spliced into the existing response --
         it must not introduce a new top-level (H2) heading."""
         content = get_module_documentation("s3-bucket", server_state)
-        baseline = filter_module_sections(content, ["inputs"])
+        # D7 Change A: s3-bucket has a resolvable root bundle, so get_module_impl
+        # scopes the default inputs view to root only -- match that here.
+        baseline = filter_module_sections(content, ["inputs"], interface_scope="root")
         overlaid = get_module_impl("s3-bucket", server_state, sections=["inputs"])
         assert len(overlaid) > len(baseline), "overlay content should have been appended"
         assert re.findall(r"(?m)^## ", overlaid) == re.findall(r"(?m)^## ", baseline)
@@ -831,19 +833,25 @@ class TestAnyOverlay:
         head_with_dir = get_module_impl("vpc", server_state)
         assert head_with_dir == head_baseline
 
-        inputs_baseline = filter_module_sections(content, ["inputs"])
+        # D7 Change A: vpc has a resolvable root bundle, so get_module_impl
+        # scopes the default inputs view to root only -- match that here.
+        inputs_baseline = filter_module_sections(content, ["inputs"], interface_scope="root")
         inputs_with_dir = get_module_impl("vpc", server_state, sections=["inputs"])
         assert inputs_with_dir == inputs_baseline
 
     def test_no_overlay_directory_present_is_unaffected(self, server_state, monkeypatch, tmp_path):
         """When _ANY_OVERLAY_DIR holds no matching overlay file, every module
-        renders unchanged (isolated from the committed model/any_overlay/ data)."""
+        renders unchanged (isolated from the committed model/any_overlay/ data).
+        D7 Change A: s3-bucket and vpc both have a resolvable root bundle, so
+        their default inputs view is root-scoped; iam has none (a pure
+        submodule-collection doc), so its fallback still walks every
+        submodule (BUG-1) -- interface_scope must match per module."""
         monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
-        for mod in ("s3-bucket", "vpc", "iam"):
+        for mod, interface_scope in (("s3-bucket", "root"), ("vpc", "root"), ("iam", "all")):
             content = get_module_documentation(mod, server_state)
             assert get_module_impl(mod, server_state) == orientation_head(content)
             assert get_module_impl(mod, server_state, sections=["inputs"]) == filter_module_sections(
-                content, ["inputs"]
+                content, ["inputs"], interface_scope=interface_scope
             )
 
     # ---- version skew label ----
@@ -1180,9 +1188,12 @@ class TestCompleteInputTable:
 
     def test_module_with_no_all_inputs_key_is_byte_identical(self, server_state, any_overlay_dir):
         """s3-bucket's FIXTURE overlay has vars but no all_inputs key at all --
-        its sections=["inputs"] output is unaffected (graceful fallback)."""
+        its sections=["inputs"] output is unaffected (graceful fallback), aside
+        from D7 Change A's root-only scoping (s3-bucket has a resolvable root
+        bundle) -- no submodule-interface menu either, since with no
+        all_inputs/all_outputs key there is nothing to advertise."""
         content = get_module_documentation("s3-bucket", server_state)
-        baseline = filter_module_sections(content, ["inputs"])
+        baseline = filter_module_sections(content, ["inputs"], interface_scope="root")
         baseline = tfmod_mcp_server._inline_any_overlay_input_cells(baseline, content)
         baseline = tfmod_mcp_server._with_any_overlay_appendix(baseline, content, is_filtered=True)
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
@@ -1190,9 +1201,10 @@ class TestCompleteInputTable:
 
     def test_no_overlay_module_byte_identical(self, server_state, any_overlay_dir):
         """A module with no overlay file at all (vpc, in the fixture dir) is
-        completely unaffected."""
+        completely unaffected, aside from D7 Change A's root-only scoping
+        (vpc has a resolvable root bundle)."""
         content = get_module_documentation("vpc", server_state)
-        baseline = filter_module_sections(content, ["inputs"])
+        baseline = filter_module_sections(content, ["inputs"], interface_scope="root")
         out = get_module_impl("vpc", server_state, sections=["inputs"])
         assert out == baseline
 
@@ -1356,17 +1368,19 @@ class TestCompleteOutputTable:
     def test_module_with_no_all_outputs_key_is_byte_identical(self, server_state, any_overlay_dir):
         """s3-bucket's FIXTURE overlay has vars but no all_outputs key at
         all -- its sections=["outputs"] output is unaffected (graceful
-        fallback)."""
+        fallback), aside from D7 Change A's root-only scoping (s3-bucket has
+        a resolvable root bundle)."""
         content = get_module_documentation("s3-bucket", server_state)
-        baseline = filter_module_sections(content, ["outputs"])
+        baseline = filter_module_sections(content, ["outputs"], interface_scope="root")
         out = get_module_impl("s3-bucket", server_state, sections=["outputs"])
         assert out == baseline
 
     def test_no_overlay_module_byte_identical(self, server_state, any_overlay_dir):
         """A module with no overlay file at all (vpc, in the fixture dir) is
-        completely unaffected."""
+        completely unaffected, aside from D7 Change A's root-only scoping
+        (vpc has a resolvable root bundle)."""
         content = get_module_documentation("vpc", server_state)
-        baseline = filter_module_sections(content, ["outputs"])
+        baseline = filter_module_sections(content, ["outputs"], interface_scope="root")
         out = get_module_impl("vpc", server_state, sections=["outputs"])
         assert out == baseline
 
@@ -1669,6 +1683,151 @@ def test_head_no_inputs_noise_for_collection_doc():
     out = orientation_head(doc)
     assert "Requested sections not found" not in out
     assert "`a`" not in out  # submodule inputs not inlined in a collection head
+
+
+class TestD7ChangeARootScopeDefault:
+    """
+    D7 Change A (2026-07-21): scope the complete inputs/outputs interface to
+    the module's ROOT overlay scope by default. Root cause: concatenating
+    every submodule scope's COMPLETE interface alongside root overflowed the
+    MCP tool output cap on wide modules (eks measured 105200 bytes for
+    sections=["inputs"], 114272 for ["inputs","outputs"] -- both over any
+    sane cap). Submodule scopes stay reachable on demand via the existing
+    submodule address. Design: evals/specs/2026-07-21-d7-remove-grep-scope-
+    default-design.md (Change A).
+
+    Uses the REAL committed eks overlay (8 scopes: root + 7 submodules).
+    """
+
+    def test_default_inputs_view_serves_root_scope_only(self, server_state):
+        """sections=["inputs"] on eks includes a known root-only input and
+        excludes a known submodule-only one (checked as its OWN table row --
+        eks's root inputs pass through per-node-group config objects whose
+        Type-cell text can otherwise embed submodule field names) -- the
+        default response no longer concatenates every scope."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert "| `name` |" in out, "root-scope input must be present"
+        assert (
+            "| `launch_template_id` |" not in out
+        ), "eks-managed-node-group-only input must not leak into the default view as its own row"
+        assert "queue_kms_data_key_reuse_period_seconds" not in out, "karpenter-only input must not leak in either"
+        assert "## Submodule 1: eks-managed-node-group" not in out, "submodule bundles must not be concatenated"
+
+    def test_default_inputs_and_outputs_view_serves_root_scope_only(self, server_state):
+        """Same guarantee for the combined sections=["inputs","outputs"] call
+        -- the pairing that measured 114272 bytes pre-fix."""
+        out = get_module_impl("eks", server_state, sections=["inputs", "outputs"])
+        assert "| `name` |" in out
+        assert "| `launch_template_id` |" not in out
+        assert "queue_kms_data_key_reuse_period_seconds" not in out
+
+    def test_default_inputs_view_stays_under_safety_ceiling(self, server_state):
+        """The whole point of the fix: eks's default inputs response must fit
+        comfortably under the tool output cap, not just be smaller than
+        before."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert len(out.encode("utf-8")) < tfmod_mcp_server._COMPLETE_TABLE_BYTE_CAP * 2
+
+    def test_default_inputs_and_outputs_view_stays_under_safety_ceiling(self, server_state):
+        out = get_module_impl("eks", server_state, sections=["inputs", "outputs"])
+        assert len(out.encode("utf-8")) < tfmod_mcp_server._COMPLETE_TABLE_BYTE_CAP * 3
+
+    def test_submodule_address_serves_that_scope_complete_interface(self, server_state):
+        """get_module("eks//modules/karpenter", sections=["inputs"]) serves
+        the karpenter scope's own complete interface -- a field the curated
+        table never listed at all now appears."""
+        out = get_module_impl("eks//modules/karpenter", server_state, sections=["inputs"])
+        assert "| `queue_kms_data_key_reuse_period_seconds` |" in out
+
+    def test_submodule_address_does_not_serve_other_submodules_complete_data(self, server_state):
+        """A field unique to a DIFFERENT submodule's overlay scope
+        (eks-managed-node-group) must not leak into the karpenter address
+        response."""
+        out = get_module_impl("eks//modules/karpenter", server_state, sections=["inputs"])
+        assert "| `launch_template_id` |" not in out
+
+    def test_footer_lists_submodule_scope_names(self, server_state):
+        """The default root-scoped response advertises the reachable
+        submodule scopes and how to reach them."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert "Submodule interfaces available on demand" in out
+        for name in (
+            "eks-managed-node-group",
+            "self-managed-node-group",
+            "fargate-profile",
+            "karpenter",
+            "hybrid-node-role",
+            "capability",
+        ):
+            assert name in out, f"{name} missing from the submodule-scope menu"
+        assert 'get_module("eks//modules/<submodule>"' in out
+
+    def test_footer_absent_for_rootless_doc(self, server_state):
+        """A module with no resolvable root bundle (iam) keeps the pre-
+        existing all-scope fallback behavior -- no submodule-scope menu is
+        appended, since nothing was hidden behind root-scoping."""
+        out = get_module_impl("iam", server_state, sections=["inputs"])
+        assert "Submodule interfaces available on demand" not in out
+
+    def test_footer_absent_when_inputs_outputs_not_requested(self, server_state):
+        """A sections request that never touches inputs/outputs (e.g. a
+        heading substring match) gets no submodule-scope menu."""
+        out = get_module_impl("eks", server_state, sections=["karpenter"])
+        assert "Submodule interfaces available on demand" not in out
+
+    def test_rootless_doc_inputs_view_unaffected(self, server_state):
+        """cloudwatch has no resolvable root bundle -- its default
+        sections=["inputs"] behavior is unchanged: submodule bundles are
+        still walked (the pre-existing BUG-1 fix), not root-scoped away."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        assert "Requested sections not found" not in out
+        assert "## Submodule 1: log-group" in out
+
+    def test_safety_cap_truncates_instead_of_overflowing(self, server_state, monkeypatch):
+        """Synthetic oversized case: with the byte cap lowered far below a
+        single real table's size, the complete-table render truncates with
+        an explicit pointer rather than emitting the whole (much larger)
+        table."""
+        monkeypatch.setattr(tfmod_mcp_server, "_COMPLETE_TABLE_BYTE_CAP", 2000)
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert "more rows omitted" in out
+        assert f"{tfmod_mcp_server._COMPLETE_TABLE_BYTE_CAP}-byte safety cap" in out
+        # Never trips into emitting the whole 104-row uncapped table.
+        assert out.count("| `") < 200
+
+    def test_safety_cap_is_a_noop_when_table_fits(self, server_state):
+        """The default (real) cap never fires on the real catalog -- the
+        pointer line must be absent when nothing was truncated."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        assert "more rows omitted" not in out
+
+
+class TestCapCompleteTableRowsUnit:
+    """Unit-level: _cap_complete_table_rows, the shared truncation helper
+    behind both _build_all_inputs_table and _build_all_outputs_table."""
+
+    def test_all_rows_kept_when_under_cap(self):
+        header = "| A | B |\n|---|---|\n"
+        rows = [f"| `v{i}` | x |\n" for i in range(5)]
+        out = tfmod_mcp_server._cap_complete_table_rows(header, rows)
+        assert out == header + "".join(rows)
+        assert "more rows omitted" not in out
+
+    def test_truncates_with_pointer_when_over_cap(self):
+        header = "| A | B |\n|---|---|\n"
+        rows = [f"| `v{i}` | {'x' * 50} |\n" for i in range(50)]
+        out = tfmod_mcp_server._cap_complete_table_rows(header, rows, cap=500)
+        assert "more rows omitted" in out
+        assert len(out.encode("utf-8")) < 500 + 400  # header/rows within cap + one pointer line
+        # Not every row survived.
+        assert out.count("| `v") < 50
+
+    def test_pointer_reports_correct_remaining_count(self):
+        header = "| A | B |\n|---|---|\n"
+        rows = [f"| `v{i}` | {'x' * 20} |\n" for i in range(10)]
+        out = tfmod_mcp_server._cap_complete_table_rows(header, rows, cap=100)
+        kept = out.count("| `v")
+        assert f"+{10 - kept} more rows omitted" in out
 
 
 class TestSubmoduleAddress:
