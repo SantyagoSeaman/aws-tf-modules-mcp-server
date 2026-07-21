@@ -2435,6 +2435,229 @@ def _inline_any_overlay_input_cells(rendered: str, content: str) -> str:
     return _substitute_input_table_cells(rendered, _cell_for_row)
 
 
+# --------------------------------------------------------------------------- #
+# Complete input table (2026-07-21 "complete interface in one call" fix) --
+# supersede the curated (possibly PARTIAL) "Main Input Variables" table with
+# the module's COMPLETE input list from the committed overlay's `all_inputs`
+# (built by scripts/build_any_overlay.py from the Registry API detail already
+# fetched there). Design: evals/specs/2026-07-21-complete-interface-one-call-
+# design.md. Runs BEFORE _inline_any_overlay_input_cells (so the any-type
+# Type-cell hint still applies to the now-complete rows) and before
+# _with_any_overlay_appendix. A pure no-op when the module has no overlay, the
+# overlay carries no `all_inputs` (the common case today), or a given table's
+# scope cannot be confidently resolved -- never guesses, falls back to the
+# curated table exactly as served before this feature existed.
+# --------------------------------------------------------------------------- #
+
+_ALL_INPUTS_TABLE_HEADER = "| Variable | Type | Required | Default | Description |\n"
+_ALL_INPUTS_TABLE_SEP = "|----------|------|----------|---------|-------------|\n"
+_ALL_INPUTS_DEFAULT_CHAR_CAP = 80
+_ALL_INPUTS_DESCRIPTION_CHAR_CAP = 200
+
+# Matches the "Main Input Variables" heading at EITHER H2 (the split-scheme
+# corpus: a doc with no submodule deep-dives, the table sits directly under
+# this H2) or H3 (the combined-scheme corpus: nested under a "## Main
+# Module:"/"## Root Module:"/"## Submodule N: <name>" H2 bundle).
+_ANY_LEVEL_INPUT_HEADING_RE = re.compile(r"^#{2,3} Main Input Variables[ \t]*$", re.MULTILINE)
+
+_SUBMODULE_H2_TITLE_RE = re.compile(r"(?i)^submodule\s+\d+\s*:\s*(.+)$")
+
+
+def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | None:
+    """
+    Resolve which `all_inputs` scope (if any) an H2 bundle's title carries:
+    "root" for a "Main Module:"/"Root Module:" bundle (when the overlay has a
+    "root" scope), or a submodule scope name for a "Submodule N: <name>"
+    bundle -- matched against `candidate_scopes` by exact name first, then by
+    substring so a decorated heading (e.g. "Submodule 2: flow-log
+    (Recommended)") still resolves. Returns None for anything else --
+    Description/Key Features/the compact "## Submodules" inventory/etc. --
+    so those blocks are never touched.
+    """
+    tl = title.strip().lower()
+    if tl.startswith(("main module", "root module")):
+        return "root" if "root" in candidate_scopes else None
+    m = _SUBMODULE_H2_TITLE_RE.match(title.strip())
+    if not m:
+        return None
+    name_lower = m.group(1).strip().lower()
+    non_root = [s for s in candidate_scopes if s != "root"]
+    for scope in non_root:
+        if name_lower == scope.lower():
+            return scope
+    for scope in non_root:
+        if scope.lower() in name_lower:
+            return scope
+    return None
+
+
+def _locate_input_table(text: str, heading_re: "re.Pattern[str]") -> tuple[int, int, int, int] | None:
+    """
+    Find the first `heading_re` match in `text` and, when it is immediately
+    followed by a recognizable pipe table (mirrors the fail-safe contract
+    _cap_head_input_table/_substitute_input_table_cells already use), return
+    its (header_line_idx, sep_idx, row_start, row_end) line-indices into
+    text.splitlines(keepends=True). Returns None on no heading match, or no
+    table immediately following it -- never guesses.
+    """
+    m = heading_re.search(text)
+    if m is None:
+        return None
+    lines = text.splitlines(keepends=True)
+    heading_line_idx = text.count("\n", 0, m.start())
+
+    idx = heading_line_idx + 1
+    while idx < len(lines) and lines[idx].strip() == "":
+        idx += 1
+    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+        return None
+    header_line_idx = idx
+
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return None
+
+    row_start = sep_idx + 1
+    row_end = row_start
+    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
+        row_end += 1
+    return header_line_idx, sep_idx, row_start, row_end
+
+
+def _curated_descriptions_from_rows(
+    lines: list[str], row_start: int, row_end: int, header_cells: list[str]
+) -> dict[str, str]:
+    """
+    Map each Variable name (a curated row's Variable cell can bundle several
+    names via "name_a / name_b") to its curated Description cell text, so the
+    complete-table rebuild can preserve the human-written description for any
+    input the curated table already documents. Empty when the table has no
+    recognizable Variable/Description columns.
+    """
+    lower_headers = [c.lower() for c in header_cells]
+    if "variable" not in lower_headers or "description" not in lower_headers:
+        return {}
+    var_idx = lower_headers.index("variable")
+    desc_idx = lower_headers.index("description")
+    out: dict[str, str] = {}
+    for i in range(row_start, row_end):
+        cells = _split_table_row(lines[i])
+        if len(cells) <= max(var_idx, desc_idx):
+            continue
+        description = cells[desc_idx].strip()
+        for raw_name in cells[var_idx].split("/"):
+            name = _cell_var_name(raw_name)
+            if name and name not in out:
+                out[name] = description
+    return out
+
+
+def _sanitize_table_cell(text: str) -> str:
+    """Collapse newlines/whitespace and escape literal pipes so free-form
+    registry text (a multi-line type/default, a stray "|" in a description)
+    can never corrupt table-row shape when embedded in a cell."""
+    collapsed = re.sub(r"\s+", " ", text).strip()
+    return collapsed.replace("|", "\\|")
+
+
+def _format_all_inputs_default_cell(item: dict[str, Any]) -> str:
+    if item.get("required"):
+        return "-"
+    default = item.get("default")
+    if default in (None, ""):
+        return "`null`"
+    text = _sanitize_table_cell(str(default))
+    if len(text) > _ALL_INPUTS_DEFAULT_CHAR_CAP:
+        text = text[: _ALL_INPUTS_DEFAULT_CHAR_CAP - 1].rstrip() + "…"
+    return f"`{text}`"
+
+
+def _format_all_inputs_row(item: dict[str, Any], description: str) -> str:
+    name = _sanitize_table_cell(str(item.get("name", "")))
+    itype = _sanitize_table_cell(str(item.get("type", "")))
+    required = "Yes" if item.get("required") else "No"
+    default_cell = _format_all_inputs_default_cell(item)
+    desc = _sanitize_table_cell(description) if description else ""
+    return f"| `{name}` | `{itype}` | {required} | {default_cell} | {desc} |\n"
+
+
+def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
+    rows = [_ALL_INPUTS_TABLE_HEADER, _ALL_INPUTS_TABLE_SEP]
+    for item in items:
+        name = item.get("name", "")
+        curated = curated_descriptions.get(name)
+        description = (
+            curated
+            if curated
+            else _clip_blurb(item.get("description") or "", max_length=_ALL_INPUTS_DESCRIPTION_CHAR_CAP)
+        )
+        rows.append(_format_all_inputs_row(item, description))
+    return "".join(rows)
+
+
+def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str:
+    """Replace ONE "Main Input Variables" table's header+rows within `block`
+    (a single H2 bundle's text) with the complete table built from `items`.
+    Leaves `block` unchanged (fails safe) when no recognizable table is found,
+    or `items` is empty (nothing to supersede with)."""
+    if not items:
+        return block
+    located = _locate_input_table(block, _ANY_LEVEL_INPUT_HEADING_RE)
+    if located is None:
+        return block
+    header_line_idx, _sep_idx, row_start, row_end = located
+    lines = block.splitlines(keepends=True)
+    header_cells = _split_table_row(lines[header_line_idx])
+    curated = _curated_descriptions_from_rows(lines, row_start, row_end, header_cells)
+    new_table = _build_all_inputs_table(items, curated)
+    return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
+
+
+def _content_with_complete_input_tables(content: str) -> str:
+    """
+    Return `content` with every "Main Input Variables" table -- the H2 split-
+    scheme root table, or an H3 combined-scheme root/submodule bundle table --
+    superseded by the module's COMPLETE input list from the committed
+    overlay's `all_inputs` (see build_any_overlay.py and the complete-
+    interface-in-one-call design). Byte-identical to `content` when the
+    module has no committed overlay, the overlay carries no `all_inputs`, or
+    a given H2 bundle's scope cannot be resolved against `all_inputs`' keys
+    (fails safe to the curated table -- never guesses).
+
+    The default orientation head is NEVER passed through this function -- it
+    stays a cheap, unchanged first look; only an explicit sections=["inputs"]
+    request (or the full-document escape hatch) gets the complete table.
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content
+    all_inputs = overlay.get("all_inputs")
+    if not isinstance(all_inputs, dict) or not all_inputs:
+        return content
+    candidate_scopes = frozenset(all_inputs)
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content
+
+    changed = False
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        items = all_inputs.get(scope) if scope else None
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_input_table(block, items)
+        if new_block != block:
+            changed = True
+        new_blocks.append(new_block)
+
+    if not changed:
+        return content
+    return preamble + "".join(new_blocks)
+
+
 def orientation_head(text: str, version_override: str | None = None) -> str:
     """
     Build the compact orientation view returned by get_module by default.
@@ -2512,18 +2735,24 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
 
     For a module with a committed any-shape overlay (``model/any_overlay/``),
     a non-head response (an explicit ``sections`` request that resolves to
-    the inputs view, or the full-document escape hatch) gets TWO things: (1)
-    each root-scope ``any``-typed input row whose var has an overlay entry
-    gets its Type cell inlined with a field-name (or example-only) hint, AT
-    the row (see ``_inline_any_overlay_input_cells`` — Fix 1 of the
-    2026-07-21 table-discoverability fix: the appendix alone measured as not
-    landing, because a worker reads the row, sees bare ``any``, and greps
-    instead of scrolling to the appendix), and (2) an appendix-anchored block
-    per overlay var appended to the end of the response, regardless of
-    whether a matching input-table row exists (see
-    ``_with_any_overlay_appendix``). The default orientation head instead
-    gets only a cell-substitution pointer (see ``orientation_head``) — never
-    the example/field-list content. A module with no overlay is unaffected.
+    the inputs view, or the full-document escape hatch) gets THREE things:
+    (0) when the overlay also carries ``all_inputs`` (built by
+    ``scripts/build_any_overlay.py`` from the Registry API detail), the
+    curated — possibly PARTIAL — input table is SUPERSEDED with the
+    module's COMPLETE input list (see ``_content_with_complete_input_tables``
+    — the 2026-07-21 complete-interface-in-one-call fix); (1) each root-scope
+    ``any``-typed input row whose var has an overlay entry gets its Type cell
+    inlined with a field-name (or example-only) hint, AT the row (see
+    ``_inline_any_overlay_input_cells`` — Fix 1 of the 2026-07-21
+    table-discoverability fix: the appendix alone measured as not landing,
+    because a worker reads the row, sees bare ``any``, and greps instead of
+    scrolling to the appendix), and (2) an appendix-anchored block per
+    overlay var appended to the end of the response, regardless of whether a
+    matching input-table row exists (see ``_with_any_overlay_appendix``). The
+    default orientation head instead gets only a cell-substitution pointer
+    (see ``orientation_head``) — never the complete table or the example/
+    field-list content. A module with no overlay (or an overlay with no
+    ``all_inputs``) is unaffected.
 
     See get_module() tool documentation for full details.
     """
@@ -2535,12 +2764,21 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         content = get_module_documentation(parent_name, state)
         # Honor the full-doc escape hatch (all/full/everything) the same way the
         # name/path branch does — return the complete parent document verbatim,
-        # with the full (unscoped) any-overlay appendix, exactly like the
-        # non-submodule full-doc branch below.
+        # with COMPLETE input tables (2026-07-21 fix) and the full (unscoped)
+        # any-overlay appendix, exactly like the non-submodule full-doc branch
+        # below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            served = _inline_any_overlay_input_cells(content, content)
+            full_content = _content_with_complete_input_tables(content)
+            served = _inline_any_overlay_input_cells(full_content, content)
             return _with_any_overlay_appendix(served, content, is_filtered=False)
-        body = filter_module_sections(content, [sub, *(sections or [])])
+        # An explicit inputs/variables request supersedes the curated (possibly
+        # PARTIAL) table with the module's COMPLETE input list BEFORE section
+        # filtering (2026-07-21 fix), so the extracted submodule bundle already
+        # carries every input — a no-op when the module has no `all_inputs`.
+        working_content = (
+            _content_with_complete_input_tables(content) if _sections_request_inputs(sections or []) else content
+        )
+        body = filter_module_sections(working_content, [sub, *(sections or [])])
         # A module WITH a committed any-shape overlay can have submodule-scoped
         # any-vars (e.g. fsx has all 19 of its any-vars submodule-scoped) — an
         # explicit inputs/variables request here must get its OWN appendix,
@@ -2559,9 +2797,16 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            served = _inline_any_overlay_input_cells(content, content)
+            full_content = _content_with_complete_input_tables(content)
+            served = _inline_any_overlay_input_cells(full_content, content)
             return _with_any_overlay_appendix(served, content, is_filtered=False)
-        rendered = filter_module_sections(content, sections)
+        # Complete-input-table supersede (2026-07-21 fix) runs BEFORE section
+        # filtering so the extracted inputs H2/H3 already carries every input —
+        # a no-op when the module has no committed `all_inputs`.
+        working_content = (
+            _content_with_complete_input_tables(content) if _sections_request_inputs(sections) else content
+        )
+        rendered = filter_module_sections(working_content, sections)
         if _sections_request_inputs(sections):
             rendered = _inline_any_overlay_input_cells(rendered, content)
             rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)

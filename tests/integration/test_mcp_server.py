@@ -725,10 +725,14 @@ class TestAnyOverlay:
         (committed, not fixture) any-overlay inlines
         `log_delivery_configuration`'s field names AT its real Main Module
         table row -- exercised against the actual model/any_overlay data,
-        not the fixture."""
+        not the fixture. The real elasticache overlay now also carries
+        `all_inputs` (2026-07-21 complete-interface-in-one-call fix), so the
+        table row grew from 4 to 5 columns (Variable/Type/Required/Default/
+        Description) -- the Type cell (index 1) is unaffected by that
+        column-count change."""
         out = get_module_impl("elasticache", server_state, sections=["inputs"])
         cells = _input_row_cells(out, "log_delivery_configuration")
-        assert len(cells) == 4, "row must still split into exactly 4 columns"
+        assert len(cells) == 5, "row must split into exactly 5 columns now that all_inputs supersedes the table"
         assert cells[1].startswith("any -- fields: ")
         assert "example below" in cells[1]
 
@@ -989,6 +993,186 @@ class TestAnyOverlaySubmoduleAddress:
         hint = tfmod_mcp_server._version_pin_hint(content)
         baseline = f"{hint}\n\n{body}" if hint else body
         out = get_module_impl("iam//modules/iam-role", server_state, sections=["inputs"])
+        assert out == baseline
+
+
+class TestCompleteInputTable:
+    """
+    complete-interface-in-one-call (2026-07-21): sections=["inputs"] serves
+    the module's COMPLETE input list from the committed overlay's
+    `all_inputs`, superseding the curated (possibly PARTIAL) table -- not
+    just the any-typed enrichment. Design:
+    evals/specs/2026-07-21-complete-interface-one-call-design.md.
+
+    Uses the FIXTURE overlay (tests/fixtures/any_overlay/cloudwatch), whose
+    all_inputs["log-group"] mirrors cloudwatch.md's real "Submodule 1:
+    log-group" curated table PLUS one field (`fixture_extra_field`) absent
+    from that curated table -- the anti-silent-no-op guard for this feature.
+    """
+
+    @pytest.fixture
+    def any_overlay_dir(self, monkeypatch):
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", ANY_OVERLAY_FIXTURES)
+        return ANY_OVERLAY_FIXTURES
+
+    def test_complete_table_includes_field_absent_from_curated_doc(self, server_state, any_overlay_dir):
+        """The primary anti-silent-no-op guard: a field with NO row at all in
+        the curated cloudwatch.md doc now appears, because it is present in
+        the overlay's all_inputs."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        assert "| `fixture_extra_field` |" in out
+
+    def test_complete_table_still_includes_every_curated_field(self, server_state, any_overlay_dir):
+        """Every field the curated table already had is preserved -- the
+        supersede is a superset, not a replacement that drops rows."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        for name in (
+            "create",
+            "name",
+            "name_prefix",
+            "retention_in_days",
+            "kms_key_id",
+            "log_group_class",
+            "skip_destroy",
+            "tags",
+        ):
+            assert f"| `{name}` |" in out, f"{name} missing from the complete table"
+
+    def test_complete_table_has_five_columns(self, server_state, any_overlay_dir):
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "fixture_extra_field")
+        assert len(cells) == 5, "Variable | Type | Required | Default | Description"
+        assert cells[0] == "`fixture_extra_field`"
+        assert cells[1] == "`string`"
+        assert cells[2] == "No"
+        assert cells[3] == "`null`"
+        assert cells[4] == "Fixture-only field absent from the curated table, proving supersede completeness"
+
+    def test_complete_table_preserves_curated_description(self, server_state, any_overlay_dir):
+        """`kms_key_id`'s row keeps the human-curated description verbatim
+        (the overlay fixture's own description text is identical to the
+        curated one on purpose, so a passing assertion here really exercises
+        the curated-description lookup rather than a coincidence)."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "kms_key_id")
+        assert cells[4] == "ARN of KMS key used to encrypt log data"
+
+    def test_other_submodule_tables_unaffected(self, server_state, any_overlay_dir):
+        """log-stream has no all_inputs entry -- its curated table (still 4
+        columns) is untouched by the log-group supersede."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        start = out.index("## Submodule 2: log-stream")
+        end = out.index("## Submodule 3: log-metric-filter")
+        block = out[start:end]
+        header_line = next(line for line in block.splitlines() if line.startswith("| Variable"))
+        assert header_line == "| Variable | Type | Default | Description |"
+
+    def test_any_overlay_appendix_still_present_alongside_complete_table(self, server_state, any_overlay_dir):
+        """The pre-existing any-overlay appendix (root::fixture_cloudwatch_marker)
+        still renders even though log-group's table structure changed."""
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        assert "fixture_cloudwatch_marker" in out
+
+    def test_head_unchanged_byte_identical(self, server_state, any_overlay_dir):
+        """The default orientation head never gets the complete table -- byte
+        identical to the pre-feature head."""
+        content = get_module_documentation("cloudwatch", server_state)
+        baseline = orientation_head(content)
+        head = get_module_impl("cloudwatch", server_state)
+        assert head == baseline
+
+    def test_full_doc_escape_hatch_also_gets_complete_table(self, server_state, any_overlay_dir):
+        full = get_module_impl("cloudwatch", server_state, sections=["all"])
+        assert "| `fixture_extra_field` |" in full
+
+    def test_submodule_address_inputs_gets_complete_table(self, server_state, any_overlay_dir):
+        """A submodule-address request (e.g. cloudwatch//modules/log-group)
+        also gets the complete table for its own scope."""
+        out = get_module_impl("cloudwatch//modules/log-group", server_state, sections=["inputs"])
+        assert "| `fixture_extra_field` |" in out
+
+    def test_module_with_no_all_inputs_key_is_byte_identical(self, server_state, any_overlay_dir):
+        """s3-bucket's FIXTURE overlay has vars but no all_inputs key at all --
+        its sections=["inputs"] output is unaffected (graceful fallback)."""
+        content = get_module_documentation("s3-bucket", server_state)
+        baseline = filter_module_sections(content, ["inputs"])
+        baseline = tfmod_mcp_server._inline_any_overlay_input_cells(baseline, content)
+        baseline = tfmod_mcp_server._with_any_overlay_appendix(baseline, content, is_filtered=True)
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        assert out == baseline
+
+    def test_no_overlay_module_byte_identical(self, server_state, any_overlay_dir):
+        """A module with no overlay file at all (vpc, in the fixture dir) is
+        completely unaffected."""
+        content = get_module_documentation("vpc", server_state)
+        baseline = filter_module_sections(content, ["inputs"])
+        out = get_module_impl("vpc", server_state, sections=["inputs"])
+        assert out == baseline
+
+    def test_no_network_access_with_complete_input_table(self, server_state, any_overlay_dir, monkeypatch):
+        """The complete-input-table supersede (all_inputs) is a static file
+        read only -- zero network calls, same as the rest of get_module."""
+
+        def _blocked(*_args, **_kwargs):
+            raise AssertionError("network access attempted while serving the complete input table")
+
+        monkeypatch.setattr(socket.socket, "connect", _blocked)
+        monkeypatch.setattr(socket, "create_connection", _blocked)
+        out = get_module_impl("cloudwatch", server_state, sections=["inputs"])
+        assert "| `fixture_extra_field` |" in out
+
+    # ---- unit-level: _scope_for_h2_title ----
+
+    def test_scope_for_h2_title_root(self):
+        assert tfmod_mcp_server._scope_for_h2_title("Main Module: ElastiCache", frozenset({"root"})) == "root"
+        assert tfmod_mcp_server._scope_for_h2_title("Root Module: S3 Bucket", frozenset({"root"})) == "root"
+
+    def test_scope_for_h2_title_root_absent_from_candidates(self):
+        assert tfmod_mcp_server._scope_for_h2_title("Main Module: X", frozenset({"user-group"})) is None
+
+    def test_scope_for_h2_title_submodule_exact(self):
+        scopes = frozenset({"root", "user-group", "serverless-cache"})
+        assert tfmod_mcp_server._scope_for_h2_title("Submodule 2: user-group", scopes) == "user-group"
+
+    def test_scope_for_h2_title_submodule_decorated_heading(self):
+        """A heading with trailing decoration (e.g. "(Recommended)") still
+        resolves via substring match."""
+        scopes = frozenset({"root", "flow-log", "vpc-endpoints"})
+        assert tfmod_mcp_server._scope_for_h2_title("Submodule 2: flow-log (Recommended)", scopes) == "flow-log"
+
+    def test_scope_for_h2_title_non_matching_heading(self):
+        scopes = frozenset({"root", "user-group"})
+        assert tfmod_mcp_server._scope_for_h2_title("Best Practices", scopes) is None
+        assert tfmod_mcp_server._scope_for_h2_title("Submodules", scopes) is None
+
+
+class TestElasticacheRealAllInputs:
+    """Real-data check (not fixture): the committed
+    model/any_overlay/terraform-aws-modules__elasticache__aws.json now
+    carries all_inputs, so sections=["inputs"] must include the fields that
+    were measured missing from the curated .md table -- the root-cause
+    finding of the complete-interface-in-one-call design (evals/specs/
+    2026-07-21-complete-interface-one-call-design.md)."""
+
+    def test_previously_missing_fields_now_present(self, server_state):
+        out = get_module_impl("elasticache", server_state, sections=["inputs"])
+        for name in (
+            "create_subnet_group",
+            "create_security_group",
+            "subnet_group_name",
+            "preferred_cache_cluster_azs",
+            "parameter_group_name",
+            "port",
+        ):
+            assert f"| `{name}` |" in out, f"{name} still missing from sections=['inputs']"
+
+    def test_real_no_overlay_module_still_byte_identical(self, server_state):
+        """rds has zero any-vars and no committed overlay file at all -- the
+        REAL (non-fixture) model/any_overlay/ directory must leave it
+        completely unaffected by this rollout."""
+        content = get_module_documentation("rds", server_state)
+        baseline = filter_module_sections(content, ["inputs"])
+        out = get_module_impl("rds", server_state, sections=["inputs"])
         assert out == baseline
 
 
