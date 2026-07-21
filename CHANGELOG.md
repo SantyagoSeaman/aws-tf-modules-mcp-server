@@ -1,5 +1,25 @@
 # Changelog
 
+## [0.26.0] - 2026-07-21
+
+[0.26.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.26.0
+
+Complete interface in one call: `get_module` now serves the COMPLETE inputs/outputs interface for all 63 catalog modules, not just a curated subset. Every module now has a committed per-module artifact, `model/any_overlay/<id>.json`, carrying `all_inputs` (every input: name, type, required, default, description) and `all_outputs` (every output: name, description), sourced from the Terraform Registry API detail at the doc's own pinned version. When `get_module` renders an inputs or outputs view — `sections=["inputs"]`/`["outputs"]`, the full-document escape hatch, or a submodule-scoped request — the complete table now SUPERSEDES the curated Markdown table, which was frequently a hand-picked subset of the real interface: `rds`, for example, curates 41 of its 111 root-level inputs (238 across all submodules) in the doc body, so the previous curated-only table left 70 real root inputs invisible to a caller who did not separately reach for `grep_module_docs`. This closes that gap for every module in one `get_module` call, offline. The 22 modules with at least one `type = any` input keep the 0.25.0 any-overlay enrichment on top — the inline field-name hint in the Type cell and the apply-verified example appendix — layered onto the now-complete table rather than replaced by it. The remaining 41 modules, which have no `any`-typed input, now also carry a committed overlay (`all_inputs`/`all_outputs` with no `vars` key) purely to serve the complete table; they get no example/field-name enrichment, since none of their inputs are `any`-typed. `get_module` stays fully offline throughout — the overlay is a committed static file, read at serve time, never a network call; live Registry access remains confined to `grep_module_docs`. The search index is untouched.
+
+### Added
+
+- **Every one of the 63 catalog modules now carries a committed `model/any_overlay/<id>.json` artifact** (built via `scripts/build_any_overlay.py` against live registry data), up from the 22 any-typed-input modules that had one in 0.25.0. Each artifact's `all_inputs`/`all_outputs` are keyed by scope (`root` plus one key per submodule), covering the module's complete registry-declared interface at its `built_from_version`.
+- **`get_module`'s inputs and outputs views now render the complete table from the overlay's `all_inputs`/`all_outputs`** whenever a given H2/H3 bundle's scope can be confidently resolved against the overlay (root, or a named submodule) — falling back to the curated table exactly as served before whenever a module has no overlay, the overlay carries no `all_inputs`/`all_outputs`, or a table's scope cannot be resolved. Applies to the default `sections=["inputs"|"outputs"]` request, the `all`/`full` escape hatch, and a submodule-address-scoped request alike.
+
+### Changed
+
+- **The 0.25.0 CHANGELOG and README claim that a module with no `any`-typed input is served "byte-identical to 0.24.0" no longer holds.** That statement described 0.25.0's behavior accurately at the time (the any-overlay only touched the 22 any-typed-input modules), but this release's complete-interface change now touches all 63 modules' inputs/outputs views, including the 41 that have no `any`-typed input. Their curated, possibly-partial input/output table is now superseded by the complete registry-sourced one on every inputs/outputs request. The historical 0.25.0 entry below is left as written (it was true when it shipped); this note corrects the record going forward.
+- **`s3-bucket`'s pinned version moved 5.14.1 -> 5.15.1** (patch-level; one new output, `s3_bucket_bucket_namespace`, no input changes) so its overlay is built from the doc's current pin rather than a stale one.
+
+### Unchanged
+
+- The search index is not rebuilt and no module doc's curated Markdown text changed; `search_modules`, `modules_list`, and `grep_module_docs` are untouched. `get_module` remains fully offline — the overlay is a static file read, never a network call. The any-overlay's example/field-name appendix for the 22 any-typed-input modules is unchanged in content, only now layered onto a complete rather than curated-subset input table.
+
 ## [0.25.0] - 2026-07-20
 
 [0.25.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.25.0

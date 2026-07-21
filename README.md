@@ -26,7 +26,7 @@ Think of it as an always-available, searchable reference card for every terrafor
 ## 🚀 Features
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
-- **Any-Typed Input Overlay**: for catalog modules with `type = any` inputs, `get_module`'s inputs view appends the module maintainers' own apply-verified example HCL and a list of field names observed in the module source — offline, additive, and honestly labeled as an example rather than a schema
+- **Complete Inputs/Outputs for Every Module**: `get_module`'s inputs/outputs views serve the module's COMPLETE Registry-sourced interface for all 63 catalog modules — not a curated subset — from a committed per-module artifact (`model/any_overlay/`); the 22 modules with `type = any` inputs additionally get the module maintainers' own apply-verified example HCL and observed field names per `any`-typed variable — all offline and honestly labeled as an example rather than a schema
 - **Live Registry Grep**: `grep_module_docs` regex-searches the full, current docs of *any* Terraform Registry module (version-pinnable, cached), returning only matching lines with context — pinpoint lookups without dumping 100k-token documents
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
 - **Fast & Efficient**: Pre-built search index with CPU-only inference using `intfloat/e5-small-v2` model
@@ -154,7 +154,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.25.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.26.0"]
     }
   }
 }
@@ -166,7 +166,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.25.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.26.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -180,7 +180,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.25.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.26.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -200,7 +200,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.25.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.26.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -265,7 +265,7 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.25.0", "modules": 63,
+# {"status": "ok", "version": "0.26.0", "modules": 63,
 #  "latest_version": null, "update_available": false}
 ```
 
@@ -656,13 +656,26 @@ Get documentation for a specific Terraform module. **By default returns a compac
 **Parameters**:
 - `module_identifier` (string): Module name (e.g., `"vpc"`), relative path (e.g., `"modules/terraform-aws-modules/vpc.md"`), or **submodule address** (e.g., `"iam//modules/iam-role"`, or the full `"terraform-aws-modules/iam/aws//modules/iam-role"`) — returns an orientation head **scoped to that submodule's section** in one call, instead of the whole parent doc.
 - `sections` (list of strings, optional): Control what comes back.
-  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. The footer also states that the curated doc is a subset and points to `grep_module_docs` for the complete, exact inputs/outputs and to module source for resource-creation conditions. For a module **with submodules**, the head also inlines the compact submodule **inventory** — each submodule's name, purpose, and pinnable source string — so when the right answer is a submodule you can pin its source or drill in via the submodule address above.
+  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. The footer also flags that the curated prose (description, examples, best practices) is a hand-picked subset and points to module source for resource-creation conditions; the inputs/outputs table itself is already the module's complete Registry-declared interface (see below) — `grep_module_docs` remains there for exhaustive confirmation or a name-exists check. For a module **with submodules**, the head also inlines the compact submodule **inventory** — each submodule's name, purpose, and pinnable source string — so when the right answer is a submodule you can pin its source or drill in via the submodule address above.
   - **Logical keys or heading substrings** → those sections added on top of the always-included core. Accepts `inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`, or case-insensitive substrings of headings (e.g. `"karpenter"` for a single EKS submodule). The `inputs`/`outputs`/`examples` keys also resolve on modules that bundle their interface into a combined `Main Module:`/`Root Module:` section or spread it across submodules.
   - **`["all"]`** (or `"full"`/`"everything"`) → the complete document verbatim.
 
 **Returns**: The compact orientation head by default, a filtered subset when specific sections are requested, or the complete markdown document when an `all`/`full` key is given.
 
-**Any-typed input overlay**: some Registry module inputs are declared `type = any`, so the curated input table can name the variable but not its shape. For the catalog modules that have at least one such input, requesting the inputs view (`sections=["inputs"]`/`"variables"`, an `all`/`full` request, or a submodule-scoped inputs view) appends, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (pulled from the module's own `examples/`) plus a list of field names observed in the module source. It is committed, static data (`model/any_overlay/`, built by `scripts/build_any_overlay.py`) — a plain file read, so `get_module` stays fully offline; live Registry access remains confined to `grep_module_docs`. Every appendix is honestly labeled: an apply-verified example from a named module version, explicitly **not a schema**, with a pointer to `grep_module_docs` for complete confirmation and a version-skew note when the overlay's source version differs from the doc's pinned version. A module with no `any`-typed inputs is served byte-identical to before; the default orientation head only gets a lightweight pointer (`any — see sections=["inputs"]`) rather than the full appendix, to keep the head small.
+**Complete inputs/outputs interface**: `get_module`'s inputs and outputs views (`sections=["inputs"]`/`["outputs"]`, an `all`/`full` request, or a submodule-scoped request) serve the module's COMPLETE Registry-declared interface — every input (name, type, required, default, description) and every output (name, description) — for all 63 catalog modules, superseding the curated Markdown table wherever that table was only a hand-picked subset. For example, `rds` curates 41 of its 111 root-level inputs (238 across all submodules) in the doc body; the complete table now surfaces all of them in one call, no separate `grep_module_docs` round-trip required. This is sourced from a committed per-module artifact, `model/any_overlay/<id>.json` (built by `scripts/build_any_overlay.py` from the Terraform Registry API detail at the doc's own pinned version) — a plain file read at serve time, so `get_module` stays fully offline; live Registry access remains confined to `grep_module_docs`.
+
+**Any-typed input overlay**: on top of the complete table, some Registry inputs are declared `type = any`, where the type string alone does not describe the shape. The 22 catalog modules with at least one such input additionally get, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (pulled from the module's own `examples/`) plus a list of field names observed in the module source. Every appendix is honestly labeled: an apply-verified example from a named module version, explicitly **not a schema**, with a pointer to `grep_module_docs` for complete confirmation and a version-skew note when the overlay's source version differs from the doc's pinned version. The default orientation head only gets a lightweight pointer (`any — see sections=["inputs"]`) rather than the full appendix, to keep the head small. The other 41 modules — no `any`-typed input — still get the complete table above; they carry no example/field-name appendix since none of their inputs need one.
+
+#### Measured impact (complete-interface release)
+
+<!-- EVAL-NUMBERS: filled after the A/B run -->
+
+| Substrate | Condition | Tool calls | Tokens | Wall-clock | Cost | Validate pass rate |
+|---|---|---:|---:|---:|---:|---:|
+| TBD | TFModSearch | TBD | TBD | TBD | TBD | TBD |
+| TBD | Raw HashiCorp MCP | TBD | TBD | TBD | TBD | TBD |
+
+*Placeholder — numbers pending the A/B comparison run; do not treat the TBD rows as measured.*
 
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
