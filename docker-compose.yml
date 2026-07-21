@@ -9,7 +9,7 @@
 # container the server must bind 0.0.0.0 or the published port is unreachable.
 services:
   tfmodsearch-http:
-    image: ghcr.io/santyagoseaman/tfmodsearch:0.27.0
+    image: ghcr.io/santyagoseaman/tfmodsearch:0.25.0
     container_name: tfmodsearch-http
     restart: unless-stopped
     ports:
@@ -17,7 +17,7 @@ services:
     command: ["--transport", "http", "--host", "0.0.0.0", "--port", "8765"]
     volumes:
       # Historically persisted grep_module_docs's registry-doc cache across
-      # container recreates/upgrades. That tool was removed in 0.27.0, so
+      # container recreates/upgrades. That tool was removed in 0.25.0, so
       # /home/app/.cache is currently unused; the mount is kept for forward
       # compatibility with any future on-disk cache. NOTE: volumes created by
       # images older than 0.19.1 are root-owned (Docker initialized them
