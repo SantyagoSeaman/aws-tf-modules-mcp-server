@@ -248,7 +248,11 @@ SAMPLE_DETAIL = {
                 "description": "Determines whether the subnet group will be created",
             },
             {"name": "port", "type": "number", "required": False, "default": "null", "description": "The port number"},
-        ]
+        ],
+        "outputs": [
+            {"name": "replication_group_id", "description": "Identifier of the replication group"},
+            {"name": "port", "description": "The port number"},
+        ],
     },
     "submodules": [
         {
@@ -256,11 +260,17 @@ SAMPLE_DETAIL = {
             "inputs": [
                 {"name": "users", "type": "list(string)", "required": True, "default": "", "description": "User ARNs"},
             ],
+            "outputs": [
+                {"name": "group_id", "description": "ID of the user group"},
+            ],
         },
         {
             "name": "wrappers",
             "inputs": [
                 {"name": "defaults", "type": "any", "required": False, "default": "{}", "description": "ignored"},
+            ],
+            "outputs": [
+                {"name": "defaults", "description": "ignored"},
             ],
         },
     ],
@@ -292,6 +302,34 @@ def test_extract_all_inputs_handles_missing_root_and_submodules():
     assert bao._extract_all_inputs({}) == {"root": []}
 
 
+# --------------------------------------------------------------------------- #
+# all_outputs - complete root+submodule output list from the SAME registry
+# detail response all_inputs is extracted from (complete-interface-in-one-call
+# design, outputs half). Outputs carry no type/required/default in the
+# Registry API - name + description only.
+# --------------------------------------------------------------------------- #
+
+
+def test_extract_all_outputs_covers_root_and_submodules():
+    all_outputs = bao._extract_all_outputs(SAMPLE_DETAIL)
+    assert {o["name"] for o in all_outputs["root"]} == {"replication_group_id", "port"}
+    assert {o["name"] for o in all_outputs["user-group"]} == {"group_id"}
+    assert "wrappers" not in all_outputs, "wrappers is never a real submodule scope"
+
+
+def test_extract_all_outputs_item_shape():
+    all_outputs = bao._extract_all_outputs(SAMPLE_DETAIL)
+    port = next(o for o in all_outputs["root"] if o["name"] == "port")
+    assert port == {"name": "port", "description": "The port number"}
+    assert "type" not in port
+    assert "required" not in port
+    assert "default" not in port
+
+
+def test_extract_all_outputs_handles_missing_root_and_submodules():
+    assert bao._extract_all_outputs({}) == {"root": []}
+
+
 def test_build_module_overlay_includes_all_inputs_from_detail(tmp_path):
     archive = _tar_gz_of_tf_files(EC_DIR, "terraform-aws-elasticache-1.9.0")
     detail_url = f"https://registry.terraform.io/v1/modules/{EC_ID}/{EC_VERSION}"
@@ -307,7 +345,10 @@ def test_build_module_overlay_includes_all_inputs_from_detail(tmp_path):
                     "default": "null",
                     "description": "The port",
                 }
-            ]
+            ],
+            "outputs": [
+                {"name": "port", "description": "The port"},
+            ],
         },
         "submodules": [],
     }
@@ -326,13 +367,14 @@ def test_build_module_overlay_includes_all_inputs_from_detail(tmp_path):
     assert overlay["all_inputs"]["root"] == [
         {"name": "port", "type": "number", "required": False, "default": "null", "description": "The port"}
     ]
+    assert overlay["all_outputs"]["root"] == [{"name": "port", "description": "The port"}]
     assert "root::log_delivery_configuration" in overlay["vars"]
 
 
 def test_build_module_overlay_degrades_gracefully_when_detail_fetch_fails_after_source(tmp_path):
-    """A transient failure on the SECOND (all_inputs) detail fetch must not
-    fail the whole build -- the overlay still carries its vars, just without
-    all_inputs."""
+    """A transient failure on the SECOND (all_inputs/all_outputs) detail
+    fetch must not fail the whole build -- the overlay still carries its
+    vars, just without all_inputs/all_outputs."""
     archive = _tar_gz_of_tf_files(EC_DIR, "terraform-aws-elasticache-1.9.0")
     detail_url = f"https://registry.terraform.io/v1/modules/{EC_ID}/{EC_VERSION}"
     v_tag_url = "https://codeload.github.com/terraform-aws-modules/terraform-aws-elasticache/tar.gz/refs/tags/v1.9.0"
@@ -354,6 +396,7 @@ def test_build_module_overlay_degrades_gracefully_when_detail_fetch_fails_after_
     assert overlay is not None
     assert "root::log_delivery_configuration" in overlay["vars"]
     assert "all_inputs" not in overlay
+    assert "all_outputs" not in overlay
 
 
 # --------------------------------------------------------------------------- #
