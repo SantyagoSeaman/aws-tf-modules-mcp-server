@@ -1,4 +1,2007 @@
 {
+  "all_inputs": {
+    "flow-log": [
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Elastic Network Interface ID to attach to",
+        "name": "eni_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Transit Gateway ID to attach to",
+        "name": "transit_gateway_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of additional tags to add to the CloudWatch log group",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The maximum interval of time during which a flow of packets is captured and aggregated into a flow log record. Valid Values: `60` seconds (1 minute) or `600` seconds (10 minutes). Default: `600`. When `transit_gateway_id` or `transit_gateway_attachment_id` is specified, `max_aggregation_interval` must be 60 seconds (1 minute)",
+        "name": "max_aggregation_interval",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "VPC ID to attach to",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a CloudWatch log group for the Flow Logs",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events. Set to `0` to keep logs indefinitely",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for inline policy permissions",
+        "name": "iam_role_permissions",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name to use across resources created",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Describes the destination options for a flow log",
+        "name": "destination_options",
+        "required": false,
+        "type": "object({\n    file_format                = optional(string)\n    hive_compatible_partitions = optional(bool)\n    per_hour_partition         = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the logging destination",
+        "name": "log_destination",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Subnet ID to attach to",
+        "name": "subnet_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS service IAM role should be created",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"ALL\"",
+        "description": "The type of traffic to capture. Valid values: `ACCEPT`, `REJECT`, `ALL`",
+        "name": "traffic_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the created CloudWatch log group",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom trust policy permissions",
+        "name": "iam_role_trust_policy_permissions",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the IAM role in the destination account used for cross-account delivery of flow logs",
+        "name": "deliver_cross_account_role",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The fields to include in the flow log record",
+        "name": "log_format",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Transit Gateway Attachment ID to attach to",
+        "name": "transit_gateway_attachment_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the log group name should be used as a prefix",
+        "name": "cloudwatch_log_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the existing Kinesis Data Firehose delivery stream. Required when `log_destination_type` is `kinesis-data-firehose`",
+        "name": "kinesis_data_firehose_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"cloud-watch-logs\"",
+        "description": "Logging destination type. Valid values: `cloud-watch-logs`, `s3`, `kinesis-data-firehose`. Default: `cloud-watch-logs`",
+        "name": "log_destination_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of additional tags to add to the flow log ",
+        "name": "flow_log_tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "root": [
+      {
+        "default": "{}",
+        "description": "Additional tags for the public subnets where the primary key is the AZ",
+        "name": "public_subnet_tags_per_az",
+        "required": false,
+        "type": "map(map(string))"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "elasticache_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "AZ where Outpost is anchored",
+        "name": "outpost_az",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you don't want EIPs to be created for your NAT Gateways and will instead pass them in via the 'external_nat_ip_ids' variable",
+        "name": "reuse_nat_ips",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of maps of egress rules to set on the default security group",
+        "name": "default_security_group_egress",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Determines whether network address usage metrics are enabled for the VPC",
+        "name": "enable_network_address_usage_metrics",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of elasticache subnets inside the VPC",
+        "name": "elasticache_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the intra route tables",
+        "name": "intra_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"outpost\"",
+        "description": "Suffix to append to outpost subnets name",
+        "name": "outpost_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the default security group",
+        "name": "default_security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of secondary CIDR blocks to associate with the VPC to extend the IP Address pool",
+        "name": "secondary_cidr_blocks",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of database subnets inside the VPC",
+        "name": "database_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the elasticache subnet group",
+        "name": "elasticache_subnet_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the intra subnets network ACL",
+        "name": "intra_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of virtual gateways for propagation",
+        "name": "default_route_table_propagating_vgws",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"vpc-flow-log-role\"",
+        "description": "Name to use on the VPC Flow Log IAM role created",
+        "name": "vpc_flow_log_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "private_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "database_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "intra_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on intra subnets. If empty, Name tags are generated",
+        "name": "intra_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want to provision NAT Gateways for each of your private networks",
+        "name": "enable_nat_gateway",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want route table propagation",
+        "name": "propagate_public_route_tables_vgw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "redshift_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want to create a new VPN Gateway resource and attach it to the VPC",
+        "name": "enable_vpn_gateway",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"AmazonProvidedDNS\"\n]",
+        "description": "Specify a list of DNS server addresses for DHCP options set, default to AWS provided (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_domain_name_servers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Private subnets outbound network ACLs",
+        "name": "private_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "database_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"redshift\"",
+        "description": "Suffix to append to redshift subnets name",
+        "name": "redshift_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the redshift route tables",
+        "name": "redshift_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want to provision a single shared NAT Gateway across all of your private networks",
+        "name": "single_nat_gateway",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want route table propagation",
+        "name": "propagate_intra_route_tables_vgw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to adopt and manage Default Network ACL",
+        "name": "manage_default_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"10.0.0.0/16\"",
+        "description": "(Optional) The IPv4 CIDR block for the VPC. CIDR can be explicitly set or it can be derived from IPAM using `ipv4_netmask_length` & `ipv4_ipam_pool_id`",
+        "name": "cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"default\"",
+        "description": "A tenancy option for instances launched into the VPC",
+        "name": "instance_tenancy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The netmask length of the IPv4 CIDR you want to allocate to this VPC. Requires specifying a ipv4_ipam_pool_id",
+        "name": "ipv4_netmask_length",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) IPv6 CIDR block to request from an IPAM Pool. Can be set explicitly or derived from IPAM using `ipv6_netmask_length`",
+        "name": "ipv6_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the private subnets where the primary key is the AZ",
+        "name": "private_subnet_tags_per_az",
+        "required": false,
+        "type": "map(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if database subnet group should be created (n.b. database_subnets must also be set)",
+        "name": "create_database_subnet_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to enable DNS support in the Default VPC",
+        "name": "default_vpc_enable_dns_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"ALL\"",
+        "description": "The type of traffic to capture. Valid values: ACCEPT, REJECT, ALL",
+        "name": "flow_log_traffic_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"private\"",
+        "description": "Suffix to append to private subnets name",
+        "name": "private_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the intra subnets",
+        "name": "intra_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of maps of ingress rules to set on the default security group",
+        "name": "default_security_group_ingress",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[\n  {\n    \"action\": \"allow\",\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_no\": 100,\n    \"to_port\": 0\n  },\n  {\n    \"action\": \"allow\",\n    \"from_port\": 0,\n    \"ipv6_cidr_block\": \"::/0\",\n    \"protocol\": \"-1\",\n    \"rule_no\": 101,\n    \"to_port\": 0\n  }\n]",
+        "description": "List of maps of egress rules to set on the Default Network ACL",
+        "name": "default_network_acl_egress",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of VPC block public access exclusions",
+        "name": "vpc_block_public_access_exclusions",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "\"intra\"",
+        "description": "Suffix to append to intra subnets name",
+        "name": "intra_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The Availability Zone for the VPN Gateway",
+        "name": "vpn_gateway_az",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create CloudWatch log group for VPC Flow Logs",
+        "name": "create_flow_log_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the elasticache route tables",
+        "name": "elasticache_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the default route table",
+        "name": "default_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the database subnets",
+        "name": "database_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting log data for VPC flow logs",
+        "name": "flow_log_cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The ID of an IPv4 IPAM pool you want to use for allocating this VPC's CIDR",
+        "name": "ipv4_ipam_pool_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Specify a list of NTP servers for DHCP options set (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_ntp_servers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "How frequently, in seconds, a running instance with an IPv6 assigned to it goes through DHCPv6 lease renewal (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_ipv6_address_preferred_lease_time",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Controls if separate route table for database should be created",
+        "name": "create_database_subnet_route_table",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Requests an Amazon-provided IPv6 CIDR block with a /56 prefix length for the VPC. You cannot specify the range of IP addresses, or the size of the CIDR block",
+        "name": "enable_ipv6",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "public_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if redshift subnet group should be created",
+        "name": "create_redshift_subnet_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Elasticache subnets outbound network ACL rules",
+        "name": "elasticache_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[]",
+        "description": "A list of intra subnets inside the VPC",
+        "name": "intra_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the outpost subnets network ACL",
+        "name": "outpost_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "private_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "database_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "intra_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to enable DNS hostnames in the Default VPC",
+        "name": "default_vpc_enable_dns_hostnames",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN of the CloudWatch log group or S3 bucket where VPC Flow Logs will be pushed. If this ARN is a S3 bucket the appropriate permissions need to be set on that bucket's policy. When create_flow_log_cloudwatch_log_group is set to false this argument must be provided",
+        "name": "flow_log_destination_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the VPC Flow Logs",
+        "name": "vpc_flow_log_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "database_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the NAT gateways",
+        "name": "nat_gateway_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to enable DNS support in the VPC",
+        "name": "enable_dns_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if a nat gateway route should be created to give internet access to the database subnets",
+        "name": "create_database_nat_gateway_route",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the elasticache subnets",
+        "name": "elasticache_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The fields to include in the flow log record, in the order in which they should appear",
+        "name": "flow_log_log_format",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Specifies DNS name for DHCP options set (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on database subnets. If empty, Name tags are generated",
+        "name": "database_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "outpost_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "private_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to be used on the Default Network ACL",
+        "name": "default_network_acl_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to manage default route table",
+        "name": "manage_default_route_table",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the public subnets",
+        "name": "public_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of redshift subnet group",
+        "name": "redshift_subnet_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on elasticache subnets. If empty, Name tags are generated",
+        "name": "elasticache_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Default VPC",
+        "name": "default_vpc_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to be used on the default route table",
+        "name": "default_route_table_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the number of days you want to retain log events in the specified log group for VPC flow logs",
+        "name": "flow_log_cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) IPAM Pool ID for a IPv6 pool. Conflicts with `assign_generated_ipv6_cidr_block`",
+        "name": "ipv6_ipam_pool_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if an internet gateway route for public database access should be created",
+        "name": "create_database_internet_gateway_route",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the database route tables",
+        "name": "database_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of elasticache subnet group",
+        "name": "elasticache_subnet_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 outpost subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "outpost_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "outpost_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the NAT EIP",
+        "name": "nat_eip_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"64512\"",
+        "description": "The Autonomous System Number (ASN) for the Amazon side of the gateway. By default the virtual private gateway is created with the current default Amazon ASN",
+        "name": "amazon_side_asn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Redshift subnets outbound network ACL rules",
+        "name": "redshift_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "elasticache_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "intra_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"vpc-flow-log-to-cloudwatch\"",
+        "description": "Name of the IAM policy",
+        "name": "vpc_flow_log_iam_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create IAM role for VPC Flow Logs",
+        "name": "create_flow_log_cloudwatch_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Intra subnets inbound network ACLs",
+        "name": "intra_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Intra subnets outbound network ACLs",
+        "name": "intra_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to enable DNS hostnames in the VPC",
+        "name": "enable_dns_hostnames",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Private subnets inbound network ACLs",
+        "name": "private_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the database subnet group",
+        "name": "database_subnet_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 elasticache subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "elasticache_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "intra_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create a separate route table for each public subnet. Default: `false`",
+        "name": "create_multiple_public_route_tables",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "redshift_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "redshift_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the VPN gateway",
+        "name": "vpn_gateway_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  {\n    \"action\": \"allow\",\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_no\": 100,\n    \"to_port\": 0\n  },\n  {\n    \"action\": \"allow\",\n    \"from_port\": 0,\n    \"ipv6_cidr_block\": \"::/0\",\n    \"protocol\": \"-1\",\n    \"rule_no\": 101,\n    \"to_port\": 0\n  }\n]",
+        "description": "List of maps of ingress rules to set on the Default Network ACL",
+        "name": "default_network_acl_ingress",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "\"\"",
+        "description": "Specifies the name suffix of CloudWatch Log Group for VPC flow logs",
+        "name": "flow_log_cloudwatch_log_group_name_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Elasticache subnets inbound network ACL rules",
+        "name": "elasticache_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if an Egress Only Internet Gateway is created and its related routes",
+        "name": "create_egress_only_igw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to be used on the default security group",
+        "name": "default_security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "private_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for database subnets",
+        "name": "database_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create a separate route table for each intra subnet. Default: `false`",
+        "name": "create_multiple_intra_route_tables",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want route table propagation",
+        "name": "propagate_private_route_tables_vgw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 intra subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "intra_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The format for the flow log. Valid values: `plain-text`, `parquet`",
+        "name": "flow_log_file_format",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls if VPC should be created (it affects almost all resources)",
+        "name": "create_vpc",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the private subnets network ACL",
+        "name": "private_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "redshift_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of outpost subnets inside the VPC",
+        "name": "outpost_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "outpost_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the subnet should be assigned a customer owned IP address. The `customer_owned_ipv4_pool` and `outpost_arn` arguments must be specified when set to `true`. Default is `false`",
+        "name": "map_customer_owned_ip_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of public subnets inside the VPC",
+        "name": "public_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "elasticache_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the outpost subnets",
+        "name": "outpost_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN for the IAM role that's used to post flow logs to a CloudWatch Logs log group. When flow_log_destination_arn is set to ARN of Cloudwatch Logs, this argument needs to be provided",
+        "name": "flow_log_cloudwatch_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"/aws/vpc-flow-log/\"",
+        "description": "Specifies the name prefix of CloudWatch Log Group for VPC flow logs",
+        "name": "flow_log_cloudwatch_log_group_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of private subnets inside the VPC",
+        "name": "private_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "elasticache_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": " Set to true if you do not wish the log group (and any logs it may contain) to be deleted at destroy time, and instead just remove the log group from the Terraform state",
+        "name": "flow_log_cloudwatch_log_group_skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "public_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 public subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "public_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The customer owned IPv4 address pool. Typically used with the `map_customer_owned_ip_on_launch` argument. The `outpost_arn` argument must be specified when configured",
+        "name": "customer_owned_ipv4_pool",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 redshift subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "redshift_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "intra_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "Additional conditions of the CloudWatch role assumption policy",
+        "name": "flow_log_cloudwatch_iam_role_conditions",
+        "required": false,
+        "type": "list(object({\n    test     = string\n    variable = string\n    values   = list(string)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on redshift subnets. If empty, Name tags are generated",
+        "name": "redshift_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to adopt and manage default security group",
+        "name": "manage_default_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "(Optional) Indicates whether to use Hive-compatible prefixes for flow logs stored in Amazon S3",
+        "name": "flow_log_hive_compatible_partitions",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want to specify a DHCP options set with a custom domain name, DNS servers, NTP servers, netbios servers, and/or netbios server type",
+        "name": "enable_dhcp_options",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of Outpost you want to create a subnet in",
+        "name": "outpost_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on outpost subnets. If empty, Name tags are generated",
+        "name": "outpost_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "By default when an IPv6 CIDR is assigned to a VPC a default ipv6_cidr_block_network_border_group will be set to the region of the VPC. This can be changed to restrict advertisement of public addresses to specific Network Border Groups such as LocalZones",
+        "name": "ipv6_cidr_block_network_border_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the private subnets",
+        "name": "private_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls if separate route table for elasticache should be created",
+        "name": "create_elasticache_subnet_route_table",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether or not to enable VPC Flow Logs",
+        "name": "enable_flow_log",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "database_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Specify netbios node_type for DHCP options set (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_netbios_node_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether IPAM pool is used for CIDR allocation",
+        "name": "use_ipam_pool",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that instances launched into the subnet should be assigned a public IP address. Default is `false`",
+        "name": "map_public_ip_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for private subnets",
+        "name": "private_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ID of VPN Gateway to attach to the VPC",
+        "name": "vpn_gateway_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if redshift should have public routing table",
+        "name": "enable_public_redshift",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the redshift subnets",
+        "name": "redshift_subnet_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for outpost subnets",
+        "name": "outpost_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"0.0.0.0/0\"",
+        "description": "Used to pass a custom destination route for private NAT Gateway. If not specified, the default 0.0.0.0/0 is used as a destination route",
+        "name": "nat_gateway_destination_cidr_block",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Default Network ACL",
+        "name": "default_network_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on public subnets. If empty, Name tags are generated",
+        "name": "public_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"db\"",
+        "description": "Suffix to append to database subnets name",
+        "name": "database_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the elasticache subnets network ACL",
+        "name": "elasticache_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Public subnets inbound network ACLs",
+        "name": "public_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Public subnets outbound network ACLs",
+        "name": "public_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if a nat gateway route should be created to give internet access to the private subnets",
+        "name": "create_private_nat_gateway_route",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the database subnets network ACL",
+        "name": "database_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the internet gateway",
+        "name": "igw_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for redshift subnets",
+        "name": "redshift_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "public_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "private_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "elasticache_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"elasticache\"",
+        "description": "Suffix to append to elasticache subnets name",
+        "name": "elasticache_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM policy (`vpc_flow_log_iam_policy_name`) is used as a prefix",
+        "name": "vpc_flow_log_iam_policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) ARN of the IAM role that allows Amazon EC2 to publish flow logs across accounts.",
+        "name": "flow_log_deliver_cross_account_role",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name to be used on all the resources as identifier",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Outpost subnets outbound network ACLs",
+        "name": "outpost_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the DHCP option set (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the public subnets network ACL",
+        "name": "public_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "database_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "outpost_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Outpost subnets inbound network ACLs",
+        "name": "outpost_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`vpc_flow_log_iam_role_name_name`) is used as a prefix",
+        "name": "vpc_flow_log_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: STANDARD or INFREQUENT_ACCESS",
+        "name": "flow_log_cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Redshift subnets inbound network ACL rules",
+        "name": "redshift_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the redshift subnets network ACL",
+        "name": "redshift_acl_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Maps of Customer Gateway's attributes (BGP ASN and Gateway's Internet-routable external IP address)",
+        "name": "customer_gateways",
+        "required": false,
+        "type": "map(map(any))"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Customer Gateway",
+        "name": "customer_gateway_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "(Optional) Indicates whether to partition the flow log per hour. This reduces the cost and response time for queries",
+        "name": "flow_log_per_hour_partition",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of VPC block public access options",
+        "name": "vpc_block_public_access_options",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the public route tables",
+        "name": "public_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "redshift_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Specify true to indicate that network interfaces created in the specified subnet should be assigned an IPv6 address. Default is `false`",
+        "name": "intra_subnet_assign_ipv6_address_on_creation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if an Internet Gateway is created for public subnets and the related routes that connect them",
+        "name": "create_igw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true if you want only one NAT Gateway per availability zone. Requires `var.azs` to be set, and the number of `public_subnets` created to be greater than or equal to the number of availability zones specified in `var.azs`",
+        "name": "one_nat_gateway_per_az",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of EIP IDs to be assigned to the NAT Gateways (used in combination with reuse_nat_ips)",
+        "name": "external_nat_ip_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "public_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"public\"",
+        "description": "Suffix to append to public subnets name",
+        "name": "public_subnet_suffix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "600",
+        "description": "The maximum interval of time during which a flow of packets is captured and aggregated into a flow log record. Valid Values: `60` seconds or `600` seconds",
+        "name": "flow_log_max_aggregation_interval",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) Netmask length to request from IPAM Pool. Conflicts with `ipv6_cidr_block`. This can be omitted if IPAM pool as a `allocation_default_netmask_length` set. Valid values: `56`",
+        "name": "ipv6_netmask_length",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "public_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the redshift subnet group",
+        "name": "redshift_subnet_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Configuration block of routes. See https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/default_route_table#route",
+        "name": "default_route_table_routes",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 database subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "database_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Should be true to adopt and manage Default VPC",
+        "name": "manage_default_vpc",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to be used on the Default VPC",
+        "name": "default_vpc_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of redshift subnets inside the VPC",
+        "name": "redshift_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of EIPs to be used for `nat_public_ips` output (used in combination with reuse_nat_ips and external_nat_ip_ids)",
+        "name": "external_nat_ips",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Database subnets outbound network ACL rules",
+        "name": "database_outbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS A records. Default: `false`",
+        "name": "private_subnet_enable_resource_name_dns_a_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "Specify a list of netbios servers for DHCP options set (requires enable_dhcp_options set to true)",
+        "name": "dhcp_options_netbios_name_servers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The path for the VPC Flow Log IAM Role",
+        "name": "vpc_flow_log_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Assigns IPv6 private subnet id based on the Amazon provided /56 prefix base 10 integer (0-256). Must be of equal length to the corresponding IPv4 subnet list",
+        "name": "private_subnet_ipv6_prefixes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the VPC",
+        "name": "vpc_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of database subnet group",
+        "name": "database_subnet_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether to create an IPv6-only subnet. Default: `false`",
+        "name": "redshift_subnet_ipv6_native",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for intra subnets",
+        "name": "intra_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to respond to DNS queries for instance hostnames with DNS AAAA records. Default: `true`",
+        "name": "outpost_subnet_enable_resource_name_dns_aaaa_record_on_launch",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the Permissions Boundary for the VPC Flow Log IAM Role",
+        "name": "vpc_flow_log_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"cidr_block\": \"0.0.0.0/0\",\n    \"from_port\": 0,\n    \"protocol\": \"-1\",\n    \"rule_action\": \"allow\",\n    \"rule_number\": 100,\n    \"to_port\": 0\n  }\n]",
+        "description": "Database subnets inbound network ACL rules",
+        "name": "database_inbound_acl_rules",
+        "required": false,
+        "type": "list(map(string))"
+      },
+      {
+        "default": "[]",
+        "description": "A list of availability zones names or ids in the region",
+        "name": "azs",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The type of hostnames to assign to instances in the subnet at launch. For IPv6-only subnets, an instance DNS name must be based on the instance ID. For dual-stack and IPv4-only subnets, you can specify whether DNS names use the instance IPv4 address or the instance ID. Valid values: `ip-name`, `resource-name`",
+        "name": "public_subnet_private_dns_hostname_type_on_launch",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Explicit values to use in the Name tag on private subnets. If empty, Name tags are generated",
+        "name": "private_subnet_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the private route tables",
+        "name": "private_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "elasticache_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if elasticache subnet group should be created",
+        "name": "create_elasticache_subnet_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for elasticache subnets",
+        "name": "elasticache_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether DNS queries made to the Amazon-provided DNS Resolver in this subnet should return synthetic IPv6 addresses for IPv4-only destinations. Default: `true`",
+        "name": "outpost_subnet_enable_dns64",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls if separate route table for redshift should be created",
+        "name": "create_redshift_subnet_route_table",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use dedicated network ACL (not default) and custom rules for public subnets",
+        "name": "public_dedicated_network_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"cloud-watch-logs\"",
+        "description": "Type of flow log destination. Can be s3, kinesis-data-firehose or cloud-watch-logs",
+        "name": "flow_log_destination_type",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "vpc-endpoints": [
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the VPC in which the endpoint will be used",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of interface and/or gateway endpoints containing their properties and configurations",
+        "name": "endpoints",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "Default subnets IDs to associate with the VPC endpoints",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to use on all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name prefix to use on security group created. Conflicts with `security_group_name`",
+        "name": "security_group_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group rules to add to the security group created",
+        "name": "security_group_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration. If a value is provided, `service_endpoint` must be specified due to https://github.com/hashicorp/terraform-provider-aws/issues/42462",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Default security group IDs to associate with the VPC endpoints",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Define maximum timeout for creating, updating, and deleting VPC endpoint resources",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created. Conflicts with `security_group_name_prefix`",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
   "built_from_version": "6.6.1",
   "module_id": "terraform-aws-modules/vpc/aws",
   "vars": {

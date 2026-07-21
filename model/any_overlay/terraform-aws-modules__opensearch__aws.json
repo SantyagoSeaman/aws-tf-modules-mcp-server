@@ -1,4 +1,584 @@
 {
+  "all_inputs": {
+    "collection": [
+      {
+        "default": "null",
+        "description": "Description of the access policy",
+        "name": "access_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where this resource will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines if a collection group is created",
+        "name": "create_collection_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the collection group's indexing and search capacity limits",
+        "name": "collection_group_capacity_limits",
+        "required": false,
+        "type": "object({\n    min_indexing_capacity_in_ocu = optional(number)\n    max_indexing_capacity_in_ocu = optional(number)\n    min_search_capacity_in_ocu   = optional(number)\n    max_search_capacity_in_ocu   = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Create and delete timeout configurations for the collection",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "[\n  \"aoss:*\"\n]",
+        "description": "Access policy permissions for the collection",
+        "name": "access_policy_collection_permissions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Access policy principals",
+        "name": "access_policy_principals",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the encryption policy",
+        "name": "encryption_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the encryption policy",
+        "name": "encryption_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Encryption policy to apply to the collection",
+        "name": "encryption_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Description of the network policy",
+        "name": "network_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, OpenSearch Serverless retains documents indefinitely",
+        "name": "lifecycle_policy_no_min_index_retention",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"ENABLED\"",
+        "description": "Indicates whether standby replicas should be used for the collection group. Valid values are `ENABLED` and `DISABLED`. If `collection_group_generation` is set to `NEXTGEN`, this argument must be set to `ENABLED`",
+        "name": "collection_group_standby_replicas",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether standby replicas should be used for a collection. One of ENABLED or DISABLED. Defaults to ENABLED.",
+        "name": "standby_replicas",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Network policy to apply to the collection",
+        "name": "network_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Name of the lifecycle policy",
+        "name": "lifecycle_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Type of collection. One of `SEARCH`, `TIMESERIES`, or `VECTORSEARCH`. Defaults to `TIMESERIES`",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an encryption policy will be created",
+        "name": "create_encryption_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the collection group",
+        "name": "collection_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the collection",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"aoss:*\"\n]",
+        "description": "Access policy permissions for the collection index",
+        "name": "access_policy_index_permissions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the collection group",
+        "name": "collection_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the collection",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an network policy will be created",
+        "name": "create_network_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an access policy will be created",
+        "name": "create_access_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the access policy",
+        "name": "access_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Access policy to apply to the collection",
+        "name": "access_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an lifecycle policy will be created",
+        "name": "create_lifecycle_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the network policy",
+        "name": "network_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the lifecycle policy",
+        "name": "lifecycle_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The minimum period, in days (d) or hours (h), to retain the document in the index. The lower bound is `24h` and the upper bound is `3650d`",
+        "name": "lifecycle_policy_min_index_retention",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Generation of the collection group. Valid values are `CLASSIC` and `NEXTGEN`. When `NEXTGEN` is specified, `standby_replicas` must be `ENABLED`",
+        "name": "collection_group_generation",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for vector search options. Only valid when `type` is `VECTORSEARCH`",
+        "name": "vector_options",
+        "required": false,
+        "type": "object({\n    serverless_vector_acceleration = optional(string)\n  })"
+      }
+    ],
+    "root": [
+      {
+        "default": "{\n  \"enabled\": true\n}",
+        "description": "Configuration block for encrypting at rest",
+        "name": "encrypt_at_rest",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for AI/ML options including Natural Language Query Generation, S3 Vectors, and Serverless Vector Acceleration",
+        "name": "aiml_options",
+        "required": false,
+        "type": "object({\n    natural_language_query_generation_options = optional(object({\n      desired_state = optional(string)\n    }))\n    s3_vectors_engine = optional(object({\n      enabled = optional(bool)\n    }))\n    serverless_vector_acceleration = optional(object({\n      enabled = optional(bool)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for deployment strategy options",
+        "name": "deployment_strategy_options",
+        "required": false,
+        "type": "object({\n    deployment_strategy = string\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Create and delete timeout configurations for the domain",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an access policy will be applied to the domain",
+        "name": "enable_access_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy document specifying the access policies for the domain. Required if `create_access_policy` is `false`",
+        "name": "access_policies",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "access_policy_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: STANDARD or INFREQUENT_ACCESS",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Key-value string pairs to specify advanced configuration options. Note that the values for these configuration options must be strings (wrapped in quotes) or they may be wrong and cause a perpetual diff, causing Terraform to want to recreate your Elasticsearch domain on every apply",
+        "name": "advanced_options",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{\n  \"enforce_https\": true,\n  \"tls_security_policy\": \"Policy-Min-TLS-1-2-2019-07\"\n}",
+        "description": "Configuration block for domain endpoint HTTP(S) related options",
+        "name": "domain_endpoint_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the domain",
+        "name": "domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether log groups are created",
+        "name": "create_cloudwatch_log_groups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "60",
+        "description": "Number of days to retain log events",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a resource policy will be created for OpenSearch to log to CloudWatch",
+        "name": "create_cloudwatch_log_resource_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"ebs_enabled\": true,\n  \"volume_size\": 64,\n  \"volume_type\": \"gp3\"\n}",
+        "description": "Configuration block for EBS related options, may be required based on chosen [instance size](https://aws.amazon.com/elasticsearch-service/pricing/)",
+        "name": "ebs_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{\n  \"enabled\": true\n}",
+        "description": "Configuration block for node-to-node encryption options",
+        "name": "node_to_node_encryption",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{\n  \"enabled\": true,\n  \"off_peak_window\": {\n    \"hours\": 7\n  }\n}",
+        "description": "Configuration to add Off Peak update options",
+        "name": "off_peak_window_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "access_policy_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Set to true if you do not wish the log group (and any logs it may contain) to be deleted at destroy time, and instead just remove the log group from the Terraform state",
+        "name": "cloudwatch_log_group_skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the resource policy for OpenSearch to log to CloudWatch",
+        "name": "cloudwatch_log_resource_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration block for authenticating Kibana with Cognito",
+        "name": "cognito_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Version of the OpenSearch engine to use. Must follow format 'OpenSearch_X.Y' (e.g., 'OpenSearch_2.11')",
+        "name": "engine_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"log_type\": \"INDEX_SLOW_LOGS\"\n  },\n  {\n    \"log_type\": \"SEARCH_SLOW_LOGS\"\n  }\n]",
+        "description": "Configuration block for publishing slow and application logs to CloudWatch Logs. This block can be declared multiple times, for each log_type, within the same resource",
+        "name": "log_publishing_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of package association IDs to associate with the domain",
+        "name": "package_associations",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an access policy will be created",
+        "name": "create_access_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress and egress rules to add to the security group created",
+        "name": "security_group_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"dedicated_master_enabled\": true\n}",
+        "description": "Configuration block for the cluster of the domain",
+        "name": "cluster_config",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Region where this resource will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration block for VPC related options. Adding or removing this configuration forces a new resource ([documentation](https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/es-vpc.html#es-vpc-limitations))",
+        "name": "vpc_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "access_policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "SAML authentication options for an AWS OpenSearch Domain",
+        "name": "saml_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The IP address type for the endpoint. Valid values are ipv4 and dualstack",
+        "name": "ip_address_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"auto_software_update_enabled\": true\n}",
+        "description": "Software update options for the domain",
+        "name": "software_update_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of VPC endpoints to create for the domain",
+        "name": "vpc_endpoints",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether SAML options will be created",
+        "name": "create_saml_options",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of AWS OpenSearch outbound connections to create",
+        "name": "outbound_connections",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{\n  \"desired_state\": \"ENABLED\",\n  \"rollback_on_disable\": \"NO_ROLLBACK\"\n}",
+        "description": "Configuration block for the Auto-Tune options of the domain",
+        "name": "auto_tune_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for enabling and managing IAM Identity Center integration within a domain",
+        "name": "identity_center_options",
+        "required": false,
+        "type": "object({\n    enabled_api_access           = optional(bool)\n    identity_center_instance_arn = optional(string)\n    roles_key                    = optional(string)\n    subject_key                  = optional(string)\n  })"
+      },
+      {
+        "default": "{\n  \"anonymous_auth_enabled\": false,\n  \"enabled\": true\n}",
+        "description": "Configuration block for [fine-grained access control](https://docs.aws.amazon.com/elasticsearch-service/latest/developerguide/fgac.html)",
+        "name": "advanced_security_options",
+        "required": false,
+        "type": "any"
+      }
+    ]
+  },
   "built_from_version": "2.11.0",
   "module_id": "terraform-aws-modules/opensearch/aws",
   "vars": {

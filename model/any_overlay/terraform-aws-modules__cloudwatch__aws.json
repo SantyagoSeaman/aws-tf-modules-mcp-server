@@ -1,4 +1,1048 @@
 {
+  "all_inputs": {
+    "cis-alarms": [
+      {
+        "default": "false",
+        "description": "Whether to prefix resource names with random prefix",
+        "name": "use_random_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of IDs of disabled CIS controls",
+        "name": "disabled_controls",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not actions should be executed during any changes to the alarm's state.",
+        "name": "actions_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of ARNs to put as Cloudwatch insuficient data actions (eg, ARN of SNS topic)",
+        "name": "insufficient_data_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch log metric filter and metric alarms",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "A name prefix for the cloudwatch alarm (if use_random_name_prefix is true, this will be ignored)",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of overrides to apply to each control",
+        "name": "control_overrides",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"CISBenchmark\"",
+        "description": "The namespace where metric filter and metric alarm should be cleated",
+        "name": "namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the log group to associate the metric filter with",
+        "name": "log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of ARNs to put as Cloudwatch Alarms actions (eg, ARN of SNS topic)",
+        "name": "alarm_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of ARNs to put as Cloudwatch OK actions (eg, ARN of SNS topic)",
+        "name": "ok_actions",
+        "required": false,
+        "type": "list(string)"
+      }
+    ],
+    "composite-alarm": [
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch composite alarm",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of actions suppressor alarm configurations.",
+        "name": "actions_suppressor",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "null",
+        "description": "The set of actions to execute when this alarm transitions into an INSUFFICIENT_DATA state from any other state. Each action is specified as an Amazon Resource Name (ARN). Up to 5 actions are allowed.",
+        "name": "insufficient_data_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The set of actions to execute when this alarm transitions into an OK state from any other state. Each action is specified as an Amazon Resource Name (ARN). Up to 5 actions are allowed.",
+        "name": "ok_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "An expression that specifies which other alarms are to be evaluated to determine this composite alarm's state. The maximum length is 10240 characters.",
+        "name": "alarm_rule",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The descriptive name for the composite alarm. This name must be unique within the region.",
+        "name": "alarm_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The description for the composite alarm.",
+        "name": "alarm_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not actions should be executed during any changes to the composite alarm's state. Defaults to true.",
+        "name": "actions_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The set of actions to execute when this alarm transitions into an ALARM state from any other state. Each action is specified as an Amazon Resource Name (ARN). Up to 5 actions are allowed.",
+        "name": "alarm_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "log-account-policy": [
+      {
+        "default": "null",
+        "description": "The name of the log group under which the log stream is to be created.",
+        "name": "log_account_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Currently defaults to and only accepts the value: ALL.",
+        "name": "log_account_policy_scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the data protection policy in JSON.",
+        "name": "policy_document",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name of the data protection policy document.",
+        "name": "log_data_protection_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The description of the data protection policy document.",
+        "name": "log_data_protection_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Criteria for applying a subscription filter policy to a selection of log groups. The only allowable criteria selector is LogGroupName NOT IN [].",
+        "name": "log_account_policy_selection_criteria",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"audit-policy\"",
+        "description": "Name of the audit statement.",
+        "name": "audit_statement_sid",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"redact-policy\"",
+        "description": "Name of the deidentify statement.",
+        "name": "deidentify_statement_sid",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"audit-policy\"",
+        "description": "Type of account policy. Either DATA_PROTECTION_POLICY or SUBSCRIPTION_FILTER_POLICY. You can have one account policy per type in an account.",
+        "name": "log_account_policy_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Set of at least 1 sensitive data identifiers that you want to mask.",
+        "name": "data_identifiers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configures CloudWatch Logs as a findings destination.",
+        "name": "findings_destination_cloudwatch_log_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configures Kinesis Firehose as a findings destination.",
+        "name": "findings_destination_firehose_delivery_stream",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configures S3 as a findings destination.",
+        "name": "findings_destination_s3_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the cloudwatch log data protection policy.",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create the cloudwatch log data protection policy.",
+        "name": "create_log_data_protection_policy",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "log-anomaly-detector": [
+      {
+        "default": "null",
+        "description": "Optionally assigns a AWS KMS key to secure this anomaly detector and its findings. If a key is assigned, the anomalies found and the model used by this detector are encrypted at rest with the key. If a key is assigned to an anomaly detector, a user must have permissions for both this key and for the anomaly detector to retrieve information about the anomalies that it finds.",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the anomaly detector.",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Array containing the ARN of the log group that this anomaly detector will watch. You can specify only one log group ARN.",
+        "name": "log_group_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Number of days to have visibility on an anomaly. After this time period has elapsed for an anomaly, it will be automatically baselined and the anomaly detector will treat new occurrences of a similar anomaly as normal. Therefore, if you do not correct the cause of an anomaly during the time period specified in anomaly_visibility_time, it will be considered normal going forward and will not be detected as an anomaly. Valid Range: Minimum value of 7. Maximum value of 90.",
+        "name": "anomaly_visibility_time",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name for this anomaly detector.",
+        "name": "detector_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether or not to enable the anomaly detector.",
+        "name": "enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies how often the anomaly detector is to run and look for anomalies. Set this value according to the frequency that the log group receives new logs. For example, if the log group receives new log events every 10 minutes, then 15 minutes might be a good setting for evaluation_frequency. Valid Values: ONE_MIN | FIVE_MIN | TEN_MIN | FIFTEEN_MIN | THIRTY_MIN | ONE_HOUR.",
+        "name": "evaluation_frequency",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "You can use this parameter to limit the anomaly detection model to examine only log events that match the pattern you specify here.",
+        "name": "filter_pattern",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "log-data-protection-policy": [
+      {
+        "default": "null",
+        "description": "The name of the log group under which the log stream is to be created.",
+        "name": "log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name of the data protection policy document.",
+        "name": "log_data_protection_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The description of the data protection policy document.",
+        "name": "log_data_protection_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"audit-policy\"",
+        "description": "Name of the audit statement.",
+        "name": "audit_statement_sid",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configures CloudWatch Logs as a findings destination.",
+        "name": "findings_destination_cloudwatch_log_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configures Kinesis Firehose as a findings destination.",
+        "name": "findings_destination_firehose_delivery_stream",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the cloudwatch log data protection policy.",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create the cloudwatch log data protection policy.",
+        "name": "create_log_data_protection_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the data protection policy in JSON.",
+        "name": "policy_document",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"redact-policy\"",
+        "description": "Name of the deidentify statement.",
+        "name": "deidentify_statement_sid",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Set of at least 1 sensitive data identifiers that you want to mask.",
+        "name": "data_identifiers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configures S3 as a findings destination.",
+        "name": "findings_destination_s3_bucket",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "log-group": [
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: STANDARD or INFREQUENT_ACCESS",
+        "name": "log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Set to true if you do not wish the log group (and any logs it may contain) to be deleted at destroy time, and instead just remove the log group from the Terraform state",
+        "name": "skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to Cloudwatch log group",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch log group",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A name for the log group",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A name prefix for the log group",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the number of days you want to retain log events in the specified log group. Possible values are: 0, 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1096, 1827, 2192, 2557, 2922, 3288 and 3653.",
+        "name": "retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting logs",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "log-metric-filter": [
+      {
+        "default": "",
+        "description": "The name of the CloudWatch metric to which the monitored log information should be published (e.g. ErrorCount)",
+        "name": "metric_transformation_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The value to emit when a filter pattern does not match a log event. Conflicts with `metric_transformation_dimensions`.",
+        "name": "metric_transformation_default_value",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch log metric filter",
+        "name": "create_cloudwatch_log_metric_filter",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The destination namespace of the CloudWatch metric.",
+        "name": "metric_transformation_namespace",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "\"1\"",
+        "description": "What to publish to the metric. For example, if you're counting the occurrences of a particular term like 'Error', the value will be '1' for each occurrence. If you're counting the bytes transferred the published value will be the value in the log event.",
+        "name": "metric_transformation_value",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The unit to assign to the metric. If you omit this, the unit is set as None.",
+        "name": "metric_transformation_unit",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "The additional dimensions to assign to the metric, in the form `\"name\" = \"$.value\". Conflicts with `metric_transformation_default_value`.",
+        "name": "metric_transformation_dimensions",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "A name for the metric filter.",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "A valid CloudWatch Logs filter pattern for extracting metric data out of ingested log events.",
+        "name": "pattern",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The name of the log group to associate the metric filter with",
+        "name": "log_group_name",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "log-stream": [
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch log stream",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A name for the log stream",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A name of the log group",
+        "name": "log_group_name",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "log-subscription-filter": [
+      {
+        "default": "\"\"",
+        "description": "A valid CloudWatch Logs filter pattern for subscribing to a filtered stream of log events. Use empty string to match everything",
+        "name": "filter_pattern",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name of the log group to associate the subscription filter with",
+        "name": "log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an IAM role that grants Amazon CloudWatch Logs permissions to deliver ingested log events to the destination",
+        "name": "role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The method used to distribute log data to the destination. By default log data is grouped by log stream, but the grouping can be set to random for a more even distribution",
+        "name": "distribution",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch log stream",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A name for the log stream",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the destination to deliver matching log events to. Kinesis stream or Lambda function ARN",
+        "name": "destination_arn",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "metric-alarm": [
+      {
+        "default": "null",
+        "description": "The period in seconds over which the specified statistic is applied.",
+        "name": "period",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Used only for alarms based on percentiles. If you specify ignore, the alarm state will not change during periods with too few data points to be statistically significant. If you specify evaluate or omit this parameter, the alarm will always be evaluated and possibly change state no matter how many data points are available. The following values are supported: ignore, and evaluate.",
+        "name": "evaluate_low_sample_count_percentiles",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Enables you to create an alarm based on a metric math expression. You may specify at most 20.",
+        "name": "metric_query",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "If this is an alarm based on an anomaly detection model, make this value match the ID of the ANOMALY_DETECTION_BAND function.",
+        "name": "threshold_metric_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The unit for the alarm's associated metric.",
+        "name": "unit",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The namespace for the alarm's associated metric. See docs for the list of namespaces. See docs for supported metrics.",
+        "name": "namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an INSUFFICIENT_DATA state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "insufficient_data_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an OK state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "ok_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"missing\"",
+        "description": "Sets how this alarm is to handle missing data points. The following values are supported: missing, ignore, breaching and notBreaching.",
+        "name": "treat_missing_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum",
+        "name": "statistic",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an ALARM state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "alarm_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The number of datapoints that must be breaching to trigger the alarm.",
+        "name": "datapoints_to_alarm",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch metric alarm",
+        "name": "create_metric_alarm",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The description for the alarm.",
+        "name": "alarm_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The arithmetic operation to use when comparing the specified Statistic and Threshold. The specified Statistic value is used as the first operand. Either of the following is supported: GreaterThanOrEqualToThreshold, GreaterThanThreshold, LessThanThreshold, LessThanOrEqualToThreshold.",
+        "name": "comparison_operator",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The number of periods over which data is compared to the specified threshold.",
+        "name": "evaluation_periods",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not actions should be executed during any changes to the alarm's state. Defaults to true.",
+        "name": "actions_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The dimensions for the alarm's associated metric.",
+        "name": "dimensions",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The percentile statistic for the metric associated with the alarm. Specify a value between p0.0 and p100.",
+        "name": "extended_statistic",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The descriptive name for the alarm. This name must be unique within the user's AWS account.",
+        "name": "alarm_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The value against which the specified statistic is compared.",
+        "name": "threshold",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The name for the alarm's associated metric. See docs for supported metrics.",
+        "name": "metric_name",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "metric-alarms-by-multiple-dimensions": [
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch metric alarm",
+        "name": "create_metric_alarm",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The descriptive name for the alarm. This name must be unique within the user's AWS account.",
+        "name": "alarm_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an ALARM state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "alarm_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an INSUFFICIENT_DATA state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "insufficient_data_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The unit for the alarm's associated metric.",
+        "name": "unit",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The namespace for the alarm's associated metric. See docs for the list of namespaces. See docs for supported metrics.",
+        "name": "namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The period in seconds over which the specified statistic is applied.",
+        "name": "period",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "The dimensions for the alarm's associated metric.",
+        "name": "dimensions",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The percentile statistic for the metric associated with the alarm. Specify a value between p0.0 and p100.",
+        "name": "extended_statistic",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Delimiter between alarm name and dimension key. Use dash or underscore for pretty alert names.",
+        "name": "alarm_name_delimiter",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The arithmetic operation to use when comparing the specified Statistic and Threshold. The specified Statistic value is used as the first operand. Either of the following is supported: GreaterThanOrEqualToThreshold, GreaterThanThreshold, LessThanThreshold, LessThanOrEqualToThreshold.",
+        "name": "comparison_operator",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The number of periods over which data is compared to the specified threshold.",
+        "name": "evaluation_periods",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "",
+        "description": "The value against which the specified statistic is compared.",
+        "name": "threshold",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The name for the alarm's associated metric. See docs for supported metrics.",
+        "name": "metric_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The list of actions to execute when this alarm transitions into an OK state from any other state. Each action is specified as an Amazon Resource Name (ARN).",
+        "name": "ok_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"missing\"",
+        "description": "Sets how this alarm is to handle missing data points. The following values are supported: missing, ignore, breaching and notBreaching.",
+        "name": "treat_missing_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Enables you to create an alarm based on a metric math expression. You may specify at most 20.",
+        "name": "metric_query",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The description for the alarm.",
+        "name": "alarm_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The statistic to apply to the alarm's associated metric. Either of the following is supported: SampleCount, Average, Sum, Minimum, Maximum",
+        "name": "statistic",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not actions should be executed during any changes to the alarm's state. Defaults to true.",
+        "name": "actions_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The number of datapoints that must be breaching to trigger the alarm.",
+        "name": "datapoints_to_alarm",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Used only for alarms based on percentiles. If you specify ignore, the alarm state will not change during periods with too few data points to be statistically significant. If you specify evaluate or omit this parameter, the alarm will always be evaluated and possibly change state no matter how many data points are available. The following values are supported: ignore, and evaluate.",
+        "name": "evaluate_low_sample_count_percentiles",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "metric-stream": [
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch metric stream.",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Friendly name of the metric stream. If omitted, Terraform will assign a random, unique name. Conflicts with name_prefix.",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "ARN of the Amazon Kinesis Firehose delivery stream to use for this metric stream.",
+        "name": "firehose_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "ARN of the IAM role that this metric stream will use to access Amazon Kinesis Firehose resources.",
+        "name": "role_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of exclusive metric filters. If you specify this parameter, the stream sends metrics from all metric namespaces except for the namespaces and the conditional metric names that you specify here. If you don't specify metric names or provide empty metric names whole metric namespace is excluded. Conflicts with include_filter.",
+        "name": "exclude_filter",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of inclusive metric filters. If you specify this parameter, the stream sends only the conditional metric names from the metric namespaces that you specify here. If you don't specify metric names or provide empty metric names whole metric namespace is included. Conflicts with exclude_filter.",
+        "name": "include_filter",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique friendly name beginning with the specified prefix. Conflicts with name.",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": " Output format for the stream. Possible values are json, opentelemetry0.7, and opentelemetry1.0",
+        "name": "output_format",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Map of statistics configuration.",
+        "name": "statistics_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to the Cloudwatch Metric Stream.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "query-definition": [
+      {
+        "default": "true",
+        "description": "Whether to create the Cloudwatch query definition",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The name of the query.",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The The query to save.",
+        "name": "query_string",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specific log groups to use with the query.",
+        "name": "log_group_names",
+        "required": false,
+        "type": "list(string)"
+      }
+    ],
+    "root": []
+  },
   "built_from_version": "5.7.2",
   "module_id": "terraform-aws-modules/cloudwatch/aws",
   "vars": {
