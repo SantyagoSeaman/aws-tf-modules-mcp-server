@@ -1,0 +1,293 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Cluster instance IAM role path",
+        "name": "instance_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Cluster instance IAM role description",
+        "name": "instance_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Spot fleet IAM role description",
+        "name": "spot_fleet_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Cluster instance IAM role name",
+        "name": "instance_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "instance_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "instance_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "spot_fleet_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "instance_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`service_iam_role_name`) is used as a prefix",
+        "name": "service_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Spot fleet IAM role path",
+        "name": "spot_fleet_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of job definitions to create",
+        "name": "job_definitions",
+        "required": false,
+        "type": "map(object({\n    container_properties       = optional(string)\n    deregister_on_new_revision = optional(bool)\n    ecs_properties             = optional(string)\n    eks_properties = optional(object({\n      pod_properties = object({\n        containers = map(object({\n          args              = optional(list(string))\n          command           = optional(list(string))\n          env               = optional(map(string))\n          image             = string\n          image_pull_policy = optional(string)\n          name              = optional(string) # Will fall back to use map key as container name\n          resources = object({\n            limits   = optional(map(string))\n            requests = optional(map(string))\n          })\n          security_context = optional(object({\n            privileged                 = optional(bool)\n            read_only_root_file_system = optional(bool)\n            run_as_group               = optional(number)\n            run_as_non_root            = optional(bool)\n            run_as_user                = optional(number)\n          }))\n          volume_mounts = optional(map(object({\n            mount_path = string\n            name       = optional(string) # Will fall back to use map key as volume mount name\n            read_only  = optional(bool)\n          })))\n        }))\n      })\n      dns_policy   = optional(string)\n      host_network = optional(bool)\n      image_pull_secrets = optional(list(object({\n        name = string\n      })))\n      init_containers = optional(map(object({\n        args              = optional(list(string))\n        command           = optional(list(string))\n        env               = optional(map(string))\n        image             = string\n        image_pull_policy = optional(string)\n        name              = optional(string) # Will fall back to use map key as init container name\n        resources = object({\n          limits   = optional(map(string))\n          requests = optional(map(string))\n        })\n        security_context = optional(object({\n          privileged                 = optional(bool)\n          read_only_root_file_system = optional(bool)\n          run_as_group               = optional(number)\n          run_as_non_root            = optional(bool)\n          run_as_user                = optional(number)\n        }))\n        volume_mounts = optional(map(object({\n          mount_path = string\n          name       = optional(string) # Will fall back to use map key as volume mount name\n          read_only  = optional(bool)\n        })))\n      })))\n      metadata = optional(object({\n        labels = optional(map(string))\n      }))\n      service_account_name    = optional(string)\n      share_process_namespace = optional(bool)\n      volumes = optional(map(object({\n        empty_dir = optional(object({\n          medium     = optional(string)\n          size_limit = optional(string)\n        }))\n        host_path = optional(object({\n          path = string\n        }))\n        name = optional(string) # Will fall back to use map key as volume name\n        secret = optional(object({\n          optional    = optional(bool)\n          secret_name = string\n        }))\n      })))\n    }))\n    name                  = optional(string) # Will fall back to use map key as job definition name\n    node_properties       = optional(string)\n    parameters            = optional(map(string))\n    platform_capabilities = optional(list(string))\n    propagate_tags        = optional(bool)\n    retry_strategy = optional(object({\n      attempts = optional(number)\n      evaluate_on_exit = optional(map(object({\n        action           = string\n        on_exit_code     = optional(string)\n        on_reason        = optional(string)\n        on_status_reason = optional(string)\n      })))\n    }))\n    scheduling_priority = optional(number)\n    tags                = optional(map(string), {})\n    timeout = optional(object({\n      attempt_duration_seconds = optional(number)\n    }))\n    type = optional(string, \"container\")\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Batch service IAM role name",
+        "name": "service_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Batch service IAM role path",
+        "name": "service_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Batch service IAM role description",
+        "name": "service_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "service_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a an IAM role is created or to use an existing IAM role",
+        "name": "create_spot_fleet_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "spot_fleet_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "spot_fleet_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`instance_iam_role_name`) is used as a prefix",
+        "name": "instance_iam_role_use_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "service_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create job queues",
+        "name": "create_job_queues",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a an IAM role is created or to use an existing IAM role",
+        "name": "create_service_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`spot_fleet_iam_role_name`) is used as a prefix",
+        "name": "spot_fleet_iam_role_use_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of job queue and scheduling policy defintions to create",
+        "name": "job_queues",
+        "required": false,
+        "type": "map(object({\n    compute_environment_order = map(object({\n      compute_environment_key = string\n      order                   = optional(number) # Will fall back to use map key as order\n    }))\n    job_state_time_limit_action = optional(map(object({\n      action           = optional(string, \"CANCEL\")\n      max_time_seconds = number\n      reason           = optional(string)\n      state            = optional(string, \"RUNNABLE\")\n    })))\n    name                  = optional(string) # Will fall back to use map key as queue name\n    priority              = number\n    scheduling_policy_arn = optional(string)\n    state                 = optional(string, \"ENABLED\")\n    tags                  = optional(map(string), {})\n    timeouts = optional(object({\n      create = optional(string, \"10m\")\n      update = optional(string, \"10m\")\n      delete = optional(string, \"10m\")\n    }))\n\n    # Scheduling policy\n    create_scheduling_policy = optional(bool, true)\n    fair_share_policy = optional(object({\n      compute_reservation = optional(number)\n      share_decay_seconds = optional(number)\n      share_distribution = optional(list(object({\n        share_identifier = string\n        weight_factor    = optional(number)\n      })))\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Map of compute environment definitions to create",
+        "name": "compute_environments",
+        "required": false,
+        "type": "map(object({\n    name        = optional(string)\n    name_prefix = optional(string)\n    compute_resources = optional(object({\n      allocation_strategy = optional(string)\n      bid_percentage      = optional(number)\n      desired_vcpus       = optional(number)\n      ec2_configuration = optional(list(object({\n        image_id_override = optional(string)\n        image_type        = optional(string)\n      })))\n      ec2_key_pair   = optional(string)\n      instance_role  = optional(string)\n      instance_types = optional(list(string))\n      launch_template = optional(object({\n        launch_template_id   = optional(string)\n        launch_template_name = optional(string)\n        version              = optional(string)\n      }))\n      max_vcpus           = number\n      min_vcpus           = optional(number)\n      placement_group     = optional(string)\n      security_group_ids  = optional(list(string))\n      spot_iam_fleet_role = optional(string)\n      subnets             = list(string)\n      tags                = optional(map(string), {})\n      type                = string\n    }))\n    eks_configuration = optional(object({\n      eks_cluster_arn      = string\n      kubernetes_namespace = string\n    }))\n    service_role = optional(string)\n    state        = optional(string)\n    tags         = optional(map(string), {})\n    type         = optional(string, \"MANAGED\")\n    update_policy = optional(object({\n      job_execution_timeout_minutes = number\n      terminate_jobs_on_update      = optional(bool, false)\n    }))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a an IAM role is created or to use an existing IAM role",
+        "name": "create_instance_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "service_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Spot fleet IAM role name",
+        "name": "spot_fleet_iam_role_name",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "spot_fleet_iam_role_arn"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "instance_iam_role_name"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "instance_iam_instance_profile_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "spot_fleet_iam_role_unique_id"
+      },
+      {
+        "description": "Map of job queues created and their associated attributes",
+        "name": "job_queues"
+      },
+      {
+        "description": "Map of compute environments created and their associated attributes",
+        "name": "compute_environments"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "instance_iam_role_arn"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "service_iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "service_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "service_iam_role_unique_id"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "spot_fleet_iam_role_name"
+      },
+      {
+        "description": "Map of scheduling policies created and their associated attributes",
+        "name": "scheduling_policies"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "instance_iam_role_unique_id"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "instance_iam_instance_profile_id"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "instance_iam_instance_profile_unique"
+      },
+      {
+        "description": "Map of job defintions created and their associated attributes",
+        "name": "job_definitions"
+      }
+    ]
+  },
+  "built_from_version": "3.0.3",
+  "module_id": "terraform-aws-modules/batch/aws"
+}

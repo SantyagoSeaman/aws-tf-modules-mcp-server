@@ -1,0 +1,639 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "true",
+        "description": "Determines whether cluster resources will be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create SASL/SCRAM secret association",
+        "name": "create_scram_secret_association",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The distribution of broker nodes across availability zones ([documentation](https://docs.aws.amazon.com/msk/1.0/apireference/clusters.html#clusters-model-brokerazdistribution)). Currently the only valid value is `DEFAULT`",
+        "name": "broker_node_az_distribution",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specify the desired Kafka software version",
+        "name": "kafka_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the S3 bucket to deliver logs to",
+        "name": "s3_logs_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of VPC Connections to create",
+        "name": "vpc_connections",
+        "required": false,
+        "type": "map(object({\n    authentication  = string\n    client_subnets  = list(string)\n    security_groups = list(string)\n    vpc_id          = string\n    tags            = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "List of AWS Secrets Manager secret ARNs to associate with SCRAM",
+        "name": "scram_secret_association_secret_arn_list",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of MSK topics to create",
+        "name": "topics",
+        "required": false,
+        "type": "map(object({\n    configs            = optional(string)\n    name               = optional(string)\n    partition_count    = number\n    replication_factor = number\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the resources created",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The desired total number of broker nodes in the kafka cluster. It must be a multiple of the number of specified client subnets",
+        "name": "number_of_broker_nodes",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Contents of the server.properties file. Supported properties are documented in the [MSK Developer Guide](https://docs.aws.amazon.com/msk/latest/developerguide/msk-configuration-properties.html)",
+        "name": "configuration_server_properties",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Override policy documents for cluster policy",
+        "name": "cluster_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether autoscaling is enabled for storage",
+        "name": "enable_storage_autoscaling",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the IAM role that allows Application AutoScaling to modify your scalable target on your behalf. This defaults to an IAM Service-Linked Role",
+        "name": "scaling_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of schema registries to be created",
+        "name": "schema_registries",
+        "required": false,
+        "type": "map(object({\n    name        = string\n    description = optional(string)\n    tags        = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create connect worker configuration",
+        "name": "create_connect_worker_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of subnets to connect to in client VPC ([documentation](https://docs.aws.amazon.com/msk/1.0/apireference/clusters.html#clusters-prop-brokernodegroupinfo-clientsubnets))",
+        "name": "broker_node_client_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of the security groups to associate with the elastic network interfaces to control who can communicate with the cluster",
+        "name": "broker_node_security_groups",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether you want to enable or disable streaming broker logs to Cloudwatch Logs",
+        "name": "cloudwatch_logs_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create an MSK cluster policy",
+        "name": "create_cluster_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specify the instance type to use for the kafka brokers. e.g. kafka.m5.large. ([Pricing info](https://aws.amazon.com/msk/pricing/))",
+        "name": "broker_node_instance_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for specifying a client authentication",
+        "name": "client_authentication",
+        "required": false,
+        "type": "object({\n    sasl = optional(object({\n      iam   = optional(bool)\n      scram = optional(bool)\n    }))\n    tls = optional(object({\n      certificate_authority_arns = optional(list(string))\n    }))\n    unauthenticated = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the log class of the log group. Possible values are: STANDARD or INFREQUENT_ACCESS.",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "70",
+        "description": "The Kafka broker storage utilization at which scaling is initiated",
+        "name": "scaling_target_value",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Region where this resource will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for intelligent rebalancing",
+        "name": "rebalancing",
+        "required": false,
+        "type": "object({\n    status = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "ARN of an externally created configuration to use",
+        "name": "configuration_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the Cloudwatch Log Group to deliver logs to",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Contents of connect-distributed.properties file. The value can be either base64 encoded or in raw format",
+        "name": "connect_worker_config_properties_file_content",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the configuration",
+        "name": "configuration_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether you want to enable or disable the Node Exporter",
+        "name": "node_exporter_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "You may specify a KMS key short ID or ARN (it will always output an ARN) to use for encrypting your data at rest. If no key is specified, an AWS managed KMS ('aws/msk' managed service) key will be used for encrypting the data at rest",
+        "name": "encryption_at_rest_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether you want to enable or disable streaming broker logs to Kinesis Data Firehose",
+        "name": "firehose_logs_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Prefix to append to the folder name",
+        "name": "s3_logs_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether you want to enable or disable the JMX Exporter",
+        "name": "jmx_exporter_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Controls storage mode for supported storage tiers. Valid values are: `LOCAL` or `TIERED`",
+        "name": "storage_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Source policy documents for cluster policy",
+        "name": "cluster_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a CloudWatch log group",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Information about the cluster access configuration",
+        "name": "broker_node_connectivity_info",
+        "required": false,
+        "type": "object({\n    vpc_connectivity = optional(object({\n      client_authentication = optional(object({\n        sasl = optional(object({\n          iam   = optional(bool)\n          scram = optional(bool)\n        }))\n        tls = optional(bool)\n      }))\n    }))\n    public_access = optional(object({\n      type = optional(string)\n    }))\n    network_type = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a configuration",
+        "name": "create_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "0",
+        "description": "Specifies the number of days you want to retain log events in the log group",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Map of custom plugin configuration details (map of maps)",
+        "name": "connect_custom_plugins",
+        "required": false,
+        "type": "map(object({\n    name              = string\n    description       = optional(string)\n    content_type      = string\n    s3_bucket_arn     = string\n    s3_file_key       = string\n    s3_object_version = optional(string)\n    timeouts = optional(object({\n      create = optional(string)\n      delete = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the configuration",
+        "name": "configuration_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "250",
+        "description": "Max storage capacity for Kafka broker autoscaling",
+        "name": "scaling_max_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting log data",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a Glue schema registry for managing Avro schemas for the cluster",
+        "name": "create_schema_registry",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map schemas to be created within the schema registry",
+        "name": "schemas",
+        "required": false,
+        "type": "map(object({\n    schema_name          = string\n    schema_registry_name = string\n    description          = optional(string)\n    data_format          = optional(string, \"AVRO\")\n    compatibility        = string\n    schema_definition    = string\n    tags                 = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A summary description of the worker configuration",
+        "name": "connect_worker_config_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"msk\"",
+        "description": "Name of the MSK cluster",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether data communication among broker nodes is encrypted. Default value: `true`",
+        "name": "encryption_in_transit_in_cluster",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specify the desired enhanced MSK CloudWatch monitoring level. See [Monitoring Amazon MSK with Amazon CloudWatch](https://docs.aws.amazon.com/msk/latest/developerguide/monitoring.html)",
+        "name": "enhanced_monitoring",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of policy statements for cluster policy",
+        "name": "cluster_policy_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The name of the worker configuration",
+        "name": "connect_worker_config_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A block that contains information about storage volumes attached to MSK broker nodes",
+        "name": "broker_node_storage_info",
+        "required": false,
+        "type": "object({\n    ebs_storage_info = optional(object({\n      provisioned_throughput = optional(object({\n        enabled           = optional(bool)\n        volume_throughput = optional(number)\n      }))\n      volume_size = optional(number, 64)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name of the Kinesis Data Firehose delivery stream to deliver logs to",
+        "name": "firehose_delivery_stream",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether you want to enable or disable streaming broker logs to S3",
+        "name": "s3_logs_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Encryption setting for data in transit between clients and brokers. Valid values: `TLS`, `TLS_PLAINTEXT`, and `PLAINTEXT`. Default value is `TLS`",
+        "name": "encryption_in_transit_client_broker",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the cluster",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Revision of the externally created configuration to use",
+        "name": "configuration_revision",
+        "required": false,
+        "type": "number"
+      }
+    ],
+    "serverless": [
+      {
+        "default": "null",
+        "description": "Specifies up to five security groups that control inbound and outbound traffic for the serverless cluster",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of subnets in at least two different Availability Zones that host your client applications",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the resources created",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create an MSK cluster policy",
+        "name": "create_cluster_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Source policy documents for cluster policy",
+        "name": "cluster_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Map of policy statements for cluster policy",
+        "name": "cluster_policy_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether cluster resources will be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the MSK serverless cluster",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where this resource will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Override policy documents for cluster policy",
+        "name": "cluster_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The ARN assigned by AWS to the scaling policy",
+        "name": "appautoscaling_policy_arn"
+      },
+      {
+        "description": "Comma separated list of one or more hostname:port pairs of Kafka brokers suitable to bootstrap connectivity to the Kafka cluster",
+        "name": "bootstrap_brokers_public"
+      },
+      {
+        "description": "Comma separated list of one or more hostname:port pairs of Kafka brokers suitable to bootstrap connectivity to the Kafka cluster",
+        "name": "bootstrap_brokers_vpc_connectivity"
+      },
+      {
+        "description": "Name of the MSK cluster",
+        "name": "cluster_name"
+      },
+      {
+        "description": "A comma separated list of one or more hostname:port pairs to use to connect to the Apache Zookeeper cluster via TLS. The returned values are sorted alphabetically",
+        "name": "zookeeper_connect_string_tls"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL IAM port pairs",
+        "name": "bootstrap_brokers_public_sasl_iam"
+      },
+      {
+        "description": "A map of output attributes for the VPC connections created",
+        "name": "vpc_connections"
+      },
+      {
+        "description": "The scaling policy's name",
+        "name": "appautoscaling_policy_name"
+      },
+      {
+        "description": "A map of output attributes for the MSK topics created",
+        "name": "topics"
+      },
+      {
+        "description": "A map of output attributes for the connect custom plugins created",
+        "name": "connect_custom_plugins"
+      },
+      {
+        "description": "The scaling policy's type",
+        "name": "appautoscaling_policy_policy_type"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL SCRAM port pairs",
+        "name": "bootstrap_brokers_public_sasl_scram"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the configuration",
+        "name": "configuration_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the MSK cluster",
+        "name": "scram_secret_association_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the log group",
+        "name": "log_group_arn"
+      },
+      {
+        "description": "A comma separated list of one or more hostname:port pairs to use to connect to the Apache Zookeeper cluster. The returned values are sorted alphabetically",
+        "name": "zookeeper_connect_string"
+      },
+      {
+        "description": "An ID of the latest successfully created revision of the worker configuration",
+        "name": "connect_worker_configuration_latest_revision"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL IAM port pairs for VPC connectivity",
+        "name": "bootstrap_brokers_vpc_connectivity_sasl_iam"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL SCRAM port pairs for VPC connectivity",
+        "name": "bootstrap_brokers_vpc_connectivity_sasl_scram"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL IAM port pairs. This attribute will have a value if `encryption_in_transit_client_broker` is set to `TLS_PLAINTEXT` or `TLS` and `client_authentication_sasl_iam` is set to `true`",
+        "name": "bootstrap_brokers_sasl_iam"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and TLS port pairs",
+        "name": "bootstrap_brokers_public_tls"
+      },
+      {
+        "description": "Latest revision of the configuration",
+        "name": "configuration_latest_revision"
+      },
+      {
+        "description": "A map of output attributes for the schema registries created",
+        "name": "schema_registries"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and SASL SCRAM port pairs. This attribute will have a value if `encryption_in_transit_client_broker` is set to `TLS_PLAINTEXT` or `TLS` and `client_authentication_sasl_scram` is set to `true`",
+        "name": "bootstrap_brokers_sasl_scram"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and TLS port pairs. This attribute will have a value if `encryption_in_transit_client_broker` is set to `TLS_PLAINTEXT` or `TLS`",
+        "name": "bootstrap_brokers_tls"
+      },
+      {
+        "description": "One or more DNS names (or IP addresses) and TLS port pairs for VPC connectivity",
+        "name": "bootstrap_brokers_vpc_connectivity_tls"
+      },
+      {
+        "description": "UUID of the MSK cluster, for use in IAM policies",
+        "name": "cluster_uuid"
+      },
+      {
+        "description": "Current version of the MSK Cluster used for updates, e.g. `K13V1IB3VIYZZH`",
+        "name": "current_version"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the worker configuration",
+        "name": "connect_worker_configuration_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the MSK cluster",
+        "name": "arn"
+      },
+      {
+        "description": "Comma separated list of one or more hostname:port pairs of Kafka brokers suitable to bootstrap connectivity to the Kafka cluster",
+        "name": "bootstrap_brokers"
+      },
+      {
+        "description": "Comma separated list of one or more hostname:port pairs of Kafka brokers suitable to bootstrap connectivity to the Kafka cluster. Contains a value if `encryption_in_transit_client_broker` is set to `PLAINTEXT` or `TLS_PLAINTEXT`",
+        "name": "bootstrap_brokers_plaintext"
+      },
+      {
+        "description": "A map of output attributes for the schemas created",
+        "name": "schemas"
+      }
+    ],
+    "serverless": [
+      {
+        "description": "The ARN of the serverless cluster",
+        "name": "serverless_arn"
+      },
+      {
+        "description": "UUID of the serverless cluster, for use in IAM policies",
+        "name": "serverless_cluster_uuid"
+      }
+    ]
+  },
+  "built_from_version": "3.3.0",
+  "module_id": "terraform-aws-modules/msk-kafka-cluster/aws"
+}

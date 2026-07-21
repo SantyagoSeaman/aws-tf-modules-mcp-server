@@ -1,0 +1,492 @@
+{
+  "all_inputs": {
+    "delegation-sets": [
+      {
+        "default": "true",
+        "description": "Whether to create Route53 delegation sets",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of Route53 delegation set parameters",
+        "name": "delegation_sets",
+        "required": false,
+        "type": "map(object({\n    reference_name = optional(string)\n  }))"
+      }
+    ],
+    "resolver-endpoint": [
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group tcp/udp on port 53 ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Security group tcp/udp on port 53 egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Subnets and IP addresses in your VPC that you want DNS queries to pass through on the way from your VPCs to your network (for outbound endpoints) or on the way from your network to your VPCs (for inbound endpoints)",
+        "name": "ip_address",
+        "required": false,
+        "type": "list(object({\n    ip        = optional(string)\n    ipv6      = optional(string)\n    subnet_id = string\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Friendly name of the Route 53 Resolver endpoint",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The VPC ID where the security group will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Protocols you want to use for the Route 53 Resolver endpoint. Valid values are `DoH`, `Do53`, or `DoH-FIPS`",
+        "name": "protocols",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "ID of one or more security groups that you want to use to control access to this VPC",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of Route 53 Resolver rules & associations to create",
+        "name": "rules",
+        "required": false,
+        "type": "map(object({\n    # Rule\n    domain_name = string\n    name        = optional(string)\n    rule_type   = string\n    tags        = optional(map(string), {})\n    target_ip = optional(list(object({\n      ip       = string\n      ipv6     = optional(string)\n      port     = optional(number)\n      protocol = optional(string)\n    })))\n\n    # Association\n    vpc_id = optional(string)\n  }))"
+      },
+      {
+        "default": "\"INBOUND\"",
+        "description": " Direction of DNS queries to or from the Route 53 Resolver endpoint. Valid values are `INBOUND` (resolver forwards DNS queries to the DNS service for a VPC from your network or another VPC) or `OUTBOUND` (resolver forwards DNS queries from the DNS service for a VPC to your network or another VPC)",
+        "name": "direction",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Endpoint IP type. This endpoint type is applied to all IP addresses. Valid values are `IPV6`, `IPV4` or `DUALSTACK` (both IPv4 and IPv6)",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "resolver-firewall-rule-group": [
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "A name that lets you identify the rule group, to manage and use it",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of RAM resource associations for the created rule group",
+        "name": "ram_resource_associations",
+        "required": false,
+        "type": "map(object({\n    resource_share_arn = string\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of rule definitions to create",
+        "name": "rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    # Domain list\n    domains = optional(list(string))\n\n    # Rule\n    action                             = string\n    block_override_dns_type            = optional(string)\n    block_override_domain              = optional(string)\n    block_override_ttl                 = optional(number)\n    block_response                     = optional(string)\n    firewall_domain_list_id            = optional(string)\n    firewall_domain_redirection_action = optional(string)\n    priority                           = number\n    q_type                             = optional(string)\n\n    tags = optional(map(string), {})\n  }))"
+      }
+    ],
+    "root": [
+      {
+        "default": "null",
+        "description": "The ARN of the KMS key to use for DNSSEC signing. Required when `create_dnssec_kms_key` is `false`",
+        "name": "dnssec_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags to apply to the KMS key created for DNSSEC signing",
+        "name": "dnssec_kms_key_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": " Configuration block(s) specifying VPC(s) to associate with a private hosted zone. Conflicts with the delegation_set_id argument in this resource and any aws_route53_zone_association resource specifying the same zone ID",
+        "name": "vpc",
+        "required": false,
+        "type": "map(object({\n    vpc_id     = string\n    vpc_region = optional(string)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "A list of aliases to create. Note - due to the use of `toset()`, values must be static strings and not computed values",
+        "name": "dnssec_kms_key_aliases",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of the Route 53 key signing key (KSK). When null, the hosted zone name is used. Set this to match an existing KSK when importing or adopting DNSSEC without recreating the key",
+        "name": "dnssec_key_signing_key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Tags added to all zones. Will take precedence over tags from the 'zones' variable",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create the Route53 zone or lookup an existing zone",
+        "name": "create_zone",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to ignore VPC association changes after creation to avoid disruptive diffs when using `aws_route53_zone_association` resource(s). Changing is a destructive action; users should be prepared to use Terraform state move commands/blocks when changing this value",
+        "name": "ignore_vpc",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether the hosted zone is private. Only applicable when `create_zone = false`",
+        "name": "private_zone",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A comment for the hosted zone. Defaults to `Managed by Terraform`",
+        "name": "comment",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create a KMS key for DNSSEC signing",
+        "name": "create_dnssec_kms_key",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create Route53 zone",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "This is the name of the hosted zone",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to enable DNSSEC for the Route53 zone",
+        "name": "enable_dnssec",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Route53 DNSSEC KMS Key\"",
+        "description": "The description of the key as viewed in AWS console",
+        "name": "dnssec_kms_key_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of Route53 records to create in the zone. The key can be used as the subdomain name, or `name` can be used to specify the full name",
+        "name": "records",
+        "required": false,
+        "type": "map(object({\n    alias = optional(object({\n      evaluate_target_health = optional(bool, false)\n      name                   = string\n      zone_id                = string\n    }))\n    allow_overwrite = optional(bool)\n    cidr_routing_policy = optional(object({\n      collection_id = string\n      location_name = string\n    }))\n    failover_routing_policy = optional(object({\n      type = string\n    }))\n    geolocation_routing_policy = optional(object({\n      continent   = optional(string)\n      country     = optional(string)\n      subdivision = optional(string)\n    }))\n    geoproximity_routing_policy = optional(object({\n      aws_region = optional(string)\n      bias       = optional(number)\n      coordinates = optional(list(object({\n        latitude  = number\n        longitude = number\n      })))\n      local_zone_group = optional(string)\n    }))\n    health_check_id = optional(string)\n    latency_routing_policy = optional(object({\n      region = string\n    }))\n    multivalue_answer_routing_policy = optional(bool)\n    name                             = optional(string)\n    full_name                        = optional(string)\n    records                          = optional(list(string))\n    set_identifier                   = optional(string)\n    ttl                              = optional(number)\n    type                             = string\n    weighted_routing_policy = optional(object({\n      weight = number\n    }))\n    timeouts = optional(object({\n      create = optional(string)\n      update = optional(string)\n      delete = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable Route 53 Accelerated Recovery for the public hosted zone. When enabled, provides a 60-minute RTO for resuming DNS record management if the US East (N. Virginia) Region becomes unavailable. Only applies to public hosted zones",
+        "name": "enable_accelerated_recovery",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Timeouts for the Route53 zone operations",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A map of VPC association authorizations to create for the Route53 zone",
+        "name": "vpc_association_authorizations",
+        "required": false,
+        "type": "map(object({\n    vpc_id     = string\n    vpc_region = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the VPC associated with the existing hosted zone. Only applicable when `create_zone = false`",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the reusable delegation set whose NS records you want to assign to the hosted zone. Conflicts with vpc as delegation sets can only be used for public zones",
+        "name": "delegation_set_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to destroy all records (possibly managed outside of Terraform) in the zone when destroying the zone",
+        "name": "force_destroy",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "delegation-sets": [
+      {
+        "description": "Reference name used when the Route53 delegation set has been created",
+        "name": "route53_delegation_set_reference_name"
+      },
+      {
+        "description": "ID of Route53 delegation set",
+        "name": "route53_delegation_set_id"
+      },
+      {
+        "description": "Name servers in the Route53 delegation set",
+        "name": "route53_delegation_set_name_servers"
+      }
+    ],
+    "resolver-endpoint": [
+      {
+        "description": "Resolver Endpoint Rules created",
+        "name": "rules"
+      },
+      {
+        "description": "The ID of the Resolver Endpoint",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the Resolver Endpoint",
+        "name": "arn"
+      },
+      {
+        "description": "The VPC ID used by the Resolver Endpoint",
+        "name": "host_vpc_id"
+      },
+      {
+        "description": "Security Group IDs mapped to Resolver Endpoint",
+        "name": "security_group_ids"
+      },
+      {
+        "description": "Resolver Endpoint IP Addresses",
+        "name": "ip_addresses"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      }
+    ],
+    "resolver-firewall-rule-group": [
+      {
+        "description": "The ARN (Amazon Resource Name) of the rule group",
+        "name": "arn"
+      },
+      {
+        "description": "The ID of the rule group",
+        "name": "id"
+      },
+      {
+        "description": "Whether the rule group is shared with other AWS accounts, or was shared with the current account by another AWS account. Sharing is configured through AWS Resource Access Manager (AWS RAM). Valid values: `NOT_SHARED`, `SHARED_BY_ME`, `SHARED_WITH_ME`",
+        "name": "share_status"
+      },
+      {
+        "description": "Map of RAM resource associations created and their attributes",
+        "name": "ram_resource_associations"
+      },
+      {
+        "description": "Map of all domain lists created and their attributes",
+        "name": "domain_lists"
+      },
+      {
+        "description": "Map of all rules created and their attributes",
+        "name": "rules"
+      }
+    ],
+    "root": [
+      {
+        "description": "The region for the key",
+        "name": "dnssec_kms_key_region"
+      },
+      {
+        "description": "Records created in the Route53 zone",
+        "name": "records"
+      },
+      {
+        "description": "Name servers of Route53 zone",
+        "name": "name_servers"
+      },
+      {
+        "description": "The Route 53 name server that created the SOA record.",
+        "name": "primary_name_server"
+      },
+      {
+        "description": "A cryptographic digest of a DNSKEY resource record (RR). DNSKEY records are used to publish the public key that resolvers can use to verify DNSSEC signatures that are used to secure certain kinds of information provided by the DNS system",
+        "name": "dnssec_signing_key_digest_value"
+      },
+      {
+        "description": "Name of Route53 zone",
+        "name": "name"
+      },
+      {
+        "description": "Route 53 Hosted Zone identifier and KMS Key identifier, separated by a comma (`,`)",
+        "name": "dnssec_signing_key_id"
+      },
+      {
+        "description": "The public key, represented as a Base64 encoding, as required by RFC-4034 Page 5",
+        "name": "dnssec_signing_key_public_key"
+      },
+      {
+        "description": "The globally unique identifier for the key",
+        "name": "dnssec_kms_key_id"
+      },
+      {
+        "description": "The IAM resource policy set on the key",
+        "name": "dnssec_kms_key_policy"
+      },
+      {
+        "description": "Zone ID of Route53 zone",
+        "name": "id"
+      },
+      {
+        "description": "A string that represents a DNSKEY record",
+        "name": "dnssec_signing_key_dnskey_record"
+      },
+      {
+        "description": "An integer used to identify the DNSSEC record for the domain name. The process used to calculate the value is described in RFC-4034 Appendix B",
+        "name": "dnssec_signing_key_tag"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the key",
+        "name": "dnssec_kms_key_arn"
+      },
+      {
+        "description": "Zone ARN of Route53 zone",
+        "name": "arn"
+      },
+      {
+        "description": "A string that represents a delegation signer (DS) record",
+        "name": "dnssec_signing_key_ds_record"
+      }
+    ]
+  },
+  "built_from_version": "6.5.0",
+  "module_id": "terraform-aws-modules/route53/aws"
+}

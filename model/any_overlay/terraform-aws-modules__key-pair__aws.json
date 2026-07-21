@@ -1,0 +1,126 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name for the key pair. Conflicts with `key_name_prefix`",
+        "name": "key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The public key material",
+        "name": "public_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a private key will be created",
+        "name": "create_private_key",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "When algorithm is `ECDSA`, the name of the elliptic curve to use. Currently-supported values are: `P224`, `P256`, `P384`, `P521`. (default: `P224`)",
+        "name": "private_key_ecdsa_curve",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "4096",
+        "description": "When algorithm is `RSA`, the size of the generated RSA key, in bits (default: `4096`)",
+        "name": "private_key_rsa_bits",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Conflicts with `key_name`",
+        "name": "key_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"RSA\"",
+        "description": "Name of the algorithm to use when generating the private key. Currently-supported values are `RSA` and `ED25519`",
+        "name": "private_key_algorithm",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The fingerprint of the public key data in OpenSSH MD5 hash format, e.g. `aa:bb:cc:....` Only available if the selected private key format is compatible, similarly to `public_key_openssh` and the ECDSA P224 limitations",
+        "name": "public_key_fingerprint_md5"
+      },
+      {
+        "description": "Public key data in PEM (RFC 1421) format",
+        "name": "public_key_pem"
+      },
+      {
+        "description": "The key pair ID",
+        "name": "key_pair_id"
+      },
+      {
+        "description": "The key pair ARN",
+        "name": "key_pair_arn"
+      },
+      {
+        "description": "The key pair name",
+        "name": "key_pair_name"
+      },
+      {
+        "description": "Private key data in PEM (RFC 1421) format",
+        "name": "private_key_pem"
+      },
+      {
+        "description": "The fingerprint of the public key data in OpenSSH SHA256 hash format, e.g. `SHA256:....` Only available if the selected private key format is compatible, similarly to `public_key_openssh` and the ECDSA P224 limitations",
+        "name": "public_key_fingerprint_sha256"
+      },
+      {
+        "description": "The public key data in \"Authorized Keys\" format. This is populated only if the configured private key is supported: this includes all `RSA` and `ED25519` keys",
+        "name": "public_key_openssh"
+      },
+      {
+        "description": "The MD5 public key fingerprint as specified in section 4 of RFC 4716",
+        "name": "key_pair_fingerprint"
+      },
+      {
+        "description": "Unique identifier for this resource: hexadecimal representation of the SHA1 checksum of the resource",
+        "name": "private_key_id"
+      },
+      {
+        "description": "Private key data in OpenSSH PEM (RFC 4716) format",
+        "name": "private_key_openssh"
+      }
+    ]
+  },
+  "built_from_version": "3.0.0",
+  "module_id": "terraform-aws-modules/key-pair/aws"
+}

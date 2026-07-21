@@ -1,0 +1,713 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "null",
+        "description": "The user data to provide when launching the instance. Do not pass gzip-compressed data via this argument; see user_data_base64 instead",
+        "name": "user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of security group IDs to associate with",
+        "name": "vpc_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Policies attached to the IAM role",
+        "name": "iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "If true, wait for password data to become available and retrieve it",
+        "name": "get_password_data",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Customize the private DNS name options of the instance",
+        "name": "private_dns_name_options",
+        "required": false,
+        "type": "object({\n    enable_resource_name_dns_a_record    = optional(bool)\n    enable_resource_name_dns_aaaa_record = optional(bool)\n    hostname_type                        = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Whether to enable volume tags (if enabled it conflicts with root_block_device tags)",
+        "name": "enable_volume_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the instance",
+        "name": "instance_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to the devices created by the instance at launch time",
+        "name": "volume_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Additional EBS volumes to attach to the instance",
+        "name": "ebs_volumes",
+        "required": false,
+        "type": "map(object({\n    encrypted                  = optional(bool)\n    final_snapshot             = optional(bool)\n    iops                       = optional(number)\n    kms_key_id                 = optional(string)\n    multi_attach_enabled       = optional(bool)\n    outpost_arn                = optional(string)\n    size                       = optional(number)\n    snapshot_id                = optional(string)\n    tags                       = optional(map(string), {})\n    throughput                 = optional(number)\n    type                       = optional(string, \"gp3\")\n    volume_initialization_rate = optional(number)\n    # Attachment\n    device_name                    = optional(string) # Will fall back to use map key as device name\n    force_detach                   = optional(bool)\n    skip_destroy                   = optional(bool)\n    stop_instance_before_detaching = optional(bool)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role/profile created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the eip",
+        "name": "eip_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name to be used on EC2 instance created",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"/aws/service/ami-amazon-linux-latest/al2023-ami-kernel-default-x86_64\"",
+        "description": "SSM parameter name for the AMI ID. For Amazon Linux AMI SSM parameters see [reference](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-public-parameters-ami.html)",
+        "name": "ami_ssm_parameter",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "AZ to start the instance in",
+        "name": "availability_zone",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The maintenance options for the instance",
+        "name": "maintenance_options",
+        "required": false,
+        "type": "object({\n    auto_recovery = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A launch group is a group of spot instances that launch together and terminate together. If left empty instances are launched and terminated individually",
+        "name": "spot_launch_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The credit option for CPU usage (unlimited or standard)",
+        "name": "cpu_credits",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether Nitro Enclaves will be enabled on the instance. Defaults to `false`",
+        "name": "enclave_options_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Can be used instead of user_data to pass base64-encoded binary data directly. Use this instead of user_data whenever the value is not a valid UTF-8 string. For example, gzip-encoded user data must be base64-encoded and passed via this argument to avoid corruption",
+        "name": "user_data_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates Spot instance behavior when it is interrupted. Valid values are `terminate`, `stop`, or `hibernate`",
+        "name": "spot_instance_interruption_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a public EIP will be created and associated with the instance.",
+        "name": "create_eip",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"vpc\"",
+        "description": "Indicates if this EIP is for use in VPC",
+        "name": "eip_domain",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ID of AMI to use for the instance",
+        "name": "ami",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Customize details about the root block device of the instance. See Block Devices below for details",
+        "name": "root_block_device",
+        "required": false,
+        "type": "object({\n    delete_on_termination = optional(bool)\n    encrypted             = optional(bool)\n    iops                  = optional(number)\n    kms_key_id            = optional(string)\n    tags                  = optional(map(string))\n    throughput            = optional(number)\n    size                  = optional(number)\n    type                  = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A list of secondary private IPv4 addresses to assign to the instance's primary network interface (eth0) in a VPC. Can only be assigned to the primary network interface (eth0) attached at instance creation, not a pre-existing network interface i.e. referenced in a `network_interface block`",
+        "name": "secondary_private_ips",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile",
+        "name": "create_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The market (purchasing) option for the instance. If set, overrides the `create_spot_instance` variable",
+        "name": "instance_market_options",
+        "required": false,
+        "type": "object({\n    market_type = optional(string)\n    spot_options = optional(object({\n      instance_interruption_behavior = optional(string)\n      max_price                      = optional(string)\n      spot_instance_type             = optional(string)\n      valid_until                    = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Whether to assign a primary IPv6 Global Unicast Address (GUA) to the instance when launched in a dual-stack or IPv6-only subnet",
+        "name": "enable_primary_ipv6",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The start date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)",
+        "name": "spot_valid_from",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name` or `name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "VPC ID to create the security group in. If not set, the security group will be created in the default VPC",
+        "name": "security_group_vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Ingress rules to add to the security group",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(number)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(number)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance will support hibernation",
+        "name": "hibernation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"http_endpoint\": \"enabled\",\n  \"http_put_response_hop_limit\": 1,\n  \"http_tokens\": \"required\"\n}",
+        "description": "Customize the metadata options of the instance",
+        "name": "metadata_options",
+        "required": false,
+        "type": "object({\n    http_endpoint               = optional(string, \"enabled\")\n    http_protocol_ipv6          = optional(string)\n    http_put_response_hop_limit = optional(number, 1)\n    http_tokens                 = optional(string, \"required\")\n    instance_metadata_tags      = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Placement Group ID to start the instance in",
+        "name": "placement_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "When used in combination with user_data or user_data_base64 will trigger a destroy and recreate when set to true. Defaults to false if not set",
+        "name": "user_data_replace_on_change",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance will be EBS-optimized",
+        "name": "ebs_optimized",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 Instance Termination Protection",
+        "name": "disable_api_termination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specify one or more IPv6 addresses from the range of the subnet to associate with the primary network interface",
+        "name": "ipv6_addresses",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The tenancy of the instance (if the instance is running in a VPC). Available values: default, dedicated, host",
+        "name": "tenancy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name` or `name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 Instance Stop Protection",
+        "name": "disable_api_stop",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance will have detailed monitoring enabled",
+        "name": "monitoring",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The maximum price to request on the spot market. Defaults to on-demand price",
+        "name": "spot_price",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Describes an instance's Capacity Reservation targeting option",
+        "name": "capacity_reservation_specification",
+        "required": false,
+        "type": "object({\n    capacity_reservation_preference = optional(string)\n    capacity_reservation_target = optional(object({\n      capacity_reservation_id                 = optional(string)\n      capacity_reservation_resource_group_arn = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Defines CPU options to apply to the instance at launch time.",
+        "name": "cpu_options",
+        "required": false,
+        "type": "object({\n    amd_sev_snp           = optional(string)\n    core_count            = optional(number)\n    nested_virtualization = optional(string)\n    threads_per_core      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Customize network interfaces to be attached at instance boot time",
+        "name": "network_interface",
+        "required": false,
+        "type": "map(object({\n    delete_on_termination = optional(bool)\n    device_index          = optional(number) # Will fall back to use map key as device index\n    network_card_index    = optional(number)\n    network_interface_id  = string\n  }))"
+      },
+      {
+        "default": "{\n  \"ipv4_default\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all IPv4 traffic\",\n    \"ip_protocol\": \"-1\"\n  },\n  \"ipv6_default\": {\n    \"cidr_ipv6\": \"::/0\",\n    \"description\": \"Allow all IPv6 traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Egress rules to add to the security group",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(number)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(number)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Whether to associate a public IP address with an instance in a VPC",
+        "name": "associate_public_ip_address",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Shutdown behavior for the instance. Amazon defaults this to stop for EBS-backed instances and terminate for instance-store instances. Cannot be set on instance-store instance",
+        "name": "instance_initiated_shutdown_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Customize secondary network interfaces to be attached to the EC2 instance",
+        "name": "secondary_network_interface",
+        "required": false,
+        "type": "map(object({\n    delete_on_termination    = optional(bool)\n    device_index             = optional(number) # Will fall back to use map key as device index\n    interface_type           = optional(string)\n    network_card_index       = number\n    private_ip_address_count = optional(number)\n    private_ip_addresses     = optional(list(string))\n    secondary_subnet_id      = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The Placement Group to start the instance in",
+        "name": "placement_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to the resource",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Depicts if the instance is a spot instance",
+        "name": "create_spot_instance",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If set, Terraform will wait for the Spot Request to be fulfilled, and will throw an error if the timeout of 10m is reached",
+        "name": "spot_wait_for_fulfillment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a security group will be created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether changes to the AMI ID changes should be ignored by Terraform. Note - changing this value will result in the replacement of the instance",
+        "name": "ignore_ami_changes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Destroys instance even if `disable_api_termination` or `disable_api_stop` is set to true. Once this parameter is set to true, a successful terraform apply run before a destroy is required to update this value in the resource state. Without a successful terraform apply after this parameter is set, this flag will have no effect. If setting this field in the same operation that would require replacing the instance or destroying the instance, this flag will not work. Additionally when importing an instance, a successful terraform apply is required to set this value in state before it will take effect on a destroy operation.",
+        "name": "force_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ID of a dedicated host that the instance will be assigned to. Use when an instance is to be launched on a specific dedicated host",
+        "name": "host_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM Instance Profile to launch the instance with. Specified as the name of the Instance Profile",
+        "name": "iam_instance_profile",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A number of IPv6 addresses to associate with the primary network interface. Amazon EC2 chooses the IPv6 addresses from the range of your subnet",
+        "name": "ipv6_address_count",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specifies a Launch Template to configure the instance. Parameters configured on this resource will override the corresponding parameters in the Launch Template",
+        "name": "launch_template",
+        "required": false,
+        "type": "object({\n    id      = optional(string)\n    name    = optional(string)\n    version = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Controls if traffic is routed to the instance when the destination address does not match the instance. Used for NAT or VPNs",
+        "name": "source_dest_check",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Define maximum timeout for creating, updating, and deleting EC2 instance resources",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Customize Ephemeral (also known as Instance Store) volumes on the instance",
+        "name": "ephemeral_block_device",
+        "required": false,
+        "type": "map(object({\n    device_name  = string\n    no_device    = optional(bool)\n    virtual_name = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Key name of the Key Pair to use for the instance; which can be managed using the `aws_key_pair` resource",
+        "name": "key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Number of the partition the instance is in. Valid only if the `aws_placement_group` resource's `strategy` argument is set to `partition`",
+        "name": "placement_partition_number",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "If set to one-time, after the instance is terminated, the spot request will be closed. Default `persistent`",
+        "name": "spot_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"t3.micro\"",
+        "description": "The type of instance to start",
+        "name": "instance_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create an instance",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the host resource group in which to launch the instances. If you specify an ARN, omit the `tenancy` parameter or set it to `host`",
+        "name": "host_resource_group_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Private IP address to associate with the instance in a VPC",
+        "name": "private_ip",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The end date and time of the request, in UTC RFC3339 format(for example, YYYY-MM-DDTHH:MM:SSZ)",
+        "name": "spot_valid_until",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The VPC Subnet ID to launch in",
+        "name": "subnet_id",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The ARN of the Outpost the instance is assigned to",
+        "name": "outpost_arn"
+      },
+      {
+        "description": "Base-64 encoded encrypted password data for the instance. Useful for getting the administrator password for instances running Microsoft Windows. This attribute is only exported if `get_password_data` is true",
+        "name": "password_data"
+      },
+      {
+        "description": "The public IP address assigned to the instance, if applicable.",
+        "name": "public_ip"
+      },
+      {
+        "description": "The IPv6 address assigned to the instance, if applicable",
+        "name": "ipv6_addresses"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "The ID of the instance",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the instance",
+        "name": "arn"
+      },
+      {
+        "description": "Capacity reservation specification of the instance",
+        "name": "capacity_reservation_specification"
+      },
+      {
+        "description": "The public DNS name assigned to the instance. For EC2-VPC, this is only available if you've enabled DNS hostnames for your VPC",
+        "name": "public_dns"
+      },
+      {
+        "description": "The current request state of the Spot Instance Request",
+        "name": "spot_request_state"
+      },
+      {
+        "description": "The private IP address assigned to the instance",
+        "name": "private_ip"
+      },
+      {
+        "description": "AMI ID that was used to create the instance",
+        "name": "ami"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "iam_instance_profile_unique"
+      },
+      {
+        "description": "The ID of the instance's primary network interface",
+        "name": "primary_network_interface_id"
+      },
+      {
+        "description": "The private DNS name assigned to the instance. Can only be used inside the Amazon EC2, and only available if you've enabled DNS hostnames for your VPC",
+        "name": "private_dns"
+      },
+      {
+        "description": "The availability zone of the created instance",
+        "name": "availability_zone"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Root block device information",
+        "name": "root_block_device"
+      },
+      {
+        "description": "EBS block device information",
+        "name": "ebs_block_device"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "The state of the instance",
+        "name": "instance_state"
+      },
+      {
+        "description": "The Instance ID (if any) that is currently fulfilling the Spot Instance request",
+        "name": "spot_instance_id"
+      },
+      {
+        "description": "Map of EBS volumes created and their attributes",
+        "name": "ebs_volumes"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "iam_instance_profile_arn"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "iam_instance_profile_id"
+      },
+      {
+        "description": "The current bid status of the Spot Instance Request",
+        "name": "spot_bid_status"
+      },
+      {
+        "description": "Ephemeral block device information",
+        "name": "ephemeral_block_device"
+      }
+    ]
+  },
+  "built_from_version": "6.4.0",
+  "module_id": "terraform-aws-modules/ec2-instance/aws"
+}

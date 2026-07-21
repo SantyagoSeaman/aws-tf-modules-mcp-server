@@ -1,0 +1,1479 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "null",
+        "description": "Switch on/off run cluster with no steps or when all steps are complete (default is on)",
+        "name": "keep_job_flow_alive_when_no_steps",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Release label for the Amazon EMR release",
+        "name": "release_label",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Fleet](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html) for the task node type. Cannot be specified if any `task_instance_group` configuration blocks are set",
+        "name": "task_instance_fleet",
+        "required": false,
+        "type": "object({\n    instance_type_configs = optional(list(object({\n      bid_price                                  = optional(string)\n      bid_price_as_percentage_of_on_demand_price = optional(number, 60)\n      configurations = optional(list(object({\n        classification = optional(string)\n        properties     = optional(map(string))\n      })))\n      ebs_config = optional(list(object({\n        iops                 = optional(number)\n        size                 = optional(number, 256)\n        type                 = optional(string, \"gp3\")\n        volumes_per_instance = optional(number)\n      })))\n      instance_type     = string\n      weighted_capacity = optional(number)\n    })))\n    launch_specifications = optional(object({\n      on_demand_specification = optional(object({\n        allocation_strategy = optional(string, \"lowest-price\")\n      }))\n      spot_specification = optional(object({\n        allocation_strategy      = optional(string, \"capacity-optimized\")\n        block_duration_minutes   = optional(number)\n        timeout_action           = optional(string, \"SWITCH_TO_ON_DEMAND\")\n        timeout_duration_minutes = optional(number, 60)\n      }))\n    }))\n    name                      = optional(string)\n    target_on_demand_capacity = optional(number)\n    target_spot_capacity      = optional(number)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the autoscaling IAM role should be created",
+        "name": "create_autoscaling_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on manged security group created. Note - `-master`, `-slave`, and `-service` will be appended to this name to distinguish",
+        "name": "managed_security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the job flow",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The specified placement group configuration",
+        "name": "placement_group_config",
+        "required": false,
+        "type": "list(object({\n    instance_role      = string\n    placement_strategy = optional(string)\n  }))"
+      },
+      {
+        "default": "{\n  \"all-traffic\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all egress traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "master_security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                      = optional(string)\n    cidr_ipv6                      = optional(string)\n    description                    = optional(string)\n    from_port                      = optional(string)\n    ip_protocol                    = optional(string, \"tcp\")\n    prefix_list_id                 = optional(string)\n    referenced_security_group_id   = optional(string)\n    reference_slave_security_group = optional(bool, false)\n    tags                           = optional(map(string), {})\n    to_port                        = optional(string)\n  }))"
+      },
+      {
+        "default": "{\n  \"all-traffic\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all egress traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "slave_security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                       = optional(string)\n    cidr_ipv6                       = optional(string)\n    description                     = optional(string)\n    from_port                       = optional(string)\n    ip_protocol                     = optional(string, \"tcp\")\n    prefix_list_id                  = optional(string)\n    referenced_security_group_id    = optional(string)\n    reference_master_security_group = optional(bool, false)\n    tags                            = optional(map(string), {})\n    to_port                         = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "service_security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                       = optional(string)\n    cidr_ipv6                       = optional(string)\n    description                     = optional(string)\n    from_port                       = optional(string)\n    ip_protocol                     = optional(string, \"tcp\")\n    prefix_list_id                  = optional(string)\n    referenced_security_group_id    = optional(string)\n    reference_master_security_group = optional(bool, false)\n    tags                            = optional(map(string), {})\n    to_port                         = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Group] for the core node type",
+        "name": "core_instance_group",
+        "required": false,
+        "type": "object({\n    autoscaling_policy = optional(string)\n    bid_price          = optional(string)\n    ebs_config = optional(list(object({\n      iops                 = optional(number)\n      size                 = optional(number, 256)\n      throughput           = optional(number)\n      type                 = optional(string, \"gp3\")\n      volumes_per_instance = optional(number)\n    })))\n    instance_count = optional(number)\n    instance_type  = string\n    name           = optional(string)\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a security configuration is created",
+        "name": "create_security_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "managed_security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of the Amazon Virtual Private Cloud (Amazon VPC) where the security groups will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "AWS KMS customer master key (CMK) key ID or arn used for encrypting log files. This attribute is only available with EMR version 5.30.0 and later, excluding EMR 6.0.0",
+        "name": "log_encryption_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Group](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-group-configuration.html#emr-plan-instance-groups) for the [master node type](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-master-core-task-nodes.html#emr-plan-master)",
+        "name": "master_instance_group",
+        "required": false,
+        "type": "object({\n    bid_price = optional(string)\n    ebs_config = optional(list(object({\n      iops                 = optional(number)\n      size                 = optional(number, 256)\n      throughput           = optional(number)\n      type                 = optional(string, \"gp3\")\n      volumes_per_instance = optional(number)\n    })))\n    instance_count = optional(number)\n    instance_type  = string\n    name           = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an existing IAM role to use if passing in a custom instance profile and creating a service role",
+        "name": "iam_instance_profile_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "slave_security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                       = optional(string)\n    cidr_ipv6                       = optional(string)\n    description                     = optional(string)\n    from_port                       = optional(string)\n    ip_protocol                     = optional(string, \"tcp\")\n    prefix_list_id                  = optional(string)\n    referenced_security_group_id    = optional(string)\n    reference_master_security_group = optional(bool, false)\n    tags                            = optional(map(string), {})\n    to_port                         = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Security configuration to create, or attach if `create_security_configuration` is `false`. Only valid for EMR clusters with `release_label` 4.8.0 or greater",
+        "name": "security_configuration",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"AmazonEMRServicePolicy_v2\": \"arn:aws:iam::aws:policy/service-role/AmazonEMRServicePolicy_v2\"\n}",
+        "description": "Map of IAM policies to attach to the service role",
+        "name": "service_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the EC2 IAM role/instance profile should be created",
+        "name": "create_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Whether the job flow is visible to all IAM users of the AWS account associated with the job flow. Default value is `true`",
+        "name": "visible_to_all_users",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the EC2 IAM role/instance profile",
+        "name": "iam_instance_profile_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"AmazonElasticMapReduceforEC2Role\": \"arn:aws:iam::aws:policy/service-role/AmazonElasticMapReduceforEC2Role\"\n}",
+        "description": "Map of IAM policies to attach to the EC2 IAM role/instance profile",
+        "name": "iam_instance_profile_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Size in GiB of the EBS root device volume of the Linux AMI that is used for each EC2 instance. Available in Amazon EMR version 4.x and later",
+        "name": "ebs_root_volume_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "List of [step states](https://docs.aws.amazon.com/emr/latest/APIReference/API_StepStatus.html) used to filter returned steps",
+        "name": "list_steps_states",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Switch on/off termination protection (default is `false`, except when using multiple master nodes). Before attempting to destroy the resource when termination protection is enabled, this configuration must be applied with its value set to `false`",
+        "name": "termination_protection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an existing IAM role to use for the service",
+        "name": "service_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an existing IAM role to use for autoscaling",
+        "name": "autoscaling_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Ordered list of bootstrap actions that will be run before Hadoop is started on the cluster nodes",
+        "name": "bootstrap_action",
+        "required": false,
+        "type": "list(object({\n    args = optional(list(string))\n    name = string\n    path = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Compute limit configuration for a [Managed Scaling Policy](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-managed-scaling.html)",
+        "name": "managed_scaling_policy",
+        "required": false,
+        "type": "object({\n    maximum_capacity_units          = number\n    maximum_core_capacity_units     = optional(number)\n    maximum_ondemand_capacity_units = optional(number)\n    minimum_capacity_units          = number\n    unit_type                       = string\n    scaling_strategy                = optional(string)\n    utilization_performance_index   = optional(number)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether `security_configuration_name` is used as a prefix",
+        "name": "security_configuration_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "JSON string for selecting additional features such as adding proxy information. Note: Currently there is no API to retrieve the value of this argument after EMR cluster creation from provider, therefore Terraform cannot detect drift from the actual EMR cluster if its value is changed outside Terraform",
+        "name": "additional_info",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the service IAM role should be created",
+        "name": "create_service_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Managed master security group\"",
+        "description": "Description of the security group created",
+        "name": "master_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of configurations supplied for the EMR cluster you are creating. Supply a configuration object for applications to override their default configuration",
+        "name": "configurations",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Fleet](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html) for the master node type. Cannot be specified if any `master_instance_group` configuration blocks are set",
+        "name": "master_instance_fleet",
+        "required": false,
+        "type": "object({\n    instance_type_configs = optional(list(object({\n      bid_price                                  = optional(string)\n      bid_price_as_percentage_of_on_demand_price = optional(number, 60)\n      configurations = optional(list(object({\n        classification = optional(string)\n        properties     = optional(map(string))\n      })))\n      ebs_config = optional(list(object({\n        iops                 = optional(number)\n        size                 = optional(number, 256)\n        type                 = optional(string, \"gp3\")\n        volumes_per_instance = optional(number)\n      })))\n      instance_type     = string\n      weighted_capacity = optional(number)\n    })))\n    launch_specifications = optional(object({\n      on_demand_specification = optional(object({\n        allocation_strategy = optional(string, \"lowest-price\")\n      }))\n      spot_specification = optional(object({\n        allocation_strategy      = optional(string, \"capacity-optimized\")\n        block_duration_minutes   = optional(number)\n        timeout_action           = optional(string, \"SWITCH_TO_ON_DEMAND\")\n        timeout_duration_minutes = optional(number, 60)\n      }))\n    }))\n    name                      = optional(string)\n    target_on_demand_capacity = optional(number)\n    target_spot_capacity      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Number of steps that can be executed concurrently. You can specify a maximum of 256 steps. Only valid for EMR clusters with `release_label` 5.28.0 or greater (default is 1)",
+        "name": "step_concurrency_level",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Group](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-group-configuration.html#emr-plan-instance-groups) for the [task node type](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-master-core-task-nodes.html#emr-plan-master)",
+        "name": "task_instance_group",
+        "required": false,
+        "type": "object({\n    autoscaling_policy  = optional(string)\n    bid_price           = optional(string)\n    configurations_json = optional(string)\n    ebs_config = optional(list(object({\n      iops                 = optional(number)\n      size                 = optional(number, 256)\n      type                 = optional(string, \"gp3\")\n      volumes_per_instance = optional(number)\n    })))\n    ebs_optimized  = optional(bool, true)\n    instance_count = optional(number)\n    instance_type  = string\n    name           = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "service_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "master_security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                      = optional(string)\n    cidr_ipv6                      = optional(string)\n    description                    = optional(string)\n    from_port                      = optional(string)\n    ip_protocol                    = optional(string, \"tcp\")\n    prefix_list_id                 = optional(string)\n    referenced_security_group_id   = optional(string)\n    reference_slave_security_group = optional(bool, false)\n    tags                           = optional(map(string), {})\n    to_port                        = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Identifies whether the cluster is created in a private subnet",
+        "name": "is_private_cluster",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM policy created",
+        "name": "service_pass_role_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"all-traffic\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all egress traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "service_security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                       = optional(string)\n    cidr_ipv6                       = optional(string)\n    description                     = optional(string)\n    from_port                       = optional(string)\n    ip_protocol                     = optional(string, \"tcp\")\n    prefix_list_id                  = optional(string)\n    referenced_security_group_id    = optional(string)\n    reference_master_security_group = optional(bool, false)\n    tags                            = optional(map(string), {})\n    to_port                         = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on EC2 IAM role/instance profile created",
+        "name": "iam_instance_profile_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Kerberos configuration for the cluster",
+        "name": "kerberos_attributes",
+        "required": false,
+        "type": "object({\n    ad_domain_join_password              = optional(string)\n    ad_domain_join_user                  = optional(string)\n    cross_realm_trust_principal_password = optional(string)\n    kdc_admin_password                   = string\n    realm                                = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "service_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "autoscaling_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "autoscaling_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A case-insensitive list of applications for Amazon EMR to install and configure when launching the cluster",
+        "name": "applications",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Steps to run when creating the cluster",
+        "name": "step",
+        "required": false,
+        "type": "list(object({\n    action_on_failure = string\n    hadoop_jar_step = optional(object({\n      args       = optional(list(string))\n      jar        = string\n      main_class = optional(string)\n      properties = optional(map(string))\n    }))\n    name = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the policy",
+        "name": "service_pass_role_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether managed security groups are created",
+        "name": "create_managed_security_groups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "JSON string for supplying list of configurations for the EMR cluster",
+        "name": "configurations_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether whether Amazon EMR should gracefully replace core nodes that have degraded within the cluster. Default value is `true`",
+        "name": "unhealthy_node_replacement",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the security configuration to create, or attach if `create_security_configuration` is `false`. Only valid for EMR clusters with `release_label` 4.8.0 or greater",
+        "name": "security_configuration_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Managed slave security group\"",
+        "description": "Description of the security group created",
+        "name": "slave_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Managed service access security group\"",
+        "description": "Description of the security group created",
+        "name": "service_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Custom Amazon Linux AMI for the cluster (instead of an EMR-owned AMI). Available in Amazon EMR version 5.7.0 and later",
+        "name": "custom_ami_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "S3 bucket to write the log files of the job flow. If a value is not provided, logs are not created",
+        "name": "log_uri",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "managed_security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Linux release for all nodes in a cluster launch RunJobFlow request. If not specified, Amazon EMR uses the latest validated Amazon Linux release for cluster launch",
+        "name": "os_release_label",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"default\": {\n    \"prefix\": \"emr-7\"\n  }\n}",
+        "description": "Map of release label filters use to lookup a release label",
+        "name": "release_label_filters",
+        "required": false,
+        "type": "map(object({\n    application = optional(string)\n    prefix      = optional(string)\n  }))"
+      },
+      {
+        "default": "\"TERMINATE_AT_TASK_COMPLETION\"",
+        "description": "Way that individual Amazon EC2 instances terminate when an automatic scale-in activity occurs or an instance group is resized",
+        "name": "scale_down_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "An auto-termination policy for an Amazon EMR cluster. An auto-termination policy defines the amount of idle time in seconds after which a cluster automatically terminates",
+        "name": "auto_termination_policy",
+        "required": false,
+        "type": "object({\n    idle_timeout = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block to use an [Instance Fleet](https://docs.aws.amazon.com/emr/latest/ManagementGuide/emr-instance-fleet.html) for the core node type. Cannot be specified if any `core_instance_group` configuration blocks are set",
+        "name": "core_instance_fleet",
+        "required": false,
+        "type": "object({\n    instance_type_configs = optional(list(object({\n      bid_price                                  = optional(string)\n      bid_price_as_percentage_of_on_demand_price = optional(number, 60)\n      configurations = optional(list(object({\n        classification = optional(string)\n        properties     = optional(map(string))\n      })))\n      ebs_config = optional(list(object({\n        iops                 = optional(number)\n        size                 = optional(number, 256)\n        type                 = optional(string, \"gp3\")\n        volumes_per_instance = optional(number)\n      })))\n      instance_type     = string\n      weighted_capacity = optional(number)\n    })))\n    launch_specifications = optional(object({\n      on_demand_specification = optional(object({\n        allocation_strategy = optional(string, \"lowest-price\")\n      }))\n      spot_specification = optional(object({\n        allocation_strategy      = optional(string, \"capacity-optimized\")\n        block_duration_minutes   = optional(number)\n        timeout_action           = optional(string, \"SWITCH_TO_ON_DEMAND\")\n        timeout_duration_minutes = optional(number, 60)\n      }))\n    }))\n    name                      = optional(string)\n    target_on_demand_capacity = optional(number)\n    target_spot_capacity      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Attributes for the EC2 instances running the job flow",
+        "name": "ec2_attributes",
+        "required": false,
+        "type": "object({\n    additional_master_security_groups = optional(string)\n    additional_slave_security_groups  = optional(string)\n    emr_managed_master_security_group = optional(string)\n    emr_managed_slave_security_group  = optional(string)\n    instance_profile                  = optional(string)\n    key_name                          = optional(string)\n    service_access_security_group     = optional(string)\n    subnet_id                         = optional(string)\n    subnet_ids                        = optional(list(string))\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "serverless": [
+      {
+        "default": "null",
+        "description": "The configuration for an application to automatically stop after a certain amount of time being idle",
+        "name": "auto_stop_configuration",
+        "required": false,
+        "type": "object({\n    enabled              = optional(bool)\n    idle_timeout_minutes = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The runtime configuration for the application",
+        "name": "runtime_configuration",
+        "required": false,
+        "type": "list(object({\n    classification = string\n    properties     = optional(map(string))\n  }))"
+      },
+      {
+        "default": "\"spark\"",
+        "description": "The type of application you want to start, such as `spark` or `hive`. Defaults to `spark`",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The maximum capacity to allocate when the application is created. This is cumulative across all workers at any given point in time, not just when an application is created. No new resources will be created once any one of the defined limits is hit",
+        "name": "maximum_capacity",
+        "required": false,
+        "type": "object({\n    cpu    = string\n    disk   = optional(string)\n    memory = string\n  })"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the application",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The network configuration for customer VPC connectivity",
+        "name": "network_configuration",
+        "required": false,
+        "type": "object({\n    security_group_ids = optional(list(string), [])\n    subnet_ids         = optional(list(string))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"all-traffic\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all egress traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The capacity to initialize when the application is created",
+        "name": "initial_capacity",
+        "required": false,
+        "type": "map(object({\n    initial_capacity_config = optional(object({\n      worker_configuration = optional(object({\n        cpu    = string\n        disk   = optional(string)\n        memory = string\n      }))\n      worker_count = optional(number, 1)\n    }))\n    initial_capacity_type = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Enables the interactive use cases to use when running an application",
+        "name": "interactive_configuration",
+        "required": false,
+        "type": "object({\n    livy_endpoint_enabled = optional(bool)\n    studio_enabled        = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for job-level cost allocation",
+        "name": "job_level_cost_allocation_configuration",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Release label for the Amazon EMR release",
+        "name": "release_label",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The monitoring configuration for the application",
+        "name": "monitoring_configuration",
+        "required": false,
+        "type": "object({\n    cloudwatch_logging_configuration = optional(object({\n      enabled                = optional(bool)\n      log_group_name         = optional(string)\n      log_stream_name_prefix = optional(string)\n      encryption_key_arn     = optional(string)\n      log_types = optional(list(object({\n        name   = string\n        values = list(string)\n      })))\n    }))\n    managed_persistence_monitoring_configuration = optional(object({\n      enabled            = optional(bool)\n      encryption_key_arn = optional(string)\n    }))\n    prometheus_monitoring_configuration = optional(object({\n      remote_write_url = optional(string)\n    }))\n    s3_monitoring_configuration = optional(object({\n      log_uri            = optional(string)\n      encryption_key_arn = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The scheduler configuration for the application",
+        "name": "scheduler_configuration",
+        "required": false,
+        "type": "object({\n    max_concurrent_runs   = optional(number)\n    queue_timeout_minutes = optional(number)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The image configuration applied to all worker types",
+        "name": "image_configuration",
+        "required": false,
+        "type": "object({\n    image_uri = string\n  })"
+      },
+      {
+        "default": "{\n  \"default\": {\n    \"prefix\": \"emr-7\"\n  }\n}",
+        "description": "Map of release label filters use to lookup a release label",
+        "name": "release_label_filters",
+        "required": false,
+        "type": "map(object({\n    application = optional(string)\n    prefix      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The CPU architecture of an application. Valid values are `ARM64` or `X86_64`. Default value is `X86_64`",
+        "name": "architecture",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The configuration for an application to automatically start on job submission",
+        "name": "auto_start_configuration",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      }
+    ],
+    "studio": [
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "user_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "user_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS key identifier (ARN) used to encrypt Amazon EMR Studio workspace and notebook files when backed up to Amazon S3",
+        "name": "encryption_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name that your identity provider (IdP) uses for its RelayState parameter. For example, RelayState or TargetSource",
+        "name": "idp_relay_state_parameter_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of subnet IDs to associate with the Amazon EMR Studio. A Studio can have a maximum of 5 subnets. The subnets must belong to the VPC specified by `vpc_id`",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "service_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name is used as a prefix",
+        "name": "user_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"EMR Studio workspace security group\"",
+        "description": "Description of the security group created",
+        "name": "workspace_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "workspace_security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                           = optional(string)\n    cidr_ipv6                           = optional(string)\n    description                         = optional(string)\n    from_port                           = optional(string)\n    ip_protocol                         = optional(string, \"tcp\")\n    prefix_list_id                      = optional(string)\n    referenced_security_group_id        = optional(string)\n    referenced_engine_security_group_id = optional(bool, false)\n    tags                                = optional(map(string), {})\n    to_port                             = optional(string)\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Amazon S3 location to back up Amazon EMR Studio Workspaces and notebook files",
+        "name": "default_s3_location",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of the Amazon Virtual Private Cloud (Amazon VPC) to associate with the Studio",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of Amazon S3 bucket ARNs to allow permission to read/write from the Amazon EMR Studio user role",
+        "name": "user_role_s3_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "user_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created. Note - `-engine` and `-workspace` will be appended to this name to distinguish",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "workspace_security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                           = optional(string)\n    cidr_ipv6                           = optional(string)\n    description                         = optional(string)\n    from_port                           = optional(string)\n    ip_protocol                         = optional(string, \"tcp\")\n    prefix_list_id                      = optional(string)\n    referenced_security_group_id        = optional(string)\n    referenced_engine_security_group_id = optional(bool, false)\n    tags                                = optional(map(string), {})\n    to_port                             = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "A descriptive name for the Amazon EMR Studio",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name is used as a prefix",
+        "name": "service_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "service_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "service_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an existing IAM role to use for the user",
+        "name": "user_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"EMR Studio engine security group\"",
+        "description": "Description of the security group created",
+        "name": "engine_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the service IAM role should be created",
+        "name": "create_service_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "service_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the service IAM role policy should be created",
+        "name": "create_service_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM policies to attach to the user role",
+        "name": "user_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the Amazon EMR Studio Engine security group. The Engine security group allows inbound network traffic from the Workspace security group, and it must be in the same VPC specified by `vpc_id`",
+        "name": "engine_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"IAM\"",
+        "description": "Specifies whether the Studio authenticates users using IAM or Amazon Web Services SSO. Valid values are `SSO` or `IAM`",
+        "name": "auth_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an existing IAM role to use for the service",
+        "name": "service_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "service_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the user IAM role should be created",
+        "name": "create_user_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "user_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "engine_security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                              = optional(string)\n    cidr_ipv6                              = optional(string)\n    description                            = optional(string)\n    from_port                              = optional(string)\n    ip_protocol                            = optional(string, \"tcp\")\n    prefix_list_id                         = optional(string)\n    referenced_security_group_id           = optional(string)\n    referenced_workspace_security_group_id = optional(bool, false)\n    tags                                   = optional(map(string), {})\n    to_port                                = optional(string)\n  }))"
+      },
+      {
+        "default": "{\n  \"all-traffic\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all egress traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "engine_security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                              = optional(string)\n    cidr_ipv6                              = optional(string)\n    description                            = optional(string)\n    from_port                              = optional(string)\n    ip_protocol                            = optional(string, \"tcp\")\n    prefix_list_id                         = optional(string)\n    referenced_security_group_id           = optional(string)\n    referenced_workspace_security_group_id = optional(bool, false)\n    tags                                   = optional(map(string), {})\n    to_port                                = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The authentication endpoint of your identity provider (IdP). Specify this value when you use IAM authentication and want to let federated users log in to a Studio with the Studio URL and credentials from your IdP",
+        "name": "idp_auth_url",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A map of session mapping definitions to apply to the Studio",
+        "name": "session_mappings",
+        "required": false,
+        "type": "map(object({\n    identity_id        = optional(string)\n    identity_name      = optional(string)\n    identity_type      = string\n    session_policy_arn = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "service_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "user_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the user IAM role policy should be created",
+        "name": "create_user_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether security groups for the EMR Studio engine and workspace are created",
+        "name": "create_security_groups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the Amazon EMR Studio Workspace security group. The Workspace security group allows outbound network traffic to resources in the Engine security group, and it must be in the same VPC specified by `vpc_id`",
+        "name": "workspace_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM policies to attach to the service role",
+        "name": "service_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of Amazon S3 bucket ARNs to allow permission to read/write from the Amazon EMR Studio",
+        "name": "service_role_s3_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "user_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A detailed description of the Amazon EMR Studio",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of Amazon Web Services Secrets Manager secret ARNs to allow use of Git credentials stored in AWS Secrets Manager to link Git repositories to a Workspace",
+        "name": "service_role_secrets_manager_arns",
+        "required": false,
+        "type": "list(string)"
+      }
+    ],
+    "virtual-cluster": [
+      {
+        "default": "false",
+        "description": "Determines whether the log group name (`cloudwatch_log_group_name`) is used as a prefix",
+        "name": "cloudwatch_log_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of annotations to add to all Kubernetes resources",
+        "name": "annotations",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a Kubernetes namespace is created for EMR on EKS",
+        "name": "create_namespace",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Job execution IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the job execution IAM role",
+        "name": "iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a Kubernetes role is created for EMR on EKS",
+        "name": "create_kubernetes_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "S3 bucket ARNs for EMR on EKS job execution role to list, get objects, and put objects",
+        "name": "s3_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the job execution role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Set to 'true' if you do not wish the log group (and any logs it may contain) to be deleted at destroy time, and instead just remove the log group from the Terraform state",
+        "name": "cloudwatch_log_group_skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of labels to add to all Kubernetes resources",
+        "name": "labels",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created for EMR on EKS job execution role",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created for EMR on EKS job execution role as well as Kubernetes RBAC role",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM job execution role name (`role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the job execution IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"arn:aws:logs:*:*:*\"",
+        "description": "ARN of the log group to use for the cluster logs",
+        "name": "cloudwatch_log_group_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EMR on EKS virtual cluster",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "EKS cluster name",
+        "name": "eks_cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"emr-containers\"",
+        "description": "Kubernetes namespace for EMR on EKS",
+        "name": "namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "OIDC provider ARN for the EKS cluster",
+        "name": "eks_oidc_provider_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "7",
+        "description": "Number of days to retain log events. Default retention - 7 days",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name of the log group. If a name is not provided, the default name format used is: `/emr-on-eks-logs/emr-workload/<NAMESPACE>`",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Stable and unique string identifying the service IAM role",
+        "name": "service_iam_role_unique_id"
+      },
+      {
+        "description": "Autoscaling IAM role ARN",
+        "name": "autoscaling_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the instance profile IAM role",
+        "name": "iam_instance_profile_iam_role_unique_id"
+      },
+      {
+        "description": "ID of the managed slave security group",
+        "name": "managed_slave_security_group_id"
+      },
+      {
+        "description": "ID of the managed service access security group",
+        "name": "managed_service_access_security_group_id"
+      },
+      {
+        "description": "The ARN of the cluster",
+        "name": "cluster_arn"
+      },
+      {
+        "description": "The ID of the cluster",
+        "name": "cluster_id"
+      },
+      {
+        "description": "The ID of the security configuration",
+        "name": "security_configuration_id"
+      },
+      {
+        "description": "Service IAM role name",
+        "name": "service_iam_role_name"
+      },
+      {
+        "description": "Autoscaling IAM role name",
+        "name": "autoscaling_iam_role_name"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "iam_instance_profile_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the managed master security group",
+        "name": "managed_master_security_group_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the managed slave security group",
+        "name": "managed_slave_security_group_arn"
+      },
+      {
+        "description": "Master node type Instance Group ID, if using Instance Group for this node type",
+        "name": "cluster_master_instance_group_id"
+      },
+      {
+        "description": "The DNS name of the master node. If the cluster is on a private subnet, this is the private DNS name. On a public subnet, this is the public DNS name",
+        "name": "cluster_master_public_dns"
+      },
+      {
+        "description": "The name of the security configuration",
+        "name": "security_configuration_name"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "iam_instance_profile_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "iam_instance_profile_unique"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the managed service access security group",
+        "name": "managed_service_access_security_group_arn"
+      },
+      {
+        "description": "Instance profile IAM role name",
+        "name": "iam_instance_profile_iam_role_name"
+      },
+      {
+        "description": "Core node type Instance Group ID, if using Instance Group for this node type",
+        "name": "cluster_core_instance_group_id"
+      },
+      {
+        "description": "Service IAM role ARN",
+        "name": "service_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the autoscaling IAM role",
+        "name": "autoscaling_iam_role_unique_id"
+      },
+      {
+        "description": "Instance profile IAM role ARN",
+        "name": "iam_instance_profile_iam_role_arn"
+      },
+      {
+        "description": "ID of the managed master security group",
+        "name": "managed_master_security_group_id"
+      }
+    ],
+    "serverless": [
+      {
+        "description": "Amazon Resource Name (ARN) of the application",
+        "name": "arn"
+      },
+      {
+        "description": "ID of the application",
+        "name": "id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      }
+    ],
+    "studio": [
+      {
+        "description": "The name of the user role policy",
+        "name": "user_iam_role_policy_name"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the engine security group",
+        "name": "engine_security_group_arn"
+      },
+      {
+        "description": "Service IAM role policy ARN",
+        "name": "service_iam_role_policy_arn"
+      },
+      {
+        "description": "User IAM role name",
+        "name": "user_iam_role_name"
+      },
+      {
+        "description": "ID of the workspace security group",
+        "name": "workspace_security_group_id"
+      },
+      {
+        "description": "The unique access URL of the Amazon EMR Studio",
+        "name": "url"
+      },
+      {
+        "description": "The name of the service role policy",
+        "name": "service_iam_role_policy_name"
+      },
+      {
+        "description": "Stable and unique string identifying the user IAM role",
+        "name": "user_iam_role_unique_id"
+      },
+      {
+        "description": "User IAM role policy ARN",
+        "name": "user_iam_role_policy_arn"
+      },
+      {
+        "description": "User IAM role policy ID",
+        "name": "user_iam_role_policy_id"
+      },
+      {
+        "description": "ID of the engine security group",
+        "name": "engine_security_group_id"
+      },
+      {
+        "description": "ARN of the studio",
+        "name": "arn"
+      },
+      {
+        "description": "Service IAM role name",
+        "name": "service_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the service IAM role",
+        "name": "service_iam_role_unique_id"
+      },
+      {
+        "description": "Service IAM role policy ID",
+        "name": "service_iam_role_policy_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the workspace security group",
+        "name": "workspace_security_group_arn"
+      },
+      {
+        "description": "Service IAM role ARN",
+        "name": "service_iam_role_arn"
+      },
+      {
+        "description": "User IAM role ARN",
+        "name": "user_iam_role_arn"
+      }
+    ],
+    "virtual-cluster": [
+      {
+        "description": "IAM role ARN of the job execution role",
+        "name": "job_execution_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the job execution IAM role",
+        "name": "job_execution_role_unique_id"
+      },
+      {
+        "description": "Name of cloudwatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "Arn of cloudwatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "ARN of the EMR virtual cluster",
+        "name": "virtual_cluster_arn"
+      },
+      {
+        "description": "ID of the EMR virtual cluster",
+        "name": "virtual_cluster_id"
+      },
+      {
+        "description": "IAM role name of the job execution role",
+        "name": "job_execution_role_name"
+      }
+    ]
+  },
+  "built_from_version": "3.3.0",
+  "module_id": "terraform-aws-modules/emr/aws"
+}

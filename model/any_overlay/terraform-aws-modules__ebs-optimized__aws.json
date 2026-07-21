@@ -1,0 +1,23 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "",
+        "description": "Instance type to evaluate if EBS optimized is an option",
+        "name": "instance_type",
+        "required": true,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Returns 1 (true) or 0 (false) depending on if the instance type is able to be EBS optimized",
+        "name": "answer"
+      }
+    ]
+  },
+  "built_from_version": "0.2.1",
+  "module_id": "terraform-aws-modules/ebs-optimized/aws"
+}

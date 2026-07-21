@@ -1,0 +1,456 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "false",
+        "description": "Whether to enable v2 logging for the CloudFront distribution",
+        "name": "enable_v2_logging",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ID of the Anycast static IP list that is associated with the distribution",
+        "name": "anycast_ip_list_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether the distribution is enabled to accept end user requests for content",
+        "name": "enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "One or more origin_group for this distribution (multiples allowed)",
+        "name": "origin_group",
+        "required": false,
+        "type": "map(object({\n    failover_criteria = object({\n      status_codes = list(number)\n    })\n    member = list(object({\n      origin_id = string\n    }))\n    origin_id = optional(string)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "An ordered list of cache behaviors resource for this distribution. List from top to bottom in order of precedence. The topmost cache behavior will have precedence 0",
+        "name": "ordered_cache_behavior",
+        "required": false,
+        "type": "list(object({\n    allowed_methods           = optional(list(string), [\"GET\", \"HEAD\", \"OPTIONS\"])\n    cached_methods            = optional(list(string), [\"GET\", \"HEAD\"])\n    cache_policy_id           = optional(string)\n    cache_policy_key          = optional(string)\n    cache_policy_name         = optional(string)\n    compress                  = optional(bool, true)\n    default_ttl               = optional(number)\n    field_level_encryption_id = optional(string)\n    forwarded_values = optional(object({\n      cookies = object({\n        forward           = optional(string, \"none\")\n        whitelisted_names = optional(list(string))\n      })\n      headers                 = optional(list(string))\n      query_string            = optional(bool, false)\n      query_string_cache_keys = optional(list(string))\n      }),\n      {\n        cookies = {\n          forward = \"none\"\n        }\n        query_string = false\n      }\n    )\n    function_association = optional(map(object({\n      event_type   = optional(string)\n      function_arn = optional(string)\n      function_key = optional(string)\n    })))\n    grpc_config = optional(object({\n      enabled = optional(bool)\n    }))\n    lambda_function_association = optional(map(object({\n      event_type   = optional(string)\n      include_body = optional(bool)\n      lambda_arn   = string\n    })))\n    max_ttl                      = optional(number)\n    min_ttl                      = optional(number)\n    origin_request_policy_id     = optional(string)\n    origin_request_policy_key    = optional(string)\n    origin_request_policy_name   = optional(string)\n    path_pattern                 = string\n    realtime_log_config_arn      = optional(string)\n    response_headers_policy_id   = optional(string)\n    response_headers_policy_key  = optional(string)\n    response_headers_policy_name = optional(string)\n    smooth_streaming             = optional(bool)\n    target_origin_id             = string\n    trusted_key_groups           = optional(list(string))\n    trusted_signers              = optional(list(string))\n    viewer_protocol_policy       = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Disables the distribution instead of deleting it when destroying the resource through Terraform. If this is set, the distribution needs to be deleted manually afterwards",
+        "name": "retain_on_delete",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If enabled, the resource will wait for the distribution status to change from InProgress to Deployed. Setting this to false will skip the process",
+        "name": "wait_for_deployment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Enabled\"",
+        "description": "A flag that indicates whether additional CloudWatch metrics are enabled for a given CloudFront distribution. Valid values are `Enabled` and `Disabled`",
+        "name": "realtime_metrics_subscription_status",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether to create a CloudFront connection function",
+        "name": "create_connection_function",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the CloudFront connection function",
+        "name": "connection_function_config",
+        "required": false,
+        "type": "object({\n    comment = string\n    runtime = string\n    key_value_store_association = optional(object({\n      key_value_store_arn = string\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Whether the IPv6 is enabled for the distribution",
+        "name": "is_ipv6_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The price class for this distribution. One of `PriceClass_All`, `PriceClass_200`, `PriceClass_100`",
+        "name": "price_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether the distribution is a staging distribution",
+        "name": "staging",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "If enabled, the resource for monitoring subscription will created",
+        "name": "create_monitoring_subscription",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The name of the CloudFront connection function",
+        "name": "connection_function_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Extra CNAMEs (alternate domain names), if any, for this distribution",
+        "name": "aliases",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "",
+        "description": "The default cache behavior for this distribution",
+        "name": "default_cache_behavior",
+        "required": true,
+        "type": "object({\n    allowed_methods           = optional(list(string), [\"GET\", \"HEAD\", \"OPTIONS\"])\n    cache_policy_id           = optional(string)\n    cache_policy_key          = optional(string)\n    cache_policy_name         = optional(string)\n    cached_methods            = optional(list(string), [\"GET\", \"HEAD\"])\n    compress                  = optional(bool, true)\n    default_ttl               = optional(number)\n    field_level_encryption_id = optional(string)\n    forwarded_values = optional(object({\n      cookies = object({\n        forward           = optional(string, \"none\")\n        whitelisted_names = optional(list(string))\n      })\n      headers                 = optional(list(string))\n      query_string            = optional(bool, false)\n      query_string_cache_keys = optional(list(string))\n      }),\n      {\n        cookies = {\n          forward = \"none\"\n        }\n        query_string = false\n      }\n    )\n    function_association = optional(map(object({\n      event_type   = optional(string)\n      function_arn = optional(string)\n      function_key = optional(string)\n    })))\n    grpc_config = optional(object({\n      enabled = optional(bool)\n    }))\n    lambda_function_association = optional(map(object({\n      event_type   = optional(string)\n      include_body = optional(bool)\n      lambda_arn   = string\n    })))\n    max_ttl                      = optional(number)\n    min_ttl                      = optional(number)\n    origin_request_policy_id     = optional(string)\n    origin_request_policy_key    = optional(string)\n    origin_request_policy_name   = optional(string)\n    realtime_log_config_arn      = optional(string)\n    response_headers_policy_id   = optional(string)\n    response_headers_policy_key  = optional(string)\n    response_headers_policy_name = optional(string)\n    smooth_streaming             = optional(bool)\n    target_origin_id             = string\n    trusted_key_groups           = optional(list(string))\n    trusted_signers              = optional(list(string))\n    viewer_protocol_policy       = optional(string, \"https-only\")\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Map of CloudFront Function configurations. Key is used as default function name if 'name' not specified",
+        "name": "cloudfront_functions",
+        "required": false,
+        "type": "map(object({\n    name                         = optional(string)\n    runtime                      = optional(string, \"cloudfront-js-2.0\")\n    comment                      = optional(string)\n    publish                      = optional(bool)\n    code                         = string\n    key_value_store_associations = optional(list(string))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Whether to publish the function to the LIVE stage after creation or update. Defaults to false",
+        "name": "connection_function_publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"http2\"",
+        "description": "The maximum HTTP version to support on the distribution. Allowed values are http1.1, http2, http2and3, and http3. The default is http2",
+        "name": "http_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If you're using AWS WAF to filter CloudFront requests, the Id of the AWS WAF web ACL that is associated with the distribution. The WAF Web ACL must exist in the WAF Global (CloudFront) region and the credentials configuring this argument must have waf:GetWebACL permissions assigned. If using WAFv2, provide the ARN of the web ACL",
+        "name": "web_acl_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of CloudFront origin request policies",
+        "name": "origin_request_policies",
+        "required": false,
+        "type": "map(object({\n    name    = optional(string)\n    comment = optional(string)\n    cookies_config = object({\n      cookie_behavior = string\n      cookies = optional(object({\n        items = list(string)\n      }))\n    })\n    headers_config = object({\n      header_behavior = string\n      headers = optional(object({\n        items = list(string)\n      }))\n    })\n    query_strings_config = object({\n      query_string_behavior = string\n      query_strings = optional(object({\n        items = list(string)\n      }))\n    })\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Map of CloudFront response headers policies with their configurations",
+        "name": "response_headers_policies",
+        "required": false,
+        "type": "map(object({\n    name    = optional(string)\n    comment = optional(string)\n    cors_config = optional(object({\n      access_control_allow_credentials = bool\n      origin_override                  = bool\n      access_control_allow_headers = object({\n        items = list(string)\n      })\n      access_control_allow_methods = object({\n        items = list(string)\n      })\n      access_control_allow_origins = object({\n        items = list(string)\n      })\n      access_control_expose_headers = optional(object({\n        items = list(string)\n      }))\n      access_control_max_age_sec = optional(number)\n    }))\n    custom_headers_config = optional(object({\n      items = list(object({\n        header   = string\n        override = bool\n        value    = string\n      }))\n    }))\n    remove_headers_config = optional(object({\n      items = list(object({\n        header = string\n      }))\n    }))\n    security_headers_config = optional(object({\n      content_security_policy = optional(object({\n        content_security_policy = string\n        override                = bool\n      }))\n      content_type_options = optional(object({\n        override = bool\n      }))\n      frame_options = optional(object({\n        frame_option = string\n        override     = bool\n      }))\n      referrer_policy = optional(object({\n        referrer_policy = string\n        override        = bool\n      }))\n      strict_transport_security = optional(object({\n        access_control_max_age_sec = number\n        override                   = bool\n        include_subdomains         = optional(bool)\n        preload                    = optional(bool)\n      }))\n      xss_protection = optional(object({\n        mode_block = bool\n        override   = bool\n        protection = bool\n        report_uri = optional(string)\n      }))\n    }))\n    server_timing_headers_config = optional(object({\n      enabled       = bool\n      sampling_rate = number\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Identifier of the connection function to associate with the distribution",
+        "name": "connection_function_association_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The object that you want CloudFront to return (for example, index.html) when an end user requests the root URL",
+        "name": "default_root_object",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The logging configuration that controls how logs are written to your distribution (maximum one)",
+        "name": "logging_config",
+        "required": false,
+        "type": "object({\n    bucket          = optional(string)\n    include_cookies = optional(bool)\n    prefix          = optional(string)\n  })"
+      },
+      {
+        "default": "{\n  \"geo_restriction\": {\n    \"restriction_type\": \"none\"\n  }\n}",
+        "description": "The restrictions configuration for this distribution",
+        "name": "restrictions",
+        "required": false,
+        "type": "object({\n    geo_restriction = object({\n      locations        = optional(list(string))\n      restriction_type = optional(string, \"none\")\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Any comments you want to include about the distribution",
+        "name": "comment",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Identifier of a continuous deployment policy. This argument should only be set on a production distribution",
+        "name": "continuous_deployment_policy_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "One or more origins for this distribution (multiples allowed)",
+        "name": "origin",
+        "required": false,
+        "type": "map(object({\n    connection_attempts = optional(number)\n    connection_timeout  = optional(number)\n    custom_header       = optional(map(string))\n    custom_origin_config = optional(object({\n      http_port                = number\n      https_port               = number\n      ip_address_type          = optional(string)\n      origin_keepalive_timeout = optional(number)\n      origin_read_timeout      = optional(number)\n      origin_protocol_policy   = string\n      origin_ssl_protocols     = optional(list(string), [\"TLSv1.2\"])\n    }))\n    domain_name               = string\n    origin_access_control_key = optional(string)\n    origin_access_control_id  = optional(string)\n    origin_id                 = optional(string)\n    origin_path               = optional(string)\n    origin_shield = optional(object({\n      enabled              = bool\n      origin_shield_region = optional(string)\n    }))\n    response_completion_timeout = optional(number)\n    vpc_origin_config = optional(object({\n      origin_keepalive_timeout = optional(number)\n      origin_read_timeout      = optional(number)\n      vpc_origin_id            = optional(string)\n      vpc_origin_key           = optional(string)\n      owner_account_id         = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Map of CloudFront VPC origins",
+        "name": "vpc_origin",
+        "required": false,
+        "type": "map(object({\n    arn                    = string\n    http_port              = number\n    https_port             = number\n    name                   = optional(string)\n    origin_protocol_policy = string\n    origin_ssl_protocols = object({\n      items    = optional(list(string), [\"TLSv1.2\"])\n      quantity = optional(number, 1)\n    })\n    timeouts = optional(object({\n      create = optional(string)\n      update = optional(string)\n      delete = optional(string)\n    }))\n    tags = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Map of CloudFront cache policies",
+        "name": "cache_policies",
+        "required": false,
+        "type": "map(object({\n    name        = optional(string)\n    comment     = optional(string)\n    default_ttl = optional(number)\n    max_ttl     = optional(number)\n    min_ttl     = number\n    parameters_in_cache_key_and_forwarded_to_origin = object({\n      enable_accept_encoding_brotli = optional(bool)\n      enable_accept_encoding_gzip   = optional(bool)\n      cookies_config = object({\n        cookie_behavior = string\n        cookies = optional(object({\n          items = list(string)\n        }))\n      })\n      headers_config = object({\n        header_behavior = string\n        headers = optional(object({\n          items = list(string)\n        }))\n      })\n      query_strings_config = object({\n        query_string_behavior = string\n        query_strings = optional(object({\n          items = list(string)\n        }))\n      })\n    })\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for v2 logging destination",
+        "name": "v2_logging",
+        "required": false,
+        "type": "object({\n    # Destination\n    delivery_destination_configuration = optional(object({\n      destination_resource_arn = optional(string)\n    }))\n    delivery_destination_type = optional(string)\n    name                      = string\n    output_format             = optional(string)\n    # Delivery\n    field_delimiter = optional(string)\n    record_fields   = optional(list(string))\n    s3_delivery_configuration = optional(object({\n      enable_hive_compatible_path = optional(bool)\n      suffix_path                 = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Cache tag configuration block for cache tag extraction from origin responses (maximum one). See the [AWS documentation](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/invalidation-by-tags.html) for more information about cache tags",
+        "name": "cache_tag_config",
+        "required": false,
+        "type": "object({\n    header_name = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "One or more custom error response elements",
+        "name": "custom_error_response",
+        "required": false,
+        "type": "list(object({\n    error_caching_min_ttl = optional(number)\n    error_code            = number\n    response_code         = optional(number)\n    response_page_path    = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "The SSL configuration for this distribution",
+        "name": "viewer_certificate",
+        "required": false,
+        "type": "object({\n    acm_certificate_arn            = optional(string)\n    cloudfront_default_certificate = optional(bool)\n    iam_certificate_id             = optional(string)\n    minimum_protocol_version       = optional(string, \"TLSv1.2_2025\")\n    ssl_support_method             = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The viewer mTLS configuration for this distribution",
+        "name": "viewer_mtls_config",
+        "required": false,
+        "type": "object({\n    mode = optional(string)\n    trust_store_config = optional(object({\n      trust_store_id                 = string\n      advertise_trust_store_ca_names = optional(bool)\n      ignore_certificate_expiry      = optional(bool)\n    }))\n  })"
+      },
+      {
+        "default": "{\n  \"s3\": {\n    \"origin_type\": \"s3\",\n    \"signing_behavior\": \"always\",\n    \"signing_protocol\": \"sigv4\"\n  }\n}",
+        "description": "Map of CloudFront origin access control",
+        "name": "origin_access_control",
+        "required": false,
+        "type": "map(object({\n    description      = optional(string)\n    name             = optional(string)\n    origin_type      = string\n    signing_behavior = string\n    signing_protocol = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The code of the CloudFront connection function",
+        "name": "connection_function_code",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "trust_store": [
+      {
+        "default": "null",
+        "description": "S3 object version ID for the CA certificates bundle",
+        "name": "ca_cert_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Key-value tags for the place index",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the trust store. Changing this forces a new resource to be created",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "S3 bucket name containing the CA certificates bundle",
+        "name": "ca_cert_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "S3 object key for the CA certificates bundle",
+        "name": "ca_cert_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "AWS region of the S3 bucket",
+        "name": "ca_cert_region",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The response headers policies created",
+        "name": "cloudfront_response_headers_policies"
+      },
+      {
+        "description": "Status of the connection function",
+        "name": "connection_function_status"
+      },
+      {
+        "description": "The cache policies created",
+        "name": "cloudfront_cache_policies"
+      },
+      {
+        "description": "Internal value used by CloudFront to allow future updates to the distribution configuration.",
+        "name": "cloudfront_distribution_caller_reference"
+      },
+      {
+        "description": "The current status of the distribution. Deployed if the distribution's information is fully propagated throughout the Amazon CloudFront system.",
+        "name": "cloudfront_distribution_status"
+      },
+      {
+        "description": "The date and time the distribution was last modified.",
+        "name": "cloudfront_distribution_last_modified_time"
+      },
+      {
+        "description": "ETag of the connection function",
+        "name": "connection_function_etag"
+      },
+      {
+        "description": "ETag of the function's LIVE stage. Will be empty if the function has not been published",
+        "name": "connection_function_live_stage_etag"
+      },
+      {
+        "description": "The identifier for the distribution.",
+        "name": "cloudfront_distribution_id"
+      },
+      {
+        "description": "The domain name corresponding to the distribution.",
+        "name": "cloudfront_distribution_domain_name"
+      },
+      {
+        "description": "The number of invalidation batches currently in progress.",
+        "name": "cloudfront_distribution_in_progress_validation_batches"
+      },
+      {
+        "description": "The CloudFront Route 53 zone ID that can be used to route an Alias Resource Record Set to.",
+        "name": "cloudfront_distribution_hosted_zone_id"
+      },
+      {
+        "description": " The ID of the CloudFront monitoring subscription, which corresponds to the `distribution_id`.",
+        "name": "cloudfront_monitoring_subscription_id"
+      },
+      {
+        "description": "The ARN (Amazon Resource Name) for the distribution.",
+        "name": "cloudfront_distribution_arn"
+      },
+      {
+        "description": "List of nested attributes for active trusted signers, if the distribution is set up to serve private content with signed URLs",
+        "name": "cloudfront_distribution_trusted_signers"
+      },
+      {
+        "description": "The current version of the distribution's information.",
+        "name": "cloudfront_distribution_etag"
+      },
+      {
+        "description": "The origin access controls created",
+        "name": "cloudfront_origin_access_controls"
+      },
+      {
+        "description": "The IDS of the VPC origin created",
+        "name": "cloudfront_vpc_origins"
+      },
+      {
+        "description": "The CloudFront Functions created",
+        "name": "cloudfront_functions"
+      },
+      {
+        "description": "ARN of the connection function",
+        "name": "connection_function_arn"
+      },
+      {
+        "description": "ID of the connection function",
+        "name": "connection_function_id"
+      },
+      {
+        "description": "The origin request policies created",
+        "name": "cloudfront_origin_request_policies"
+      }
+    ],
+    "trust_store": [
+      {
+        "description": "The ARN of the trust store",
+        "name": "arn"
+      },
+      {
+        "description": "ETag of the trust store",
+        "name": "etag"
+      },
+      {
+        "description": "Number of CA certificates in the trust store",
+        "name": "number_of_ca_certificates"
+      },
+      {
+        "description": "The ID of the trust store",
+        "name": "id"
+      }
+    ]
+  },
+  "built_from_version": "6.7.0",
+  "module_id": "terraform-aws-modules/cloudfront/aws"
+}

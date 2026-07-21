@@ -19,7 +19,8 @@ EC_DIR = FIXTURES / "elasticache"
 OS_DIR = FIXTURES / "opensearch"
 
 S3_ID = "terraform-aws-modules/s3-bucket/aws"
-S3_VERSION = "5.14.1"
+S3_VERSION = "5.14.1"  # fixture pin (tests/fixtures/any_examples/s3_bucket) -- independent of the real catalog doc
+S3_CATALOG_VERSION = "5.15.1"  # the real, committed modules/terraform-aws-modules/s3-bucket.md pin
 EC_ID = "terraform-aws-modules/elasticache/aws"
 EC_VERSION = "1.9.0"
 OS_ID = "terraform-aws-modules/opensearch/aws"
@@ -176,7 +177,7 @@ def test_write_overlay_filename_from_module_id(tmp_path):
 def test_discover_catalog_modules_finds_real_catalog():
     catalog = bao.discover_catalog_modules(REPO_ROOT / "modules")
     catalog_dict = dict(catalog)
-    assert catalog_dict.get(S3_ID) == "5.14.1"
+    assert catalog_dict.get(S3_ID) == S3_CATALOG_VERSION
     assert len(catalog) == 63  # matches the documented catalog size
     assert catalog == sorted(catalog)  # deterministic ordering
 
@@ -515,3 +516,56 @@ def test_any_overlay_dir_exists_for_wheel_build():
     # not exist at all; a committed placeholder keeps the wheel buildable
     # before real overlay JSON files land (later, human-reviewed step).
     assert (REPO_ROOT / "model/any_overlay").is_dir()
+
+
+# --------------------------------------------------------------------------- #
+# Full-catalog coverage regression guard (2026-07-21): every one of the 63
+# catalog modules must have a committed overlay carrying all_inputs/
+# all_outputs, not just the modules with `type = any` inputs. Exercises the
+# REAL, committed model/any_overlay/ directory (built via `--all`), so this is
+# a durable guard against a future catalog module landing without a
+# corresponding overlay regeneration.
+# --------------------------------------------------------------------------- #
+
+
+def test_every_catalog_module_has_committed_overlay_with_complete_interface():
+    catalog = dict(bao.discover_catalog_modules(REPO_ROOT / "modules"))
+    overlay_dir = REPO_ROOT / "model" / "any_overlay"
+    missing = []
+    no_all_inputs = []
+    no_all_outputs = []
+    for module_id in catalog:
+        path = overlay_dir / bao._overlay_filename(module_id)
+        if not path.is_file():
+            missing.append(module_id)
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not data.get("all_inputs"):
+            no_all_inputs.append(module_id)
+        if not data.get("all_outputs"):
+            no_all_outputs.append(module_id)
+    assert not missing, f"catalog modules with no overlay file at all: {sorted(missing)}"
+    assert not no_all_inputs, f"overlays missing all_inputs: {sorted(no_all_inputs)}"
+    assert not no_all_outputs, f"overlays missing all_outputs: {sorted(no_all_outputs)}"
+
+
+def test_any_overlay_dir_has_exactly_63_files():
+    files = sorted((REPO_ROOT / "model" / "any_overlay").glob("*.json"))
+    assert len(files) == 63, f"expected 63 overlay files, found {len(files)}: {[f.name for f in files]}"
+
+
+def test_22_any_modules_carry_vars_41_do_not():
+    """The catalog-wide split matches the design: 22 modules with at least
+    one `type = any` input carry `vars`; the remaining 41 (zero any-vars)
+    carry only all_inputs/all_outputs."""
+    overlay_dir = REPO_ROOT / "model" / "any_overlay"
+    with_vars = 0
+    without_vars = 0
+    for path in overlay_dir.glob("*.json"):
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if data.get("vars"):
+            with_vars += 1
+        else:
+            without_vars += 1
+    assert with_vars == 22
+    assert without_vars == 41

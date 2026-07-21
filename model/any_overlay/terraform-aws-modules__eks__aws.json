@@ -1,0 +1,3712 @@
+{
+  "all_inputs": {
+    "_user_data": [
+      {
+        "default": "\"\"",
+        "description": "Path to a local, custom user data template file to use when rendering user data",
+        "name": "user_data_template_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the bootstrap configurations are populated within the user data template",
+        "name": "enable_bootstrap_user_data",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the user data is used on nodes in an EKS managed node group. Used to determine if user data will be appended or not",
+        "name": "is_eks_managed_node_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Endpoint of associated EKS cluster",
+        "name": "cluster_endpoint",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Array of cloud-init document parts that are created before the nodeadm document part",
+        "name": "cloudinit_pre_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "Array of cloud-init document parts that are created after the nodeadm document part",
+        "name": "cloudinit_post_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "\"AL2023_x86_64_STANDARD\"",
+        "description": "Type of Amazon Machine Image (AMI) associated with the EKS Node Group. See the [AWS documentation](https://docs.aws.amazon.com/eks/latest/APIReference/API_Nodegroup.html#AmazonEKS-Type-Nodegroup-amiType) for valid values",
+        "name": "ami_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Base64 encoded CA of associated EKS cluster",
+        "name": "cluster_auth_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Additional arguments passed to the bootstrap script. When `ami_type` = `BOTTLEROCKET_*`; these are additional [settings](https://github.com/bottlerocket-os/bottlerocket#settings) that are provided to the Bottlerocket user data",
+        "name": "bootstrap_extra_args",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The CIDR block (IPv4 or IPv6) used by the cluster to assign Kubernetes service IP addresses. This is derived from the cluster itself",
+        "name": "cluster_service_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"ipv4\"",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`",
+        "name": "cluster_ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Additional DNS IP addresses to use for the cluster. Only used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "additional_cluster_dns_ips",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "User data that is injected into the user data script ahead of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "pre_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create user-data or not",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "User data that is appended to the user data script after of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "post_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "capability": [
+      {
+        "default": "null",
+        "description": "IAM policy description",
+        "name": "iam_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM policy documents to override the default assume role policy document for the Karpenter controller IAM role",
+        "name": "iam_role_override_assume_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "iam_policy_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Policies to attach to the IAM role in `{'static_name' = 'policy_arn'}` format",
+        "name": "iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"20s\"",
+        "description": "Duration to wait between creating the IAM role/policy and creating the capability",
+        "name": "wait_duration",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM role (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Path of the IAM role",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role description",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum API session duration in seconds between 3600 and 43200",
+        "name": "iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM policy documents to use as a source for the assume role policy document for the Karpenter controller IAM role",
+        "name": "iam_role_source_assume_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"RETAIN\"",
+        "description": "The propagation policy to use when deleting the capability. Valid values: `RETAIN`",
+        "name": "delete_propagation_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the capability",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the IAM role that provides permissions for the capability",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the IAM policy",
+        "name": "iam_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the capability to add to the cluster",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration for the capability",
+        "name": "configuration",
+        "required": false,
+        "type": "object({\n    argo_cd = optional(object({\n      aws_idc = object({\n        idc_instance_arn = string\n        idc_region       = optional(string)\n      })\n      namespace = optional(string)\n      network_access = optional(object({\n        vpce_ids = optional(list(string))\n      }))\n      rbac_role_mapping = optional(list(object({\n        identity = list(object({\n          id   = string\n          type = string\n        }))\n        role = string\n      })))\n    }))\n  })"
+      },
+      {
+        "default": "\"\"",
+        "description": "Type of the capability. Valid values: `ACK`, `KRO`, `ARGOCD`",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the IAM role",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Permissions boundary ARN to use for the IAM role",
+        "name": "iam_role_permissions_boundary_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add the the IAM role",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Path of the IAM policy",
+        "name": "iam_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM policy (`iam_policy_name`) is used as a prefix",
+        "name": "iam_policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "eks-managed-node-group": [
+      {
+        "default": "\"\"",
+        "description": "The AWS partition - pass through value to reduce number of GET requests from data sources",
+        "name": "partition",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Endpoint of associated EKS cluster",
+        "name": "cluster_endpoint",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The placement of the instance",
+        "name": "placement",
+        "required": false,
+        "type": "object({\n    affinity                = optional(string)\n    availability_zone       = optional(string)\n    group_name              = optional(string)\n    host_id                 = optional(string)\n    host_resource_group_arn = optional(string)\n    partition_number        = optional(number)\n    spread_domain           = optional(string)\n    tenancy                 = optional(string)\n  })"
+      },
+      {
+        "default": "1",
+        "description": "Minimum number of instances/nodes",
+        "name": "min_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create EKS managed node group or not",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Customize the credit specification of the instance",
+        "name": "credit_specification",
+        "required": false,
+        "type": "object({\n    cpu_credits = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Enable Nitro Enclaves on launched instances",
+        "name": "enclave_options",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to enable Elastic Fabric Adapter (EFA) support",
+        "name": "enable_efa_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EKS managed node group",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created or to use an existing IAM role",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a launch template or not. If set to `false`, EKS will use its own default launch template",
+        "name": "create_launch_template",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"http_endpoint\": \"enabled\",\n  \"http_put_response_hop_limit\": 1,\n  \"http_tokens\": \"required\"\n}",
+        "description": "Customize the metadata options for the instance",
+        "name": "metadata_options",
+        "required": false,
+        "type": "object({\n    http_endpoint               = optional(string, \"enabled\")\n    http_protocol_ipv6          = optional(string)\n    http_put_response_hop_limit = optional(number, 1)\n    http_tokens                 = optional(string, \"required\")\n    instance_metadata_tags      = optional(string)\n  })"
+      },
+      {
+        "default": "1",
+        "description": "Desired number of instances/nodes",
+        "name": "desired_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Force version update if existing pods are unable to be drained due to a pod disruption budget issue",
+        "name": "force_update_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 instance termination protection",
+        "name": "disable_api_termination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the node group",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "User data that is appended to the user data script after of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "post_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Additional arguments passed to the bootstrap script. When `ami_type` = `BOTTLEROCKET_*`; these are additional [settings](https://github.com/bottlerocket-os/bottlerocket#settings) that are provided to the Bottlerocket user data",
+        "name": "bootstrap_extra_args",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The network performance options for the instance",
+        "name": "network_performance_options",
+        "required": false,
+        "type": "object({\n    bandwidth_weighting = optional(string)\n  })"
+      },
+      {
+        "default": "[]",
+        "description": "Customize network interfaces to be attached at instance boot time",
+        "name": "network_interfaces",
+        "required": false,
+        "type": "list(object({\n    associate_carrier_ip_address = optional(bool)\n    associate_public_ip_address  = optional(bool)\n    connection_tracking_specification = optional(object({\n      tcp_established_timeout = optional(number)\n      udp_stream_timeout      = optional(number)\n      udp_timeout             = optional(number)\n    }))\n    delete_on_termination = optional(bool)\n    description           = optional(string)\n    device_index          = optional(number)\n    ena_srd_specification = optional(object({\n      ena_srd_enabled = optional(bool)\n      ena_srd_udp_specification = optional(object({\n        ena_srd_udp_enabled = optional(bool)\n      }))\n    }))\n    interface_type       = optional(string)\n    ipv4_address_count   = optional(number)\n    ipv4_addresses       = optional(list(string))\n    ipv4_prefix_count    = optional(number)\n    ipv4_prefixes        = optional(list(string))\n    ipv6_address_count   = optional(number)\n    ipv6_addresses       = optional(list(string))\n    ipv6_prefix_count    = optional(number)\n    ipv6_prefixes        = optional(list(string))\n    network_card_index   = optional(number)\n    network_interface_id = optional(string)\n    primary_ipv6         = optional(bool)\n    private_ip_address   = optional(string)\n    security_groups      = optional(list(string), [])\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The options for the instance hostname. The default values are inherited from the subnet",
+        "name": "private_dns_name_options",
+        "required": false,
+        "type": "object({\n    enable_resource_name_dns_aaaa_record = optional(bool)\n    enable_resource_name_dns_a_record    = optional(bool)\n    hostname_type                        = optional(string)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the tag_specifications of launch template created",
+        "name": "launch_template_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"ON_DEMAND\"",
+        "description": "Type of capacity associated with the EKS Node Group. Valid values: `ON_DEMAND`, `SPOT`",
+        "name": "capacity_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Key-value map of Kubernetes labels. Only labels that are applied with the EKS API are managed by this argument. Other Kubernetes labels applied to the EKS Node Group will not be managed",
+        "name": "labels",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of launch template to be created",
+        "name": "launch_template_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the launch template",
+        "name": "launch_template_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A list of license specifications to associate with",
+        "name": "license_specifications",
+        "required": false,
+        "type": "list(object({\n    license_configuration_arn = string\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable EFA (`false`, default) or EFA and EFA-only (`true`) network interfaces. Note: requires vpc-cni version `v1.18.4` or later",
+        "name": "enable_efa_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Set of instance types associated with the EKS Node Group. Defaults to `[\"t3.medium\"]`",
+        "name": "instance_types",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Kubernetes version. Defaults to EKS Cluster Kubernetes version",
+        "name": "kubernetes_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach the `AmazonEKS_CNI_Policy`/`AmazonEKS_CNI_IPv6_Policy` IAM policy to the IAM IAM role. WARNING: If set `false` the permissions must be assigned to the `aws-node` DaemonSet pods via another method or nodes will not be able to join the cluster",
+        "name": "iam_role_attach_cni_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "User data that is injected into the user data script ahead of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "pre_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `name` as is or create a unique name beginning with the `name` as the prefix",
+        "name": "use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use the latest AMI release version for the given `ami_type` (except for `CUSTOM`). Note: `ami_type` and `kubernetes_version` must be supplied in order to enable this feature",
+        "name": "use_latest_ami_release_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Array of cloud-init document parts that are created after the nodeadm document part",
+        "name": "cloudinit_post_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "[\n  0\n]",
+        "description": "The indices of the network interfaces that should be EFA-enabled. Only valid when `enable_efa_support` = `true`",
+        "name": "efa_indices",
+        "required": false,
+        "type": "list(number)"
+      },
+      {
+        "default": "\"AL2023_x86_64_STANDARD\"",
+        "description": "Type of Amazon Machine Image (AMI) associated with the EKS Node Group. See the [AWS documentation](https://docs.aws.amazon.com/eks/latest/APIReference/API_Nodegroup.html#AmazonEKS-Type-Nodegroup-amiType) for valid values",
+        "name": "ami_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Launch template version number. The default is `$Default`",
+        "name": "launch_template_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The node auto repair configuration for the node group",
+        "name": "node_repair_config",
+        "required": false,
+        "type": "object({\n    enabled                                 = optional(bool, true)\n    max_parallel_nodes_repaired_count       = optional(number)\n    max_parallel_nodes_repaired_percentage  = optional(number)\n    max_unhealthy_node_threshold_count      = optional(number)\n    max_unhealthy_node_threshold_percentage = optional(number)\n    node_repair_config_overrides = optional(list(object({\n      min_repair_wait_time_mins = number\n      node_monitoring_condition = string\n      node_unhealthy_reason     = string\n      repair_action             = string\n    })))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    self                         = optional(bool, false)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Array of cloud-init document parts that are created before the nodeadm document part",
+        "name": "cloudinit_pre_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Disk size in GiB for nodes. Defaults to `20`. Only valid when `use_custom_launch_template` = `false`",
+        "name": "disk_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The Kubernetes taints to be applied to the nodes in the node group. Maximum of 50 taints per node group",
+        "name": "taints",
+        "required": false,
+        "type": "map(object({\n    key    = string\n    value  = optional(string)\n    effect = string\n  }))"
+      },
+      {
+        "default": "\"ipv4\"",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`",
+        "name": "cluster_ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Base64 encoded CA of associated EKS cluster",
+        "name": "cluster_auth_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use a custom launch template or not. If set to `false`, EKS will use its own default launch template",
+        "name": "use_custom_launch_template",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The CPU options for the instance",
+        "name": "cpu_options",
+        "required": false,
+        "type": "object({\n    amd_sev_snp           = optional(string)\n    core_count            = optional(number)\n    nested_virtualization = optional(string)\n    threads_per_core      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Identifiers of EC2 Subnets to associate with the EKS Node Group. These subnets must have the following resource tag: `kubernetes.io/cluster/CLUSTER_NAME`",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN for the node group. Required if `create_iam_role` is set to `false`",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AWS account ID - pass through value to reduce number of GET requests from data sources",
+        "name": "account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the bootstrap configurations are populated within the user data template. Only valid when using a custom AMI via `ami_id`",
+        "name": "enable_bootstrap_user_data",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The CIDR block (IPv4 or IPv6) used by the cluster to assign Kubernetes service IP addresses. This is derived from the cluster itself",
+        "name": "cluster_service_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `launch_template_name` as is or create a unique name beginning with the `launch_template_name` as the prefix",
+        "name": "launch_template_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AMI from which to launch the instance. If not supplied, EKS will use its own default image",
+        "name": "ami_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of security group IDs to associate",
+        "name": "vpc_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The maintenance options for the instance",
+        "name": "maintenance_options",
+        "required": false,
+        "type": "object({\n    auto_recovery = optional(string)\n  })"
+      },
+      {
+        "default": "3",
+        "description": "Maximum number of instances/nodes",
+        "name": "max_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The key name that should be used for the instance(s)",
+        "name": "key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Default version of the launch template",
+        "name": "launch_template_default_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specify volumes to attach to the instance besides the volumes specified by the AMI",
+        "name": "block_device_mappings",
+        "required": false,
+        "type": "map(object({\n    device_name = optional(string)\n    ebs = optional(object({\n      delete_on_termination      = optional(bool)\n      encrypted                  = optional(bool)\n      iops                       = optional(number)\n      kms_key_id                 = optional(string)\n      snapshot_id                = optional(string)\n      throughput                 = optional(number)\n      volume_initialization_rate = optional(number)\n      volume_size                = optional(number)\n      volume_type                = optional(string)\n    }))\n    no_device    = optional(string)\n    virtual_name = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Targeting for EC2 capacity reservations",
+        "name": "capacity_reservation_specification",
+        "required": false,
+        "type": "object({\n    capacity_reservation_preference = optional(string)\n    capacity_reservation_target = optional(object({\n      capacity_reservation_id                 = optional(string)\n      capacity_reservation_resource_group_arn = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The AMI version. Defaults to latest AMI release version for the given Kubernetes version and AMI type",
+        "name": "ami_release_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block with remote access settings. Only valid when `use_custom_launch_template` = `false`",
+        "name": "remote_access",
+        "required": false,
+        "type": "object({\n    ec2_ssh_key               = optional(string)\n    source_security_group_ids = optional(list(string))\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "iam_role_policy_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Path to a local, custom user data template file to use when rendering user data",
+        "name": "user_data_template_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of an existing launch template to use. Required when `create_launch_template` = `false` and `use_custom_launch_template` = `true`",
+        "name": "launch_template_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The kernel ID",
+        "name": "kernel_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Enables/disables detailed monitoring",
+        "name": "enable_monitoring",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"EKS managed node group IAM role\"",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role policy is created or not",
+        "name": "create_iam_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to update the launch templates default version on each update. Conflicts with `launch_template_default_version`",
+        "name": "update_launch_template_default_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a placement group is created & used by the node group",
+        "name": "create_placement_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    self                         = optional(bool, false)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of associated EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance(s) will be EBS-optimized",
+        "name": "ebs_optimized",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the EKS cluster primary security group to associate with the instance(s). This is the security group that is automatically created by the EKS service",
+        "name": "cluster_primary_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The market (purchasing) option for the instance",
+        "name": "instance_market_options",
+        "required": false,
+        "type": "object({\n    market_type = optional(string)\n    spot_options = optional(object({\n      block_duration_minutes         = optional(number)\n      instance_interruption_behavior = optional(string)\n      max_price                      = optional(string)\n      spot_instance_type             = optional(string)\n      valid_until                    = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "[\n  \"instance\",\n  \"volume\",\n  \"network-interface\"\n]",
+        "description": "The tags to apply to the resources during launch",
+        "name": "tag_specifications",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{\n  \"max_unavailable_percentage\": 33\n}",
+        "description": "Configuration block of settings for max unavailable resources during node group updates",
+        "name": "update_config",
+        "required": false,
+        "type": "object({\n    max_unavailable            = optional(number)\n    max_unavailable_percentage = optional(number)\n    update_strategy            = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the ram disk",
+        "name": "ram_disk_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "fargate-profile": [
+      {
+        "default": "\"ipv4\"",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`",
+        "name": "cluster_ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Fargate profile IAM role\"",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of subnet IDs for the EKS Fargate Profile",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block(s) for selecting Kubernetes Pods to execute with this Fargate Profile",
+        "name": "selectors",
+        "required": false,
+        "type": "list(object({\n    labels    = optional(map(string))\n    namespace = string\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AWS account ID - pass through value to reduce number of GET requests from data sources",
+        "name": "account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created or to use an existing IAM role",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN for the Fargate profile. Required if `create_iam_role` is set to `false`",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach the `AmazonEKS_CNI_Policy`/`AmazonEKS_CNI_IPv6_Policy` IAM policy to the IAM IAM role. WARNING: If set `false` the permissions must be assigned to the `aws-node` DaemonSet pods via another method or nodes will not be able to join the cluster",
+        "name": "iam_role_attach_cni_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role policy is created or not",
+        "name": "create_iam_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EKS Fargate Profile",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create Fargate profile or not",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "iam_role_policy_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AWS partition - pass through value to reduce number of GET requests from data sources",
+        "name": "partition",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Create and delete timeout configurations for the Fargate Profile",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    delete = optional(string)\n  })"
+      }
+    ],
+    "hybrid-node-role": [
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "intermediate_policy_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Maximum API session duration in seconds between 3600 and 43200",
+        "name": "max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the ACM PCA that issued the trust anchor certificate",
+        "name": "ira_trust_anchor_acm_pca_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"/\"",
+        "description": "Path of the IAM role",
+        "name": "intermediate_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Policies to attach to the IAM role in `{'static_name' = 'policy_arn'}` format",
+        "name": "policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Enables EKS Pod Identity based IAM permissions on the node",
+        "name": "enable_pod_identity",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the IAM policy",
+        "name": "intermediate_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Policies to attach to the IAM role in `{'static_name' = 'policy_arn'}` format",
+        "name": "intermediate_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM role (`name`) is used as a prefix",
+        "name": "use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "policy_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "A list of managed policy ARNs that apply to the vended session credentials",
+        "name": "ira_profile_managed_policy_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The X.509 certificate data of the trust anchor",
+        "name": "ira_trust_anchor_x509_certificate_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Notification settings for the trust anchor",
+        "name": "ira_trust_anchor_notification_settings",
+        "required": false,
+        "type": "list(object({\n    channel   = optional(string)\n    enabled   = optional(bool)\n    event     = optional(string)\n    threshold = optional(number)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM Roles Anywhere trust anchor ARNs. Required if `enable_ira` is set to `true`",
+        "name": "trust_anchor_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name of the Roles Anywhere profile",
+        "name": "ira_profile_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The number of seconds the vended session credentials are valid for. Defaults to `3600`",
+        "name": "ira_profile_duration_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name of the IAM role",
+        "name": "intermediate_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM role (`intermediate_role_name`) is used as a prefix",
+        "name": "intermediate_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"EKS Hybrid Node IAM Roles Anywhere intermediate IAM role\"",
+        "description": "IAM role description",
+        "name": "intermediate_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"/\"",
+        "description": "Path of the IAM role",
+        "name": "path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"EKSHybridNode\"",
+        "description": "Name of the IAM policy",
+        "name": "policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies whether instance properties are required in [CreateSession](https://docs.aws.amazon.com/rolesanywhere/latest/APIReference/API_CreateSession.html) requests with this profile",
+        "name": "ira_profile_require_instance_properties",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"EKS Hybrid Node IAM role policy\"",
+        "description": "IAM policy description",
+        "name": "policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"EKS Hybrid Node IAM role\"",
+        "description": "IAM role description",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"/\"",
+        "description": "Path of the IAM policy",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"*\"\n]",
+        "description": "List of EKS cluster ARNs to allow the node to describe",
+        "name": "cluster_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A session policy that applies to the trust boundary of the vended session credentials",
+        "name": "ira_profile_session_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM policy (`intermediate_policy_name`) is used as a prefix",
+        "name": "intermediate_policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the Roles Anywhere trust anchor",
+        "name": "ira_trust_anchor_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The source type of the trust anchor",
+        "name": "ira_trust_anchor_source_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"EKSHybridNode\"",
+        "description": "Name of the IAM role",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Permissions boundary ARN to use for the IAM role",
+        "name": "permissions_boundary_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add the the IAM role",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Enables IAM Roles Anywhere based IAM permissions on the node",
+        "name": "enable_ira",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM policy (`policy_name`) is used as a prefix",
+        "name": "policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "karpenter": [
+      {
+        "default": "{}",
+        "description": "Policies to attach to the IAM role in `{'static_name' = 'policy_arn'}` format",
+        "name": "iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created or to use an existing IAM role",
+        "name": "create_node_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "node_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the Node IAM role name (`node_iam_role_name`) is used as a prefix",
+        "name": "node_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"/\"",
+        "description": "IAM role path",
+        "name": "node_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Permissions boundary ARN to use for the IAM role",
+        "name": "iam_role_permissions_boundary_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Karpenter controller IAM policy\"",
+        "description": "IAM policy description",
+        "name": "iam_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM policy documents to use as a source for the assume role policy document for the Karpenter controller IAM role",
+        "name": "iam_role_source_assume_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"kube-system\"",
+        "description": "Namespace to associate with the Karpenter Pod Identity",
+        "name": "namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "node_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the controller policy is created as a standard IAM policy or inline IAM policy. This can be enabled when the error `LimitExceeded: Cannot exceed quota for PolicySize: 6144` is received since standard IAM policies have a limit of 6,144 characters versus an inline role policy's limit of 10,240 ([Reference](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_iam-quotas.html))",
+        "name": "enable_inline_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"/\"",
+        "description": "Path of the IAM policy",
+        "name": "iam_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable native spot termination handling",
+        "name": "enable_spot_termination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of the SQS queue",
+        "name": "queue_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The length of time, in seconds, for which Amazon SQS can reuse a data key to encrypt or decrypt messages before calling AWS KMS again",
+        "name": "queue_kms_data_key_reuse_period_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "node_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"EC2_LINUX\"",
+        "description": "Type of the access entry. `EC2_LINUX`, `FARGATE_LINUX`, or `EC2_WINDOWS`; defaults to `EC2_LINUX`",
+        "name": "access_entry_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"KarpenterController\"",
+        "description": "Name of the IAM role",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum API session duration in seconds between 3600 and 43200",
+        "name": "iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"KarpenterController\"",
+        "description": "Name of the IAM policy",
+        "name": "iam_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM policy documents to override the default assume role policy document for the Karpenter controller IAM role",
+        "name": "iam_role_override_assume_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"karpenter\"",
+        "description": "Service account to associate with the Karpenter Pod Identity",
+        "name": "service_account",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ID of an AWS-managed customer master key (CMK) for Amazon SQS or a custom CMK",
+        "name": "queue_kms_master_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN for the IAM instance profile. Required if `create_node_iam_role` is set to `false`",
+        "name": "node_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create an IAM instance profile",
+        "name": "create_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Boolean to enable server-side encryption (SSE) of message content with SQS-owned encryption keys",
+        "name": "queue_managed_sse_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "iam_policy_statements",
+        "required": false,
+        "type": "list(object({ # TODO - change to `map(object({...}))` in next major version\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create pod identity association",
+        "name": "create_pod_identity_association",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to add an `aws:SourceAccount` condition to the node IAM role's trust policy, scoped to the current account",
+        "name": "node_iam_role_source_account_condition",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "node_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an access entry is created for the IAM role used by the node IAM role",
+        "name": "create_access_entry",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM policy (`iam_policy_name`) is used as a prefix",
+        "name": "iam_policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"/\"",
+        "description": "Path of the IAM role",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of SSM Parameter ARNs that Karpenter controller is allowed read access (for retrieving AMI IDs)",
+        "name": "ami_id_ssm_parameter_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific SQS queue policy permissions as needed",
+        "name": "queue_policy_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "\"ipv4\"",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`. Note: If `ipv6` is specified, the `AmazonEKS_CNI_IPv6_Policy` must exist in the account. This policy is created by the EKS module with `create_cni_ipv6_iam_policy = true`",
+        "name": "cluster_ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "node_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Karpenter\"",
+        "description": "Prefix used for all event bridge rules",
+        "name": "rule_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"Karpenter controller IAM role\"",
+        "description": "IAM role description",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum API session duration in seconds between 3600 and 43200",
+        "name": "node_iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach the `AmazonEKS_CNI_Policy`/`AmazonEKS_CNI_IPv6_Policy` IAM policy to the IAM IAM role. WARNING: If set `false` the permissions must be assigned to the `aws-node` DaemonSet pods via another method or nodes will not be able to join the cluster",
+        "name": "node_iam_role_attach_cni_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the name of the IAM role (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add the the IAM role",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "root": [
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cluster",
+        "name": "cluster_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not to tag the cluster's primary security group. This security group is created by the EKS service, not the module, and therefore tagging is handled after cluster creation",
+        "name": "create_primary_security_group_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"EKS cluster security group\"",
+        "description": "Description of the cluster security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create an OpenID Connect Provider for EKS to enable IRSA",
+        "name": "enable_irsa",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Cluster encryption policy to allow cluster role to utilize CMK provided\"",
+        "description": "Description of the cluster encryption policy created",
+        "name": "encryption_policy_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Cluster encryption policy path",
+        "name": "encryption_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The CIDR block to assign Kubernetes pod and service IP addresses from if `ipv6` was specified when the cluster was created. Kubernetes assigns service addresses from the unique local address range (fc00::/7) because you can't specify a custom IPv6 CIDR block when you create the cluster",
+        "name": "service_ipv6_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the cluster",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether to enable the default key policy",
+        "name": "kms_key_enable_default_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the node security group created",
+        "name": "node_security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of OpenID Connect audience client IDs to add to the IRSA provider",
+        "name": "openid_connect_audiences",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Additional list of server certificate thumbprints for the OpenID Connect (OIDC) identity provider's server certificate(s)",
+        "name": "custom_oidc_thumbprints",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create/attach IAM resources for EKS Auto Mode. Useful for when using only custom node pools and not built-in EKS Auto Mode node pools",
+        "name": "create_auto_mode_iam_resources",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Map of cluster addon configurations to enable for the cluster. Addon name can be the map keys or set with `name`",
+        "name": "addons",
+        "required": false,
+        "type": "map(object({\n    name                 = optional(string) # will fall back to map key\n    before_compute       = optional(bool, false)\n    most_recent          = optional(bool, true)\n    addon_version        = optional(string)\n    configuration_values = optional(string)\n    namespace_config = optional(object({\n      namespace = string\n    }))\n    pod_identity_association = optional(list(object({\n      role_arn        = string\n      service_account = string\n    })))\n    preserve                    = optional(bool, true)\n    resolve_conflicts_on_create = optional(string, \"NONE\")\n    resolve_conflicts_on_update = optional(string, \"OVERWRITE\")\n    service_account_role_arn    = optional(string)\n    timeouts = optional(object({\n      create = optional(string)\n      update = optional(string)\n      delete = optional(string)\n    }), {})\n    tags = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "\"API_AND_CONFIG_MAP\"",
+        "description": "The authentication mode for the cluster. Valid values are `CONFIG_MAP`, `API` or `API_AND_CONFIG_MAP`",
+        "name": "authentication_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The CIDR block to assign Kubernetes service IP addresses from. If you don't specify a block, Kubernetes assigns addresses from either the 10.100.0.0/16 or 172.20.0.0/16 CIDR blocks",
+        "name": "service_ipv4_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether cluster security group name (`cluster_security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the EKS Auto node IAM role",
+        "name": "node_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of EKS managed node group definitions to create",
+        "name": "eks_managed_node_groups",
+        "required": false,
+        "type": "map(object({\n    create             = optional(bool)\n    kubernetes_version = optional(string)\n\n    # EKS Managed Node Group\n    name                           = optional(string) # Will fall back to map key\n    use_name_prefix                = optional(bool)\n    subnet_ids                     = optional(list(string))\n    min_size                       = optional(number)\n    max_size                       = optional(number)\n    desired_size                   = optional(number)\n    ami_id                         = optional(string)\n    ami_type                       = optional(string)\n    ami_release_version            = optional(string)\n    use_latest_ami_release_version = optional(bool)\n    capacity_type                  = optional(string)\n    disk_size                      = optional(number)\n    force_update_version           = optional(bool)\n    instance_types                 = optional(list(string))\n    labels                         = optional(map(string))\n    node_repair_config = optional(object({\n      enabled                                 = optional(bool)\n      max_parallel_nodes_repaired_count       = optional(number)\n      max_parallel_nodes_repaired_percentage  = optional(number)\n      max_unhealthy_node_threshold_count      = optional(number)\n      max_unhealthy_node_threshold_percentage = optional(number)\n      node_repair_config_overrides = optional(list(object({\n        min_repair_wait_time_mins = number\n        node_monitoring_condition = string\n        node_unhealthy_reason     = string\n        repair_action             = string\n      })))\n    }))\n    remote_access = optional(object({\n      ec2_ssh_key               = optional(string)\n      source_security_group_ids = optional(list(string))\n    }))\n    taints = optional(map(object({\n      key    = string\n      value  = optional(string)\n      effect = string\n    })))\n    update_config = optional(object({\n      max_unavailable            = optional(number)\n      max_unavailable_percentage = optional(number)\n      update_strategy            = optional(string)\n    }))\n    timeouts = optional(object({\n      create = optional(string)\n      update = optional(string)\n      delete = optional(string)\n    }))\n    # User data\n    enable_bootstrap_user_data = optional(bool)\n    pre_bootstrap_user_data    = optional(string)\n    post_bootstrap_user_data   = optional(string)\n    bootstrap_extra_args       = optional(string)\n    user_data_template_path    = optional(string)\n    cloudinit_pre_nodeadm = optional(list(object({\n      content      = string\n      content_type = optional(string)\n      filename     = optional(string)\n      merge_type   = optional(string)\n    })))\n    cloudinit_post_nodeadm = optional(list(object({\n      content      = string\n      content_type = optional(string)\n      filename     = optional(string)\n      merge_type   = optional(string)\n    })))\n    # Launch Template\n    create_launch_template                 = optional(bool)\n    use_custom_launch_template             = optional(bool)\n    launch_template_id                     = optional(string)\n    launch_template_name                   = optional(string) # Will fall back to map key\n    launch_template_use_name_prefix        = optional(bool)\n    launch_template_version                = optional(string)\n    launch_template_default_version        = optional(string)\n    update_launch_template_default_version = optional(bool)\n    launch_template_description            = optional(string)\n    launch_template_tags                   = optional(map(string))\n    tag_specifications                     = optional(list(string))\n    ebs_optimized                          = optional(bool)\n    key_name                               = optional(string)\n    disable_api_termination                = optional(bool)\n    kernel_id                              = optional(string)\n    ram_disk_id                            = optional(string)\n    block_device_mappings = optional(map(object({\n      device_name = optional(string)\n      ebs = optional(object({\n        delete_on_termination      = optional(bool)\n        encrypted                  = optional(bool)\n        iops                       = optional(number)\n        kms_key_id                 = optional(string)\n        snapshot_id                = optional(string)\n        throughput                 = optional(number)\n        volume_initialization_rate = optional(number)\n        volume_size                = optional(number)\n        volume_type                = optional(string)\n      }))\n      no_device    = optional(string)\n      virtual_name = optional(string)\n    })))\n    capacity_reservation_specification = optional(object({\n      capacity_reservation_preference = optional(string)\n      capacity_reservation_target = optional(object({\n        capacity_reservation_id                 = optional(string)\n        capacity_reservation_resource_group_arn = optional(string)\n      }))\n    }))\n    cpu_options = optional(object({\n      amd_sev_snp           = optional(string)\n      core_count            = optional(number)\n      nested_virtualization = optional(string)\n      threads_per_core      = optional(number)\n    }))\n    credit_specification = optional(object({\n      cpu_credits = optional(string)\n    }))\n    enclave_options = optional(object({\n      enabled = optional(bool)\n    }))\n    instance_market_options = optional(object({\n      market_type = optional(string)\n      spot_options = optional(object({\n        block_duration_minutes         = optional(number)\n        instance_interruption_behavior = optional(string)\n        max_price                      = optional(string)\n        spot_instance_type             = optional(string)\n        valid_until                    = optional(string)\n      }))\n    }))\n    license_specifications = optional(list(object({\n      license_configuration_arn = string\n    })))\n    metadata_options = optional(object({\n      http_endpoint               = optional(string)\n      http_protocol_ipv6          = optional(string)\n      http_put_response_hop_limit = optional(number)\n      http_tokens                 = optional(string)\n      instance_metadata_tags      = optional(string)\n    }))\n    enable_monitoring      = optional(bool)\n    enable_efa_support     = optional(bool)\n    enable_efa_only        = optional(bool)\n    efa_indices            = optional(list(string))\n    create_placement_group = optional(bool)\n    placement = optional(object({\n      affinity                = optional(string)\n      availability_zone       = optional(string)\n      group_name              = optional(string)\n      host_id                 = optional(string)\n      host_resource_group_arn = optional(string)\n      partition_number        = optional(number)\n      spread_domain           = optional(string)\n      tenancy                 = optional(string)\n    }))\n    network_interfaces = optional(list(object({\n      associate_carrier_ip_address = optional(bool)\n      associate_public_ip_address  = optional(bool)\n      connection_tracking_specification = optional(object({\n        tcp_established_timeout = optional(number)\n        udp_stream_timeout      = optional(number)\n        udp_timeout             = optional(number)\n      }))\n      delete_on_termination = optional(bool)\n      description           = optional(string)\n      device_index          = optional(number)\n      ena_srd_specification = optional(object({\n        ena_srd_enabled = optional(bool)\n        ena_srd_udp_specification = optional(object({\n          ena_srd_udp_enabled = optional(bool)\n        }))\n      }))\n      interface_type       = optional(string)\n      ipv4_address_count   = optional(number)\n      ipv4_addresses       = optional(list(string))\n      ipv4_prefix_count    = optional(number)\n      ipv4_prefixes        = optional(list(string))\n      ipv6_address_count   = optional(number)\n      ipv6_addresses       = optional(list(string))\n      ipv6_prefix_count    = optional(number)\n      ipv6_prefixes        = optional(list(string))\n      network_card_index   = optional(number)\n      network_interface_id = optional(string)\n      primary_ipv6         = optional(bool)\n      private_ip_address   = optional(string)\n      security_groups      = optional(list(string), [])\n      subnet_id            = optional(string)\n    })))\n    network_performance_options = optional(object({\n      bandwidth_weighting = optional(string)\n    }))\n    maintenance_options = optional(object({\n      auto_recovery = optional(string)\n    }))\n    private_dns_name_options = optional(object({\n      enable_resource_name_dns_aaaa_record = optional(bool)\n      enable_resource_name_dns_a_record    = optional(bool)\n      hostname_type                        = optional(string)\n    }))\n    # IAM role\n    create_iam_role               = optional(bool)\n    iam_role_arn                  = optional(string)\n    iam_role_name                 = optional(string)\n    iam_role_use_name_prefix      = optional(bool)\n    iam_role_path                 = optional(string)\n    iam_role_description          = optional(string)\n    iam_role_permissions_boundary = optional(string)\n    iam_role_tags                 = optional(map(string))\n    iam_role_attach_cni_policy    = optional(bool)\n    iam_role_additional_policies  = optional(map(string))\n    create_iam_role_policy        = optional(bool)\n    iam_role_policy_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    # Security group\n    vpc_security_group_ids                = optional(list(string), [])\n    attach_cluster_primary_security_group = optional(bool, false)\n    cluster_primary_security_group_id     = optional(string)\n    create_security_group                 = optional(bool)\n    security_group_name                   = optional(string)\n    security_group_use_name_prefix        = optional(bool)\n    security_group_description            = optional(string)\n    security_group_ingress_rules = optional(map(object({\n      name                         = optional(string)\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      self                         = optional(bool)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })))\n    security_group_egress_rules = optional(map(object({\n      name                         = optional(string)\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      self                         = optional(bool)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })), {})\n    security_group_tags = optional(map(string))\n\n    tags = optional(map(string))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Configuration for the AWS Outpost to provision the cluster on",
+        "name": "outpost_config",
+        "required": false,
+        "type": "object({\n    control_plane_instance_type = optional(string)\n    control_plane_placement = optional(object({\n      group_name = string\n    }))\n    outpost_arns = list(string)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of access entries to add to the cluster",
+        "name": "access_entries",
+        "required": false,
+        "type": "map(object({\n    # Access entry\n    kubernetes_groups = optional(list(string))\n    principal_arn     = string\n    type              = optional(string, \"STANDARD\")\n    user_name         = optional(string)\n    tags              = optional(map(string), {})\n    # Access policy association\n    policy_associations = optional(map(object({\n      policy_arn = string\n      access_scope = object({\n        namespaces = optional(list(string))\n        type       = string\n      })\n    })), {})\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether or not to add the cluster creator (the identity used by Terraform) as an administrator via access entry",
+        "name": "enable_cluster_creator_admin_permissions",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "List of additional security group rules to add to the node security group created. Set `source_cluster_security_group = true` inside rules to set the `cluster_security_group` as source",
+        "name": "node_security_group_additional_rules",
+        "required": false,
+        "type": "map(object({\n    protocol                      = optional(string, \"tcp\")\n    from_port                     = number\n    to_port                       = number\n    type                          = optional(string, \"ingress\")\n    description                   = optional(string)\n    cidr_blocks                   = optional(list(string))\n    ipv6_cidr_blocks              = optional(list(string))\n    prefix_list_ids               = optional(list(string))\n    self                          = optional(bool)\n    source_cluster_security_group = optional(bool, false)\n    source_security_group_id      = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created for the cluster",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on the EKS Auto node IAM role created",
+        "name": "node_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the EKS Auto node IAM role name (`node_iam_role_name`) is used as a prefix",
+        "name": "node_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the EKS Auto node IAM role",
+        "name": "node_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Egress mode for the EKS control plane. Valid values are `AWS_MANAGED` and `CUSTOMER_ROUTED`",
+        "name": "control_plane_egress_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls if a KMS key for cluster encryption should be created",
+        "name": "create_kms_key",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create an [`AmazonEKS_CNI_IPv6_Policy`](https://docs.aws.amazon.com/eks/latest/userguide/cni-iam-role.html#cni-iam-role-create-ipv6-policy)",
+        "name": "create_cni_ipv6_iam_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an EKS Auto node IAM role is created",
+        "name": "create_node_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the EKS Auto node IAM role created",
+        "name": "node_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Kubernetes `<major>.<minor>` version to use for the EKS cluster (i.e.: `1.33`)",
+        "name": "kubernetes_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of subnet IDs where the nodes/node groups will be provisioned. If `control_plane_subnet_ids` is not provided, the EKS cluster control plane (ENIs) will be provisioned in these subnets",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"ipv4\"",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`. You can only specify an IP family when you create a cluster, changing this value will force a new cluster to be created",
+        "name": "ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-default-allow-users)",
+        "name": "kms_key_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key service users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-service-integration)",
+        "name": "kms_key_service_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created for the cluster. Note: the EKS service creates a primary security group for the cluster by default",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the EKS cluster",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional, externally created security group IDs to attach to the cluster control plane",
+        "name": "additional_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cluster security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "ID of an existing security group to attach to the node groups created",
+        "name": "node_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to include the root CA thumbprint in the OpenID Connect (OIDC) identity provider's server certificate(s)",
+        "name": "include_oidc_root_ca_thumbprint",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Map of self-managed node group definitions to create",
+        "name": "self_managed_node_groups",
+        "required": false,
+        "type": "map(object({\n    create             = optional(bool)\n    kubernetes_version = optional(string)\n\n    # Autoscaling Group\n    create_autoscaling_group         = optional(bool)\n    name                             = optional(string) # Will fall back to map key\n    use_name_prefix                  = optional(bool)\n    availability_zones               = optional(list(string))\n    subnet_ids                       = optional(list(string))\n    min_size                         = optional(number)\n    max_size                         = optional(number)\n    desired_size                     = optional(number)\n    desired_size_type                = optional(string)\n    capacity_rebalance               = optional(bool)\n    default_instance_warmup          = optional(number)\n    protect_from_scale_in            = optional(bool)\n    context                          = optional(string)\n    create_placement_group           = optional(bool)\n    placement_group                  = optional(string)\n    health_check_type                = optional(string)\n    health_check_grace_period        = optional(number)\n    ignore_failed_scaling_activities = optional(bool)\n    force_delete                     = optional(bool)\n    termination_policies             = optional(list(string))\n    suspended_processes              = optional(list(string))\n    max_instance_lifetime            = optional(number)\n    enabled_metrics                  = optional(list(string))\n    metrics_granularity              = optional(string)\n    initial_lifecycle_hooks = optional(list(object({\n      default_result          = optional(string)\n      heartbeat_timeout       = optional(number)\n      lifecycle_transition    = string\n      name                    = string\n      notification_metadata   = optional(string)\n      notification_target_arn = optional(string)\n      role_arn                = optional(string)\n    })))\n    instance_maintenance_policy = optional(object({\n      max_healthy_percentage = number\n      min_healthy_percentage = number\n    }))\n    instance_refresh = optional(object({\n      preferences = optional(object({\n        alarm_specification = optional(object({\n          alarms = optional(list(string))\n        }))\n        auto_rollback                = optional(bool)\n        checkpoint_delay             = optional(number)\n        checkpoint_percentages       = optional(list(number))\n        instance_warmup              = optional(number)\n        max_healthy_percentage       = optional(number)\n        min_healthy_percentage       = optional(number)\n        scale_in_protected_instances = optional(string)\n        skip_matching                = optional(bool)\n        standby_instances            = optional(string)\n      }))\n      strategy = optional(string)\n      triggers = optional(list(string))\n      })\n    )\n    use_mixed_instances_policy = optional(bool)\n    mixed_instances_policy = optional(object({\n      instances_distribution = optional(object({\n        on_demand_allocation_strategy            = optional(string)\n        on_demand_base_capacity                  = optional(number)\n        on_demand_percentage_above_base_capacity = optional(number)\n        spot_allocation_strategy                 = optional(string)\n        spot_instance_pools                      = optional(number)\n        spot_max_price                           = optional(string)\n      }))\n      launch_template = object({\n        override = optional(list(object({\n          instance_requirements = optional(object({\n            accelerator_count = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            accelerator_manufacturers = optional(list(string))\n            accelerator_names         = optional(list(string))\n            accelerator_total_memory_mib = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            accelerator_types      = optional(list(string))\n            allowed_instance_types = optional(list(string))\n            bare_metal             = optional(string)\n            baseline_ebs_bandwidth_mbps = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            burstable_performance                                   = optional(string)\n            cpu_manufacturers                                       = optional(list(string))\n            excluded_instance_types                                 = optional(list(string))\n            instance_generations                                    = optional(list(string))\n            local_storage                                           = optional(string)\n            local_storage_types                                     = optional(list(string))\n            max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n            memory_gib_per_vcpu = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            memory_mib = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            network_bandwidth_gbps = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            network_interface_count = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            on_demand_max_price_percentage_over_lowest_price = optional(number)\n            require_hibernate_support                        = optional(bool)\n            spot_max_price_percentage_over_lowest_price      = optional(number)\n            total_local_storage_gb = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n            vcpu_count = optional(object({\n              max = optional(number)\n              min = optional(number)\n            }))\n          }))\n          instance_type = optional(string)\n          launch_template_specification = optional(object({\n            launch_template_id   = optional(string)\n            launch_template_name = optional(string)\n            version              = optional(string)\n          }))\n          weighted_capacity = optional(string)\n        })))\n      })\n    }))\n    timeouts = optional(object({\n      delete = optional(string)\n    }))\n    autoscaling_group_tags = optional(map(string))\n    # User data\n    ami_type                   = optional(string)\n    additional_cluster_dns_ips = optional(list(string))\n    pre_bootstrap_user_data    = optional(string)\n    post_bootstrap_user_data   = optional(string)\n    bootstrap_extra_args       = optional(string)\n    user_data_template_path    = optional(string)\n    cloudinit_pre_nodeadm = optional(list(object({\n      content      = string\n      content_type = optional(string)\n      filename     = optional(string)\n      merge_type   = optional(string)\n    })))\n    cloudinit_post_nodeadm = optional(list(object({\n      content      = string\n      content_type = optional(string)\n      filename     = optional(string)\n      merge_type   = optional(string)\n    })))\n    # Launch Template\n    create_launch_template                 = optional(bool)\n    use_custom_launch_template             = optional(bool)\n    launch_template_id                     = optional(string)\n    launch_template_name                   = optional(string) # Will fall back to map key\n    launch_template_use_name_prefix        = optional(bool)\n    launch_template_version                = optional(string)\n    launch_template_default_version        = optional(string)\n    update_launch_template_default_version = optional(bool)\n    launch_template_description            = optional(string)\n    launch_template_tags                   = optional(map(string))\n    tag_specifications                     = optional(list(string))\n    ebs_optimized                          = optional(bool)\n    ami_id                                 = optional(string)\n    instance_type                          = optional(string)\n    key_name                               = optional(string)\n    disable_api_termination                = optional(bool)\n    instance_initiated_shutdown_behavior   = optional(string)\n    kernel_id                              = optional(string)\n    ram_disk_id                            = optional(string)\n    block_device_mappings = optional(map(object({\n      device_name = optional(string)\n      ebs = optional(object({\n        delete_on_termination      = optional(bool)\n        encrypted                  = optional(bool)\n        iops                       = optional(number)\n        kms_key_id                 = optional(string)\n        snapshot_id                = optional(string)\n        throughput                 = optional(number)\n        volume_initialization_rate = optional(number)\n        volume_size                = optional(number)\n        volume_type                = optional(string)\n      }))\n      no_device    = optional(string)\n      virtual_name = optional(string)\n    })))\n    capacity_reservation_specification = optional(object({\n      capacity_reservation_preference = optional(string)\n      capacity_reservation_target = optional(object({\n        capacity_reservation_id                 = optional(string)\n        capacity_reservation_resource_group_arn = optional(string)\n      }))\n    }))\n    cpu_options = optional(object({\n      amd_sev_snp           = optional(string)\n      core_count            = optional(number)\n      nested_virtualization = optional(string)\n      threads_per_core      = optional(number)\n    }))\n    credit_specification = optional(object({\n      cpu_credits = optional(string)\n    }))\n    enclave_options = optional(object({\n      enabled = optional(bool)\n    }))\n    instance_requirements = optional(object({\n      accelerator_count = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      accelerator_manufacturers = optional(list(string))\n      accelerator_names         = optional(list(string))\n      accelerator_total_memory_mib = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      accelerator_types      = optional(list(string))\n      allowed_instance_types = optional(list(string))\n      bare_metal             = optional(string)\n      baseline_ebs_bandwidth_mbps = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      burstable_performance                                   = optional(string)\n      cpu_manufacturers                                       = optional(list(string))\n      excluded_instance_types                                 = optional(list(string))\n      instance_generations                                    = optional(list(string))\n      local_storage                                           = optional(string)\n      local_storage_types                                     = optional(list(string))\n      max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n      memory_gib_per_vcpu = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      memory_mib = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      network_bandwidth_gbps = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      network_interface_count = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      on_demand_max_price_percentage_over_lowest_price = optional(number)\n      require_hibernate_support                        = optional(bool)\n      spot_max_price_percentage_over_lowest_price      = optional(number)\n      total_local_storage_gb = optional(object({\n        max = optional(number)\n        min = optional(number)\n      }))\n      vcpu_count = optional(object({\n        max = optional(number)\n        min = string\n      }))\n    }))\n    instance_market_options = optional(object({\n      market_type = optional(string)\n      spot_options = optional(object({\n        block_duration_minutes         = optional(number)\n        instance_interruption_behavior = optional(string)\n        max_price                      = optional(string)\n        spot_instance_type             = optional(string)\n        valid_until                    = optional(string)\n      }))\n    }))\n    license_specifications = optional(list(object({\n      license_configuration_arn = string\n    })))\n    metadata_options = optional(object({\n      http_endpoint               = optional(string)\n      http_protocol_ipv6          = optional(string)\n      http_put_response_hop_limit = optional(number)\n      http_tokens                 = optional(string)\n      instance_metadata_tags      = optional(string)\n    }))\n    enable_monitoring  = optional(bool)\n    enable_efa_support = optional(bool)\n    enable_efa_only    = optional(bool)\n    efa_indices        = optional(list(string))\n    network_interfaces = optional(list(object({\n      associate_carrier_ip_address = optional(bool)\n      associate_public_ip_address  = optional(bool)\n      connection_tracking_specification = optional(object({\n        tcp_established_timeout = optional(number)\n        udp_stream_timeout      = optional(number)\n        udp_timeout             = optional(number)\n      }))\n      delete_on_termination = optional(bool)\n      description           = optional(string)\n      device_index          = optional(number)\n      ena_srd_specification = optional(object({\n        ena_srd_enabled = optional(bool)\n        ena_srd_udp_specification = optional(object({\n          ena_srd_udp_enabled = optional(bool)\n        }))\n      }))\n      interface_type       = optional(string)\n      ipv4_address_count   = optional(number)\n      ipv4_addresses       = optional(list(string))\n      ipv4_prefix_count    = optional(number)\n      ipv4_prefixes        = optional(list(string))\n      ipv6_address_count   = optional(number)\n      ipv6_addresses       = optional(list(string))\n      ipv6_prefix_count    = optional(number)\n      ipv6_prefixes        = optional(list(string))\n      network_card_index   = optional(number)\n      network_interface_id = optional(string)\n      primary_ipv6         = optional(bool)\n      private_ip_address   = optional(string)\n      security_groups      = optional(list(string))\n      subnet_id            = optional(string)\n    })))\n    network_performance_options = optional(object({\n      bandwidth_weighting = optional(string)\n    }))\n    placement = optional(object({\n      affinity                = optional(string)\n      availability_zone       = optional(string)\n      group_name              = optional(string)\n      host_id                 = optional(string)\n      host_resource_group_arn = optional(string)\n      partition_number        = optional(number)\n      spread_domain           = optional(string)\n      tenancy                 = optional(string)\n    }))\n    maintenance_options = optional(object({\n      auto_recovery = optional(string)\n    }))\n    private_dns_name_options = optional(object({\n      enable_resource_name_dns_aaaa_record = optional(bool)\n      enable_resource_name_dns_a_record    = optional(bool)\n      hostname_type                        = optional(string)\n    }))\n    # IAM role\n    create_iam_instance_profile   = optional(bool)\n    iam_instance_profile_arn      = optional(string)\n    iam_role_name                 = optional(string)\n    iam_role_use_name_prefix      = optional(bool)\n    iam_role_path                 = optional(string)\n    iam_role_description          = optional(string)\n    iam_role_permissions_boundary = optional(string)\n    iam_role_tags                 = optional(map(string))\n    iam_role_attach_cni_policy    = optional(bool)\n    iam_role_additional_policies  = optional(map(string))\n    create_iam_role_policy        = optional(bool)\n    iam_role_policy_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    # Access entry\n    create_access_entry = optional(bool)\n    iam_role_arn        = optional(string)\n    # Security group\n    vpc_security_group_ids                = optional(list(string), [])\n    attach_cluster_primary_security_group = optional(bool, false)\n    create_security_group                 = optional(bool)\n    security_group_name                   = optional(string)\n    security_group_use_name_prefix        = optional(bool)\n    security_group_description            = optional(string)\n    security_group_ingress_rules = optional(map(object({\n      name                         = optional(string)\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      self                         = optional(bool)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })))\n    security_group_egress_rules = optional(map(object({\n      name                         = optional(string)\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      self                         = optional(bool)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })))\n    security_group_tags = optional(map(string))\n\n    tags = optional(map(string))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "ID of the VPC where the cluster security group will be provisioned",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the cluster upgrade policy",
+        "name": "upgrade_policy",
+        "required": false,
+        "type": "object({\n    support_type = optional(string)\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether or not the Amazon EKS public API server endpoint is enabled",
+        "name": "endpoint_public_access",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether key rotation is enabled",
+        "name": "enable_kms_key_rotation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for those who will have full key permissions (`kms:*`)",
+        "name": "kms_key_owners",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the cluster compute configuration",
+        "name": "compute_config",
+        "required": false,
+        "type": "object({\n    enabled       = optional(bool, false)\n    node_pools    = optional(list(string))\n    node_role_arn = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the cluster zonal shift",
+        "name": "zonal_shift_config",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The description of the key as viewed in AWS console",
+        "name": "kms_key_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key administrators](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-default-allow-administrators). If no value is provided, the current caller identity is used to ensure at least one key admin is available",
+        "name": "kms_key_administrators",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Existing security group ID to be attached to the cluster",
+        "name": "security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "List of additional security group rules to add to the cluster security group created. Set `source_node_security_group = true` inside rules to set the `node_security_group` as source",
+        "name": "security_group_additional_rules",
+        "required": false,
+        "type": "map(object({\n    protocol                   = optional(string, \"tcp\")\n    from_port                  = number\n    to_port                    = number\n    type                       = optional(string, \"ingress\")\n    description                = optional(string)\n    cidr_blocks                = optional(list(string))\n    ipv6_cidr_blocks           = optional(list(string))\n    prefix_list_ids            = optional(list(string))\n    self                       = optional(bool)\n    source_node_security_group = optional(bool, false)\n    source_security_group_id   = optional(string)\n  }))"
+      },
+      {
+        "default": "\"EKS node shared security group\"",
+        "description": "Description of the node security group created",
+        "name": "node_security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable deletion protection for the cluster. When enabled, the cluster cannot be deleted unless deletion protection is first disabled",
+        "name": "deletion_protection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of subnet IDs where the EKS cluster control plane (ENIs) will be provisioned. Used for expanding the pool of subnets used by nodes/node groups without replacing the EKS control plane",
+        "name": "control_plane_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not to attach an additional policy for the cluster IAM role to utilize the encryption key provided",
+        "name": "attach_encryption_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Custom period of time between each key rotation date. If you specify a value, it must be between `90` and `2560`, inclusive. If you do not specify a value, it defaults to `365`",
+        "name": "kms_key_rotation_period_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "kms_key_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "kms_key_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events. Default retention - 90 days",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cluster encryption policy created",
+        "name": "encryption_policy_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of aliases to create. Note - due to the use of `toset()`, values must be static strings and not computed values",
+        "name": "kms_key_aliases",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN for the cluster. Required if `create_iam_role` is set to `false`",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"audit\",\n  \"api\",\n  \"authenticator\"\n]",
+        "description": "A list of the desired control plane logs to enable. For more information, see Amazon EKS Control Plane Logging documentation (https://docs.aws.amazon.com/eks/latest/userguide/control-plane-logs.html)",
+        "name": "enabled_log_types",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether or not the Amazon EKS private API server endpoint is enabled",
+        "name": "endpoint_private_access",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable recommended security group rules for the node security group created. This includes node-to-node TCP ingress on ephemeral ports and allows all egress traffic",
+        "name": "node_security_group_enable_recommended_rules",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"30s\"",
+        "description": "Duration to wait after the EKS cluster has become active before creating the dataplane components (EKS managed node group(s), self-managed node group(s), Fargate profile(s))",
+        "name": "dataplane_wait_duration",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable permissions for custom tags resources created by EKS Auto Mode",
+        "name": "enable_auto_mode_custom_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The EKS Auto node IAM role path",
+        "name": "node_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the EKS Auto node IAM role",
+        "name": "node_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"-\"",
+        "description": "The separator to use between the prefix and the generated timestamp for resource names",
+        "name": "prefix_separator",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the EKS Provisioned Control Plane scaling tier. Valid values for tier are `standard`, `tier-xl`, `tier-2xl`, `tier-4xl` and `tier-8xl`",
+        "name": "control_plane_scaling_config",
+        "required": false,
+        "type": "object({\n    tier = string\n  })"
+      },
+      {
+        "default": "[\n  \"0.0.0.0/0\"\n]",
+        "description": "List of CIDR blocks which can access the Amazon EKS public API server endpoint",
+        "name": "endpoint_public_access_cidrs",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cloudwatch log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a security group for the node groups or use the existing `node_security_group_id`",
+        "name": "create_node_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the cluster addons",
+        "name": "addons_timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Map of Fargate Profile definitions to create",
+        "name": "fargate_profiles",
+        "required": false,
+        "type": "map(object({\n    create = optional(bool)\n\n    # Fargate profile\n    name       = optional(string) # Will fall back to map key\n    subnet_ids = optional(list(string))\n    selectors = optional(list(object({\n      labels    = optional(map(string))\n      namespace = string\n    })))\n    timeouts = optional(object({\n      create = optional(string)\n      delete = optional(string)\n    }))\n\n    # IAM role\n    create_iam_role               = optional(bool)\n    iam_role_arn                  = optional(string)\n    iam_role_name                 = optional(string)\n    iam_role_use_name_prefix      = optional(bool)\n    iam_role_path                 = optional(string)\n    iam_role_description          = optional(string)\n    iam_role_permissions_boundary = optional(string)\n    iam_role_tags                 = optional(map(string))\n    iam_role_attach_cni_policy    = optional(bool)\n    iam_role_additional_policies  = optional(map(string))\n    create_iam_role_policy        = optional(bool)\n    iam_role_policy_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    tags = optional(map(string))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on cluster security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on cluster encryption policy created",
+        "name": "encryption_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of cluster identity provider configurations to enable for the cluster. Note - this is different/separate from IRSA",
+        "name": "identity_providers",
+        "required": false,
+        "type": "map(object({\n    client_id                     = string\n    groups_claim                  = optional(string)\n    groups_prefix                 = optional(string)\n    identity_provider_config_name = optional(string) # will fall back to map key\n    issuer_url                    = string\n    required_claims               = optional(map(string))\n    username_claim                = optional(string)\n    username_prefix               = optional(string)\n    tags                          = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Force version update by overriding upgrade-blocking readiness checks when updating a cluster",
+        "name": "force_update_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the cluster remote network configuration",
+        "name": "remote_network_config",
+        "required": false,
+        "type": "object({\n    remote_node_networks = object({\n      cidrs = optional(list(string))\n    })\n    remote_pod_networks = optional(object({\n      cidrs = optional(list(string))\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The waiting period, specified in number of days. After the waiting period ends, AWS KMS deletes the KMS key. If you specify a value, it must be between `7` and `30`, inclusive. If you do not specify a value, it defaults to `30`",
+        "name": "kms_key_deletion_window_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on node security group created",
+        "name": "node_security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether node security group name (`node_security_group_name`) is used as a prefix",
+        "name": "node_security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether cluster encryption policy name (`cluster_encryption_policy_name`) is used as a prefix",
+        "name": "encryption_policy_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration block with encryption configuration for the cluster",
+        "name": "encryption_config",
+        "required": false,
+        "type": "object({\n    provider_key_arn = optional(string)\n    resources        = optional(list(string), [\"secrets\"])\n  })"
+      }
+    ],
+    "self-managed-node-group": [
+      {
+        "default": "null",
+        "description": "Configuration block containing settings to define launch targets for Auto Scaling groups",
+        "name": "mixed_instances_policy",
+        "required": false,
+        "type": "object({\n    instances_distribution = optional(object({\n      on_demand_allocation_strategy            = optional(string)\n      on_demand_base_capacity                  = optional(number)\n      on_demand_percentage_above_base_capacity = optional(number)\n      spot_allocation_strategy                 = optional(string)\n      spot_instance_pools                      = optional(number)\n      spot_max_price                           = optional(string)\n    }))\n    launch_template = object({\n      override = optional(list(object({\n        instance_requirements = optional(object({\n          accelerator_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_manufacturers = optional(list(string))\n          accelerator_names         = optional(list(string))\n          accelerator_total_memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_types      = optional(list(string))\n          allowed_instance_types = optional(list(string))\n          bare_metal             = optional(string)\n          baseline_ebs_bandwidth_mbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          burstable_performance                                   = optional(string)\n          cpu_manufacturers                                       = optional(list(string))\n          excluded_instance_types                                 = optional(list(string))\n          instance_generations                                    = optional(list(string))\n          local_storage                                           = optional(string)\n          local_storage_types                                     = optional(list(string))\n          max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n          memory_gib_per_vcpu = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_bandwidth_gbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_interface_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          on_demand_max_price_percentage_over_lowest_price = optional(number)\n          require_hibernate_support                        = optional(bool)\n          spot_max_price_percentage_over_lowest_price      = optional(number)\n          total_local_storage_gb = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          vcpu_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n        }))\n        instance_type = optional(string)\n        launch_template_specification = optional(object({\n          launch_template_id   = optional(string)\n          launch_template_name = optional(string)\n          version              = optional(string)\n        }))\n        weighted_capacity = optional(string)\n      })))\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) - used for adding specific IAM permissions as needed",
+        "name": "iam_role_policy_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    self                         = optional(bool, false)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specify volumes to attach to the instance besides the volumes specified by the AMI",
+        "name": "block_device_mappings",
+        "required": false,
+        "type": "map(object({\n    device_name = optional(string)\n    ebs = optional(object({\n      delete_on_termination      = optional(bool)\n      encrypted                  = optional(bool)\n      iops                       = optional(number)\n      kms_key_id                 = optional(string)\n      snapshot_id                = optional(string)\n      throughput                 = optional(number)\n      volume_initialization_rate = optional(number)\n      volume_size                = optional(number)\n      volume_type                = optional(string)\n    }))\n    no_device    = optional(string)\n    virtual_name = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Targeting for EC2 capacity reservations",
+        "name": "capacity_reservation_specification",
+        "required": false,
+        "type": "object({\n    capacity_reservation_preference = optional(string)\n    capacity_reservation_target = optional(object({\n      capacity_reservation_id                 = optional(string)\n      capacity_reservation_resource_group_arn = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "[]",
+        "description": "Customize network interfaces to be attached at instance boot time",
+        "name": "network_interfaces",
+        "required": false,
+        "type": "list(object({\n    associate_carrier_ip_address = optional(bool)\n    associate_public_ip_address  = optional(bool)\n    connection_tracking_specification = optional(object({\n      tcp_established_timeout = optional(number)\n      udp_stream_timeout      = optional(number)\n      udp_timeout             = optional(number)\n    }))\n    delete_on_termination = optional(bool)\n    description           = optional(string)\n    device_index          = optional(number)\n    ena_srd_specification = optional(object({\n      ena_srd_enabled = optional(bool)\n      ena_srd_udp_specification = optional(object({\n        ena_srd_udp_enabled = optional(bool)\n      }))\n    }))\n    interface_type       = optional(string)\n    ipv4_address_count   = optional(number)\n    ipv4_addresses       = optional(list(string))\n    ipv4_prefix_count    = optional(number)\n    ipv4_prefixes        = optional(list(string))\n    ipv6_address_count   = optional(number)\n    ipv6_addresses       = optional(list(string))\n    ipv6_prefix_count    = optional(number)\n    ipv6_prefixes        = optional(list(string))\n    network_card_index   = optional(number)\n    network_interface_id = optional(string)\n    primary_ipv6         = optional(bool)\n    private_ip_address   = optional(string)\n    security_groups      = optional(list(string), [])\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The options for the instance hostname. The default values are inherited from the subnet",
+        "name": "private_dns_name_options",
+        "required": false,
+        "type": "object({\n    enable_resource_name_dns_aaaa_record = optional(bool)\n    enable_resource_name_dns_a_record    = optional(bool)\n    hostname_type                        = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create autoscaling group or not",
+        "name": "create_autoscaling_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `name` as is or create a unique name beginning with the `name` as the prefix",
+        "name": "use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Launch template version. Can be version number, `$Latest`, or `$Default`",
+        "name": "launch_template_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Reserved",
+        "name": "context",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 instance termination protection",
+        "name": "disable_api_termination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Enable Nitro Enclaves on launched instances",
+        "name": "enclave_options",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      },
+      {
+        "default": "\"m6i.large\"",
+        "description": "The type of the instance to launch",
+        "name": "instance_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Allows setting instance protection. The autoscaling group will not select instances with this setting for termination during scale in events",
+        "name": "protect_from_scale_in",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Time (in seconds) after instance comes into service before checking health",
+        "name": "health_check_grace_period",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The maximum amount of time, in seconds, that an instance can be in service, values must be either equal to 0 or between 604800 and 31536000 seconds",
+        "name": "max_instance_lifetime",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach the `AmazonEKS_CNI_Policy`/`AmazonEKS_CNI_IPv6_Policy` IAM policy to the IAM IAM role. WARNING: If set `false` the permissions must be assigned to the `aws-node` DaemonSet pods via another method or nodes will not be able to join the cluster",
+        "name": "iam_role_attach_cni_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AWS account ID - pass through value to reduce number of GET requests from data sources",
+        "name": "account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The maintenance options for the instance",
+        "name": "maintenance_options",
+        "required": false,
+        "type": "object({\n    auto_recovery = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A list of license specifications to associate with",
+        "name": "license_specifications",
+        "required": false,
+        "type": "list(object({\n    license_configuration_arn = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The attribute requirements for the type of instance. If present then `instance_type` cannot be present",
+        "name": "instance_requirements",
+        "required": false,
+        "type": "object({\n    accelerator_count = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    accelerator_manufacturers = optional(list(string))\n    accelerator_names         = optional(list(string))\n    accelerator_total_memory_mib = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    accelerator_types      = optional(list(string))\n    allowed_instance_types = optional(list(string))\n    bare_metal             = optional(string)\n    baseline_ebs_bandwidth_mbps = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    burstable_performance                                   = optional(string)\n    cpu_manufacturers                                       = optional(list(string))\n    excluded_instance_types                                 = optional(list(string))\n    instance_generations                                    = optional(list(string))\n    local_storage                                           = optional(string)\n    local_storage_types                                     = optional(list(string))\n    max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n    memory_gib_per_vcpu = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    memory_mib = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    network_bandwidth_gbps = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    network_interface_count = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    on_demand_max_price_percentage_over_lowest_price = optional(number)\n    require_hibernate_support                        = optional(bool)\n    spot_max_price_percentage_over_lowest_price      = optional(number)\n    total_local_storage_gb = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    vcpu_count = optional(object({\n      max = optional(number)\n      min = string\n    }))\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Enables/disables detailed monitoring",
+        "name": "enable_monitoring",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to enable Elastic Fabric Adapter (EFA) support",
+        "name": "enable_efa_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the tag_specifications of launch template created",
+        "name": "launch_template_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  \"instance\",\n  \"volume\",\n  \"network-interface\"\n]",
+        "description": "The tags to apply to the resources during launch",
+        "name": "tag_specifications",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The IP family used to assign Kubernetes pod and service addresses. Valid values are `ipv4` (default) and `ipv6`",
+        "name": "cluster_ip_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Array of cloud-init document parts that are created before the nodeadm document part",
+        "name": "cloudinit_pre_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `launch_template_name` as is or create a unique name beginning with the `launch_template_name` as the prefix",
+        "name": "launch_template_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  0\n]",
+        "description": "The indices of the network interfaces that should be EFA-enabled. Only valid when `enable_efa_support` = `true`",
+        "name": "efa_indices",
+        "required": false,
+        "type": "list(number)"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether capacity rebalance is enabled",
+        "name": "capacity_rebalance",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to use a mixed instances policy in the autoscaling group or not",
+        "name": "use_mixed_instances_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of an existing IAM instance profile that provides permissions for the node group. Required if `create_iam_instance_profile` = `false`",
+        "name": "iam_instance_profile_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The CIDR block (IPv4 or IPv6) used by the cluster to assign Kubernetes service IP addresses. This is derived from the cluster itself",
+        "name": "cluster_service_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"preferences\": {\n    \"min_healthy_percentage\": 66\n  },\n  \"strategy\": \"Rolling\"\n}",
+        "description": "If this block is configured, start an Instance Refresh when this Auto Scaling Group is updated",
+        "name": "instance_refresh",
+        "required": false,
+        "type": "object({\n    preferences = optional(object({\n      alarm_specification = optional(object({\n        alarms = optional(list(string))\n      }))\n      auto_rollback                = optional(bool)\n      checkpoint_delay             = optional(number)\n      checkpoint_percentages       = optional(list(number))\n      instance_warmup              = optional(number)\n      max_healthy_percentage       = optional(number)\n      min_healthy_percentage       = optional(number)\n      scale_in_protected_instances = optional(string)\n      skip_matching                = optional(bool)\n      standby_instances            = optional(string)\n    }))\n    strategy = optional(string)\n    triggers = optional(list(string))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create self managed node group or not",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Base64 encoded CA of associated EKS cluster",
+        "name": "cluster_auth_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path to a local, custom user data template file to use when rendering user data",
+        "name": "user_data_template_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Array of cloud-init document parts that are created after the nodeadm document part",
+        "name": "cloudinit_post_nodeadm",
+        "required": false,
+        "type": "list(object({\n    content      = string\n    content_type = optional(string)\n    filename     = optional(string)\n    merge_type   = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A list of subnet IDs to launch resources in. Subnets automatically determine which availability zones the group will reside. Conflicts with `availability_zones`",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "1",
+        "description": "The minimum size of the autoscaling group",
+        "name": "min_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "`EC2` or `ELB`. Controls how health checking is done",
+        "name": "health_check_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of metrics to collect. The allowed values are `GroupDesiredCapacity`, `GroupInServiceCapacity`, `GroupPendingCapacity`, `GroupMinSize`, `GroupMaxSize`, `GroupInServiceInstances`, `GroupPendingInstances`, `GroupStandbyInstances`, `GroupStandbyCapacity`, `GroupTerminatingCapacity`, `GroupTerminatingInstances`, `GroupTotalCapacity`, `GroupTotalInstances`",
+        "name": "enabled_metrics",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the EKS cluster primary security group to associate with the instance(s). This is the security group that is automatically created by the EKS service",
+        "name": "cluster_primary_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A list of one or more availability zones for the group. Used for EC2-Classic and default subnets when not specified with `subnet_ids` argument. Conflicts with `subnet_ids`",
+        "name": "availability_zones",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "3",
+        "description": "The maximum size of the autoscaling group",
+        "name": "max_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The unit of measurement for the value specified for `desired_size`. Supported for attribute-based instance type selection only. Valid values: `units`, `vcpu`, `memory-mib`",
+        "name": "desired_size_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to ignore failed Auto Scaling scaling activities while waiting for capacity",
+        "name": "ignore_failed_scaling_activities",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile",
+        "name": "create_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Customize the credit specification of the instance",
+        "name": "credit_specification",
+        "required": false,
+        "type": "object({\n    cpu_credits = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The market (purchasing) option for the instance",
+        "name": "instance_market_options",
+        "required": false,
+        "type": "object({\n    market_type = optional(string)\n    spot_options = optional(object({\n      block_duration_minutes         = optional(number)\n      instance_interruption_behavior = optional(string)\n      max_price                      = optional(string)\n      spot_instance_type             = optional(string)\n      valid_until                    = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the autoscaling group created. Tags are applied to the autoscaling group only and are NOT propagated to instances",
+        "name": "autoscaling_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether cluster IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"Self managed node group IAM role\"",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role policy is created or not",
+        "name": "create_iam_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    self                         = optional(bool, false)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name of launch template to be created",
+        "name": "launch_template_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The kernel ID",
+        "name": "kernel_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a placement group is created & used by the node group",
+        "name": "create_placement_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amount of time, in seconds, until a newly launched instance can contribute to the Amazon CloudWatch metrics. This delay lets an instance finish initializing before Amazon EC2 Auto Scaling aggregates instance metrics, resulting in more reliable usage data",
+        "name": "default_instance_warmup",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The granularity to associate with the metrics to collect. The only valid value is `1Minute`",
+        "name": "metrics_granularity",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "One or more Lifecycle Hooks to attach to the Auto Scaling Group before instances are launched. The syntax is exactly the same as the separate `aws_autoscaling_lifecycle_hook` resource, without the `autoscaling_group_name` attribute. Please note that this will only work when creating a new Auto Scaling Group. For all other use-cases, please use `aws_autoscaling_lifecycle_hook` resource",
+        "name": "initial_lifecycle_hooks",
+        "required": false,
+        "type": "list(object({\n    default_result          = optional(string)\n    heartbeat_timeout       = optional(number)\n    lifecycle_transition    = string\n    name                    = string\n    notification_metadata   = optional(string)\n    notification_target_arn = optional(string)\n    role_arn                = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "If this block is configured, add a instance maintenance policy to the specified Auto Scaling group",
+        "name": "instance_maintenance_policy",
+        "required": false,
+        "type": "object({\n    max_healthy_percentage = number\n    min_healthy_percentage = number\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable EFA (`false`, default) or EFA and EFA-only (`true`) network interfaces. Note: requires vpc-cni version `v1.18.4` or later",
+        "name": "enable_efa_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of associated EKS cluster",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create launch template or not",
+        "name": "create_launch_template",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The placement of the instance",
+        "name": "placement",
+        "required": false,
+        "type": "object({\n    affinity                = optional(string)\n    availability_zone       = optional(string)\n    group_name              = optional(string)\n    host_id                 = optional(string)\n    host_resource_group_arn = optional(string)\n    partition_number        = optional(number)\n    spread_domain           = optional(string)\n    tenancy                 = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance will be EBS-optimized",
+        "name": "ebs_optimized",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"AL2023_x86_64_STANDARD\"",
+        "description": "Type of Amazon Machine Image (AMI) associated with the node group. See the [AWS documentation](https://docs.aws.amazon.com/eks/latest/APIReference/API_Nodegroup.html#AmazonEKS-Type-Nodegroup-amiType) for valid values",
+        "name": "ami_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of policies to decide how the instances in the Auto Scaling Group should be terminated. The allowed values are `OldestInstance`, `NewestInstance`, `OldestLaunchConfiguration`, `ClosestToNextInstanceHour`, `OldestLaunchTemplate`, `AllocationStrategy`, `Default`",
+        "name": "termination_policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an access entry is created for the IAM role used by the node group",
+        "name": "create_access_entry",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the launch template",
+        "name": "launch_template_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Default Version of the launch template",
+        "name": "launch_template_default_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to update Default Version each update. Conflicts with `launch_template_default_version`",
+        "name": "update_launch_template_default_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The key name that should be used for the instance",
+        "name": "key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of security group IDs to associate",
+        "name": "vpc_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the IAM role used by the instance profile. Required when `create_access_entry = true` and `create_iam_instance_profile = false`",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The network performance options for the instance",
+        "name": "network_performance_options",
+        "required": false,
+        "type": "object({\n    bandwidth_weighting = optional(string)\n  })"
+      },
+      {
+        "default": "1",
+        "description": "The number of Amazon EC2 instances that should be running in the autoscaling group",
+        "name": "desired_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "A list of processes to suspend for the Auto Scaling Group. The allowed values are `Launch`, `Terminate`, `HealthCheck`, `ReplaceUnhealthy`, `AZRebalance`, `AlarmNotification`, `ScheduledActions`, `AddToLoadBalancer`. Note that if you suspend either the `Launch` or `Terminate` process types, it can prevent your Auto Scaling Group from functioning properly",
+        "name": "suspended_processes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Timeout configurations for the autoscaling group",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Shutdown behavior for the instance. Can be `stop` or `terminate`. (Default: `stop`)",
+        "name": "instance_initiated_shutdown_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the Self managed Node Group",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "User data that is injected into the user data script ahead of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "pre_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of an existing launch template to use. Required when `create_launch_template` = `false`",
+        "name": "launch_template_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Kubernetes cluster version - used to lookup default AMI ID if one is not provided",
+        "name": "kubernetes_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Endpoint of associated EKS cluster",
+        "name": "cluster_endpoint",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Additional DNS IP addresses to use for the cluster. Only used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "additional_cluster_dns_ips",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "User data that is appended to the user data script after of the EKS bootstrap script. Not used when `ami_type` = `BOTTLEROCKET_*`",
+        "name": "post_bootstrap_user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Additional arguments passed to the bootstrap script. When `ami_type` = `BOTTLEROCKET_*`; these are additional [settings](https://github.com/bottlerocket-os/bottlerocket#settings) that are provided to the Bottlerocket user data",
+        "name": "bootstrap_extra_args",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the ram disk",
+        "name": "ram_disk_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The CPU options for the instance",
+        "name": "cpu_options",
+        "required": false,
+        "type": "object({\n    amd_sev_snp           = optional(string)\n    core_count            = optional(number)\n    nested_virtualization = optional(string)\n    threads_per_core      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The name of the placement group into which you'll launch your instances",
+        "name": "placement_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Allows deleting the Auto Scaling Group without waiting for all instances in the pool to terminate. You can force an Auto Scaling Group to delete even if it's in the process of scaling a resource. Normally, Terraform drains all the instances before deleting the group. This bypasses that behavior and potentially leaves resources dangling",
+        "name": "force_delete",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AWS partition - pass through value to reduce number of GET requests from data sources",
+        "name": "partition",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The AMI from which to launch the instance",
+        "name": "ami_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"http_endpoint\": \"enabled\",\n  \"http_put_response_hop_limit\": 1,\n  \"http_tokens\": \"required\"\n}",
+        "description": "Customize the metadata options for the instance",
+        "name": "metadata_options",
+        "required": false,
+        "type": "object({\n    http_endpoint               = optional(string, \"enabled\")\n    http_protocol_ipv6          = optional(string)\n    http_put_response_hop_limit = optional(number, 1)\n    http_tokens                 = optional(string, \"required\")\n    instance_metadata_tags      = optional(string)\n  })"
+      }
+    ]
+  },
+  "all_outputs": {
+    "_user_data": [
+      {
+        "description": "Base64 encoded user data rendered for the provided inputs",
+        "name": "user_data"
+      }
+    ],
+    "capability": [
+      {
+        "description": "The version of the EKS Capability",
+        "name": "version"
+      },
+      {
+        "description": "URL of the Argo CD server",
+        "name": "argocd_server_url"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "The ARN of the EKS Capability",
+        "name": "arn"
+      }
+    ],
+    "eks-managed-node-group": [
+      {
+        "description": "The ID of the launch template",
+        "name": "launch_template_id"
+      },
+      {
+        "description": "The ARN of the launch template",
+        "name": "launch_template_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the EKS Node Group",
+        "name": "node_group_arn"
+      },
+      {
+        "description": "List of objects containing information about taints applied to the node group",
+        "name": "node_group_taints"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "EKS Cluster name and EKS Node Group name separated by a colon (`:`)",
+        "name": "node_group_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "The latest version of the launch template",
+        "name": "launch_template_latest_version"
+      },
+      {
+        "description": "List of objects containing information about underlying resources",
+        "name": "node_group_resources"
+      },
+      {
+        "description": "List of the autoscaling group names",
+        "name": "node_group_autoscaling_group_names"
+      },
+      {
+        "description": "Map of labels applied to the node group",
+        "name": "node_group_labels"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "The name of the launch template",
+        "name": "launch_template_name"
+      },
+      {
+        "description": "Status of the EKS Node Group",
+        "name": "node_group_status"
+      }
+    ],
+    "fargate-profile": [
+      {
+        "description": "EKS Cluster name and EKS Fargate Profile name separated by a colon (`:`)",
+        "name": "fargate_profile_id"
+      },
+      {
+        "description": "Status of the EKS Fargate Profile",
+        "name": "fargate_profile_status"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the EKS Fargate Profile Pod execution role ARN",
+        "name": "fargate_profile_pod_execution_role_arn"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the EKS Fargate Profile",
+        "name": "fargate_profile_arn"
+      }
+    ],
+    "hybrid-node-role": [
+      {
+        "description": "The name of the node IAM role",
+        "name": "name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the node IAM role",
+        "name": "arn"
+      },
+      {
+        "description": "Stable and unique string identifying the node IAM role",
+        "name": "unique_id"
+      },
+      {
+        "description": "The name of the node IAM role",
+        "name": "intermediate_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the node IAM role",
+        "name": "intermediate_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the node IAM role",
+        "name": "intermediate_role_unique_id"
+      }
+    ],
+    "karpenter": [
+      {
+        "description": "The name of the created Amazon SQS queue",
+        "name": "queue_name"
+      },
+      {
+        "description": "Service Account associated with the Karpenter Pod Identity",
+        "name": "service_account"
+      },
+      {
+        "description": "The name of the controller IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "Map of the event rules created and their attributes",
+        "name": "event_rules"
+      },
+      {
+        "description": "The name of the node IAM role",
+        "name": "node_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the node IAM role",
+        "name": "node_iam_role_unique_id"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "instance_profile_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "instance_profile_unique"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the controller IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the controller IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "The ARN of the SQS queue",
+        "name": "queue_arn"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "instance_profile_id"
+      },
+      {
+        "description": "Name of the instance profile",
+        "name": "instance_profile_name"
+      },
+      {
+        "description": "Namespace associated with the Karpenter Pod Identity",
+        "name": "namespace"
+      },
+      {
+        "description": "The URL for the created Amazon SQS queue",
+        "name": "queue_url"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the node IAM role",
+        "name": "node_iam_role_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the node Access Entry",
+        "name": "node_access_entry_arn"
+      }
+    ],
+    "root": [
+      {
+        "description": "Endpoint for your Kubernetes API server",
+        "name": "cluster_endpoint"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the key",
+        "name": "kms_key_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the cluster security group",
+        "name": "cluster_security_group_arn"
+      },
+      {
+        "description": "Map of attribute maps for all EKS Fargate Profiles created",
+        "name": "fargate_profiles"
+      },
+      {
+        "description": "Map of attribute maps for all self managed node groups created",
+        "name": "self_managed_node_groups"
+      },
+      {
+        "description": "Cluster security group that was created by Amazon EKS for the cluster. Managed node groups use this security group for control-plane-to-data-plane communication. Referred to as 'Cluster security group' in the EKS console",
+        "name": "cluster_primary_security_group_id"
+      },
+      {
+        "description": "The CIDR block where Kubernetes pod and service IP addresses are assigned from",
+        "name": "cluster_service_cidr"
+      },
+      {
+        "description": "The IP family used by the cluster (e.g. `ipv4` or `ipv6`)",
+        "name": "cluster_ip_family"
+      },
+      {
+        "description": "The IAM resource policy set on the key",
+        "name": "kms_key_policy"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the cluster",
+        "name": "cluster_arn"
+      },
+      {
+        "description": "The ID of the EKS cluster. Note: currently a value is returned only for local EKS clusters created on Outposts",
+        "name": "cluster_id"
+      },
+      {
+        "description": "Platform version for the cluster",
+        "name": "cluster_platform_version"
+      },
+      {
+        "description": "ID of the cluster security group",
+        "name": "cluster_security_group_id"
+      },
+      {
+        "description": "Arn of cloudwatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The ARN of the OIDC Provider if `enable_irsa = true`",
+        "name": "oidc_provider_arn"
+      },
+      {
+        "description": "EKS Auto node IAM role ARN",
+        "name": "node_iam_role_arn"
+      },
+      {
+        "description": "List of the autoscaling group names created by EKS managed node groups",
+        "name": "eks_managed_node_groups_autoscaling_group_names"
+      },
+      {
+        "description": "The URL on the EKS cluster for the OpenID Connect identity provider",
+        "name": "cluster_oidc_issuer_url"
+      },
+      {
+        "description": "Map of access entries created and their attributes",
+        "name": "access_entries"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the node shared security group",
+        "name": "node_security_group_arn"
+      },
+      {
+        "description": "The SHA1 fingerprint of the public key of the cluster's certificate",
+        "name": "cluster_tls_certificate_sha1_fingerprint"
+      },
+      {
+        "description": "EKS Auto node IAM role name",
+        "name": "node_iam_role_name"
+      },
+      {
+        "description": "Map of attribute maps for all EKS cluster addons enabled",
+        "name": "cluster_addons"
+      },
+      {
+        "description": "List of the autoscaling group names created by self-managed node groups",
+        "name": "self_managed_node_groups_autoscaling_group_names"
+      },
+      {
+        "description": "Dual-stack compatible URL on the EKS cluster for the OpenID Connect identity provider",
+        "name": "cluster_dualstack_oidc_issuer_url"
+      },
+      {
+        "description": "The Kubernetes version for the cluster",
+        "name": "cluster_version"
+      },
+      {
+        "description": "Map of eks cluster access policy associations created and their attributes",
+        "name": "access_policy_associations"
+      },
+      {
+        "description": "Cluster IAM role ARN",
+        "name": "cluster_iam_role_arn"
+      },
+      {
+        "description": "Map of attribute maps for all EKS managed node groups created",
+        "name": "eks_managed_node_groups"
+      },
+      {
+        "description": "Base64 encoded certificate data required to communicate with the cluster",
+        "name": "cluster_certificate_authority_data"
+      },
+      {
+        "description": "The name of the EKS cluster",
+        "name": "cluster_name"
+      },
+      {
+        "description": "The EKS Provisioned Control Plane scaling tier for the cluster",
+        "name": "cluster_control_plane_scaling_tier"
+      },
+      {
+        "description": "ID of the node shared security group",
+        "name": "node_security_group_id"
+      },
+      {
+        "description": "Cluster IAM role name",
+        "name": "cluster_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "cluster_iam_role_unique_id"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "node_iam_role_unique_id"
+      },
+      {
+        "description": "Name of cloudwatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "Status of the EKS cluster. One of `CREATING`, `ACTIVE`, `DELETING`, `FAILED`",
+        "name": "cluster_status"
+      },
+      {
+        "description": "The globally unique identifier for the key",
+        "name": "kms_key_id"
+      },
+      {
+        "description": "The OpenID Connect identity provider (issuer URL without leading `https://`)",
+        "name": "oidc_provider"
+      },
+      {
+        "description": "Map of attribute maps for all EKS identity providers enabled",
+        "name": "cluster_identity_providers"
+      }
+    ],
+    "self-managed-node-group": [
+      {
+        "description": "Amazon Resource Name (ARN) of the Access Entry",
+        "name": "access_entry_arn"
+      },
+      {
+        "description": "ID of the image",
+        "name": "image_id"
+      },
+      {
+        "description": "Base64 encoded user data",
+        "name": "user_data"
+      },
+      {
+        "description": "The ARN of the launch template",
+        "name": "launch_template_arn"
+      },
+      {
+        "description": "The autoscaling group name",
+        "name": "autoscaling_group_name"
+      },
+      {
+        "description": "The maximum size of the autoscaling group",
+        "name": "autoscaling_group_max_size"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "iam_instance_profile_unique"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "The minimum size of the autoscaling group",
+        "name": "autoscaling_group_min_size"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "iam_instance_profile_arn"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "iam_instance_profile_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "The ID of the launch template",
+        "name": "launch_template_id"
+      },
+      {
+        "description": "The latest version of the launch template",
+        "name": "launch_template_latest_version"
+      },
+      {
+        "description": "The name of the launch template",
+        "name": "launch_template_name"
+      },
+      {
+        "description": "Time after instance comes into service before checking health",
+        "name": "autoscaling_group_health_check_grace_period"
+      },
+      {
+        "description": "EC2 or ELB. Controls how health checking is done",
+        "name": "autoscaling_group_health_check_type"
+      },
+      {
+        "description": "The availability zones of the autoscaling group",
+        "name": "autoscaling_group_availability_zones"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "The ARN for this autoscaling group",
+        "name": "autoscaling_group_arn"
+      },
+      {
+        "description": "The autoscaling group id",
+        "name": "autoscaling_group_id"
+      },
+      {
+        "description": "The number of Amazon EC2 instances that should be running in the group",
+        "name": "autoscaling_group_desired_capacity"
+      },
+      {
+        "description": "Time between a scaling activity and the succeeding scaling activity",
+        "name": "autoscaling_group_default_cooldown"
+      },
+      {
+        "description": "The VPC zone identifier",
+        "name": "autoscaling_group_vpc_zone_identifier"
+      }
+    ]
+  },
+  "built_from_version": "21.24.0",
+  "module_id": "terraform-aws-modules/eks/aws"
+}

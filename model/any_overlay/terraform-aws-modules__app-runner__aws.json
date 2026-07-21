@@ -1,4 +1,388 @@
 {
+  "all_inputs": {
+    "root": [
+      {
+        "default": "{}",
+        "description": "Map of connection definitions to create",
+        "name": "connections",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a VPC ingress configuration will be created",
+        "name": "create_ingress_vpc_connection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the VPC Connector",
+        "name": "vpc_connector_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The security groups to use for the VPC Connector",
+        "name": "vpc_connector_security_groups",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "access_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "The instance configuration for the service",
+        "name": "instance_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "access_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "instance_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to associate the subdomain with the App Runner service in addition to the base domain. Defaults to `true`",
+        "name": "enable_www_subdomain",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an X-Ray Observability Configuration will be created and assigned to the service",
+        "name": "enable_observability_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the service",
+        "name": "service_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of an App Runner automatic scaling configuration resource that you want to associate with your service. If not provided, App Runner associates the latest revision of a default auto scaling configuration",
+        "name": "auto_scaling_configuration_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "access_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of the VPC endpoint that is used for the VPC ingress configuration",
+        "name": "ingress_vpc_endpoint_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a VPC Connector will be created",
+        "name": "create_vpc_connector",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of auto-scaling configuration definitions to create",
+        "name": "auto_scaling_configurations",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the service will be created",
+        "name": "create_service",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "The health check configuration for the service",
+        "name": "health_check_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "instance_policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"\"",
+        "description": "The custom domain endpoint to association. Specify a base domain e.g., `example.com` or a subdomain e.g., `subdomain.example.com`",
+        "name": "domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "access_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "IAM policies to attach to the IAM role",
+        "name": "access_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of the VPC that is used for the VPC ingress configuration",
+        "name": "ingress_vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The subnets to use for the VPC Connector",
+        "name": "vpc_connector_subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "The encryption configuration for the service",
+        "name": "encryption_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "The network configuration for the service",
+        "name": "network_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the private ECR repository that contains the service image to launch",
+        "name": "private_ecr_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "instance_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an IAM role is created or to use an existing IAM role",
+        "name": "create_access_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "instance_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "instance_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "instance_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "IAM policies to attach to the IAM role",
+        "name": "instance_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "The observability configuration for the service",
+        "name": "observability_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "The source configuration for the service",
+        "name": "source_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "access_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM role is created or to use an existing IAM role",
+        "name": "create_instance_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a Custom Domain Association will be created",
+        "name": "create_custom_domain_association",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The Amazon Resource Name (ARN) of VPC connector",
+        "name": "vpc_connector_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "instance_iam_role_unique_id"
+      },
+      {
+        "description": "A set of certificate CNAME records used for this domain name",
+        "name": "custom_domain_association_certificate_validation_records"
+      },
+      {
+        "description": "The current state of the VPC connector. If the status of a connector revision is INACTIVE, it was deleted and can't be used. Inactive connector revisions are permanently removed some time after they are deleted",
+        "name": "vpc_connector_status"
+      },
+      {
+        "description": "Map of attribute maps for all autoscaling configurations created",
+        "name": "auto_scaling_configurations"
+      },
+      {
+        "description": "The current state of the observability configuration. An `INACTIVE` configuration revision has been deleted and can't be used. It is permanently removed some time after deletion",
+        "name": "observability_configuration_status"
+      },
+      {
+        "description": "An alphanumeric ID that App Runner generated for this service. Unique within the AWS Region",
+        "name": "service_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "access_iam_role_arn"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the VPC Ingress Connection",
+        "name": "vpc_ingress_connection_arn"
+      },
+      {
+        "description": "The domain name associated with the VPC Ingress Connection resource",
+        "name": "vpc_ingress_connection_domain_name"
+      },
+      {
+        "description": "The App Runner subdomain of the App Runner service. The custom domain name is mapped to this target name. Attribute only available if resource created (not imported) with Terraform",
+        "name": "custom_domain_association_dns_target"
+      },
+      {
+        "description": "The revision of VPC connector. It's unique among all the active connectors (\"Status\": \"ACTIVE\") that share the same Name",
+        "name": "vpc_connector_revision"
+      },
+      {
+        "description": "Map of attribute maps for all connections created",
+        "name": "connections"
+      },
+      {
+        "description": "ARN of this observability configuration",
+        "name": "observability_configuration_arn"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the service",
+        "name": "service_arn"
+      },
+      {
+        "description": "A subdomain URL that App Runner generated for this service. You can use this URL to access your service web application",
+        "name": "service_url"
+      },
+      {
+        "description": "The current state of the App Runner service",
+        "name": "service_status"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "access_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "access_iam_role_unique_id"
+      },
+      {
+        "description": "The revision of the observability configuration",
+        "name": "observability_configuration_revision"
+      },
+      {
+        "description": "Whether the observability configuration has the highest `observability_configuration_revision` among all configurations that share the same `observability_configuration_name`",
+        "name": "observability_configuration_latest"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "instance_iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "instance_iam_role_arn"
+      },
+      {
+        "description": "The `domain_name` and `service_arn` separated by a comma (`,`)",
+        "name": "custom_domain_association_id"
+      }
+    ]
+  },
   "built_from_version": "1.2.2",
   "module_id": "terraform-aws-modules/app-runner/aws",
   "vars": {

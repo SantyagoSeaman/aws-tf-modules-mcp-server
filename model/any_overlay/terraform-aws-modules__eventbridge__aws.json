@@ -1,4 +1,729 @@
 {
+  "all_inputs": {
+    "root": [
+      {
+        "default": "[]",
+        "description": "List of policy statements ARN to attach to IAM role",
+        "name": "policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Connection definitions.",
+        "name": "connections",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Description of IAM role to use for EventBridge",
+        "name": "role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM policy to use for EventBridge",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS SNS's you want to use as EventBridge targets",
+        "name": "sns_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Additional trusted entities for assuming roles (trust relationship)",
+        "name": "trusted_entities",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-pipe' to the name of the pipe",
+        "name": "append_pipe_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SNS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sns_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the StepFunctions you want to use as EventBridge targets",
+        "name": "sfn_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_jsons should be added to IAM role",
+        "name": "attach_policy_jsons",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies JSON to attach to IAM role",
+        "name": "number_of_policy_jsons",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The configuration block for the EventBridge bus log config settings",
+        "name": "log_config",
+        "required": false,
+        "type": "object({\n    include_detail = string\n    level          = string\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Permission definitions.",
+        "name": "permissions",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the StepFunction policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sfn_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Kinesis Streams you want to use as EventBridge targets",
+        "name": "kinesis_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_json should be added to IAM role",
+        "name": "attach_policy_json",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge log delivery source resource should be created",
+        "name": "create_log_delivery_source",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies to force detaching any policies the IAM role has before destroying it.",
+        "name": "role_force_detach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-destination' to the name of the destination",
+        "name": "append_destination_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Connection resources should be created",
+        "name": "create_connections",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether default schemas discoverer should be created",
+        "name": "create_schemas_discoverer",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The partner event source that the new event bus will be matched with. Must match name.",
+        "name": "event_source_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Auto schemas discoverer event\"",
+        "description": "Default schemas discoverer description",
+        "name": "schemas_discoverer_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy should be added to IAM role",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_statements should be added to IAM role",
+        "name": "attach_policy_statements",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-group' to the name of the schedule group",
+        "name": "append_schedule_group_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule Group definitions.",
+        "name": "schedule_groups",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-connection' to the name of the connection",
+        "name": "append_connection_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Event bus description",
+        "name": "bus_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Target definitions.",
+        "name": "targets",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to resources.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule Group create and delete timeouts.",
+        "name": "schedule_group_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of approved roles to be passed",
+        "name": "ecs_pass_role_resources",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether list of policies should be added to IAM role",
+        "name": "attach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-schedule' to the name of the schedule",
+        "name": "append_schedule_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The identifier of the AWS KMS customer managed key for EventBridge to use, if you choose to use a customer managed key to encrypt events on this event bus. The identifier can be the key Amazon Resource Name (ARN), KeyId, key alias, or key alias ARN.",
+        "name": "kms_key_identifier",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration details of the Amazon SQS queue for EventBridge to use as a dead-letter queue (DLQ)",
+        "name": "dead_letter_config",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether X-Ray tracing policy should be added to IAM role for EventBridge",
+        "name": "attach_tracing_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Kinesis Firehose Delivery Streams you want to use as EventBridge targets",
+        "name": "kinesis_firehose_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional policy documents as JSON to attach to IAM role",
+        "name": "policy_jsons",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the ECS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_ecs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether IAM roles should be created",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Bus resource should be created",
+        "name": "create_bus",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of the configuration block for the EventBridge bus log delivery settings (key is the type of log delivery: cloudwatch_logs, s3, firehose)",
+        "name": "log_delivery",
+        "required": false,
+        "type": "map(object({\n    enabled         = optional(bool, true)\n    destination_arn = string\n    source_name     = optional(string)\n    name            = optional(string)\n    output_format   = optional(string)\n    field_delimiter = optional(string)\n    record_fields   = optional(list(string))\n    s3_delivery_configuration = optional(object({\n      enable_hive_compatible_path = optional(bool)\n      suffix_path                 = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule definitions.",
+        "name": "schedules",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies to attach to IAM role",
+        "name": "number_of_policies",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with the EventBridge Archive definitions.",
+        "name": "archives",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Destination definitions.",
+        "name": "api_destinations",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the API Destination policy should be added to IAM role for EventBridge Target",
+        "name": "attach_api_destination_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Lambda Functions you want to use as EventBridge targets",
+        "name": "lambda_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Permission resources should be created",
+        "name": "create_permissions",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether an IAM role should be created for the pipes only",
+        "name": "create_pipe_role_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for EventBridge",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS SQS Queues you want to use as EventBridge targets",
+        "name": "sqs_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  \"*\"\n]",
+        "description": "The Amazon Resource Name (ARN) of the AWS KMS's configured for AWS SNS you want Decrypt/GenerateDataKey for",
+        "name": "sns_kms_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of dynamic policy statements to attach to IAM role",
+        "name": "policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Schedule resources should be created",
+        "name": "create_schedules",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge log delivery resources should be created",
+        "name": "create_log_delivery",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of log delivery source",
+        "name": "log_delivery_source_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the IAM role used by EventBridge",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document as JSON to attach to IAM role",
+        "name": "policy_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document ARN to attach to IAM role",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Target resources should be created",
+        "name": "create_targets",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Destination resources should be created",
+        "name": "create_api_destinations",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to IAM role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Kinesis policy should be added to IAM role for EventBridge Target",
+        "name": "attach_kinesis_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Kinesis Firehose policy should be added to IAM role for EventBridge Target",
+        "name": "attach_kinesis_firehose_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Lambda Function policy should be added to IAM role for EventBridge Target",
+        "name": "attach_lambda_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Cloudwatch policy should be added to IAM role for EventBridge Target",
+        "name": "attach_cloudwatch_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Schedule Group resources should be created",
+        "name": "create_schedule_groups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"default\"",
+        "description": "A unique name for your EventBridge Bus",
+        "name": "bus_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS ECS Tasks you want to use as EventBridge targets",
+        "name": "ecs_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Archive resources should be created",
+        "name": "create_archives",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-rule' to the name of the rule",
+        "name": "append_rule_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Rule resources should be created",
+        "name": "create_rules",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Rule definitions.",
+        "name": "rules",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Pipe definitions.",
+        "name": "pipes",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Pipes resources should be created",
+        "name": "create_pipes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of IAM role to use for EventBridge",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SQS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sqs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Cloudwatch Log Streams you want to use as EventBridge targets",
+        "name": "cloudwatch_target_arns",
+        "required": false,
+        "type": "list(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The EventBridge Schedule Group ARNs",
+        "name": "eventbridge_schedule_group_arns"
+      },
+      {
+        "description": "The EventBridge Schedule Group states",
+        "name": "eventbridge_schedule_group_states"
+      },
+      {
+        "description": "The EventBridge Pipes ARNs",
+        "name": "eventbridge_pipe_arns"
+      },
+      {
+        "description": "The EventBridge Targets created and their attributes",
+        "name": "eventbridge_targets"
+      },
+      {
+        "description": "The EventBridge Permission IDs",
+        "name": "eventbridge_permission_ids"
+      },
+      {
+        "description": "The EventBridge Schedule Groups created and their attributes",
+        "name": "eventbridge_schedule_groups"
+      },
+      {
+        "description": "The EventBridge Bus Name",
+        "name": "eventbridge_bus_name"
+      },
+      {
+        "description": "The EventBridge Connection Arns",
+        "name": "eventbridge_connection_arns"
+      },
+      {
+        "description": "The EventBridge Schedule IDs created",
+        "name": "eventbridge_schedule_ids"
+      },
+      {
+        "description": "The EventBridge Schedule ARNs created",
+        "name": "eventbridge_schedule_arns"
+      },
+      {
+        "description": "The ARNs of the IAM role created for EventBridge Pipes",
+        "name": "eventbridge_pipe_role_arns"
+      },
+      {
+        "description": "The EventBridge Rules created and their attributes",
+        "name": "eventbridge_rules"
+      },
+      {
+        "description": "The EventBridge IAM roles created and their attributes",
+        "name": "eventbridge_iam_roles"
+      },
+      {
+        "description": "The EventBridge Archive ARNs",
+        "name": "eventbridge_archive_arns"
+      },
+      {
+        "description": "The EventBridge API Destination ARNs",
+        "name": "eventbridge_api_destination_arns"
+      },
+      {
+        "description": "The EventBridge Rule ARNs",
+        "name": "eventbridge_rule_arns"
+      },
+      {
+        "description": "The EventBridge Schedule Group IDs",
+        "name": "eventbridge_schedule_group_ids"
+      },
+      {
+        "description": "The name of the IAM role created for EventBridge",
+        "name": "eventbridge_role_name"
+      },
+      {
+        "description": "The EventBridge Bus ARN",
+        "name": "eventbridge_bus_arn"
+      },
+      {
+        "description": "The EventBridge Bus created and their attributes",
+        "name": "eventbridge_bus"
+      },
+      {
+        "description": "The EventBridge Archives created and their attributes",
+        "name": "eventbridge_archives"
+      },
+      {
+        "description": "The EventBridge Pipes IAM roles created and their attributes",
+        "name": "eventbridge_pipes_iam_roles"
+      },
+      {
+        "description": "The EventBridge Connection IDs",
+        "name": "eventbridge_connection_ids"
+      },
+      {
+        "description": "The ARN of the IAM role created for EventBridge",
+        "name": "eventbridge_role_arn"
+      },
+      {
+        "description": "The names of the IAM role created for EventBridge Pipes",
+        "name": "eventbridge_pipe_role_names"
+      },
+      {
+        "description": "The EventBridge Rule IDs",
+        "name": "eventbridge_rule_ids"
+      },
+      {
+        "description": "The EventBridge Pipes IDs",
+        "name": "eventbridge_pipe_ids"
+      },
+      {
+        "description": "The EventBridge Permissions created and their attributes",
+        "name": "eventbridge_permissions"
+      },
+      {
+        "description": "The EventBridge Pipes created and their attributes",
+        "name": "eventbridge_pipes"
+      },
+      {
+        "description": "The EventBridge Bus CloudWatch Log Delivery Source ARN",
+        "name": "eventbridge_log_delivery_source_arn"
+      },
+      {
+        "description": "The EventBridge Bus CloudWatch Log Delivery Source Name",
+        "name": "eventbridge_log_delivery_source_name"
+      },
+      {
+        "description": "The EventBridge Connections created and their attributes",
+        "name": "eventbridge_connections"
+      },
+      {
+        "description": "The EventBridge API Destinations created and their attributes",
+        "name": "eventbridge_api_destinations"
+      },
+      {
+        "description": "The EventBridge Schedules created and their attributes",
+        "name": "eventbridge_schedules"
+      }
+    ]
+  },
   "built_from_version": "4.3.0",
   "module_id": "terraform-aws-modules/eventbridge/aws",
   "vars": {

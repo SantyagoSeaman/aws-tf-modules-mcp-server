@@ -1,0 +1,160 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "true",
+        "description": "Whether to create SSM Parameter",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Regular expression used to validate the parameter value",
+        "name": "allowed_pattern",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Data type of the parameter. Valid values: `text`, `aws:ssm:integration` and `aws:ec2:image` for AMI format, see the [Native parameter support for Amazon Machine Image IDs](https://docs.aws.amazon.com/systems-manager/latest/userguide/parameter-store-ec2-aliases.html)",
+        "name": "data_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the parameter",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Parameter tier to assign to the parameter. If not specified, will use the default parameter tier for the region. Valid tiers are Standard, Advanced, and Intelligent-Tiering. Downgrading an Advanced tier parameter to Standard will recreate the resource",
+        "name": "tier",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Value of the parameter. This value is always marked as sensitive in the Terraform plan output, regardless of type. Additionally, write-only values are never stored to state. `value_wo_version` can be used to trigger an update and is required with this argument",
+        "name": "value_wo_version",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Whether the type of the value should be considered as secure or not",
+        "name": "secure_type",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "KMS key ID or ARN for encrypting a `SecureString`",
+        "name": "key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the parameter. If the name contains a path (e.g., any forward slashes (`/`)), it must be fully qualified with a leading forward slash (`/`)",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Overwrite an existing parameter. If not specified, defaults to `false` during create operations to avoid overwriting existing resources and then `true` for all subsequent operations once the resource is managed by Terraform",
+        "name": "overwrite",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Type of the parameter. Valid types are `String`, `StringList` and `SecureString`",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Value of the parameter",
+        "name": "value",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create SSM Parameter and ignore changes in value",
+        "name": "ignore_value_changes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of values of the parameter (will be jsonencoded to store as string natively in SSM)",
+        "name": "values",
+        "required": false,
+        "type": "list(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Insecure value of the parameter",
+        "name": "insecure_value"
+      },
+      {
+        "description": "Whether SSM parameter is a SecureString or not?",
+        "name": "secure_type"
+      },
+      {
+        "description": "Type of the parameter",
+        "name": "ssm_parameter_type"
+      },
+      {
+        "description": "Parameter value after jsondecode(). Probably this is what you are looking for",
+        "name": "value"
+      },
+      {
+        "description": "Secure value of the parameter",
+        "name": "secure_value"
+      },
+      {
+        "description": "The ARN of the parameter",
+        "name": "ssm_parameter_arn"
+      },
+      {
+        "description": "Version of the parameter",
+        "name": "ssm_parameter_version"
+      },
+      {
+        "description": "Name of the parameter",
+        "name": "ssm_parameter_name"
+      },
+      {
+        "description": "Raw value of the parameter (as it is stored in SSM). Use 'value' output to get jsondecode'd value",
+        "name": "raw_value"
+      }
+    ]
+  },
+  "built_from_version": "2.1.1",
+  "module_id": "terraform-aws-modules/ssm-parameter/aws"
+}

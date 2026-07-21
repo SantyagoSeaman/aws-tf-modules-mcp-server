@@ -1,4 +1,418 @@
 {
+  "all_inputs": {
+    "root": [
+      {
+        "default": "{}",
+        "description": "The Amazon Cognito User Pool configuration.",
+        "name": "user_pool_config",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of tags to add to GraphQL API",
+        "name": "graphql_api_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"SMALL\"",
+        "description": "The cache instance type.",
+        "name": "cache_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of datasources to create",
+        "name": "datasources",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The maximum number of resolvers that can be invoked in a single request.",
+        "name": "resolver_count_limit",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create service role for Cloudwatch logs",
+        "name": "create_logs_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name of the service role that AWS AppSync will assume to publish to Amazon CloudWatch logs in your account.",
+        "name": "log_cloudwatch_logs_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of tags to add to Cloudwatch logs IAM role",
+        "name": "logs_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The domain name that AppSync gets associated with.",
+        "name": "domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"{\\n  \\\"version\\\" : \\\"2017-02-28\\\",\\n  \\\"operation\\\": \\\"Invoke\\\",\\n  \\\"payload\\\": {\\n    \\\"arguments\\\": $util.toJson($ctx.arguments),\\n    \\\"identity\\\": $util.toJson($ctx.identity),\\n    \\\"source\\\": $util.toJson($ctx.source),\\n    \\\"request\\\": $util.toJson($ctx.request),\\n    \\\"prev\\\": $util.toJson($ctx.prev),\\n    \\\"info\\\": {\\n        \\\"selectionSetList\\\": $util.toJson($ctx.info.selectionSetList),\\n        \\\"selectionSetGraphQL\\\": $util.toJson($ctx.info.selectionSetGraphQL),\\n        \\\"parentTypeName\\\": $util.toJson($ctx.info.parentTypeName),\\n        \\\"fieldName\\\": $util.toJson($ctx.info.fieldName),\\n        \\\"variables\\\": $util.toJson($ctx.info.variables)\\n    },\\n    \\\"stash\\\": $util.toJson($ctx.stash)\\n  }\\n}\\n\"",
+        "description": "VTL request template for the direct lambda integrations",
+        "name": "direct_lambda_request_template",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"$util.toJson($ctx.result)\\n\"",
+        "description": "VTL response template for the direct lambda integrations",
+        "name": "direct_lambda_response_template",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "60",
+        "description": "Default caching TTL for resolvers when caching is enabled",
+        "name": "resolver_caching_ttl",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Whether to enable domain name association on GraphQL API",
+        "name": "domain_name_association_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Set to TRUE to exclude sections that contain information such as headers, context, and evaluated mapping templates, regardless of logging level.",
+        "name": "log_exclude_verbose_content",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"es:ESHttpDelete\",\n  \"es:ESHttpHead\",\n  \"es:ESHttpGet\",\n  \"es:ESHttpPost\",\n  \"es:ESHttpPut\"\n]",
+        "description": "List of allowed IAM actions for datasources type AMAZON_OPENSEARCH_SERVICE",
+        "name": "opensearchservice_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  \"secretsmanager:GetSecretValue\"\n]",
+        "description": "List of allowed IAM actions for secrets manager datasources type RELATIONAL_DATABASE",
+        "name": "secrets_manager_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"FULL_REQUEST_CACHING\"",
+        "description": "Caching behavior.",
+        "name": "caching_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to enable Cloudwatch logging on GraphQL API",
+        "name": "logging_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether tracing with X-ray is enabled.",
+        "name": "xray_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of GraphQL API",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The API visibility. Valid values: GLOBAL, PRIVATE.",
+        "name": "visibility",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"API_KEY\"",
+        "description": "The authentication type to use by GraphQL API",
+        "name": "authentication_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Nested argument containing Lambda authorizer configuration.",
+        "name": "lambda_authorizer_config",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "One or more additional authentication providers for the GraphqlApi.",
+        "name": "additional_authentication_provider",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create GraphQL API",
+        "name": "create_graphql_api",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether caching with Elasticache is enabled.",
+        "name": "caching_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Field logging level. Valid values: ALL, ERROR, NONE.",
+        "name": "log_field_log_level",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "At-rest encryption flag for cache.",
+        "name": "cache_at_rest_encryption_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Transit encryption flag when connecting to cache.",
+        "name": "cache_transit_encryption_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"dynamodb:GetItem\",\n  \"dynamodb:PutItem\",\n  \"dynamodb:DeleteItem\",\n  \"dynamodb:UpdateItem\",\n  \"dynamodb:Query\",\n  \"dynamodb:Scan\",\n  \"dynamodb:BatchGetItem\",\n  \"dynamodb:BatchWriteItem\"\n]",
+        "description": "List of allowed IAM actions for datasources type AMAZON_DYNAMODB",
+        "name": "dynamodb_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The schema definition, in GraphQL schema language format. Terraform cannot perform drift detection of this configuration.",
+        "name": "schema",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of functions to create",
+        "name": "functions",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable or disable introspection of the GraphQL API.",
+        "name": "introspection_config",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Nested argument containing Lambda Ehanced metrics configuration.",
+        "name": "enhanced_metrics_config",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of tags to add to all GraphQL resources created by this module",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Amazon Resource Name (ARN) of the certificate.",
+        "name": "certificate_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "1",
+        "description": "TTL in seconds for cache entries",
+        "name": "cache_ttl",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Map of API keys to create",
+        "name": "api_keys",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  \"lambda:invokeFunction\"\n]",
+        "description": "List of allowed IAM actions for datasources type AWS_LAMBDA",
+        "name": "lambda_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  \"events:PutEvents\"\n]",
+        "description": "List of allowed IAM actions for datasources type AMAZON_EVENTBRIDGE",
+        "name": "eventbridge_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  \"rds-data:BatchExecuteStatement\",\n  \"rds-data:BeginTransaction\",\n  \"rds-data:CommitTransaction\",\n  \"rds-data:ExecuteStatement\",\n  \"rds-data:RollbackTransaction\"\n]",
+        "description": "List of allowed IAM actions for datasources type RELATIONAL_DATABASE",
+        "name": "relational_database_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A description of the Domain Name.",
+        "name": "domain_name_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"es:ESHttpDelete\",\n  \"es:ESHttpHead\",\n  \"es:ESHttpGet\",\n  \"es:ESHttpPost\",\n  \"es:ESHttpPut\"\n]",
+        "description": "List of allowed IAM actions for datasources type AMAZON_ELASTICSEARCH",
+        "name": "elasticsearch_allowed_actions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN for iam permissions boundary",
+        "name": "iam_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of resolvers to create",
+        "name": "resolvers",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The maximum depth a query can have in a single request.",
+        "name": "query_depth_limit",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name of IAM role to create for Cloudwatch logs",
+        "name": "logs_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description for the IAM role to create for Cloudwatch logs",
+        "name": "logs_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Nested argument containing OpenID Connect configuration.",
+        "name": "openid_connect_config",
+        "required": false,
+        "type": "map(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Map of API Keys",
+        "name": "appsync_api_key_key"
+      },
+      {
+        "description": "Map of IDs of functions",
+        "name": "appsync_function_id"
+      },
+      {
+        "description": "The domain name that AppSync provides.",
+        "name": "appsync_domain_name"
+      },
+      {
+        "description": "The ID of your Amazon Route 53 hosted zone.",
+        "name": "appsync_domain_hosted_zone_id"
+      },
+      {
+        "description": "Map of ARNs of datasources",
+        "name": "appsync_datasource_arn"
+      },
+      {
+        "description": "Map of ARNs of resolvers",
+        "name": "appsync_resolver_arn"
+      },
+      {
+        "description": "Map of ARNs of functions",
+        "name": "appsync_function_arn"
+      },
+      {
+        "description": "Map of function IDs of functions",
+        "name": "appsync_function_function_id"
+      },
+      {
+        "description": "The Appsync Domain Name.",
+        "name": "appsync_domain_id"
+      },
+      {
+        "description": "Map of FQDNs associated with the API (no protocol and path)",
+        "name": "appsync_graphql_api_fqdns"
+      },
+      {
+        "description": "ID of GraphQL API",
+        "name": "appsync_graphql_api_id"
+      },
+      {
+        "description": "ARN of GraphQL API",
+        "name": "appsync_graphql_api_arn"
+      },
+      {
+        "description": "Map of URIs associated with the API",
+        "name": "appsync_graphql_api_uris"
+      },
+      {
+        "description": "Map of API Key ID (Formatted as ApiId:Key)",
+        "name": "appsync_api_key_id"
+      }
+    ]
+  },
   "built_from_version": "4.1.0",
   "module_id": "terraform-aws-modules/appsync/aws",
   "vars": {

@@ -1,4 +1,346 @@
 {
+  "all_inputs": {
+    "root": [
+      {
+        "default": "true",
+        "description": "Controls whether CloudWatch Logs policy should be added to IAM role for Lambda Function",
+        "name": "attach_cloudwatch_logs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the IAM role used by Step Function",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_jsons should be added to IAM role",
+        "name": "attach_policy_jsons",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy should be added to IAM role",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Amazon States Language definition of the Step Function",
+        "name": "definition",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Amazon Resource Name (ARN) of the IAM role to use for this Step Function",
+        "name": "role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether list of policies should be added to IAM role",
+        "name": "attach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to IAM role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies JSON to attach to IAM role",
+        "name": "number_of_policy_jsons",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "Step Function additional trusted entities for assuming roles (trust relationship)",
+        "name": "trusted_entities",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document as JSON to attach to IAM role",
+        "name": "policy_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM policies to use for Step Function",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the step function.",
+        "name": "sfn_state_machine_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the number of days you want to retain log events in the specified log group. Possible values are: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, and 3653.",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Specifies to force detaching any policies the IAM role has before destroying it.",
+        "name": "role_force_detach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional policy documents as JSON to attach to IAM role",
+        "name": "policy_jsons",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use an existing IAM role for this Step Function",
+        "name": "use_existing_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of Cloudwatch Logs group name to use.",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of IAM role to use for Step Function",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create Step Function resource",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use an existing CloudWatch log group or create new",
+        "name": "use_existing_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of IAM role to use for Step Function",
+        "name": "role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for Step Function",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach AWS Service policies to IAM role",
+        "name": "attach_policies_for_integrations",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_statements should be added to IAM role",
+        "name": "attach_policy_statements",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document ARN to attach to IAM role",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of policy statements ARN to attach to IAM role",
+        "name": "policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create IAM role for the Step Function",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the Step Function",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Defines what encryption configuration is used to encrypt data in the State Machine.",
+        "name": "encryption_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of AWS service integrations to allow in IAM role policy",
+        "name": "service_integrations",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_json should be added to IAM role",
+        "name": "attach_policy_json",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"STANDARD\"",
+        "description": "Determines whether a Standard or Express state machine is created. The default is STANDARD. Valid Values: STANDARD | EXPRESS",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Defines what execution history events are logged and where they are logged",
+        "name": "logging_configuration",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting log data.",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of AWS regions where IAM role can be assumed by the Step Function",
+        "name": "aws_region_assume_role",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies to attach to IAM role",
+        "name": "number_of_policies",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Map of dynamic policy statements to attach to IAM role",
+        "name": "policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Maps of tags to assign to the Step Function",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to set a version of the state machine when it is created.",
+        "name": "publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the resource.",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The current status of the Step Function",
+        "name": "state_machine_status"
+      },
+      {
+        "description": "The ARN of the IAM role created for the Step Function",
+        "name": "role_arn"
+      },
+      {
+        "description": "The ARN of the Step Function",
+        "name": "state_machine_arn"
+      },
+      {
+        "description": "The Name of the Step Function",
+        "name": "state_machine_name"
+      },
+      {
+        "description": "The ARN of state machine version",
+        "name": "state_machine_version_arn"
+      },
+      {
+        "description": "The name of the IAM role created for the Step Function",
+        "name": "role_name"
+      },
+      {
+        "description": "The ARN of the CloudWatch log group created for the Step Function",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The name of the CloudWatch log group created for the Step Function",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "The ARN of the Step Function",
+        "name": "state_machine_id"
+      },
+      {
+        "description": "The date the Step Function was created",
+        "name": "state_machine_creation_date"
+      }
+    ]
+  },
   "built_from_version": "5.1.0",
   "module_id": "terraform-aws-modules/step-functions/aws",
   "vars": {

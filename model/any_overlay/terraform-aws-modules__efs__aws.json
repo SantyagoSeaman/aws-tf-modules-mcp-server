@@ -1,0 +1,279 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "null",
+        "description": "Name to assign to the security group. If omitted, Terraform will assign a random, unique name",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(number, 2049)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    region                       = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(number, 2049)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A map of file protection configurations",
+        "name": "protection",
+        "required": false,
+        "type": "object({\n    replication_overwrite = optional(string)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of mount target definitions to create",
+        "name": "mount_targets",
+        "required": false,
+        "type": "map(object({\n    ip_address      = optional(string)\n    ip_address_type = optional(string)\n    ipv6_address    = optional(string)\n    region          = optional(string)\n    security_groups = optional(list(string), [])\n    subnet_id       = string\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of access point definitions to create",
+        "name": "access_points",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n    tags = optional(map(string), {})\n    posix_user = optional(object({\n      gid            = number\n      uid            = number\n      secondary_gids = optional(list(number))\n    }))\n    root_directory = optional(object({\n      path = optional(string)\n      creation_info = optional(object({\n        owner_gid   = number\n        owner_uid   = number\n        permissions = string\n      }))\n    }))\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The VPC ID where the security group will be created",
+        "name": "security_group_vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a replication configuration is created",
+        "name": "create_replication_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A destination configuration block",
+        "name": "replication_configuration_destination",
+        "required": false,
+        "type": "object({\n    availability_zone_name = optional(string)\n    file_system_id         = optional(string)\n    kms_key_id             = optional(string)\n    region                 = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Security group description. Defaults to Managed by Terraform",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a backup policy is `ENABLED` or `DISABLED`",
+        "name": "enable_backup_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "If `true`, the disk will be encrypted",
+        "name": "encrypted",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a policy is attached to the file system",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A flag to indicate whether to bypass the `aws_efs_file_system_policy` lockout safety check. Defaults to `false`",
+        "name": "bypass_policy_lockout_safety_check",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A list of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "policy_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    conditions = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(number, 2049)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    region                       = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(number, 2049)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A unique name (a maximum of 64 characters are allowed) used as reference when creating the Elastic File System to ensure idempotent file system creation. By default generated by Terraform",
+        "name": "creation_token",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The file system performance mode. Can be either `generalPurpose` or `maxIO`. Default is `generalPurpose`",
+        "name": "performance_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN for the KMS encryption key. When specifying `kms_key_arn`, encrypted needs to be set to `true`",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use the common policy option for denying nonsecure transport which allows all AWS principals when accessed via EFS mounted target",
+        "name": "deny_nonsecure_transport_via_mount_target",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a backup policy is created",
+        "name": "create_backup_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The AWS Availability Zone in which to create the file system. Used to create a file system that uses One Zone storage classes",
+        "name": "availability_zone_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Throughput mode for the file system. Defaults to `bursting`. Valid values: `bursting`, `elastic`, and `provisioned`. When using `provisioned`, also set `provisioned_throughput_in_mibps`",
+        "name": "throughput_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to use a name prefix for the security group. If `true`, the `security_group_name` value will be used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The throughput, measured in MiB/s, that you want to provision for the file system. Only applicable with `throughput_mode` set to `provisioned`",
+        "name": "provisioned_throughput_in_mibps",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A file system [lifecycle policy](https://docs.aws.amazon.com/efs/latest/ug/API_LifecyclePolicy.html) object",
+        "name": "lifecycle_policy",
+        "required": false,
+        "type": "object({\n    transition_to_ia                    = optional(string)\n    transition_to_archive               = optional(string)\n    transition_to_primary_storage_class = optional(string)\n  })"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the file system",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where this resource will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether `aws:SecureTransport` is required when connecting to elastic file system",
+        "name": "deny_nonsecure_transport",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Amazon Resource Name of the file system",
+        "name": "arn"
+      },
+      {
+        "description": "The ID that identifies the file system (e.g., `fs-ccfc0d65`)",
+        "name": "id"
+      },
+      {
+        "description": "The latest known metered size (in bytes) of data stored in the file system, the value is not the exact size that the file system was at any point in time",
+        "name": "size_in_bytes"
+      },
+      {
+        "description": "Map of mount targets created and their attributes",
+        "name": "mount_targets"
+      },
+      {
+        "description": "ARN of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Map of access points created and their attributes",
+        "name": "access_points"
+      },
+      {
+        "description": "The DNS name for the filesystem per [documented convention](http://docs.aws.amazon.com/efs/latest/ug/mounting-fs-mount-cmd-dns-name.html)",
+        "name": "dns_name"
+      },
+      {
+        "description": "The file system ID of the replica",
+        "name": "replication_configuration_destination_file_system_id"
+      }
+    ]
+  },
+  "built_from_version": "2.2.0",
+  "module_id": "terraform-aws-modules/efs/aws"
+}

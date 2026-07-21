@@ -1,0 +1,48 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "true",
+        "description": "Whether to create Customer Gateway resources",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name to be used on all the resources as identifier",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Maps of Customer Gateway's attributes (BGP ASN and Gateway's Internet-routable external IP address)",
+        "name": "customer_gateways",
+        "required": false,
+        "type": "map(map(any))"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "List of IDs of Customer Gateway",
+        "name": "ids"
+      },
+      {
+        "description": "Map of Customer Gateway attributes",
+        "name": "customer_gateway"
+      }
+    ]
+  },
+  "built_from_version": "3.1.1",
+  "module_id": "terraform-aws-modules/customer-gateway/aws"
+}

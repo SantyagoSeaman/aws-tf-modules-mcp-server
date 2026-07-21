@@ -1211,14 +1211,25 @@ class TestElasticacheRealAllInputs:
         ):
             assert f"| `{name}` |" in out, f"{name} still missing from sections=['inputs']"
 
-    def test_real_no_overlay_module_still_byte_identical(self, server_state):
-        """rds has zero any-vars and no committed overlay file at all -- the
-        REAL (non-fixture) model/any_overlay/ directory must leave it
-        completely unaffected by this rollout."""
-        content = get_module_documentation("rds", server_state)
-        baseline = filter_module_sections(content, ["inputs"])
+    def test_real_zero_any_module_gets_complete_input_table(self, server_state):
+        """Full-catalog extension (2026-07-21): rds has zero any-vars, but as
+        of the all-63-catalog build it now DOES get a committed overlay --
+        carrying all_inputs/all_outputs with no `vars` key. rds.md is also
+        split-scheme (no "## Main Module:" bundle, no submodules), so this
+        doubles as the real-data end-to-end proof for the
+        `_scope_for_h2_title` split-scheme fix. Fields the curated table never
+        listed (it documents a curated subset, not the full registry
+        interface) must now appear via the complete-table supersede."""
         out = get_module_impl("rds", server_state, sections=["inputs"])
-        assert out == baseline
+        for name in ("ca_cert_identifier", "auto_minor_version_upgrade", "copy_tags_to_snapshot"):
+            assert f"| `{name}` |" in out, f"{name} still missing from sections=['inputs']"
+
+    def test_real_zero_any_module_gets_no_vars_enrichment(self, server_state):
+        """rds has no `type = any` inputs at all, so its overlay carries no
+        `vars` -- no any-cell hint, no any-overlay appendix, ever."""
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert "any -- fields:" not in out
+        assert "any-typed input overlay" not in out
 
 
 class TestCompleteOutputTable:
@@ -1471,14 +1482,15 @@ class TestElasticacheRealAllOutputs:
         ):
             assert f"| `{name}` |" in out, f"{name} missing from sections=['outputs']"
 
-    def test_real_no_overlay_module_still_byte_identical(self, server_state):
-        """rds has zero any-vars and no committed overlay file at all -- the
-        REAL (non-fixture) model/any_overlay/ directory must leave it
-        completely unaffected by this rollout."""
-        content = get_module_documentation("rds", server_state)
-        baseline = filter_module_sections(content, ["outputs"])
+    def test_real_zero_any_module_gets_complete_output_table(self, server_state):
+        """Full-catalog extension (2026-07-21): rds has zero any-vars, but as
+        of the all-63-catalog build it now DOES get a committed overlay --
+        carrying all_inputs/all_outputs with no `vars` key. Output names the
+        curated table never listed must now appear via the complete-table
+        supersede."""
         out = get_module_impl("rds", server_state, sections=["outputs"])
-        assert out == baseline
+        for name in ("db_instance_ca_cert_identifier", "db_instance_domain", "db_instance_status"):
+            assert f"| `{name}` |" in out, f"{name} still missing from sections=['outputs']"
 
 
 def test_extract_interface_h3_inputs_only():

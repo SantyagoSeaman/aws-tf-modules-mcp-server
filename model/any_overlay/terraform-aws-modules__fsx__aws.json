@@ -1,4 +1,1281 @@
 {
+  "all_inputs": {
+    "lustre": [
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the source backup to create the filesystem from",
+        "name": "backup_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Adds support for Elastic Fabric Adapter (EFA) and GPUDirect Storage (GDS) to Lustre. This must be set at creation. If set this cannot be changed and this prevents changes to per_unit_storage_throughput. This is only supported when deployment_type is set to PERSISTENT_2, metadata_configuration is used, and an EFA-enabled security group is attached",
+        "name": "efa_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Sets the Lustre version for the file system that you're creating",
+        "name": "file_system_type_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Describes the amount of read and write throughput for each 1 tebibyte of storage, in MB/s/TiB, required for the `PERSISTENT_1` and `PERSISTENT_2` deployment_type",
+        "name": "per_unit_storage_throughput",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "The Lustre root squash configuration used when creating an Amazon FSx for Lustre file system. When enabled, root squash restricts root-level access from clients that try to access your file system as a root user",
+        "name": "root_squash_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the subnets that the file system will be accessible from",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The filesystem deployment type. One of: `SCRATCH_1`, `SCRATCH_2`, `PERSISTENT_1`, `PERSISTENT_2`",
+        "name": "deployment_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the file system",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events. Default retention - 90 days",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the ID of the AWS Key Management Service (AWS KMS) key to use for encrypting data on an Amazon File Cache",
+        "name": "file_cache_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "A boolean flag indicating whether tags for the file system should be copied to backups",
+        "name": "copy_tags_to_backups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the security groups that apply to the specified network interfaces created for file system access. These security groups will apply to all network interfaces",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Throughput in MBps required for the `INTELLIGENT_TIERING` storage type. Must be 4000 or multiples of 4000",
+        "name": "throughput_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cloudwatch log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The preferred time to take daily automatic backups, in the UTC time zone.",
+        "name": "daily_automatic_backup_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone",
+        "name": "weekly_maintenance_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create a backup of the file system",
+        "name": "create_backup",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Create and delete timeout configurations for the backup",
+        "name": "backup_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the data repository associations",
+        "name": "data_repository_associations_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A boolean flag indicating whether tags for the cache should be copied to data repository associations. This value defaults to `false`",
+        "name": "file_cache_copy_tags_to_data_repository_associations",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "The configuration object for Amazon FSx for Lustre",
+        "name": "file_cache_lustre_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "The Lustre data read cache configuration used when creating an Amazon FSx for Lustre file system. Used to configure sizing mode for the cache and size of the file system's SSD read cache, in gibibytes (GiB).",
+        "name": "data_read_cache_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The type of drive cache used by `PERSISTENT_1` filesystems that are provisioned with `HDD` `storage_type`",
+        "name": "drive_cache_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the file system",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The filesystem storage type. One of `SSD`, `HDD` or `INTELLIGENT_TIERING`, defaults to `SSD`. `HDD` is only supported on `PERSISTENT_1` deployment types. `INTELLIGENT_TIERING` requires `data_read_cache_configuration` and `metadata_configuration` to be set and is only supported for `PERSISTENT_2` deployment types",
+        "name": "storage_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the log group name should be prefixed with the `cloudwatch_log_group_name` provided",
+        "name": "cloudwatch_log_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to assign to the backup",
+        "name": "backup_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of data repository associations to create",
+        "name": "data_repository_associations",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "The Lustre metadata configuration used when creating an Amazon FSx for Lustre file system. This can be used to specify a user provisioned metadata scale. This is only supported when deployment_type is set to PERSISTENT_2",
+        "name": "metadata_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a file cache is created",
+        "name": "create_file_cache",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Sets the data compression configuration for the file system. Valid values are `LZ4` and `NONE`. Default value is `NONE`",
+        "name": "data_compression_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"level\": \"WARN_ERROR\"\n}",
+        "description": "The configuration object for Amazon FSx for Lustre file systems used in the CreateFileSystem and CreateFileSystemFromBackup operations.",
+        "name": "log_configuration",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"2.12\"",
+        "description": "The version for the type of cache that you're creating",
+        "name": "file_cache_type_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The storage capacity of the cache in gibibytes (GiB). Valid values are 1200 GiB, 2400 GiB, and increments of 2400 GiB",
+        "name": "file_cache_storage_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. only valid for `PERSISTENT_1` and `PERSISTENT_2` deployment_type",
+        "name": "automatic_backup_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The storage capacity (GiB) of the file system",
+        "name": "storage_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name of the CloudWatch Log Group to send logs to. Note: `/aws/fsx/` is pre-pended to the name provided as this is a requirement by FSx",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "ontap": [
+      {
+        "default": "null",
+        "description": "The ONTAP administrative password for the fsxadmin user that you can use to administer your file system using the ONTAP CLI and REST API",
+        "name": "fsx_admin_password",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The filesystem storage type. defaults to `SSD`",
+        "name": "storage_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The number of ha_pairs to deploy for the file system. Valid values are 1 through 6. Recommend only using this parameter for 2 or more ha pairs",
+        "name": "ha_pairs",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the file system",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the security groups that apply to the specified network interfaces created for file system access. These security groups will apply to all network interfaces",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The storage capacity (GiB) of the file system",
+        "name": "storage_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are `128`, `256`, `512`, `1024`, `2048`, and `4096`. Either `throughput_capacity` or `throughput_capacity_per_ha_pair` must be specified",
+        "name": "throughput_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the IP address range in which the endpoints to access your file system will be created. By default, Amazon FSx selects an unused IP address range for you from the 198.19.* range",
+        "name": "endpoint_ip_address_range",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the subnets that the file system will be accessible from",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system",
+        "name": "disk_iops_configuration",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID for a subnet. A subnet is a range of IP addresses in your virtual private cloud (VPC)",
+        "name": "preferred_subnet_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the volumes",
+        "name": "volumes_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days",
+        "name": "automatic_backup_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the file system",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A recurring daily time, in the format `HH:MM`. HH is the zero-padded hour of the day (0-23), and MM is the zero-padded minute of the hour. For example, `05:00` specifies 5 AM daily. Requires `automatic_backup_retention_days` to be set",
+        "name": "daily_automatic_backup_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Specifies the VPC route tables in which your file system's endpoints will be created. You should specify all VPC route tables associated with the subnets in which your clients are located. By default, Amazon FSx selects your VPC's default route table",
+        "name": "route_table_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are `3072`, `6144`. This parameter should only be used when specifying the `ha_pairs` parameter. Either `throughput_capacity` or `throughput_capacity_per_ha_pair` must be specified",
+        "name": "throughput_capacity_per_ha_pair",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the storage virtual machines",
+        "name": "storage_virtual_machines_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"MULTI_AZ_1\"",
+        "description": "The filesystem deployment type. One of: `MULTI_AZ_1` or `SINGLE_AZ_1`",
+        "name": "deployment_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone",
+        "name": "weekly_maintenance_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of ONTAP storage virtual machine definitions to create",
+        "name": "storage_virtual_machines",
+        "required": false,
+        "type": "any"
+      }
+    ],
+    "openzfs": [
+      {
+        "default": "null",
+        "description": "When enabled, will skip the default final backup taken when the file system is deleted",
+        "name": "skip_final_backup",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The storage capacity (GiB) of the file system",
+        "name": "storage_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The filesystem storage type. Either `SSD` or `HDD`, defaults to `SSD`",
+        "name": "storage_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines if a root volume snapshot is created",
+        "name": "create_snapshot",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The number of days to retain automatic backups. Setting this to 0 disables automatic backups. You can retain automatic backups for a maximum of 90 days. only valid for `PERSISTENT_1` and `PERSISTENT_2` deployment_type",
+        "name": "automatic_backup_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Multi-AZ only) Specifies the IP address range in which the endpoints to access your file system will be created",
+        "name": "endpoint_ip_address_range",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the security groups that apply to the specified network interfaces created for file system access. These security groups will apply to all network interfaces",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "The SSD IOPS configuration for the Amazon FSx for NetApp ONTAP file system",
+        "name": "disk_iops_configuration",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of OpenZFS volume definitions to create",
+        "name": "volumes",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the snapshots",
+        "name": "snapshot_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "A boolean flag indicating whether tags for the file system should be copied to snapshots. The default value is `false`",
+        "name": "copy_tags_to_volumes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The preferred start time (in d:HH:MM format) to perform weekly maintenance, in the UTC time zone",
+        "name": "weekly_maintenance_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The name of the root volume snapshot",
+        "name": "snapshot_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the source backup to create the filesystem from",
+        "name": "backup_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Multi-AZ only) Required when deployment_type is set to `MULTI_AZ_1`. This specifies the subnet in which you want the preferred file server to be located",
+        "name": "preferred_subnet_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The filesystem deployment type. Only `SINGLE_AZ_1` is supported",
+        "name": "deployment_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the volumes",
+        "name": "volumes_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "The configuration for the root volume of the file system. All other volumes are children or the root volume",
+        "name": "root_volume_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The preferred time to take daily automatic backups, in the UTC time zone.",
+        "name": "daily_automatic_backup_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the file system",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the subnets that the file system will be accessible from",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Sets the throughput capacity (in MBps) for the file system that you're creating. Valid values are `128`, `256`, `512`, `1024`, and `2048`",
+        "name": "throughput_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the file system",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "A boolean flag indicating whether tags for the file system should be copied to backups",
+        "name": "copy_tags_to_backups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "(Multi-AZ only) Specifies the route tables in which Amazon FSx creates the rules for routing traffic to the correct file server. You should specify all virtual private cloud (VPC) route tables associated with the subnets in which your clients are located",
+        "name": "route_table_ids",
+        "required": false,
+        "type": "list(string)"
+      }
+    ],
+    "root": [],
+    "windows": [
+      {
+        "default": "null",
+        "description": "The number of days to retain automatic backups. Minimum of `0` and maximum of `90`. Defaults to `7`. Set to `0` to disable",
+        "name": "automatic_backup_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "The SSD IOPS configuration for the Amazon FSx for Windows File Server file system",
+        "name": "disk_iops_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Name of the CloudWatch Log Group to send logs to. Note: `/aws/fsx/` is pre-pended to the name provided as this is a requirement by FSx",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The preferred start time (in `d:HH:MM` format) to perform weekly maintenance, in the UTC time zone",
+        "name": "weekly_maintenance_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"ipv4\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all outbound traffic by default\",\n    \"ip_protocol\": \"-1\"\n  },\n  \"ipv6\": {\n    \"cidr_ipv6\": \"::/0\",\n    \"description\": \"Allow all outbound traffic by default\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the source backup to create the filesystem from",
+        "name": "backup_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The preferred time (in `HH:MM` format) to take daily automatic backups, in the UTC time zone",
+        "name": "daily_automatic_backup_start_time",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the file system deployment type, valid values are `MULTI_AZ_1`, `SINGLE_AZ_1` and `SINGLE_AZ_2`. Default value is `SINGLE_AZ_1`",
+        "name": "deployment_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the security groups that apply to the specified network interfaces created for file system access. These security groups will apply to all network interfaces",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Throughput (megabytes per second) of the file system in power of `2` increments. Minimum of `8` and maximum of `2048`",
+        "name": "throughput_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Storage capacity (GiB) of the file system. Minimum of 32 and maximum of 65536. If the storage type is set to HDD the minimum value is `2000`. Required when not creating filesystem for a backup",
+        "name": "storage_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the log group name should be prefixed with the `cloudwatch_log_group_name` provided",
+        "name": "cloudwatch_log_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cloudwatch log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN for the KMS Key to encrypt the file system at rest. Defaults to an AWS managed KMS Key",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the subnet in which you want the preferred file server to be located. Required for when deployment type is `MULTI_AZ_1`",
+        "name": "preferred_subnet_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Create, update, and delete timeout configurations for the file system",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A boolean flag indicating whether tags on the file system should be copied to backups. Defaults to `false`",
+        "name": "copy_tags_to_backups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the file system",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration block that Amazon FSx uses to join the Windows File Server instance to your self-managed (including on-premises) Microsoft Active Directory (AD) directory. Cannot be specified with `active_directory_id`",
+        "name": "self_managed_active_directory",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the storage type, Valid values are `SSD` and `HDD`. `HDD` is supported on `SINGLE_AZ_2` and `MULTI_AZ_1` Windows file system deployment types. Default value is `SSD`",
+        "name": "storage_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ID for an existing Microsoft Active Directory instance that the file system should join when it's created. Cannot be specified with `self_managed_active_directory`",
+        "name": "active_directory_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "An array DNS alias names that you want to associate with the Amazon FSx file system",
+        "name": "aliases",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{\n  \"file_access_audit_log_level\": \"FAILURE_ONLY\",\n  \"file_share_access_audit_log_level\": \"FAILURE_ONLY\"\n}",
+        "description": "The configuration that Amazon FSx for Windows File Server uses to audit and log user accesses of files, folders, and file shares on the Amazon FSx for Windows File Server file system",
+        "name": "audit_log_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": " When enabled, will skip the default final backup taken when the file system is deleted. This configuration must be applied separately before attempting to delete the resource to have the desired behavior. Defaults to `false`",
+        "name": "skip_final_backup",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events. Default retention - 90 days",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IDs for the subnets that the file system will be accessible from. To specify more than a single subnet set `deployment_type` to `MULTI_AZ_1`",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "lustre": [
+      {
+        "description": "Set of Elastic Network Interface identifiers from which the file system is accessible. As explained in the [documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/mounting-on-premises.html), the first network interface returned is the primary network interface",
+        "name": "file_system_network_interface_ids"
+      },
+      {
+        "description": "Name of cloudwatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "Arn of cloudwatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "Amazon Resource Name of the backup",
+        "name": "backup_arn"
+      },
+      {
+        "description": "Identifier of the file cache",
+        "name": "file_cache_id"
+      },
+      {
+        "description": "Data repository associations created and their attributes",
+        "name": "data_repository_associations"
+      },
+      {
+        "description": "The Domain Name System (DNS) name for the cache",
+        "name": "file_cache_dns_name"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Amazon Resource Name of the file system",
+        "name": "file_system_arn"
+      },
+      {
+        "description": "DNS name for the file system, e.g., `fs-12345678.fsx.us-west-2.amazonaws.com`",
+        "name": "file_system_dns_name"
+      },
+      {
+        "description": "Identifier of the file system, e.g., `fs-12345678`",
+        "name": "file_system_id"
+      },
+      {
+        "description": "Amazon Resource Name of the file cache",
+        "name": "file_cache_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "The value to be used when mounting the filesystem",
+        "name": "file_system_mount_name"
+      },
+      {
+        "description": "Identifier of the backup",
+        "name": "backup_id"
+      }
+    ],
+    "ontap": [
+      {
+        "description": "DNS name for the file system, e.g., `fs-12345678.fsx.us-west-2.amazonaws.com`",
+        "name": "file_system_dns_name"
+      },
+      {
+        "description": "The endpoints that are used to access data or to manage the file system using the NetApp ONTAP CLI, REST API, or NetApp SnapMirror",
+        "name": "file_system_endpoints"
+      },
+      {
+        "description": "Set of Elastic Network Interface identifiers from which the file system is accessible. As explained in the [documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/mounting-on-premises.html), the first network interface returned is the primary network interface",
+        "name": "file_system_network_interface_ids"
+      },
+      {
+        "description": "A map of ONTAP storage virtual machines created and their attributes",
+        "name": "storage_virtual_machines"
+      },
+      {
+        "description": "A map of ONTAP volumes created and their attributes",
+        "name": "volumes"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Amazon Resource Name of the file system",
+        "name": "file_system_arn"
+      },
+      {
+        "description": "Identifier of the file system, e.g., `fs-12345678`",
+        "name": "file_system_id"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      }
+    ],
+    "openzfs": [
+      {
+        "description": "Identifier of the file system, e.g., `fs-12345678`",
+        "name": "file_system_id"
+      },
+      {
+        "description": "Identifier of the root volume, e.g., `fsvol-12345678`",
+        "name": "file_system_root_volume_id"
+      },
+      {
+        "description": "A map of OpenZFS volumes created and their attributes",
+        "name": "volumes"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the root volume snapshot",
+        "name": "root_volume_snapshot_arn"
+      },
+      {
+        "description": "A map of OpenZFS child volumes and their snapshots",
+        "name": "child_volumes_snapshots"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "Amazon Resource Name of the file system",
+        "name": "file_system_arn"
+      },
+      {
+        "description": "DNS name for the file system, e.g., `fs-12345678.fsx.us-west-2.amazonaws.com`",
+        "name": "file_system_dns_name"
+      },
+      {
+        "description": "Set of Elastic Network Interface identifiers from which the file system is accessible. As explained in the [documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/mounting-on-premises.html), the first network interface returned is the primary network interface",
+        "name": "file_system_network_interface_ids"
+      },
+      {
+        "description": "IP address of the endpoint that is used to access data or to manage the file system",
+        "name": "file_system_endpoint_ip_address"
+      },
+      {
+        "description": "ID of the root volume snapshot",
+        "name": "root_volume_snapshot_id"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      }
+    ],
+    "root": [],
+    "windows": [
+      {
+        "description": "DNS name for the file system, e.g., `fs-12345678.fsx.us-west-2.amazonaws.com`",
+        "name": "file_system_dns_name"
+      },
+      {
+        "description": "Identifier of the file system, e.g., `fs-12345678`",
+        "name": "file_system_id"
+      },
+      {
+        "description": "Set of Elastic Network Interface identifiers from which the file system is accessible. As explained in the [documentation](https://docs.aws.amazon.com/fsx/latest/LustreGuide/mounting-on-premises.html), the first network interface returned is the primary network interface",
+        "name": "file_system_network_interface_ids"
+      },
+      {
+        "description": "For `MULTI_AZ_1` deployment types, use this endpoint when performing administrative tasks on the file system using Amazon FSx Remote PowerShell. For `SINGLE_AZ_1` deployment types, this is the DNS name of the file system",
+        "name": "file_system_remote_administration_endpoint"
+      },
+      {
+        "description": "Name of cloudwatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Amazon Resource Name of the file system",
+        "name": "file_system_arn"
+      },
+      {
+        "description": "IP address of the primary, or preferred, file server",
+        "name": "file_system_preferred_file_server_ip"
+      },
+      {
+        "description": "Arn of cloudwatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      }
+    ]
+  },
   "built_from_version": "1.3.1",
   "module_id": "terraform-aws-modules/fsx/aws",
   "vars": {

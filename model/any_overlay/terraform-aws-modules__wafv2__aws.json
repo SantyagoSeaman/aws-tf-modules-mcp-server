@@ -1,4 +1,787 @@
 {
+  "all_inputs": {
+    "api-key": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`. Note: WAFv2 API Keys for `CLOUDFRONT` must be created in the `us-east-1` region",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The domains the API key may be used with (up to 5)",
+        "name": "token_domains",
+        "required": true,
+        "type": "list(string)"
+      }
+    ],
+    "ip-set": [
+      {
+        "default": "[]",
+        "description": "Contains an array of strings that specifies zero or more IP addresses or blocks of IP addresses in CIDR notation",
+        "name": "addresses",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "A friendly name of the IP set",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the IP set",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"IPV4\"",
+        "description": "Specify `IPV4` or `IPV6`. Valid values are `IPV4` or `IPV6`",
+        "name": "ip_address_version",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "logging-configuration": [
+      {
+        "default": "[]",
+        "description": "The parts of the request that you want to keep out of the logs. Each entry must specify exactly one of `method`, `query_string`, `uri_path`, or `single_header`",
+        "name": "redacted_fields",
+        "required": false,
+        "type": "list(object({\n    method        = optional(object({}))\n    query_string  = optional(object({}))\n    uri_path      = optional(object({}))\n    single_header = optional(object({ name = string }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A configuration block that specifies which web requests are kept in the logs and which are dropped",
+        "name": "logging_filter",
+        "required": false,
+        "type": "object({\n    default_behavior = string\n    filters = list(object({\n      behavior    = string\n      requirement = string\n      conditions = list(object({\n        action_condition = optional(object({\n          action = string\n        }))\n        label_name_condition = optional(object({\n          label_name = string\n        }))\n      }))\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the WAF logging configuration will be managed. Defaults to the provider region",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the Web ACL to associate with the logging configuration",
+        "name": "resource_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The Amazon Kinesis Data Firehose, CloudWatch Log Group, or S3 Bucket Amazon Resource Names (ARNs) that you want to associate with the Web ACL. Names must be prefixed with `aws-waf-logs-`",
+        "name": "log_destination_configs",
+        "required": true,
+        "type": "list(string)"
+      }
+    ],
+    "regex-pattern-set": [
+      {
+        "default": "[]",
+        "description": "Set of regex pattern strings",
+        "name": "regular_expressions",
+        "required": false,
+        "type": "set(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "A friendly name of the regex pattern set",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the regex pattern set",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "null",
+        "description": "Escape hatch: JSON string of WAF rules for cases where dynamic blocks cannot represent all provider features. Mutually exclusive with `rules`",
+        "name": "rule_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Specifies the domains that AWS WAF should accept in a web request token. Enables token use across multiple protected resources",
+        "name": "token_domains",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "CAPTCHA configuration for the Web ACL. Specifies how long a CAPTCHA timestamp is considered valid",
+        "name": "captcha_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Challenge configuration for the Web ACL. Specifies how long a challenge timestamp is considered valid",
+        "name": "challenge_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration for body inspection size limits per resource type. Keys are resource types (e.g., `CLOUDFRONT`, `API_GATEWAY`, `COGNITO_USER_POOL`, `APP_RUNNER_SERVICE`, `VERIFIED_ACCESS_INSTANCE`)",
+        "name": "association_config",
+        "required": false,
+        "type": "map(object({\n    default_size_inspection_limit = string\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Controls if a logging configuration should be created for the Web ACL",
+        "name": "create_logging_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"allow\"",
+        "description": "Action to perform if none of the rules contained in the Web ACL match. Use `allow` or `block` for simple actions, or provide an object for custom request handling/response. See examples for object structure",
+        "name": "default_action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of custom response body configurations. Key is the reference key, used in custom responses",
+        "name": "custom_response_bodies",
+        "required": false,
+        "type": "map(object({\n    content      = string\n    content_type = string\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Kinesis Data Firehose, CloudWatch Log Group, or S3 Bucket ARNs for the logging destination. Names must be prefixed with `aws-waf-logs-`",
+        "name": "logging_log_destination_configs",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A configuration block that specifies which web requests are kept in the logs and which are dropped",
+        "name": "logging_filter",
+        "required": false,
+        "type": "object({\n    default_behavior = string\n    filters = list(object({\n      behavior    = string\n      requirement = string\n      conditions = list(object({\n        action_condition = optional(object({\n          action = string\n        }))\n        label_name_condition = optional(object({\n          label_name = string\n        }))\n      }))\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A friendly name of the Web ACL. Mutually exclusive with `name_prefix`",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Mutually exclusive with `name` (provider rejects both being set at apply time)",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Data protection configuration. `data_protections` is a list of objects with `field` (object with `field_keys` list and `field_type` one of `SINGLE_HEADER`/`SINGLE_COOKIE`/`SINGLE_QUERY_ARGUMENT`/`QUERY_STRING`/`BODY`), `action` (`HASH` or `SUBSTITUTION`), `exclude_rate_based_details` (bool, optional), and `exclude_rule_match_details` (bool, optional)",
+        "name": "data_protection_config",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Region where the WAF logging configuration will be managed. Defaults to the provider region",
+        "name": "logging_region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of resource ARNs to associate with the Web ACL. Key is a friendly name, value is the resource ARN",
+        "name": "association_resource_arns",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the Web ACL",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of WAF rule configurations. The key is used as the rule name.\n\nEach rule supports:\n- `priority`          - (Required) Rule priority (lower = evaluated first)\n- `action`            - Action for standalone rules. Use string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom response\n- `override_action`   - Override action for managed/rule group rules. Use string (`none`, `count`) or object\n- `statement`         - (Required) Rule statement configuration. See AWS provider docs for statement structure\n- `visibility_config` - CloudWatch metrics config. Auto-generated from rule key if omitted\n- `captcha_config`    - Optional CAPTCHA configuration\n- `challenge_config`  - Optional challenge configuration\n- `rule_labels`       - Optional list of labels to add to matching requests\n\nSee examples/complete for usage patterns.\n",
+        "name": "rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "The parts of the request that you want to keep out of the logs. Each entry must specify exactly one of `method`, `query_string`, `uri_path`, or `single_header`",
+        "name": "logging_redacted_fields",
+        "required": false,
+        "type": "list(object({\n    method        = optional(object({}))\n    query_string  = optional(object({}))\n    uri_path      = optional(object({}))\n    single_header = optional(object({ name = string }))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Visibility configuration for the Web ACL. Defines CloudWatch metrics configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      }
+    ],
+    "rule-group": [
+      {
+        "default": "null",
+        "description": "A friendly description of the rule group",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The web ACL capacity units (WCUs) required for this rule group. Valid range is 1 to 1500",
+        "name": "capacity",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "\"\"",
+        "description": "A friendly name of the rule group. Conflicts with `name_prefix`",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Visibility configuration for the rule group. Defines CloudWatch metrics configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of WAF rule configurations. The key is used as the rule name.\n\nEach rule supports:\n- `priority`          - (Required) Rule priority (lower = evaluated first)\n- `action`            - Action: string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom response\n- `statement`         - (Required) Rule statement configuration. See AWS provider docs for statement structure.\n                        NOTE: rule groups cannot reference managed rule groups, rate-based statements,\n                        or other rule groups, so those statement types are not supported here.\n- `visibility_config` - CloudWatch metrics config. Auto-generated from rule key if omitted\n- `captcha_config`    - Optional CAPTCHA configuration\n- `challenge_config`  - Optional challenge configuration\n- `rule_labels`       - Optional list of labels to add to matching requests\n",
+        "name": "rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of custom response body configurations. Key is the reference key, used in custom responses",
+        "name": "custom_response_body",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Conflicts with `name`",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "web-acl-association": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the Web ACL to associate with the resource",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the resource to associate with the Web ACL (ALB, API Gateway, Cognito User Pool, AppSync, Verified Access)",
+        "name": "resource_arn",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "web-acl-rule": [
+      {
+        "default": "null",
+        "description": "Action to take when the rule matches. Use string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom request handling/response. Conflicts with `override_action`",
+        "name": "action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Override action for managed rule groups and rule group reference statements. Use string (`none`, `count`) or object. Conflicts with `action`",
+        "name": "override_action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "CAPTCHA configuration that overrides the Web ACL level setting",
+        "name": "captcha_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Challenge configuration that overrides the Web ACL level setting",
+        "name": "challenge_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "ARN of the Web ACL to add the rule to",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "Rule statement configuration. Required. Supports the full WAFv2 statement schema including managed_rule_group_statement, rate_based_statement, rule_group_reference_statement, and nested AND/OR/NOT logical statements",
+        "name": "statement",
+        "required": true,
+        "type": "any"
+      },
+      {
+        "default": "",
+        "description": "CloudWatch metrics configuration for this rule",
+        "name": "visibility_config",
+        "required": true,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "[]",
+        "description": "List of labels to apply to matching web requests. Each entry must have a `name` field",
+        "name": "rule_label",
+        "required": false,
+        "type": "list(object({\n    name = string\n  }))"
+      },
+      {
+        "default": "",
+        "description": "Name of the rule. Must be unique within the Web ACL",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "Rule priority. Rules with lower priority are evaluated first",
+        "name": "priority",
+        "required": true,
+        "type": "number"
+      }
+    ],
+    "web-acl-rule-group-association": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "Name of the rule to create in the Web ACL that references the rule group (1-128 chars)",
+        "name": "rule_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "ARN of the Web ACL to associate the Rule Group with",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Managed Rule Group configuration. One of `managed_rule_group` or `rule_group_reference` must be set",
+        "name": "managed_rule_group",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "CloudWatch metrics + sampled requests configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = string\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "",
+        "description": "Priority of the rule within the Web ACL. Lower numbers are evaluated first",
+        "name": "priority",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Override action for the rule group. Valid values are `none` and `count`. Defaults to `none`",
+        "name": "override_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Custom Rule Group reference. One of `managed_rule_group` or `rule_group_reference` must be set",
+        "name": "rule_group_reference",
+        "required": false,
+        "type": "any"
+      }
+    ]
+  },
+  "all_outputs": {
+    "api-key": [
+      {
+        "description": "The generated API key. Sensitive — do not log",
+        "name": "api_key"
+      },
+      {
+        "description": "The scope (REGIONAL or CLOUDFRONT) of the API key",
+        "name": "scope"
+      },
+      {
+        "description": "The token domains the API key is bound to",
+        "name": "token_domains"
+      }
+    ],
+    "ip-set": [
+      {
+        "description": "The ID of the IP set",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the IP set",
+        "name": "arn"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "lock_token"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "logging-configuration": [
+      {
+        "description": "The ID of the WAF logging configuration",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the Web ACL associated with the logging configuration",
+        "name": "resource_arn"
+      }
+    ],
+    "regex-pattern-set": [
+      {
+        "description": "The ID of the regex pattern set",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the regex pattern set",
+        "name": "arn"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "lock_token"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "root": [
+      {
+        "description": "The name of the Web ACL",
+        "name": "web_acl_name"
+      },
+      {
+        "description": "The description of the Web ACL",
+        "name": "web_acl_description"
+      },
+      {
+        "description": "List of rule names in the Web ACL",
+        "name": "web_acl_rule_names"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "web_acl_tags_all"
+      },
+      {
+        "description": "Map of Web ACL association IDs",
+        "name": "web_acl_association_ids"
+      },
+      {
+        "description": "The ID of the Web ACL",
+        "name": "web_acl_id"
+      },
+      {
+        "description": "The ARN of the Web ACL",
+        "name": "web_acl_arn"
+      },
+      {
+        "description": "Web ACL capacity units (WCUs) currently being used by this Web ACL",
+        "name": "web_acl_capacity"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "web_acl_lock_token"
+      },
+      {
+        "description": "The URL to use in SDK integrations with managed rule groups",
+        "name": "web_acl_application_integration_url"
+      },
+      {
+        "description": "The visibility configuration of the Web ACL",
+        "name": "web_acl_visibility_config"
+      },
+      {
+        "description": "The ID of the WAF logging configuration",
+        "name": "logging_configuration_id"
+      }
+    ],
+    "rule-group": [
+      {
+        "description": "The ID of the WAF rule group",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the WAF rule group",
+        "name": "arn"
+      },
+      {
+        "description": "Lock token used by AWS to detect concurrent modifications",
+        "name": "lock_token"
+      },
+      {
+        "description": "The capacity (WCUs) configured for the rule group",
+        "name": "capacity"
+      },
+      {
+        "description": "Map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "web-acl-association": [
+      {
+        "description": "The ID of the Web ACL association",
+        "name": "id"
+      }
+    ],
+    "web-acl-rule": [
+      {
+        "description": "Name of the rule",
+        "name": "name"
+      },
+      {
+        "description": "Priority of the rule",
+        "name": "priority"
+      },
+      {
+        "description": "ARN of the Web ACL the rule is attached to",
+        "name": "web_acl_arn"
+      }
+    ],
+    "web-acl-rule-group-association": [
+      {
+        "description": "Priority of the rule",
+        "name": "priority"
+      },
+      {
+        "description": "ARN of the parent Web ACL",
+        "name": "web_acl_arn"
+      },
+      {
+        "description": "Name of the rule created in the Web ACL",
+        "name": "rule_name"
+      }
+    ]
+  },
   "built_from_version": "2.1.0",
   "module_id": "terraform-aws-modules/wafv2/aws",
   "vars": {
