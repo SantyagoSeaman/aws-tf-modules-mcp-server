@@ -167,7 +167,7 @@ class TestSearchModulesTool:
             assert len(hit.description) <= 203, "description should be truncated to ~200 chars"
 
     def test_search_hit_includes_module_id(self, server_state):
-        """Test that search hits surface module_id and latest_version for chaining into grep_module_docs."""
+        """Test that search hits surface module_id and latest_version registry coordinates."""
         result = search_modules_impl("vpc", server_state)
 
         top = result.results[0]
@@ -344,19 +344,21 @@ class TestGetModuleSections:
         assert 'version = "' in head, "Pin hint should show an exact version pin"
 
     def test_response_carries_escalation_pointer(self, server_state):
-        """Head and filtered responses point to grep_module_docs for complete/exact data."""
+        """Head and filtered responses point to the module source for complete/exact
+        data now that grep_module_docs (D7, 2026-07-21) has been removed."""
         for resp in (
             get_module_impl("s3-bucket", server_state),
             get_module_impl("s3-bucket", server_state, sections=["inputs"]),
         ):
-            assert "grep_module_docs" in resp, "Response must point to the live-registry tier"
+            assert "grep_module_docs" not in resp, "Response must not reference the removed grep tool"
             assert "COMPLETE inputs/outputs" in resp, "Response must flag that it is a curated subset"
             assert "module source" in resp, "Response must name source as the creation-condition tier"
 
     def test_footer_grep_hint_mentions_shapes(self):
-        """Footer still carries the TYPE/SHAPE phrase -- now scoped to grep's one
-        remaining reserved case (a map(object)/any field's nested sub-shape),
-        not to names (D1, 2026-07-21)."""
+        """D7 (2026-07-21): grep_module_docs was removed outright. The footer
+        still carries the TYPE/SHAPE phrase for the one case it used to
+        reserve for grep (a map(object)/any field's nested sub-shape), but now
+        routes it to the module source directly instead of a live-grep tool."""
         doc = (
             "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
             "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
@@ -382,19 +384,20 @@ class TestGetModuleSections:
             "to confirm a name exists, grep the live doc" not in out
         ), "Old name-confirmation-to-grep phrasing must be gone"
 
-    def test_footer_still_reserves_grep_for_version_non_catalog_nested_cases(self):
-        """D1: grep_module_docs stays the pointer for the three cases only it
-        serves -- a module outside the catalog, a pinned/older version, or a
-        map(object)/any field's nested sub-shape."""
+    def test_footer_routes_remaining_escalation_cases_to_module_source_not_grep(self):
+        """D7 (2026-07-21): grep_module_docs was removed outright. The footer
+        still names the three cases it used to reserve for grep -- a module
+        outside the catalog, a pinned/older version, or a map(object)/any
+        field's nested sub-shape -- but must never name the removed tool."""
         doc = (
             "---\nm: x\n---\n\n## Module Information\n\n- **Module ID**: x/y/aws\n\n"
             "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
         )
         out = filter_module_sections(doc, [])
-        assert "grep_module_docs" in out, "Footer must still name grep_module_docs for its reserved cases"
-        assert "outside this catalog" in out, "Footer must still reserve grep for non-catalog modules"
-        assert "pinned" in out.lower(), "Footer must still reserve grep for pinned/older versions"
-        assert "nested" in out.lower(), "Footer must still reserve grep for a nested map(object)/any sub-shape"
+        assert "grep_module_docs" not in out, "Footer must not reference the removed grep tool"
+        assert "outside this catalog" in out, "Footer must still reserve an escalation for non-catalog modules"
+        assert "pinned" in out.lower(), "Footer must still reserve an escalation for pinned/older versions"
+        assert "nested" in out.lower(), "Footer must still reserve an escalation for a nested map(object)/any sub-shape"
 
     def test_head_cap_pointer_mentions_full_interface(self, server_state):
         """D1: the capped head input-table pointer (fires when a module's root
@@ -414,7 +417,7 @@ class TestGetModuleSections:
             "## Description\n\nd\n\n## Notes for AI Agents\n\nn\n"
         )
         out = filter_module_sections(doc, [])
-        disclaimer_line = next(line for line in out.splitlines() if "grep_module_docs" in line)
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
         assert len(disclaimer_line) < 400, (
             f"disclaimer line ({len(disclaimer_line)} chars) must be far shorter than the old " f"~764-char paragraph"
         )
@@ -603,7 +606,7 @@ class TestAnyOverlay:
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
         assert "Apply-verified example" in out
         assert "one accepted form" in out
-        assert "grep_module_docs" in out
+        assert "grep_module_docs" not in out, "removed grep tool must never be referenced (D7, 2026-07-21)"
 
     def test_appendix_adds_no_new_h2_heading(self, server_state, any_overlay_dir):
         """The appendix is fenced content spliced into the existing response --
@@ -672,8 +675,9 @@ class TestAnyOverlay:
 
     def test_no_network_access_serving_overlay(self, server_state, any_overlay_dir, monkeypatch):
         """Committed overlay = static data -- get_module makes zero network
-        calls while serving it. get_module stays 100% network-decoupled; live
-        Registry access stays confined to grep_module_docs."""
+        calls while serving it. get_module stays 100% network-decoupled; since
+        D7 (2026-07-21) this server makes no live Registry reads at all -- the
+        tool that used to (grep_module_docs) was removed outright."""
 
         def _blocked(*_args, **_kwargs):
             raise AssertionError("network access attempted while serving get_module")
@@ -803,12 +807,15 @@ class TestAnyOverlay:
         assert "example below" in cells[1]
 
     # ---- Fix 2 (2026-07-21): reworded appendix labels no longer invite a
-    # confirmatory grep_module_docs round-trip. ----
+    # confirmatory grep_module_docs round-trip; D7 (2026-07-21) then removed
+    # grep_module_docs outright, so the labels now route to the module
+    # source directly instead of a live-grep tool. ----
 
     def test_appendix_labels_no_longer_say_confirm_shapes_via_grep(self, server_state, any_overlay_dir):
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
         assert "confirm shapes via" not in out
         assert "not a schema" not in out
+        assert "grep_module_docs" not in out, "removed grep tool must never be referenced"
 
     def test_appendix_field_name_label_says_use_them_directly(self, server_state, any_overlay_dir):
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
@@ -820,7 +827,7 @@ class TestAnyOverlay:
         out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
         assert "copy and adapt this" in out
         assert "one accepted form" in out, "one-accepted-form caveat must survive the reword"
-        assert "consult `grep_module_docs` only for fields beyond this example" in out
+        assert "for fields beyond this example, consult the module source directly" in out
 
     # ---- no regression: a module with no overlay is byte-identical ----
 
@@ -1990,7 +1997,7 @@ class TestModulesListTool:
             assert len(module.description) <= 203, f"Description for {module.module_name} should be truncated"
 
     def test_modules_list_includes_module_id(self, server_state):
-        """Test that every catalog entry carries a non-empty module_id for chaining into grep_module_docs."""
+        """Test that every catalog entry carries a non-empty module_id registry coordinate."""
         result = modules_list_impl(server_state)
 
         assert all(m.module_id for m in result.modules), "Every module should have a non-empty module_id"
@@ -2059,26 +2066,9 @@ class TestResponseByteMetering:
     the hook at each tool's real return point is covered.
     """
 
-    @pytest.fixture
-    def cache_tmp_state(self, mcp_index, search_weights, test_logger, tmp_path):
-        """Same as the module's `server_state` fixture, but with an isolated
-        doc_cache_dir so a grep_module_docs call never touches the real
-        on-disk cache."""
-        index_path = PROJECT_ROOT / "model" / "tfmod_e5_small_index.pkl"
-        ServerStateManager.reset()
-        state = ServerStateManager.initialize(
-            index=mcp_index,
-            weights=search_weights,
-            index_path=index_path,
-            logger=test_logger,
-            doc_cache_dir=tmp_path,
-        )
-        yield state
-        ServerStateManager.reset()
-
     def test_flag_unset_emits_no_response_bytes_lines(self, server_state, caplog, monkeypatch):
         """Default (env var unset) must be a true no-op: no response_bytes
-        line from any of the four tools, behavior otherwise unchanged."""
+        line from any of the three tools, behavior otherwise unchanged."""
         monkeypatch.delenv("TFMODSEARCH_LOG_RESPONSE_BYTES", raising=False)
         with caplog.at_level(logging.INFO):
             tfmod_mcp_server.modules_list()
@@ -2128,24 +2118,6 @@ class TestResponseByteMetering:
         assert isinstance(result, str), "get_module returns a plain string -- measured directly, no re-serialization"
         expected_bytes = len(result.encode("utf-8"))
         assert lines[0] == f"response_bytes tool=get_module bytes={expected_bytes}"
-
-    def test_grep_module_docs_logs_true_byte_length(self, cache_tmp_state, caplog, monkeypatch):
-        import json
-
-        import tfmod_registry_docs as rd
-
-        fixture = json.loads((PROJECT_ROOT / "tests" / "fixtures" / "registry_vpc_min.json").read_text())
-        monkeypatch.setattr(rd, "_http_fetch", lambda ns, n, p, v: fixture)
-        monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
-        caplog.clear()
-        with caplog.at_level(logging.INFO):
-            result = tfmod_mcp_server.grep_module_docs(
-                "terraform-aws-modules/vpc/aws", "enable_nat_gateway", version="6.6.1"
-            )
-        lines = [r.message for r in caplog.records if r.message.startswith("response_bytes tool=grep_module_docs")]
-        assert len(lines) == 1, "Exactly one response_bytes line must be logged per tool call"
-        expected_bytes = len(result.model_dump_json().encode("utf-8"))
-        assert lines[0] == f"response_bytes tool=grep_module_docs bytes={expected_bytes}"
 
     def test_flag_on_does_not_change_response_content(self, server_state, monkeypatch):
         """D2 must never alter what a tool returns -- only whether a log line

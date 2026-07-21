@@ -1103,7 +1103,7 @@
     "web-acl-rule::override_action": {
       "examples": [],
       "field_names": [],
-      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see grep_module_docs for the raw module source",
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
       "provenance": "honest-any"
     },
     "web-acl-rule::statement": {

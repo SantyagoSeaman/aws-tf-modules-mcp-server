@@ -161,7 +161,7 @@ def top_level_fields(type_str: str) -> list[str]:
 
 def roster(fields: list[str], cap: int = 8) -> str:
     """Render '— fields: `a`, `b`, `c`' (all, when <= cap) or a capped version with
-    an explicit '(N shown; see grep_module_docs)' tail."""
+    an explicit '(N shown; see the module source)' tail."""
     if not fields:
         return ""
     if len(fields) <= cap:
@@ -169,7 +169,7 @@ def roster(fields: list[str], cap: int = 8) -> str:
         tail = ""
     else:
         shown = fields[:cap]
-        tail = f", … ({cap} shown; see grep_module_docs)"
+        tail = f", … ({cap} shown; see the module source)"
     rendered = ", ".join(f"`{f}`" for f in shown)
     return f"— fields: {rendered}{tail}"
 

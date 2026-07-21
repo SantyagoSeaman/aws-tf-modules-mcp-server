@@ -78,7 +78,7 @@ ALLOWED_PROVENANCE = ("example", "example+names", "names-only", "honest-any")
 _HONEST_ANY_NOTE = (
     "no example and no observed field names found in the module source; "
     "likely pass-through/context plumbing or a runtime-polymorphic value - "
-    "stays honest `any`, see grep_module_docs for the raw module source"
+    "stays honest `any`, see the module source directly for the raw shape"
 )
 
 # --------------------------------------------------------------------------- #

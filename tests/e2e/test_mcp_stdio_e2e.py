@@ -19,7 +19,7 @@ from mcp.client.stdio import stdio_client
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 SERVER_SCRIPT = PROJECT_ROOT / "src" / "tfmod_mcp_server.py"
 
-EXPECTED_TOOLS = {"modules_list", "search_modules", "get_module", "grep_module_docs"}
+EXPECTED_TOOLS = {"modules_list", "search_modules", "get_module"}
 
 
 def _server_params() -> StdioServerParameters:
