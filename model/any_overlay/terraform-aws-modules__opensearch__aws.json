@@ -579,6 +579,132 @@
       }
     ]
   },
+  "all_outputs": {
+    "collection": [
+      {
+        "description": "The JSON policy document of the encryption policy",
+        "name": "encryption_policy"
+      },
+      {
+        "description": "The version of the network policy",
+        "name": "network_policy_version"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the collection",
+        "name": "arn"
+      },
+      {
+        "description": "The JSON policy document of the network policy",
+        "name": "network_policy"
+      },
+      {
+        "description": "The JSON policy document of the access policy",
+        "name": "access_policy"
+      },
+      {
+        "description": "The version of the lifecycle policy",
+        "name": "lifecycle_policy_version"
+      },
+      {
+        "description": "The JSON policy document of the lifecycle policy",
+        "name": "lifecycle_policy"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the collection group",
+        "name": "collection_group_arn"
+      },
+      {
+        "description": "Unique identifier for the collection group",
+        "name": "collection_group_id"
+      },
+      {
+        "description": "The ARN of the Amazon Web Services KMS key used to encrypt the collection",
+        "name": "kms_key_arn"
+      },
+      {
+        "description": "Unique identifier for the collection",
+        "name": "id"
+      },
+      {
+        "description": "The version of the access policy",
+        "name": "access_policy_version"
+      },
+      {
+        "description": "Collection-specific endpoint used to submit index, search, and data upload requests to an OpenSearch Serverless collection",
+        "name": "endpoint"
+      },
+      {
+        "description": "Collection-specific endpoint used to access OpenSearch Dashboards",
+        "name": "dashboard_endpoint"
+      },
+      {
+        "description": "Name of the collection",
+        "name": "name"
+      },
+      {
+        "description": "The version of the encryption policy",
+        "name": "encryption_policy_version"
+      }
+    ],
+    "root": [
+      {
+        "description": "Map of CloudWatch log groups created and their attributes",
+        "name": "cloudwatch_logs"
+      },
+      {
+        "description": "The unique identifier for the domain",
+        "name": "domain_id"
+      },
+      {
+        "description": "The name of the domain",
+        "name": "domain_name"
+      },
+      {
+        "description": "Domain-specific endpoint used to submit index, search, and data upload requests",
+        "name": "domain_endpoint"
+      },
+      {
+        "description": "V2 domain endpoint for Dashboard that works with both IPv4 and IPv6 addresses, without https scheme",
+        "name": "domain_dashboard_endpoint_v2"
+      },
+      {
+        "description": "Map of package associations created and their attributes",
+        "name": "package_associations"
+      },
+      {
+        "description": "Map of outbound connections created and their attributes",
+        "name": "outbound_connections"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the domain",
+        "name": "domain_arn"
+      },
+      {
+        "description": "V2 domain endpoint that works with both IPv4 and IPv6 addresses, used to submit index, search, and data upload requests",
+        "name": "domain_endpoint_v2"
+      },
+      {
+        "description": "Domain-specific endpoint for Dashboard without https scheme",
+        "name": "domain_dashboard_endpoint"
+      },
+      {
+        "description": "Dual stack hosted zone ID for the domain.",
+        "name": "domain_endpoint_v2_hosted_zone_id"
+      },
+      {
+        "description": "Map of VPC endpoints created and their attributes",
+        "name": "vpc_endpoints"
+      }
+    ]
+  },
   "built_from_version": "2.11.0",
   "module_id": "terraform-aws-modules/opensearch/aws",
   "vars": {

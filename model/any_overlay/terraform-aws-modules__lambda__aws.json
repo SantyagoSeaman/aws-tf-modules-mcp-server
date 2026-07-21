@@ -1507,6 +1507,236 @@
       }
     ]
   },
+  "all_outputs": {
+    "alias": [
+      {
+        "description": "The name of the Lambda Function Alias",
+        "name": "lambda_alias_name"
+      },
+      {
+        "description": "The ARN of the Lambda Function Alias",
+        "name": "lambda_alias_arn"
+      },
+      {
+        "description": "The reason the event source mapping is in its current state",
+        "name": "lambda_alias_event_source_mapping_state_transition_reason"
+      },
+      {
+        "description": "The UUID of the created event source mapping",
+        "name": "lambda_alias_event_source_mapping_uuid"
+      },
+      {
+        "description": "The ARN to be used for invoking Lambda Function from API Gateway",
+        "name": "lambda_alias_invoke_arn"
+      },
+      {
+        "description": "Description of alias",
+        "name": "lambda_alias_description"
+      },
+      {
+        "description": "Lambda function version which the alias uses",
+        "name": "lambda_alias_function_version"
+      },
+      {
+        "description": "The the ARN of the Lambda function the event source mapping is sending events to",
+        "name": "lambda_alias_event_source_mapping_function_arn"
+      },
+      {
+        "description": "The state of the event source mapping",
+        "name": "lambda_alias_event_source_mapping_state"
+      }
+    ],
+    "deploy": [
+      {
+        "description": "CodeDeploy deployment group id",
+        "name": "codedeploy_deployment_group_id"
+      },
+      {
+        "description": "Name of IAM role used by CodeDeploy",
+        "name": "codedeploy_iam_role_name"
+      },
+      {
+        "description": "Appspec data as HCL",
+        "name": "appspec"
+      },
+      {
+        "description": "Path to a deployment script",
+        "name": "deploy_script"
+      },
+      {
+        "description": "Name of CodeDeploy application",
+        "name": "codedeploy_app_name"
+      },
+      {
+        "description": "CodeDeploy deployment group name",
+        "name": "codedeploy_deployment_group_name"
+      },
+      {
+        "description": "Appspec data as valid JSON",
+        "name": "appspec_content"
+      },
+      {
+        "description": "SHA256 of Appspec JSON",
+        "name": "appspec_sha256"
+      },
+      {
+        "description": "Deployment script",
+        "name": "script"
+      }
+    ],
+    "docker-build": [
+      {
+        "description": "The ECR image URI for deploying lambda",
+        "name": "image_uri"
+      },
+      {
+        "description": "The ID of the Docker image",
+        "name": "image_id"
+      }
+    ],
+    "root": [
+      {
+        "description": "The size in bytes of the function .zip file",
+        "name": "lambda_function_source_code_size"
+      },
+      {
+        "description": "The state of the event source mapping",
+        "name": "lambda_event_source_mapping_state"
+      },
+      {
+        "description": "The reason the event source mapping is in its current state",
+        "name": "lambda_event_source_mapping_state_transition_reason"
+      },
+      {
+        "description": "The map with S3 object data of zip archive deployed (if deployment was from S3)",
+        "name": "s3_object"
+      },
+      {
+        "description": "The name of the Lambda Function",
+        "name": "lambda_function_name"
+      },
+      {
+        "description": "The ARN for the KMS encryption key of Lambda Function",
+        "name": "lambda_function_kms_key_arn"
+      },
+      {
+        "description": "ARN of the signing profile version",
+        "name": "lambda_function_signing_profile_version_arn"
+      },
+      {
+        "description": "The URL of the Lambda Function URL",
+        "name": "lambda_function_url"
+      },
+      {
+        "description": "The the ARN of the Lambda function the event source mapping is sending events to",
+        "name": "lambda_event_source_mapping_function_arn"
+      },
+      {
+        "description": "The UUID of the created event source mapping",
+        "name": "lambda_event_source_mapping_uuid"
+      },
+      {
+        "description": "The ARN of the Lambda Function",
+        "name": "lambda_function_arn"
+      },
+      {
+        "description": "The base64-encoded representation of the source code package file",
+        "name": "lambda_function_code_sha256"
+      },
+      {
+        "description": "The ARN of the Lambda Layer with version",
+        "name": "lambda_layer_arn"
+      },
+      {
+        "description": "The date Lambda Layer resource was created",
+        "name": "lambda_layer_created_date"
+      },
+      {
+        "description": "The ARN of the IAM role created for the Lambda Function",
+        "name": "lambda_role_arn"
+      },
+      {
+        "description": "The name of the IAM role created for the Lambda Function",
+        "name": "lambda_role_name"
+      },
+      {
+        "description": "The ARN identifying your Lambda Function Version",
+        "name": "lambda_function_qualified_arn"
+      },
+      {
+        "description": "The Invoke ARN identifying your Lambda Function Version",
+        "name": "lambda_function_qualified_invoke_arn"
+      },
+      {
+        "description": "The user-defined hash of the source code package file",
+        "name": "lambda_function_source_code_hash"
+      },
+      {
+        "description": "The unique id of the IAM role created for the Lambda Function",
+        "name": "lambda_role_unique_id"
+      },
+      {
+        "description": "The date Lambda Function resource was last modified",
+        "name": "lambda_function_last_modified"
+      },
+      {
+        "description": "The event source mapping ARN",
+        "name": "lambda_event_source_mapping_arn"
+      },
+      {
+        "description": "ARN of the signing job",
+        "name": "lambda_function_signing_job_arn"
+      },
+      {
+        "description": "The Lambda Function URL generated id",
+        "name": "lambda_function_url_id"
+      },
+      {
+        "description": "The user-defined hash of the Lambda Layer source code package file",
+        "name": "lambda_layer_source_code_hash"
+      },
+      {
+        "description": "The Lambda Layer version",
+        "name": "lambda_layer_version"
+      },
+      {
+        "description": "The filename of zip archive deployed (if deployment was from local)",
+        "name": "local_filename"
+      },
+      {
+        "description": "The static ARN of the Lambda Function. Use this to avoid cycle errors between resources (e.g., Step Functions)",
+        "name": "lambda_function_arn_static"
+      },
+      {
+        "description": "Latest published version of Lambda Function",
+        "name": "lambda_function_version"
+      },
+      {
+        "description": "The ARN of the Lambda Layer without version",
+        "name": "lambda_layer_layer_arn"
+      },
+      {
+        "description": "The ARN of the Cloudwatch Log Group",
+        "name": "lambda_cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The Invoke ARN of the Lambda Function",
+        "name": "lambda_function_invoke_arn"
+      },
+      {
+        "description": "The base64-encoded representation of the Lambda Layer source code package file",
+        "name": "lambda_layer_code_sha256"
+      },
+      {
+        "description": "The size in bytes of the Lambda Layer .zip file",
+        "name": "lambda_layer_source_code_size"
+      },
+      {
+        "description": "The name of the Cloudwatch Log Group",
+        "name": "lambda_cloudwatch_log_group_name"
+      }
+    ]
+  },
   "built_from_version": "8.8.0",
   "module_id": "terraform-aws-modules/lambda/aws",
   "vars": {

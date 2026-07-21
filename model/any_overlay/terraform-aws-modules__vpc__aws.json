@@ -2002,6 +2002,530 @@
       }
     ]
   },
+  "all_outputs": {
+    "flow-log": [
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "The ID of the Flow Log",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the Flow Log",
+        "name": "arn"
+      },
+      {
+        "description": "Name of CloudWatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "ARN of CloudWatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      }
+    ],
+    "root": [
+      {
+        "description": "ID of the private network ACL",
+        "name": "private_network_acl_id"
+      },
+      {
+        "description": "A list of all outpost subnets, containing the full objects.",
+        "name": "outpost_subnet_objects"
+      },
+      {
+        "description": "ID of the redshift network ACL",
+        "name": "redshift_network_acl_id"
+      },
+      {
+        "description": "ARN of the redshift network ACL",
+        "name": "redshift_network_acl_arn"
+      },
+      {
+        "description": "List of IDs of elasticache route tables",
+        "name": "elasticache_route_table_ids"
+      },
+      {
+        "description": "List of allocation ID of Elastic IPs created for AWS NAT Gateway",
+        "name": "nat_ids"
+      },
+      {
+        "description": "ID of the IPv6 internet gateway route",
+        "name": "public_internet_gateway_ipv6_route_id"
+      },
+      {
+        "description": "List of ARNs of outpost subnets",
+        "name": "outpost_subnet_arns"
+      },
+      {
+        "description": "List of ARNs of database subnets",
+        "name": "database_subnet_arns"
+      },
+      {
+        "description": "ID of the database IPv6 egress route",
+        "name": "database_ipv6_egress_route_id"
+      },
+      {
+        "description": "ARN of the elasticache network ACL",
+        "name": "elasticache_network_acl_arn"
+      },
+      {
+        "description": "The ARN of the IAM role used when pushing logs cross account",
+        "name": "vpc_flow_log_deliver_cross_account_role"
+      },
+      {
+        "description": "A list of all private subnets, containing the full objects.",
+        "name": "private_subnet_objects"
+      },
+      {
+        "description": "List of IDs of private subnets",
+        "name": "private_subnets"
+      },
+      {
+        "description": "The ID of the main route table associated with this VPC",
+        "name": "vpc_main_route_table_id"
+      },
+      {
+        "description": "List of cidr_blocks of intra subnets",
+        "name": "intra_subnets_cidr_blocks"
+      },
+      {
+        "description": "ARN of the intra network ACL",
+        "name": "intra_network_acl_arn"
+      },
+      {
+        "description": "The ARN of the destination for VPC Flow Logs",
+        "name": "vpc_flow_log_destination_arn"
+      },
+      {
+        "description": "Whether or not the VPC has DNS support",
+        "name": "vpc_enable_dns_support"
+      },
+      {
+        "description": "The IPv6 CIDR block",
+        "name": "vpc_ipv6_cidr_block"
+      },
+      {
+        "description": "The ID of the default route table",
+        "name": "default_route_table_id"
+      },
+      {
+        "description": "ARN of the private network ACL",
+        "name": "private_network_acl_arn"
+      },
+      {
+        "description": "List of IDs of Customer Gateway",
+        "name": "cgw_ids"
+      },
+      {
+        "description": "The ID of the DHCP options",
+        "name": "dhcp_options_id"
+      },
+      {
+        "description": "List of ARNs of public subnets",
+        "name": "public_subnet_arns"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of database subnets in an IPv6 enabled VPC",
+        "name": "database_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "List of secondary CIDR blocks of the VPC",
+        "name": "vpc_secondary_cidr_blocks"
+      },
+      {
+        "description": "Name of database subnet group",
+        "name": "database_subnet_group_name"
+      },
+      {
+        "description": "ID of the database internet gateway route",
+        "name": "database_internet_gateway_route_id"
+      },
+      {
+        "description": "Tenancy of instances spin up within Default VPC",
+        "name": "default_vpc_instance_tenancy"
+      },
+      {
+        "description": "ID of elasticache subnet group",
+        "name": "elasticache_subnet_group"
+      },
+      {
+        "description": "List of IDs of the intra route table association",
+        "name": "intra_route_table_association_ids"
+      },
+      {
+        "description": "List of IDs of the ipv6 egress route",
+        "name": "private_ipv6_egress_route_ids"
+      },
+      {
+        "description": "The ARN of the IAM role used when pushing logs to Cloudwatch log group",
+        "name": "vpc_flow_log_cloudwatch_iam_role_arn"
+      },
+      {
+        "description": "ID of redshift subnet group",
+        "name": "redshift_subnet_group"
+      },
+      {
+        "description": "List of ARNs of Customer Gateway",
+        "name": "cgw_arns"
+      },
+      {
+        "description": "The ID of the VPN Gateway",
+        "name": "vgw_id"
+      },
+      {
+        "description": "The ARN of the VPN Gateway",
+        "name": "vgw_arn"
+      },
+      {
+        "description": "The ARN of the Internet Gateway",
+        "name": "igw_arn"
+      },
+      {
+        "description": "List of cidr_blocks of public subnets",
+        "name": "public_subnets_cidr_blocks"
+      },
+      {
+        "description": "ID of the outpost network ACL",
+        "name": "outpost_network_acl_id"
+      },
+      {
+        "description": "List of ARNs of redshift subnets",
+        "name": "redshift_subnet_arns"
+      },
+      {
+        "description": "The ID of the Flow Log resource",
+        "name": "vpc_flow_log_id"
+      },
+      {
+        "description": "The ID of the Internet Gateway",
+        "name": "igw_id"
+      },
+      {
+        "description": "List of ARNs of private subnets",
+        "name": "private_subnet_arns"
+      },
+      {
+        "description": "List of IDs of the private nat gateway route",
+        "name": "private_nat_gateway_route_ids"
+      },
+      {
+        "description": "List of IDs of database route tables",
+        "name": "database_route_table_ids"
+      },
+      {
+        "description": "The ID of the egress only Internet Gateway",
+        "name": "egress_only_internet_gateway_id"
+      },
+      {
+        "description": "The ARN of the Default VPC",
+        "name": "default_vpc_arn"
+      },
+      {
+        "description": "The ARN of the VPC",
+        "name": "vpc_arn"
+      },
+      {
+        "description": "ID of the public network ACL",
+        "name": "public_network_acl_id"
+      },
+      {
+        "description": "List of IDs of outpost subnets",
+        "name": "outpost_subnets"
+      },
+      {
+        "description": "ARN of the outpost network ACL",
+        "name": "outpost_network_acl_arn"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of public subnets in an IPv6 enabled VPC",
+        "name": "public_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "List of IDs of the database route table association",
+        "name": "database_route_table_association_ids"
+      },
+      {
+        "description": "The ID of the default network ACL of the Default VPC",
+        "name": "default_vpc_default_network_acl_id"
+      },
+      {
+        "description": "The ID of the main route table associated with the Default VPC",
+        "name": "default_vpc_main_route_table_id"
+      },
+      {
+        "description": "A list of all public subnets, containing the full objects.",
+        "name": "public_subnet_objects"
+      },
+      {
+        "description": "List of IDs of database subnets",
+        "name": "database_subnets"
+      },
+      {
+        "description": "List of cidr_blocks of database subnets",
+        "name": "database_subnets_cidr_blocks"
+      },
+      {
+        "description": "ARN of the database network ACL",
+        "name": "database_network_acl_arn"
+      },
+      {
+        "description": "List of IDs of intra route tables",
+        "name": "intra_route_table_ids"
+      },
+      {
+        "description": "Map of Customer Gateway attributes",
+        "name": "this_customer_gateway"
+      },
+      {
+        "description": "The ID of the default network ACL",
+        "name": "default_network_acl_id"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of outpost subnets in an IPv6 enabled VPC",
+        "name": "outpost_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "The name of the VPC specified as argument to this module",
+        "name": "name"
+      },
+      {
+        "description": "Whether or not the VPC has DNS hostname support",
+        "name": "vpc_enable_dns_hostnames"
+      },
+      {
+        "description": "List of IDs of the public route table association",
+        "name": "public_route_table_association_ids"
+      },
+      {
+        "description": "List of IDs of private route tables",
+        "name": "private_route_table_ids"
+      },
+      {
+        "description": "List of IDs of the database nat gateway route",
+        "name": "database_nat_gateway_route_ids"
+      },
+      {
+        "description": "ID of the elasticache network ACL",
+        "name": "elasticache_network_acl_id"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of intra subnets in an IPv6 enabled VPC",
+        "name": "intra_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "Tenancy of instances spin up within VPC",
+        "name": "vpc_instance_tenancy"
+      },
+      {
+        "description": "List of IDs of public route tables",
+        "name": "public_route_table_ids"
+      },
+      {
+        "description": "ID of database subnet group",
+        "name": "database_subnet_group"
+      },
+      {
+        "description": "List of IDs of redshift route tables",
+        "name": "redshift_route_table_ids"
+      },
+      {
+        "description": "A list of all elasticache subnets, containing the full objects.",
+        "name": "elasticache_subnet_objects"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of elasticache subnets in an IPv6 enabled VPC",
+        "name": "elasticache_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "ARN of the public network ACL",
+        "name": "public_network_acl_arn"
+      },
+      {
+        "description": "List of cidr_blocks of elasticache subnets",
+        "name": "elasticache_subnets_cidr_blocks"
+      },
+      {
+        "description": "List of IDs of intra subnets",
+        "name": "intra_subnets"
+      },
+      {
+        "description": "List of NAT Gateway IDs",
+        "name": "natgw_ids"
+      },
+      {
+        "description": "ID of the internet gateway route",
+        "name": "public_internet_gateway_route_id"
+      },
+      {
+        "description": "List of cidr_blocks of outpost subnets",
+        "name": "outpost_subnets_cidr_blocks"
+      },
+      {
+        "description": "List of IDs of the redshift route table association",
+        "name": "redshift_route_table_association_ids"
+      },
+      {
+        "description": "A list of all redshift subnets, containing the full objects.",
+        "name": "redshift_subnet_objects"
+      },
+      {
+        "description": "The ID of the VPC",
+        "name": "vpc_id"
+      },
+      {
+        "description": "List of IDs of the private route table association",
+        "name": "private_route_table_association_ids"
+      },
+      {
+        "description": "ID of the database network ACL",
+        "name": "database_network_acl_id"
+      },
+      {
+        "description": "The type of the destination for VPC Flow Logs",
+        "name": "vpc_flow_log_destination_type"
+      },
+      {
+        "description": "The CIDR block of the VPC",
+        "name": "vpc_cidr_block"
+      },
+      {
+        "description": "The ID of the security group created by default on VPC creation",
+        "name": "default_security_group_id"
+      },
+      {
+        "description": "The association ID for the IPv6 CIDR block",
+        "name": "vpc_ipv6_association_id"
+      },
+      {
+        "description": "List of cidr_blocks of redshift subnets",
+        "name": "redshift_subnets_cidr_blocks"
+      },
+      {
+        "description": "Whether or not the Default VPC has DNS support",
+        "name": "default_vpc_enable_dns_support"
+      },
+      {
+        "description": "ID of the intra network ACL",
+        "name": "intra_network_acl_id"
+      },
+      {
+        "description": "The ID of the security group created by default on Default VPC creation",
+        "name": "default_vpc_default_security_group_id"
+      },
+      {
+        "description": "The ID of the default route table of the Default VPC",
+        "name": "default_vpc_default_route_table_id"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of private subnets in an IPv6 enabled VPC",
+        "name": "private_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "Name of elasticache subnet group",
+        "name": "elasticache_subnet_group_name"
+      },
+      {
+        "description": "A list of all intra subnets, containing the full objects.",
+        "name": "intra_subnet_objects"
+      },
+      {
+        "description": "List of Network Interface IDs assigned to NAT Gateways",
+        "name": "natgw_interface_ids"
+      },
+      {
+        "description": "A map of VPC block public access exclusions",
+        "name": "vpc_block_public_access_exclusions"
+      },
+      {
+        "description": "List of IPv6 cidr_blocks of redshift subnets in an IPv6 enabled VPC",
+        "name": "redshift_subnets_ipv6_cidr_blocks"
+      },
+      {
+        "description": "List of IDs of the elasticache route table association",
+        "name": "elasticache_route_table_association_ids"
+      },
+      {
+        "description": "List of IDs of redshift subnets",
+        "name": "redshift_subnets"
+      },
+      {
+        "description": "List of IDs of the public redshift route table association",
+        "name": "redshift_public_route_table_association_ids"
+      },
+      {
+        "description": "List of IDs of elasticache subnets",
+        "name": "elasticache_subnets"
+      },
+      {
+        "description": "List of ARNs of elasticache subnets",
+        "name": "elasticache_subnet_arns"
+      },
+      {
+        "description": "List of ARNs of intra subnets",
+        "name": "intra_subnet_arns"
+      },
+      {
+        "description": "A list of all database subnets, containing the full objects.",
+        "name": "database_subnet_objects"
+      },
+      {
+        "description": "A list of availability zones specified as argument to this module",
+        "name": "azs"
+      },
+      {
+        "description": "List of public Elastic IPs created for AWS NAT Gateway",
+        "name": "nat_public_ips"
+      },
+      {
+        "description": "The ID of the Default VPC",
+        "name": "default_vpc_id"
+      },
+      {
+        "description": "The CIDR block of the Default VPC",
+        "name": "default_vpc_cidr_block"
+      },
+      {
+        "description": "The ID of the AWS account that owns the VPC",
+        "name": "vpc_owner_id"
+      },
+      {
+        "description": "List of IDs of public subnets",
+        "name": "public_subnets"
+      },
+      {
+        "description": "List of cidr_blocks of private subnets",
+        "name": "private_subnets_cidr_blocks"
+      },
+      {
+        "description": "Whether or not the Default VPC has DNS hostname support",
+        "name": "default_vpc_enable_dns_hostnames"
+      }
+    ],
+    "vpc-endpoints": [
+      {
+        "description": "Array containing the full resource object and attributes for all endpoints created",
+        "name": "endpoints"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      }
+    ]
+  },
   "built_from_version": "6.6.1",
   "module_id": "terraform-aws-modules/vpc/aws",
   "vars": {

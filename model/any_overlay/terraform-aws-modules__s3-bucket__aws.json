@@ -972,6 +972,168 @@
       }
     ]
   },
+  "all_outputs": {
+    "account-public-access": [
+      {
+        "description": "AWS account ID",
+        "name": "s3_account_public_access_block_id"
+      }
+    ],
+    "notification": [
+      {
+        "description": "ID of S3 bucket",
+        "name": "s3_bucket_notification_id"
+      }
+    ],
+    "object": [
+      {
+        "description": "The key of S3 object",
+        "name": "s3_object_id"
+      },
+      {
+        "description": "The ETag generated for the object (an MD5 sum of the object content).",
+        "name": "s3_object_etag"
+      },
+      {
+        "description": "A unique version ID value for the object, if bucket versioning is enabled.",
+        "name": "s3_object_version_id"
+      }
+    ],
+    "root": [
+      {
+        "description": "The Route 53 Hosted Zone ID for this bucket's region.",
+        "name": "s3_bucket_hosted_zone_id"
+      },
+      {
+        "description": "The lifecycle rules of the bucket, if the bucket is configured with lifecycle rules. If not, this will be an empty string.",
+        "name": "s3_bucket_lifecycle_configuration_rules"
+      },
+      {
+        "description": "The AWS region this bucket resides in.",
+        "name": "s3_bucket_region"
+      },
+      {
+        "description": "The domain of the website endpoint, if the bucket is configured with a website. If not, this will be an empty string. This is used to create Route 53 alias records.",
+        "name": "s3_bucket_website_domain"
+      },
+      {
+        "description": "Name of the directory bucket.",
+        "name": "s3_directory_bucket_name"
+      },
+      {
+        "description": "The ARN of the bucket. Will be of format arn:aws:s3:::bucketname.",
+        "name": "s3_bucket_arn"
+      },
+      {
+        "description": "The policy of the bucket, if the bucket is configured with a policy. If not, this will be an empty string.",
+        "name": "s3_bucket_policy"
+      },
+      {
+        "description": "The website endpoint, if the bucket is configured with a website. If not, this will be an empty string.",
+        "name": "s3_bucket_website_endpoint"
+      },
+      {
+        "description": "ARN of the directory bucket.",
+        "name": "s3_directory_bucket_arn"
+      },
+      {
+        "description": "The versioning status of the bucket. Will be 'Enabled', 'Suspended', or 'Disabled'.",
+        "name": "aws_s3_bucket_versioning_status"
+      },
+      {
+        "description": "Tags of the bucket.",
+        "name": "s3_bucket_tags"
+      },
+      {
+        "description": "The name of the bucket.",
+        "name": "s3_bucket_id"
+      },
+      {
+        "description": "The bucket domain name. Will be of format bucketname.s3.amazonaws.com.",
+        "name": "s3_bucket_bucket_domain_name"
+      },
+      {
+        "description": "The bucket region-specific domain name. The bucket domain name including the region name, please refer here for format. Note: The AWS CloudFront allows specifying S3 region-specific endpoint when creating S3 origin, it will prevent redirect issues from CloudFront to S3 Origin URL.",
+        "name": "s3_bucket_bucket_regional_domain_name"
+      }
+    ],
+    "table-bucket": [
+      {
+        "description": "Identifiers for the current version of table data.",
+        "name": "s3_table_version_tokens"
+      },
+      {
+        "description": "S3 URIs pointing to the S3 Bucket that contains the table data.",
+        "name": "s3_table_warehouse_locations"
+      },
+      {
+        "description": "The table ARNs.",
+        "name": "s3_table_arns"
+      },
+      {
+        "description": "Dates and times when the tables were created.",
+        "name": "s3_table_created_at"
+      },
+      {
+        "description": "Account IDs of the accounts that created the tables",
+        "name": "s3_table_created_by"
+      },
+      {
+        "description": "Locations of table metadata.",
+        "name": "s3_table_metadata_locations"
+      },
+      {
+        "description": "Dates and times when the tables was last modified.",
+        "name": "s3_table_modified_at"
+      },
+      {
+        "description": "Account IDs of the accounts that last modified the tables.",
+        "name": "s3_table_modified_by"
+      },
+      {
+        "description": "Types of the tables. One of customer or aws.",
+        "name": "s3_table_types"
+      },
+      {
+        "description": "ARN of the table bucket.",
+        "name": "s3_table_bucket_arn"
+      },
+      {
+        "description": "Date and time when the bucket was created.",
+        "name": "s3_table_bucket_created_at"
+      },
+      {
+        "description": "Account ID of the account that owns the table bucket.",
+        "name": "s3_table_bucket_owner_account_id"
+      },
+      {
+        "description": "Account IDs of the accounts that owns the tables.",
+        "name": "s3_table_owner_account_ids"
+      }
+    ],
+    "vectors": [
+      {
+        "description": "ARN of the S3 Vectors vector bucket",
+        "name": "vector_bucket_arn"
+      },
+      {
+        "description": "Name of the S3 Vectors vector bucket",
+        "name": "vector_bucket_name"
+      },
+      {
+        "description": "Date and time when the vector bucket was created",
+        "name": "creation_time"
+      },
+      {
+        "description": "ARNs of the vector indexes",
+        "name": "index_arns"
+      },
+      {
+        "description": "Date and time when the vector indexes were created",
+        "name": "index_creation_times"
+      }
+    ]
+  },
   "built_from_version": "5.14.1",
   "module_id": "terraform-aws-modules/s3-bucket/aws",
   "vars": {

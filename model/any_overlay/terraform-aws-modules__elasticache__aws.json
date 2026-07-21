@@ -651,6 +651,158 @@
       }
     ]
   },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The AWS ARN associated with the parameter group",
+        "name": "parameter_group_arn"
+      },
+      {
+        "description": "The ElastiCache parameter group name",
+        "name": "parameter_group_id"
+      },
+      {
+        "description": "The ElastiCache subnet group name",
+        "name": "subnet_group_name"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Because ElastiCache pulls the latest minor or patch for a version, this attribute returns the running version of the cache engine",
+        "name": "replication_group_engine_version_actual"
+      },
+      {
+        "description": "Arn of cloudwatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "List of node objects including `id`, `address`, `port` and `availability_zone`",
+        "name": "cluster_cache_nodes"
+      },
+      {
+        "description": "(Memcached only) Configuration endpoint to allow host discovery",
+        "name": "cluster_configuration_endpoint"
+      },
+      {
+        "description": "ARN of the created ElastiCache Replication Group",
+        "name": "replication_group_arn"
+      },
+      {
+        "description": "Address of the replication group configuration endpoint when cluster mode is enabled",
+        "name": "replication_group_configuration_endpoint_address"
+      },
+      {
+        "description": "ID of the ElastiCache Replication Group",
+        "name": "replication_group_id"
+      },
+      {
+        "description": "Map of CloudWatch log groups created and their attributes",
+        "name": "cloudwatch_log_groups"
+      },
+      {
+        "description": "The ARN of the ElastiCache Cluster",
+        "name": "cluster_arn"
+      },
+      {
+        "description": "Because ElastiCache pulls the latest minor or patch for a version, this attribute returns the running version of the cache engine",
+        "name": "cluster_engine_version_actual"
+      },
+      {
+        "description": "(Memcached only) DNS name of the cache cluster without the port appended",
+        "name": "cluster_address"
+      },
+      {
+        "description": "Address of the endpoint for the primary node in the replication group, if the cluster mode is disabled",
+        "name": "replication_group_primary_endpoint_address"
+      },
+      {
+        "description": "Address of the endpoint for the reader node in the replication group, if the cluster mode is disabled",
+        "name": "replication_group_reader_endpoint_address"
+      },
+      {
+        "description": "ID of the ElastiCache Global Replication Group",
+        "name": "global_replication_group_id"
+      },
+      {
+        "description": "ARN of the created ElastiCache Global Replication Group",
+        "name": "global_replication_group_arn"
+      },
+      {
+        "description": "Set of node groups (shards) on the global replication group",
+        "name": "global_replication_group_node_groups"
+      },
+      {
+        "description": "Identifiers of all the nodes that are part of this replication group",
+        "name": "replication_group_member_clusters"
+      },
+      {
+        "description": "Port of the primary node in the replication group, if the cluster mode is disabled",
+        "name": "replication_group_port"
+      },
+      {
+        "description": "The full version number of the cache engine running on the members of this global replication group",
+        "name": "global_replication_group_engine_version_actual"
+      },
+      {
+        "description": "Name of cloudwatch log group created",
+        "name": "cloudwatch_log_group_name"
+      }
+    ],
+    "serverless-cache": [
+      {
+        "description": "The amazon resource name of the serverless cache",
+        "name": "serverless_cache_arn"
+      },
+      {
+        "description": "Timestamp of when the serverless cache was created",
+        "name": "serverless_cache_create_time"
+      },
+      {
+        "description": " Represents the information required for client programs to connect to a cache node",
+        "name": "serverless_cache_endpoint"
+      },
+      {
+        "description": "The name and version number of the engine the serverless cache is compatible with",
+        "name": "serverless_cache_full_engine_version"
+      },
+      {
+        "description": "The version number of the engine the serverless cache is compatible with",
+        "name": "serverless_cache_major_engine_version"
+      },
+      {
+        "description": "Represents the information required for client programs to connect to a cache node",
+        "name": "serverless_cache_reader_endpoint"
+      },
+      {
+        "description": "The current status of the serverless cache. The allowed values are CREATING, AVAILABLE, DELETING, CREATE-FAILED and MODIFYING",
+        "name": "serverless_cache_status"
+      }
+    ],
+    "user-group": [
+      {
+        "description": "ARN of the default user",
+        "name": "default_user_arn"
+      },
+      {
+        "description": "The ARN that identifies the user group",
+        "name": "group_arn"
+      },
+      {
+        "description": "The user group identifier",
+        "name": "group_id"
+      },
+      {
+        "description": "A map of users created and their attributes",
+        "name": "users"
+      }
+    ]
+  },
   "built_from_version": "1.11.0",
   "module_id": "terraform-aws-modules/elasticache/aws",
   "vars": {

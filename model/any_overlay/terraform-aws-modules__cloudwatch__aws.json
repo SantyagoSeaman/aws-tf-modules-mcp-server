@@ -1043,6 +1043,123 @@
     ],
     "root": []
   },
+  "all_outputs": {
+    "cis-alarms": [
+      {
+        "description": "List of ARNs of the Cloudwatch metric alarm",
+        "name": "cloudwatch_metric_alarm_arns"
+      },
+      {
+        "description": "List of IDs of the Cloudwatch metric alarm",
+        "name": "cloudwatch_metric_alarm_ids"
+      }
+    ],
+    "composite-alarm": [
+      {
+        "description": "The ARN of the Cloudwatch composite alarm.",
+        "name": "cloudwatch_composite_alarm_arn"
+      },
+      {
+        "description": "The ID of the Cloudwatch composite alarm.",
+        "name": "cloudwatch_composite_alarm_id"
+      }
+    ],
+    "log-account-policy": [
+      {
+        "description": "Name of Cloudwatch log account policy",
+        "name": "log_account_policy_name"
+      }
+    ],
+    "log-anomaly-detector": [
+      {
+        "description": "The ARN of the anomaly detector.",
+        "name": "arn"
+      }
+    ],
+    "log-data-protection-policy": [
+      {
+        "description": "Name of Cloudwatch log group",
+        "name": "log_group_name"
+      }
+    ],
+    "log-group": [
+      {
+        "description": "Name of Cloudwatch log group",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "ARN of Cloudwatch log group",
+        "name": "cloudwatch_log_group_arn"
+      }
+    ],
+    "log-metric-filter": [
+      {
+        "description": "The name of the metric filter",
+        "name": "cloudwatch_log_metric_filter_id"
+      }
+    ],
+    "log-stream": [
+      {
+        "description": "Name of Cloudwatch log stream",
+        "name": "cloudwatch_log_stream_name"
+      },
+      {
+        "description": "ARN of Cloudwatch log stream",
+        "name": "cloudwatch_log_stream_arn"
+      }
+    ],
+    "log-subscription-filter": [
+      {
+        "description": "Log subscription filter name",
+        "name": "cloudwatch_log_subscription_filter_name"
+      }
+    ],
+    "metric-alarm": [
+      {
+        "description": "The ARN of the Cloudwatch metric alarm.",
+        "name": "cloudwatch_metric_alarm_arn"
+      },
+      {
+        "description": "The ID of the Cloudwatch metric alarm.",
+        "name": "cloudwatch_metric_alarm_id"
+      }
+    ],
+    "metric-alarms-by-multiple-dimensions": [
+      {
+        "description": "List of IDs of the Cloudwatch metric alarm",
+        "name": "cloudwatch_metric_alarm_ids"
+      },
+      {
+        "description": "List of ARNs of the Cloudwatch metric alarm",
+        "name": "cloudwatch_metric_alarm_arns"
+      }
+    ],
+    "metric-stream": [
+      {
+        "description": "ARN of the metric stream.",
+        "name": "cloudwatch_metric_stream"
+      },
+      {
+        "description": "Date and time in RFC3339 format that the metric stream was created.",
+        "name": "cloudwatch_metric_stream_creation_date"
+      },
+      {
+        "description": "Date and time in RFC3339 format that the metric stream was last updated.",
+        "name": "cloudwatch_metric_stream_last_update_date"
+      },
+      {
+        "description": "State of the metric stream. Possible values are running and stopped.",
+        "name": "cloudwatch_metric_stream_state"
+      }
+    ],
+    "query-definition": [
+      {
+        "description": "The query definition id.",
+        "name": "cloudwatch_query_definition_id"
+      }
+    ],
+    "root": []
+  },
   "built_from_version": "5.7.2",
   "module_id": "terraform-aws-modules/cloudwatch/aws",
   "vars": {
