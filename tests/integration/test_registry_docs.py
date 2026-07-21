@@ -5,7 +5,13 @@ from pathlib import Path
 
 import pytest
 
-from tfmod_registry_docs import assemble_document, fetch_module_source, get_assembled_docs, parse_module_id
+from tfmod_registry_docs import (
+    assemble_document,
+    fetch_module_detail,
+    fetch_module_source,
+    get_assembled_docs,
+    parse_module_id,
+)
 
 FIX = json.loads((Path(__file__).parent.parent / "fixtures/registry_vpc_min.json").read_text())
 
@@ -251,6 +257,36 @@ def test_fetch_module_source_extracts_only_tf_files_and_skips_others(tmp_path):
     assert (tmp_path / "modules/vectors/variables.tf").is_file()
     assert not (tmp_path / "README.md").exists()
     assert not (tmp_path / "LICENSE").exists()
+
+
+# --------------------------------------------------------------------------- #
+# fetch_module_detail - standalone registry detail GET (the all_inputs source
+# for build_any_overlay.py's complete-interface-in-one-call extraction). All
+# tests inject `fetch` so they run fully offline.
+# --------------------------------------------------------------------------- #
+
+
+def test_fetch_module_detail_returns_parsed_json():
+    detail_url = "https://registry.terraform.io/v1/modules/terraform-aws-modules/vpc/aws/6.6.1"
+    fetch = _fetch_returning({detail_url: json.dumps({"version": "6.6.1"}).encode()})
+    assert fetch_module_detail("terraform-aws-modules/vpc/aws", "6.6.1", fetch=fetch) == {"version": "6.6.1"}
+
+
+def test_fetch_module_detail_returns_none_on_bad_module_id():
+    assert fetch_module_detail("not-a-valid-id", "1.0.0", fetch=lambda url: b"") is None
+
+
+def test_fetch_module_detail_returns_none_on_fetch_exception():
+    def always_raises(url):
+        raise RuntimeError("network is down")
+
+    assert fetch_module_detail("terraform-aws-modules/vpc/aws", "6.6.1", fetch=always_raises) is None
+
+
+def test_fetch_module_detail_returns_none_on_malformed_json():
+    detail_url = "https://registry.terraform.io/v1/modules/terraform-aws-modules/vpc/aws/6.6.1"
+    fetch = _fetch_returning({detail_url: b"{not valid json"})
+    assert fetch_module_detail("terraform-aws-modules/vpc/aws", "6.6.1", fetch=fetch) is None
 
 
 def test_fetch_module_source_guards_against_path_traversal(tmp_path):

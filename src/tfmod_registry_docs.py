@@ -369,6 +369,34 @@ def _url_fetch(url: str, timeout: int = 25) -> bytes:
         return resp.read()
 
 
+def fetch_module_detail(
+    module_id: str,
+    version: str,
+    *,
+    fetch: Callable[[str], bytes] | None = None,
+) -> dict[str, Any] | None:
+    """
+    Fetch the raw registry module detail JSON for `module_id`@`version` (root
+    and submodule `inputs`/`outputs`/`resources`, etc.) via the same GET
+    `fetch_module_source` uses internally to resolve GitHub source -- exposed
+    standalone here so a caller (build_any_overlay.py's `all_inputs`
+    extraction, the complete-interface-in-one-call feature) can read the
+    detail's input metadata directly without also downloading source. Never
+    raises: an unparseable module_id, network error, or malformed JSON
+    response returns None.
+    """
+    fetch = fetch or _url_fetch
+    try:
+        namespace, name, provider = parse_module_id(module_id)
+    except ValueError:
+        return None
+    try:
+        detail_url = f"{REGISTRY_API_BASE}/{namespace}/{name}/{provider}/{version}"
+        return json.loads(fetch(detail_url))
+    except Exception:
+        return None
+
+
 def _parse_github_source(source: str) -> tuple[str, str] | None:
     """Extract (owner, repo) from a registry module detail's `source` field.
 
