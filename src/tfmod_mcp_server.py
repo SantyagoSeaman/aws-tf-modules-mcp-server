@@ -1992,9 +1992,15 @@ def _load_any_overlay(module_id: str) -> dict[str, Any] | None:
     never a network call. Fails closed to None on anything unexpected: no
     module_id, missing file, unreadable, malformed JSON, or the wrong shape --
     the caller then serves the honest `any` exactly as it did before this
-    feature existed. A broken/missing overlay is never a hard error for
-    get_module; only ~30 of the 63 catalog modules have any `any` inputs at
-    all, so None is the overwhelmingly common case.
+    feature existed.
+
+    Since the 2026-07-21 all-catalog build, every one of the 63 catalog
+    modules gets a committed overlay carrying `all_inputs`/`all_outputs`; only
+    modules with at least one `type = any` input additionally carry a `vars`
+    key. `vars` is therefore OPTIONAL here -- a missing key is treated as the
+    empty dict `{}` (every `.get("vars", {})`/`.get("vars") or {}` call site
+    already defaults this way), and only a PRESENT-but-wrong-shape `vars` (not
+    a dict) fails the whole overlay closed.
     """
     if not module_id:
         return None
@@ -2005,7 +2011,10 @@ def _load_any_overlay(module_id: str) -> dict[str, Any] | None:
         data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return None
-    if not isinstance(data, dict) or not isinstance(data.get("vars"), dict):
+    if not isinstance(data, dict):
+        return None
+    vars_field = data.get("vars", {})
+    if not isinstance(vars_field, dict):
         return None
     return data
 
@@ -2467,20 +2476,34 @@ _ANY_LEVEL_OUTPUT_HEADING_RE = re.compile(r"^#{2,3} (?:Main|Key) Outputs[ \t]*$"
 
 _SUBMODULE_H2_TITLE_RE = re.compile(r"(?i)^submodule\s+\d+\s*:\s*(.+)$")
 
+# Split-scheme corpus (48 of 63 catalog docs -- e.g. rds.md): the input/output
+# table sits directly under its OWN top-level H2 ("## Main Input Variables" /
+# "## Main Outputs" / "## Key Outputs"), with no enclosing "Main Module:"/
+# "Root Module:" bundle at all -- there is exactly one scope in such a doc,
+# and it is root. Without this, `_scope_for_h2_title` never resolves these H2
+# titles (they do not start with "main module"/"root module" and do not match
+# the submodule pattern), so the complete-table supersede silently no-ops on
+# the majority of the catalog.
+_SPLIT_SCHEME_ROOT_H2_TITLES = frozenset({"main input variables", "main outputs", "key outputs"})
+
 
 def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | None:
     """
-    Resolve which `all_inputs` scope (if any) an H2 bundle's title carries:
-    "root" for a "Main Module:"/"Root Module:" bundle (when the overlay has a
-    "root" scope), or a submodule scope name for a "Submodule N: <name>"
-    bundle -- matched against `candidate_scopes` by exact name first, then by
-    substring so a decorated heading (e.g. "Submodule 2: flow-log
-    (Recommended)") still resolves. Returns None for anything else --
-    Description/Key Features/the compact "## Submodules" inventory/etc. --
-    so those blocks are never touched.
+    Resolve which `all_inputs`/`all_outputs` scope (if any) an H2 bundle's
+    title carries: "root" for a "Main Module:"/"Root Module:" bundle (when
+    the overlay has a "root" scope), "root" again for a split-scheme doc's
+    own bare "Main Input Variables"/"Main Outputs"/"Key Outputs" H2 (no
+    enclosing bundle -- see `_SPLIT_SCHEME_ROOT_H2_TITLES`), or a submodule
+    scope name for a "Submodule N: <name>" bundle -- matched against
+    `candidate_scopes` by exact name first, then by substring so a decorated
+    heading (e.g. "Submodule 2: flow-log (Recommended)") still resolves.
+    Returns None for anything else -- Description/Key Features/the compact
+    "## Submodules" inventory/etc. -- so those blocks are never touched.
     """
     tl = title.strip().lower()
     if tl.startswith(("main module", "root module")):
+        return "root" if "root" in candidate_scopes else None
+    if tl in _SPLIT_SCHEME_ROOT_H2_TITLES:
         return "root" if "root" in candidate_scopes else None
     m = _SUBMODULE_H2_TITLE_RE.match(title.strip())
     if not m:

@@ -1,0 +1,16 @@
+{
+  "module_id": "terraform-aws-modules/rds/aws",
+  "built_from_version": "7.2.0",
+  "all_inputs": {
+    "root": [
+      {"name": "identifier", "type": "string", "required": true, "default": "", "description": "Name of the RDS instance"},
+      {"name": "fixture_extra_field", "type": "string", "required": false, "default": "null", "description": "Fixture-only field absent from the curated rds.md table, proving split-scheme supersede completeness"}
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {"name": "db_instance_endpoint", "description": "Connection endpoint (`hostname:port`)"},
+      {"name": "fixture_extra_output", "description": "Fixture-only output absent from the curated rds.md table, proving split-scheme supersede completeness"}
+    ]
+  }
+}

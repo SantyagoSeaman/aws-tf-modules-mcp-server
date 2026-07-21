@@ -316,11 +316,26 @@ class TestGetModuleSections:
         assert get_module_impl("security-group", server_state, sections=None) == head
 
     def test_full_escape_hatch_returns_complete_document(self, server_state):
-        """sections=['all'] bypasses filtering and returns the unmodified full document."""
+        """sections=['all'] bypasses section filtering/truncation -- the full
+        section inventory is always present. Since the 2026-07-21 all-63-
+        catalog build every module carries a committed any-overlay (all_
+        inputs/all_outputs at minimum), so the complete-interface-table
+        supersede and any-overlay appendix transforms still apply here
+        exactly as they do for every other view -- there is no longer a
+        catalog module for which the raw doc is untouched, so the baseline is
+        built through the same transform pipeline get_module_impl uses for
+        this branch (mirrors TestCompleteInputTable/TestCompleteOutputTable's
+        own full-doc-escape-hatch checks)."""
         for key in ("all", "full", "everything"):
             full = get_module_impl("security-group", server_state, sections=[key])
             raw = get_module_documentation("security-group", server_state)
-            assert full == raw, f"sections=['{key}'] should return the complete document verbatim"
+            expected = tfmod_mcp_server._content_with_complete_input_tables(raw)
+            expected = tfmod_mcp_server._content_with_complete_output_tables(expected)
+            expected = tfmod_mcp_server._inline_any_overlay_input_cells(expected, raw)
+            expected = tfmod_mcp_server._with_any_overlay_appendix(expected, raw, is_filtered=False)
+            assert (
+                full == expected
+            ), f"sections=['{key}'] should return the complete document (overlay transforms applied)"
 
     def test_orientation_head_includes_version_pin_hint(self, server_state):
         """The default head surfaces an actionable exact-version pin (BUG-5)."""
@@ -928,6 +943,29 @@ class TestAnyOverlay:
         monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
         assert tfmod_mcp_server._load_any_overlay("x/y/aws") is None
 
+    def test_load_any_overlay_missing_vars_key_is_valid(self, tmp_path, monkeypatch):
+        """A zero-any catalog module's overlay carries all_inputs/all_outputs
+        and NO `vars` key at all (not even an empty one) -- this must load
+        successfully, not fail closed."""
+        (tmp_path / "x__y__aws.json").write_text(
+            '{"module_id": "x/y/aws", "built_from_version": "1.0.0", "all_inputs": {"root": []}}',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
+        overlay = tfmod_mcp_server._load_any_overlay("x/y/aws")
+        assert overlay is not None
+        assert "vars" not in overlay
+
+    def test_load_any_overlay_present_but_wrong_shape_vars_returns_none(self, tmp_path, monkeypatch):
+        """A PRESENT `vars` key that is not a dict still fails the whole
+        overlay closed -- only a MISSING `vars` key is treated as empty."""
+        (tmp_path / "x__y__aws.json").write_text(
+            '{"module_id": "x/y/aws", "built_from_version": "1.0.0", "vars": ["not", "a", "dict"]}',
+            encoding="utf-8",
+        )
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", tmp_path)
+        assert tfmod_mcp_server._load_any_overlay("x/y/aws") is None
+
 
 class TestAnyOverlaySubmoduleAddress:
     """MAJOR 1 fix: get_module_impl's submodule-address branch
@@ -1305,6 +1343,104 @@ class TestCompleteOutputTable:
         out = get_module_impl("cloudwatch", server_state, sections=["outputs"])
         assert "fixture_extra_field" not in out
         assert "fixture_cloudwatch_marker" not in out
+
+
+class TestNoVarsOverlaySplitScheme:
+    """
+    Full-catalog extension (2026-07-21): every one of the 63 catalog modules
+    now gets a committed overlay carrying all_inputs/all_outputs, but only
+    modules with at least one `type = any` input also carry a `vars` key. Two
+    things must hold for the ~41 zero-any modules:
+
+    1. `_load_any_overlay` must accept an overlay with NO `vars` key at all
+       (not just an empty `vars: {}`) -- it used to require `vars` to be a
+       present dict, which would silently reject every such overlay.
+    2. The complete-table supersede must actually fire for the SPLIT-SCHEME
+       corpus (48 of 63 docs, e.g. rds.md) -- a doc with no submodules, whose
+       "Main Input Variables"/"Main Outputs" table sits directly under its
+       own top-level H2, not wrapped in a "Main Module: X" bundle. Without a
+       root-scope match for that bare heading, `_scope_for_h2_title` always
+       returned None for these docs and the supersede silently no-opped on
+       the majority of the catalog.
+
+    Uses a FIXTURE overlay (tests/fixtures/any_overlay/rds.json) with
+    all_inputs/all_outputs at "root" scope and NO "vars" key, against the
+    real, committed rds.md doc (confirmed split-scheme: no "## Main Module:"/
+    "## Submodules" heading at all).
+    """
+
+    @pytest.fixture
+    def any_overlay_dir(self, monkeypatch):
+        monkeypatch.setattr(tfmod_mcp_server, "_ANY_OVERLAY_DIR", ANY_OVERLAY_FIXTURES)
+        return ANY_OVERLAY_FIXTURES
+
+    def test_load_any_overlay_accepts_missing_vars_key(self, any_overlay_dir):
+        overlay = tfmod_mcp_server._load_any_overlay("terraform-aws-modules/rds/aws")
+        assert overlay is not None
+        assert "vars" not in overlay
+        assert overlay["all_inputs"]["root"][0]["name"] == "identifier"
+
+    def test_complete_input_table_fires_for_split_scheme_doc(self, server_state, any_overlay_dir):
+        """The primary anti-silent-no-op guard for the split-scheme fix: a
+        field with no row at all in the curated rds.md doc now appears."""
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert "| `fixture_extra_field` |" in out
+
+    def test_complete_input_table_preserves_curated_rows_and_description(self, server_state, any_overlay_dir):
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "identifier")
+        assert cells[4] == "Name of the RDS instance"
+
+    def test_complete_output_table_fires_for_split_scheme_doc(self, server_state, any_overlay_dir):
+        out = get_module_impl("rds", server_state, sections=["outputs"])
+        assert "| `fixture_extra_output` |" in out
+
+    def test_complete_output_table_preserves_curated_description(self, server_state, any_overlay_dir):
+        out = get_module_impl("rds", server_state, sections=["outputs"])
+        cells = _output_row_cells(out, "db_instance_endpoint")
+        assert cells[1] == "Connection endpoint (`hostname:port`)"
+
+    def test_no_any_cell_hint_injected_without_vars(self, server_state, any_overlay_dir):
+        """No `vars` key -> no any-typed cell substitution anywhere (there is
+        nothing to hint at)."""
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert "any -- fields:" not in out
+        assert "any -- see any-overlay example below" not in out
+
+    def test_no_any_overlay_appendix_injected_without_vars(self, server_state, any_overlay_dir):
+        """No `vars` key -> the any-overlay appendix (example HCL / field
+        list block) never renders -- `_render_any_overlay_appendix` returns
+        "" for an empty vars_obj, so `_insert_before_footer` is a no-op."""
+        out = get_module_impl("rds", server_state, sections=["inputs"])
+        assert "any-typed input overlay" not in out
+
+    def test_does_not_crash_on_full_doc_escape_hatch(self, server_state, any_overlay_dir):
+        out = get_module_impl("rds", server_state, sections=["all"])
+        assert "| `fixture_extra_field` |" in out
+        assert "| `fixture_extra_output` |" in out
+
+    def test_head_unchanged_byte_identical(self, server_state, any_overlay_dir):
+        """The default orientation head never gets the complete table --
+        byte-identical to the pre-feature head even with a no-vars overlay
+        present."""
+        content = get_module_documentation("rds", server_state)
+        baseline = orientation_head(content)
+        head = get_module_impl("rds", server_state)
+        assert head == baseline
+
+    # ---- unit-level: _scope_for_h2_title split-scheme root resolution ----
+
+    def test_scope_for_h2_title_split_scheme_input_heading(self):
+        assert tfmod_mcp_server._scope_for_h2_title("Main Input Variables", frozenset({"root"})) == "root"
+
+    def test_scope_for_h2_title_split_scheme_output_headings(self):
+        assert tfmod_mcp_server._scope_for_h2_title("Main Outputs", frozenset({"root"})) == "root"
+        assert tfmod_mcp_server._scope_for_h2_title("Key Outputs", frozenset({"root"})) == "root"
+
+    def test_scope_for_h2_title_split_scheme_root_absent_from_candidates(self):
+        """A doc whose overlay has no "root" scope (e.g. cloudwatch, which
+        is submodule-only) must not resolve the bare heading to "root"."""
+        assert tfmod_mcp_server._scope_for_h2_title("Main Input Variables", frozenset({"log-group"})) is None
 
 
 class TestElasticacheRealAllOutputs:
