@@ -7,7 +7,7 @@
 - **Source**: `terraform-aws-modules/s3-bucket/aws`
 - **GitHub Repository**: https://github.com/terraform-aws-modules/terraform-aws-s3-bucket
 - **Terraform Registry**: https://registry.terraform.io/modules/terraform-aws-modules/s3-bucket/aws/latest
-- **Latest Version**: 5.14.1
+- **Latest Version**: 5.15.1
 - **Purpose**: Terraform module that creates and configures AWS S3 buckets (standard, S3 Express directory buckets, S3 Table buckets, and S3 Vectors buckets) with nearly all features exposed by the AWS provider
 - **Service**: AWS S3 (Simple Storage Service)
 - **Category**: Storage, Object Storage
