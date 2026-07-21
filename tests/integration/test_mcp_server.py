@@ -36,6 +36,17 @@ from tfmod_search_lib import load_index
 ANY_OVERLAY_FIXTURES = PROJECT_ROOT / "tests" / "fixtures" / "any_overlay"
 
 
+def _input_row_cells(rendered: str, var_name: str) -> list[str]:
+    """Locate the Main Input Variables row for `var_name` (a bare, backtick-
+    wrapped Variable-column cell, e.g. "lifecycle_rule") and split it into
+    cells via the server's own table-row splitter, for precise cell-level
+    assertions instead of fragile whole-row substring/comma counting (a
+    Description cell can carry its own commas/backticked names that would
+    otherwise collide with a Type-cell assertion)."""
+    matched = next(row for row in rendered.splitlines() if row.startswith(f"| `{var_name}`"))
+    return tfmod_mcp_server._split_table_row(matched)
+
+
 @pytest.fixture(scope="module")
 def test_logger():
     """Provide a logger for tests."""
@@ -633,6 +644,93 @@ class TestAnyOverlay:
         full = get_module_impl("s3-bucket", server_state, sections=["all"])
         assert len(head) < len(full)
         assert "more inputs" in head, "cap pointer line must still be present"
+
+    # ---- Fix 1 (2026-07-21): inline the field-name hint AT the input-table
+    # row, not only in the appendix below it -- an A/B eval measured a worker
+    # reading the table, seeing bare `any`, and grepping instead of scrolling
+    # down to the appendix. ----
+
+    def test_inputs_table_cell_inlines_field_names_for_overlay_var(self, server_state, any_overlay_dir):
+        """`lifecycle_rule`'s Type cell in the sections=["inputs"] TABLE gets
+        its overlay field names inlined, capped at 6 with a "+N more" tail,
+        and a pointer to the example -- the row splits into the same 4
+        columns as every other row (pipe-structure intact)."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "lifecycle_rule")
+        assert len(cells) == 4, "row must still split into exactly 4 columns"
+        assert cells[1] == (
+            "any -- fields: id, enabled, status, expiration, transition, filter, +2 more; example below"
+        ), f"unexpected rendered Type cell: {cells[1]!r}"
+        # The full field list (including the 7th/8th names dropped from the
+        # capped cell) still lives in the appendix, one call away.
+        assert "abort_incomplete_multipart_upload_days" in out
+
+    def test_inputs_table_cell_field_names_capped_at_six(self, server_state, any_overlay_dir):
+        """Never more than 6 names inlined before the "+N more" tail (token
+        budget / one-line-per-row) -- the 7th/8th overlay field names must
+        not leak into the Type cell itself, only be folded into the count."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "lifecycle_rule")
+        assert "+2 more" in cells[1]
+        assert "tags" not in cells[1], "7th field name must not leak into the capped Type cell"
+        assert "abort_incomplete_multipart_upload_days" not in cells[1], "8th field name must not leak either"
+
+    def test_inputs_table_cell_example_only_var_gets_pointer_no_fields(self, server_state, any_overlay_dir):
+        """`website` has an overlay example but no field names -- its cell
+        points at the example, without a false "fields:" list."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "website")
+        assert cells[1] == "any -- see any-overlay example below"
+
+    def test_inputs_table_cell_fields_only_var_has_no_example_claim(self, server_state, any_overlay_dir):
+        """`object_lock_configuration` has overlay field names but NO
+        example -- the cell must not claim "example below" when the
+        appendix will not actually render one for this var (honesty)."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "object_lock_configuration")
+        assert cells[1] == "any -- fields: mode, days"
+
+    def test_inputs_table_cell_honest_any_row_left_bare(self, server_state, any_overlay_dir):
+        """`logging` has an overlay entry with neither example nor field
+        names (honest-any) -- its real table row is left exactly as the
+        curated doc wrote it."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "logging")
+        assert cells[1] == "`any`"
+
+    def test_inputs_table_cell_no_overlay_var_row_untouched(self, server_state, any_overlay_dir):
+        """A row with no overlay entry at all (e.g. a bool/string-typed
+        input) is completely unaffected."""
+        out = get_module_impl("s3-bucket", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "create_bucket")
+        assert cells[1] == "`bool`"
+
+    def test_full_doc_view_also_gets_inlined_cell(self, server_state, any_overlay_dir):
+        """The full-document escape hatch (sections=["all"]) gets the same
+        inline cell treatment as sections=["inputs"] -- same non-head family."""
+        full = get_module_impl("s3-bucket", server_state, sections=["all"])
+        cells = _input_row_cells(full, "lifecycle_rule")
+        assert cells[1].startswith("any -- fields:")
+
+    def test_head_still_unaffected_by_fix_1(self, server_state, any_overlay_dir):
+        """The head keeps pointing to sections=["inputs"] only -- Fix 1 never
+        inlines field names into the head's capped table."""
+        head = get_module_impl("s3-bucket", server_state)
+        assert 'sections=["inputs"]' in head
+        assert "fields:" not in head
+        assert "example below" not in head
+
+    def test_elasticache_log_delivery_configuration_cell_matches_real_overlay(self, server_state):
+        """Same scenario the report is asked to show: elasticache's real
+        (committed, not fixture) any-overlay inlines
+        `log_delivery_configuration`'s field names AT its real Main Module
+        table row -- exercised against the actual model/any_overlay data,
+        not the fixture."""
+        out = get_module_impl("elasticache", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "log_delivery_configuration")
+        assert len(cells) == 4, "row must still split into exactly 4 columns"
+        assert cells[1].startswith("any -- fields: ")
+        assert "example below" in cells[1]
 
     # ---- Fix 2 (2026-07-21): reworded appendix labels no longer invite a
     # confirmatory grep_module_docs round-trip. ----

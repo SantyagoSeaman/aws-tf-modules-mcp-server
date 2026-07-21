@@ -19,9 +19,35 @@
       "field_names": [
         "id",
         "enabled",
+        "status",
+        "expiration",
+        "transition",
+        "filter",
+        "tags",
         "abort_incomplete_multipart_upload_days"
       ],
       "provenance": "example+names"
+    },
+    "root::logging": {
+      "examples": [],
+      "field_names": [],
+      "provenance": "honest-any",
+      "note": "test fixture honest-any case with a real table row"
+    },
+    "root::website": {
+      "examples": [
+        "website = {\n  index_document = \"index.html\"\n  error_document = \"error.html\"\n}"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::object_lock_configuration": {
+      "examples": [],
+      "field_names": [
+        "mode",
+        "days"
+      ],
+      "provenance": "names-only"
     },
     "root::fixture_no_row_var": {
       "examples": [],

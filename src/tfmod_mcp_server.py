@@ -21,7 +21,7 @@ import re
 import sys
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
@@ -2226,15 +2226,138 @@ def _cell_var_name(cell: str) -> str:
     return match.group(1) if match else cell.strip()
 
 
+def _root_any_overlay_entries(text: str) -> dict[str, dict[str, Any]]:
+    """Root-scope overlay entries (examples/field_names/provenance/note) from
+    `text`'s committed overlay, keyed by the bare var name (the "root::"
+    prefix stripped) -- both the eligibility set AND the content source for
+    the head's pointer-only substitution (_substitute_any_type_head_cells)
+    and the inline field-name hint (_inline_any_overlay_input_cells, Fix 1 of
+    the 2026-07-21 table-discoverability fix). Empty when the module has no
+    overlay."""
+    overlay = _load_any_overlay(_resolve_overlay_module_id(text))
+    if not overlay:
+        return {}
+    return {key.split("::", 1)[1]: entry for key, entry in overlay.get("vars", {}).items() if key.startswith("root::")}
+
+
 def _root_any_var_names(text: str) -> frozenset[str]:
     """Root-scope any-var names from `text`'s committed overlay (if any) --
     used only to decide which head Type cells are eligible for the
     sections=["inputs"] pointer substitution. Empty when the module has no
     overlay."""
-    overlay = _load_any_overlay(_resolve_overlay_module_id(text))
-    if not overlay:
-        return frozenset()
-    return frozenset(key.split("::", 1)[1] for key in overlay.get("vars", {}) if key.startswith("root::"))
+    return frozenset(_root_any_overlay_entries(text))
+
+
+# Field names shown inline in a Type cell before falling back to a "+N more"
+# tail (Fix 1 of the 2026-07-21 table-discoverability fix) -- long enough to
+# be useful at the point of need, short enough to keep one table row one line.
+_ANY_OVERLAY_CELL_FIELD_CAP = 6
+
+
+def _format_any_overlay_cell_hint(entry: dict[str, Any]) -> str | None:
+    """
+    Build the inline Type-cell replacement for one any-typed input row from
+    its root-scope overlay entry (Fix 1 of the 2026-07-21 table-
+    discoverability fix): an A/B eval measured that a worker reading the
+    input TABLE saw a bare `any` Type cell and greped `grep_module_docs` for
+    the field names anyway, never connecting the row to the any-overlay
+    appendix block below it. The field-name signal now lives AT the row,
+    the point of need.
+
+    - field_names present: ``"any -- fields: f1, f2, ..., f6[, +N more]"``,
+      capped at ``_ANY_OVERLAY_CELL_FIELD_CAP`` names, plus ``"; example
+      below"`` ONLY when the entry also carries an example -- never claim an
+      example is "below" when the appendix block will not actually render
+      one for this var.
+    - no field_names but an example exists: ``"any -- see any-overlay
+      example below"``.
+    - honest-any (neither field_names nor an example): ``None`` -- the
+      caller leaves the cell as bare ``any``, exactly as before this fix.
+
+    Always a single line with no literal ``|``; overlay field names are
+    plain identifiers in the corpus today so this holds by construction, but
+    the caller (``_substitute_input_table_cells``) still verifies it before
+    writing the cell rather than trusting this blindly.
+    """
+    field_names = entry.get("field_names") or []
+    has_example = bool(entry.get("examples"))
+    if field_names:
+        shown = field_names[:_ANY_OVERLAY_CELL_FIELD_CAP]
+        hint = "any -- fields: " + ", ".join(shown)
+        remaining = len(field_names) - len(shown)
+        if remaining > 0:
+            hint += f", +{remaining} more"
+        if has_example:
+            hint += "; example below"
+        return hint
+    if has_example:
+        return "any -- see any-overlay example below"
+    return None
+
+
+def _substitute_input_table_cells(text: str, cell_for_row: Callable[[str, str], str | None]) -> str:
+    """
+    Walk EVERY ``### Main Input Variables`` table in `text` -- a document can
+    carry more than one on the combined-scheme corpus (one per "## Root
+    Module:"/"## Submodule N:" bundle, e.g. elasticache) -- and, for each
+    data row, ask ``cell_for_row(var_name, type_cell)`` for a replacement
+    Type-cell string. Returning ``None`` from the callback leaves that row's
+    Type cell untouched.
+
+    Shared by the head's pointer-only substitution
+    (``_substitute_any_type_head_cells``, which only ever sees a single table
+    since the head is scoped to ``interface_scope="root"``) and the inline
+    field-name hint (``_inline_any_overlay_input_cells``, which can see
+    several tables in one call).
+
+    Reuses exactly the heading/header/separator detection
+    ``_cap_head_input_table`` relies on, so whenever that cap correctly
+    identifies a table, this substitution does too -- and on any parse
+    mismatch for one OCCURRENCE (no header row immediately after the
+    heading, no separator, no Variable/Type column) that occurrence is left
+    unchanged rather than guessing, the same fail-safe contract the cap
+    function documents; other occurrences in the same document are still
+    processed independently. A callback replacement containing a literal
+    ``|`` or a newline is rejected (that row left unchanged) so a malformed
+    hint can never corrupt the table shape.
+    """
+    lines = text.splitlines(keepends=True)
+    changed = False
+    for heading_match in _INPUT_TABLE_HEADING_RE.finditer(text):
+        heading_line_idx = text.count("\n", 0, heading_match.start())
+
+        idx = heading_line_idx + 1
+        while idx < len(lines) and lines[idx].strip() == "":
+            idx += 1
+        if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+            continue
+        header_line_idx = idx
+        header_cells = _split_table_row(lines[header_line_idx])
+
+        sep_idx = header_line_idx + 1
+        if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+            continue
+
+        lower_headers = [c.lower() for c in header_cells]
+        if "variable" not in lower_headers or "type" not in lower_headers:
+            continue
+        var_idx = lower_headers.index("variable")
+        type_idx = lower_headers.index("type")
+
+        row_idx = sep_idx + 1
+        while row_idx < len(lines) and _TABLE_ROW_RE.match(lines[row_idx].rstrip("\n")):
+            row = lines[row_idx]
+            cells = _split_table_row(row)
+            if len(cells) > max(var_idx, type_idx):
+                replacement = cell_for_row(_cell_var_name(cells[var_idx]), cells[type_idx])
+                if replacement is not None and "|" not in replacement and "\n" not in replacement:
+                    cells[type_idx] = replacement
+                    newline = "\n" if row.endswith("\n") else ""
+                    lines[row_idx] = "| " + " | ".join(cells) + " |" + newline
+                    changed = True
+            row_idx += 1
+
+    return "".join(lines) if changed else text
 
 
 def _substitute_any_type_head_cells(head_text: str, any_var_names: frozenset[str]) -> str:
@@ -2249,62 +2372,67 @@ def _substitute_any_type_head_cells(head_text: str, any_var_names: frozenset[str
     ``|``/newline) and MUST run before ``_cap_head_input_table`` so the cap's
     own row/column parsing is unaffected.
 
-    Reuses exactly the heading/header/separator detection
-    ``_cap_head_input_table`` already relies on, so whenever that cap
-    correctly identifies the table, this substitution does too -- and on any
-    parse mismatch (no heading, no recognizable table, no Variable/Type
-    column) this returns `head_text` unchanged rather than guessing, the same
-    fail-safe contract the cap function documents. A module with no overlay
-    (``any_var_names`` empty) short-circuits to a no-op without even
-    attempting to locate the table.
+    Delegates to ``_substitute_input_table_cells`` (the fail-safe multi-table
+    walker also used by ``_inline_any_overlay_input_cells``) -- the head text
+    only ever carries a single ``### Main Input Variables`` table
+    (``interface_scope="root"`` excludes submodule bundles), so walking
+    "every" table here is equivalent to the previous single-table
+    implementation. A module with no overlay (``any_var_names`` empty)
+    short-circuits to a no-op without even attempting to locate the table.
     """
     if not any_var_names:
         return head_text
-    heading_match = _INPUT_TABLE_HEADING_RE.search(head_text)
-    if heading_match is None:
-        return head_text
 
-    lines = head_text.splitlines(keepends=True)
-    heading_line_idx = head_text.count("\n", 0, heading_match.start())
+    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
+        if var_name not in any_var_names or type_cell.strip().strip("`").strip().lower() != "any":
+            return None
+        return _ANY_TYPE_HEAD_POINTER
 
-    idx = heading_line_idx + 1
-    while idx < len(lines) and lines[idx].strip() == "":
-        idx += 1
-    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
-        return head_text
-    header_line_idx = idx
-    header_cells = _split_table_row(lines[header_line_idx])
+    return _substitute_input_table_cells(head_text, _cell_for_row)
 
-    sep_idx = header_line_idx + 1
-    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
-        return head_text
 
-    lower_headers = [c.lower() for c in header_cells]
-    if "variable" not in lower_headers or "type" not in lower_headers:
-        return head_text
-    var_idx = lower_headers.index("variable")
-    type_idx = lower_headers.index("type")
+def _inline_any_overlay_input_cells(rendered: str, content: str) -> str:
+    """
+    Fix 1 of the 2026-07-21 table-discoverability fix: for a non-head view
+    (a ``sections=["inputs"]`` response, or the full-document escape hatch),
+    inline the overlay's field-name (or example-only) hint directly into the
+    Type cell of every ``any``-typed input row whose var name has a
+    root-scope overlay entry -- AT the row, across every ``### Main Input
+    Variables`` table `rendered` carries (a combined-scheme doc like
+    elasticache has one such table per submodule bundle plus the root/main
+    one; only the root-scope table's rows are eligible, but matching is by
+    var name so no heading-scoping is needed to find it).
 
-    row_start = sep_idx + 1
-    row_end = row_start
-    changed = False
-    new_lines = lines[:row_start]
-    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
-        row = lines[row_end]
-        cells = _split_table_row(row)
-        if (
-            len(cells) > max(var_idx, type_idx)
-            and _cell_var_name(cells[var_idx]) in any_var_names
-            and cells[type_idx].strip().strip("`").strip().lower() == "any"
-        ):
-            cells[type_idx] = _ANY_TYPE_HEAD_POINTER
-            newline = "\n" if row.endswith("\n") else ""
-            row = "| " + " | ".join(cells) + " |" + newline
-            changed = True
-        new_lines.append(row)
-        row_end += 1
-    new_lines.extend(lines[row_end:])
-    return "".join(new_lines) if changed else head_text
+    An A/B eval measured the any-overlay appendix as not landing on its own:
+    a worker read the input table, saw a bare ``any`` Type cell, and grepped
+    ``grep_module_docs`` for the fields anyway rather than connecting the row
+    to the appendix block below it. This closes that gap at the point of
+    need. The appendix (``_with_any_overlay_appendix``) still runs
+    afterward and remains the source of the full example HCL / field list;
+    this substitution is only ever a same-row pointer into it.
+
+    Root-scope only (see ``_root_any_overlay_entries``) and matched purely by
+    var name against every table row in `rendered`, regardless of which H2
+    bundle it lives under -- like the head substitution, this trusts that
+    the corpus's submodule variable namespaces do not collide with the
+    root's. Must run BEFORE ``_with_any_overlay_appendix`` (the appendix is
+    what a row's "below" wording now points at). A no-op when the module has
+    no overlay, or none of its root-scope any-vars have a matching table row
+    (the common case: no overlay).
+    """
+    entries = _root_any_overlay_entries(content)
+    if not entries:
+        return rendered
+
+    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
+        if type_cell.strip().strip("`").strip().lower() != "any":
+            return None
+        entry = entries.get(var_name)
+        if entry is None:
+            return None
+        return _format_any_overlay_cell_hint(entry)
+
+    return _substitute_input_table_cells(rendered, _cell_for_row)
 
 
 def orientation_head(text: str, version_override: str | None = None) -> str:
@@ -2384,12 +2512,18 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
 
     For a module with a committed any-shape overlay (``model/any_overlay/``),
     a non-head response (an explicit ``sections`` request that resolves to
-    the inputs view, or the full-document escape hatch) gets an
-    appendix-anchored block per overlay var appended to the end of the
-    response, regardless of whether a matching input-table row exists (see
-    ``_with_any_overlay_appendix``). The default orientation head instead gets
-    only a cell-substitution pointer (see ``orientation_head``) — never the
-    example/field-list content. A module with no overlay is unaffected.
+    the inputs view, or the full-document escape hatch) gets TWO things: (1)
+    each root-scope ``any``-typed input row whose var has an overlay entry
+    gets its Type cell inlined with a field-name (or example-only) hint, AT
+    the row (see ``_inline_any_overlay_input_cells`` — Fix 1 of the
+    2026-07-21 table-discoverability fix: the appendix alone measured as not
+    landing, because a worker reads the row, sees bare ``any``, and greps
+    instead of scrolling to the appendix), and (2) an appendix-anchored block
+    per overlay var appended to the end of the response, regardless of
+    whether a matching input-table row exists (see
+    ``_with_any_overlay_appendix``). The default orientation head instead
+    gets only a cell-substitution pointer (see ``orientation_head``) — never
+    the example/field-list content. A module with no overlay is unaffected.
 
     See get_module() tool documentation for full details.
     """
@@ -2404,14 +2538,20 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # with the full (unscoped) any-overlay appendix, exactly like the
         # non-submodule full-doc branch below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return _with_any_overlay_appendix(content, content, is_filtered=False)
+            served = _inline_any_overlay_input_cells(content, content)
+            return _with_any_overlay_appendix(served, content, is_filtered=False)
         body = filter_module_sections(content, [sub, *(sections or [])])
         # A module WITH a committed any-shape overlay can have submodule-scoped
         # any-vars (e.g. fsx has all 19 of its any-vars submodule-scoped) — an
         # explicit inputs/variables request here must get its OWN appendix,
         # scope-filtered to this submodule's `<sub>::` keys only so a different
-        # submodule's or the root's overlay vars never leak in.
+        # submodule's or the root's overlay vars never leak in. The root-scope
+        # inline cell hint (Fix 1) runs unconditionally here too — harmless
+        # no-op unless this submodule body happens to also carry the root's
+        # own inputs table (e.g. sections=["inputs"] on top of the submodule
+        # address).
         if _sections_request_inputs(sections or []):
+            body = _inline_any_overlay_input_cells(body, content)
             body = _with_any_overlay_appendix(body, content, is_filtered=True, scope=sub)
         hint = _version_pin_hint(content)
         return f"{hint}\n\n{body}" if hint else body
@@ -2419,9 +2559,11 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return _with_any_overlay_appendix(content, content, is_filtered=False)
+            served = _inline_any_overlay_input_cells(content, content)
+            return _with_any_overlay_appendix(served, content, is_filtered=False)
         rendered = filter_module_sections(content, sections)
         if _sections_request_inputs(sections):
+            rendered = _inline_any_overlay_input_cells(rendered, content)
             rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
         return rendered
     return orientation_head(content)
