@@ -233,6 +233,130 @@ def test_build_module_overlay_returns_none_when_fetch_fails(tmp_path):
 
 
 # --------------------------------------------------------------------------- #
+# all_inputs - complete root+submodule input list from the registry detail
+# already fetched (complete-interface-in-one-call design).
+# --------------------------------------------------------------------------- #
+
+SAMPLE_DETAIL = {
+    "root": {
+        "inputs": [
+            {
+                "name": "create_subnet_group",
+                "type": "bool",
+                "required": False,
+                "default": "true",
+                "description": "Determines whether the subnet group will be created",
+            },
+            {"name": "port", "type": "number", "required": False, "default": "null", "description": "The port number"},
+        ]
+    },
+    "submodules": [
+        {
+            "name": "user-group",
+            "inputs": [
+                {"name": "users", "type": "list(string)", "required": True, "default": "", "description": "User ARNs"},
+            ],
+        },
+        {
+            "name": "wrappers",
+            "inputs": [
+                {"name": "defaults", "type": "any", "required": False, "default": "{}", "description": "ignored"},
+            ],
+        },
+    ],
+}
+
+
+def test_extract_all_inputs_covers_root_and_submodules():
+    all_inputs = bao._extract_all_inputs(SAMPLE_DETAIL)
+    assert {i["name"] for i in all_inputs["root"]} == {"create_subnet_group", "port"}
+    assert {i["name"] for i in all_inputs["user-group"]} == {"users"}
+    assert "wrappers" not in all_inputs, "wrappers is never a real submodule scope"
+
+
+def test_extract_all_inputs_item_shape():
+    all_inputs = bao._extract_all_inputs(SAMPLE_DETAIL)
+    port = next(i for i in all_inputs["root"] if i["name"] == "port")
+    assert port == {
+        "name": "port",
+        "type": "number",
+        "required": False,
+        "default": "null",
+        "description": "The port number",
+    }
+    users = next(i for i in all_inputs["user-group"] if i["name"] == "users")
+    assert users["required"] is True
+
+
+def test_extract_all_inputs_handles_missing_root_and_submodules():
+    assert bao._extract_all_inputs({}) == {"root": []}
+
+
+def test_build_module_overlay_includes_all_inputs_from_detail(tmp_path):
+    archive = _tar_gz_of_tf_files(EC_DIR, "terraform-aws-elasticache-1.9.0")
+    detail_url = f"https://registry.terraform.io/v1/modules/{EC_ID}/{EC_VERSION}"
+    v_tag_url = "https://codeload.github.com/terraform-aws-modules/terraform-aws-elasticache/tar.gz/refs/tags/v1.9.0"
+    detail_payload = {
+        "source": "https://github.com/terraform-aws-modules/terraform-aws-elasticache",
+        "root": {
+            "inputs": [
+                {
+                    "name": "port",
+                    "type": "number",
+                    "required": False,
+                    "default": "null",
+                    "description": "The port",
+                }
+            ]
+        },
+        "submodules": [],
+    }
+    detail_bytes = json.dumps(detail_payload).encode()
+
+    def fetch(url):
+        if url == detail_url:
+            return detail_bytes
+        if url == v_tag_url:
+            return archive
+        raise RuntimeError(f"unexpected url in test fetch: {url}")
+
+    overlay = bao.build_module_overlay(EC_ID, EC_VERSION, fetch=fetch, workdir=tmp_path)
+
+    assert overlay is not None
+    assert overlay["all_inputs"]["root"] == [
+        {"name": "port", "type": "number", "required": False, "default": "null", "description": "The port"}
+    ]
+    assert "root::log_delivery_configuration" in overlay["vars"]
+
+
+def test_build_module_overlay_degrades_gracefully_when_detail_fetch_fails_after_source(tmp_path):
+    """A transient failure on the SECOND (all_inputs) detail fetch must not
+    fail the whole build -- the overlay still carries its vars, just without
+    all_inputs."""
+    archive = _tar_gz_of_tf_files(EC_DIR, "terraform-aws-elasticache-1.9.0")
+    detail_url = f"https://registry.terraform.io/v1/modules/{EC_ID}/{EC_VERSION}"
+    v_tag_url = "https://codeload.github.com/terraform-aws-modules/terraform-aws-elasticache/tar.gz/refs/tags/v1.9.0"
+    detail_bytes = json.dumps({"source": "https://github.com/terraform-aws-modules/terraform-aws-elasticache"}).encode()
+
+    calls = {"detail": 0}
+
+    def fetch(url):
+        if url == detail_url:
+            calls["detail"] += 1
+            if calls["detail"] == 1:
+                return detail_bytes
+            raise RuntimeError("simulated transient failure")
+        if url == v_tag_url:
+            return archive
+        raise RuntimeError(f"unexpected url in test fetch: {url}")
+
+    overlay = bao.build_module_overlay(EC_ID, EC_VERSION, fetch=fetch, workdir=tmp_path)
+    assert overlay is not None
+    assert "root::log_delivery_configuration" in overlay["vars"]
+    assert "all_inputs" not in overlay
+
+
+# --------------------------------------------------------------------------- #
 # Wheel packaging guard (cheap, offline - the real wheel build is covered by
 # tests/e2e/test_package_e2e.py).
 # --------------------------------------------------------------------------- #

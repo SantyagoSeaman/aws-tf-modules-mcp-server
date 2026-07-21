@@ -54,7 +54,7 @@ from tfmod_any_examples import (  # noqa: E402 -- sys.path must be set up first
     observed_field_names,
 )
 
-from tfmod_registry_docs import fetch_module_source  # noqa: E402 -- sys.path must be set up first
+from tfmod_registry_docs import fetch_module_detail, fetch_module_source  # noqa: E402 -- sys.path must be set up first
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MODULES_DIR = REPO_ROOT / "modules"
@@ -165,6 +165,51 @@ def build_overlay_from_source(module_id: str, version: str, source_dir: str | Pa
     }
 
 
+def _extract_all_inputs(detail: dict) -> dict[str, list[dict]]:
+    """
+    Complete root+submodule input list from a registry module detail JSON
+    (complete-interface-in-one-call design), keyed by the SAME scope
+    convention `vars` uses ("root", or a submodule's directory name) -
+    EVERY input, not just `type = any` ones, each as
+    {name, type, required, default, description}. A "wrappers" submodule is
+    skipped (never a real submodule scope - mirrors find_any_vars). Pure,
+    offline: `detail` is the JSON dict already fetched, no I/O here.
+    """
+
+    def _entry(item: dict) -> dict:
+        return {
+            "name": item.get("name", ""),
+            "type": item.get("type", ""),
+            "required": bool(item.get("required", False)),
+            "default": item.get("default", "") or "",
+            "description": item.get("description", "") or "",
+        }
+
+    root_inputs = (detail.get("root") or {}).get("inputs") or []
+    all_inputs: dict[str, list[dict]] = {"root": [_entry(item) for item in root_inputs]}
+    for submodule in detail.get("submodules") or []:
+        name = submodule.get("name")
+        if not name or name == "wrappers":
+            continue
+        all_inputs[name] = [_entry(item) for item in submodule.get("inputs") or []]
+    return all_inputs
+
+
+def _attach_all_inputs(overlay: dict, module_id: str, version: str, *, fetch: Callable[[str], bytes] | None) -> None:
+    """
+    Fetch the registry detail for `module_id`@`version` and merge its
+    complete input list into `overlay["all_inputs"]`, in place. Best-effort:
+    a detail-fetch failure (transient network error, malformed JSON) leaves
+    `overlay` exactly as `build_overlay_from_source` produced it - vars-only,
+    no `all_inputs` - rather than failing the whole build over a nicety that
+    was already reached once (successfully) inside fetch_module_source to
+    resolve the GitHub source.
+    """
+    detail = fetch_module_detail(module_id, version, fetch=fetch)
+    if detail is not None:
+        overlay["all_inputs"] = _extract_all_inputs(detail)
+
+
 def build_module_overlay(
     module_id: str,
     version: str,
@@ -180,18 +225,31 @@ def build_module_overlay(
     zero any-vars. `workdir`, when given, is used as the extraction directory
     directly (and NOT cleaned up by this function); otherwise a temp directory
     is created and removed automatically.
+
+    When an overlay is built, its complete `all_inputs` (every root+submodule
+    input, not just any-typed ones) is also attached from a second registry
+    detail fetch (see `_attach_all_inputs`) - best-effort, never turning a
+    successful vars-only build into a failure.
     """
+
+    def _finish(source_dir: Path) -> dict | None:
+        overlay = build_overlay_from_source(module_id, version, source_dir)
+        if overlay is None:
+            return None
+        _attach_all_inputs(overlay, module_id, version, fetch=fetch)
+        return overlay
+
     if workdir is not None:
         source_dir = fetch_module_source(module_id, version, Path(workdir), fetch=fetch)
         if source_dir is None:
             return None
-        return build_overlay_from_source(module_id, version, source_dir)
+        return _finish(source_dir)
 
     with tempfile.TemporaryDirectory(prefix="tfmod_any_overlay_") as tmp:
         source_dir = fetch_module_source(module_id, version, Path(tmp), fetch=fetch)
         if source_dir is None:
             return None
-        return build_overlay_from_source(module_id, version, source_dir)
+        return _finish(source_dir)
 
 
 # --------------------------------------------------------------------------- #
@@ -318,6 +376,7 @@ def main(argv: list[str] | None = None) -> int:
                 no_any_vars.append(module_id)
                 continue
 
+            _attach_all_inputs(overlay, module_id, version, fetch=None)
             path = write_overlay(overlay, args.out_dir)
             written.append(module_id)
             logger.info(f"{module_id}@{version}: wrote {path} ({len(overlay['vars'])} any-var(s))")
