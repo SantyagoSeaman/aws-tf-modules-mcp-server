@@ -2643,3 +2643,87 @@ class TestResponseByteMetering:
         monkeypatch.setenv("TFMODSEARCH_LOG_RESPONSE_BYTES", "1")
         on_result = tfmod_mcp_server.get_module("vpc")
         assert off_result == on_result, "Response content must be identical regardless of the metering flag"
+
+
+_TYPE_COLLAPSE_FOOTER_TEXT = (
+    "Collapsed object types show first-level keys only; full nested shape -> "
+    'sections=["examples"] or the module source.'
+)
+
+
+class TestTypeCollapseCompleteTableIntegration:
+    """
+    Integration coverage for the type-signature collapse feature (fatrun5 /
+    Change 1, 0.26.0 candidate): a handful of Registry-declared object types
+    (eks's self_managed_node_groups: 18,561 chars) used to alone be big
+    enough to push a complete inputs table toward or past
+    `_COMPLETE_TABLE_BYTE_CAP`. Collapsing them to first-level keys at
+    render time keeps every catalog module's root (and reachable submodule)
+    complete interface serving in full, with no "+N more rows" truncation.
+
+    Uses the REAL committed model/any_overlay/ data -- same fixture-free
+    pattern as TestD7ChangeARootScopeDefault above.
+    """
+
+    def test_eks_inputs_and_outputs_render_complete_no_truncation(self, server_state):
+        out = get_module_impl("eks", server_state, sections=["inputs", "outputs"])
+        assert "more rows omitted" not in out
+
+    def test_eks_inputs_and_outputs_render_under_30k_bytes(self, server_state):
+        out = get_module_impl("eks", server_state, sections=["inputs", "outputs"])
+        assert len(out.encode("utf-8")) < 30000
+
+    def test_eks_inputs_and_outputs_render_carries_collapse_footer(self, server_state):
+        out = get_module_impl("eks", server_state, sections=["inputs", "outputs"])
+        assert _TYPE_COLLAPSE_FOOTER_TEXT in out
+
+    def test_eks_monster_type_cell_shows_collapsed_first_level_keys(self, server_state):
+        """self_managed_node_groups (map(object({...})), 18,561 raw chars)
+        renders as a short wrapper(object{keys}) cell, not the full type."""
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        cells = _input_row_cells(out, "self_managed_node_groups")
+        type_cell = cells[1]
+        assert type_cell.startswith("`map(object{")
+        assert "create" in type_cell
+        assert "... 102 keys" in type_cell
+        assert len(type_cell) < 300
+
+    def test_all_catalog_modules_root_complete_tables_render_without_truncation(self, server_state):
+        """Every module in the 63-doc catalog with a committed any-overlay
+        gets its root sections=["inputs","outputs"] rendered COMPLETE -- no
+        module's complete table trips the byte-cap safety truncation."""
+        modules = modules_list_impl(server_state, detail="full").modules
+        checked = 0
+        truncated: list[str] = []
+        for m in modules:
+            overlay = tfmod_mcp_server._load_any_overlay(m.module_id)
+            if overlay is None:
+                continue
+            checked += 1
+            out = get_module_impl(m.module_name, server_state, sections=["inputs", "outputs"])
+            if "more rows omitted" in out:
+                truncated.append(m.module_name)
+        assert checked >= 60, "sanity: most of the 63-doc catalog must carry a committed any-overlay"
+        assert not truncated, f"complete table truncated for: {truncated}"
+
+    def test_submodule_scope_complete_table_also_collapses(self, server_state):
+        """eks//modules/self-managed-node-group carries its own monster
+        types (mixed_instances_policy, instance_requirements) -- the
+        submodule-scope complete table must collapse them too, not just the
+        root-scope render."""
+        out = get_module_impl("eks//modules/self-managed-node-group", server_state, sections=["inputs"])
+        assert "more rows omitted" not in out
+        cells = _input_row_cells(out, "mixed_instances_policy")
+        type_cell = cells[1]
+        assert type_cell.startswith("`object{")
+        assert "instances_distribution" in type_cell
+        assert _TYPE_COLLAPSE_FOOTER_TEXT in out
+
+    def test_footer_absent_when_no_type_collapses(self, server_state):
+        """key-pair's root scope carries only short types (max 11 raw chars
+        across 10 inputs) -- nothing collapses, so the footer line must be
+        entirely absent, not emitted unconditionally."""
+        out = get_module_impl("key-pair", server_state, sections=["inputs", "outputs"])
+        assert "more rows omitted" not in out
+        assert _TYPE_COLLAPSE_FOOTER_TEXT not in out
+        assert "Collapsed object types" not in out
