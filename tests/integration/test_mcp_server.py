@@ -5,8 +5,10 @@ Tests both the search_modules tool and get_module resource.
 """
 
 import logging
+import os
 import re
 import socket
+import subprocess
 import sys
 from pathlib import Path
 
@@ -329,10 +331,7 @@ class TestGetModuleSections:
         for key in ("all", "full", "everything"):
             full = get_module_impl("security-group", server_state, sections=[key])
             raw = get_module_documentation("security-group", server_state)
-            expected = tfmod_mcp_server._content_with_complete_input_tables(raw)
-            expected = tfmod_mcp_server._content_with_complete_output_tables(expected)
-            expected = tfmod_mcp_server._inline_any_overlay_input_cells(expected, raw)
-            expected = tfmod_mcp_server._with_any_overlay_appendix(expected, raw, is_filtered=False)
+            expected = tfmod_mcp_server._full_document_view(raw)
             assert (
                 full == expected
             ), f"sections=['{key}'] should return the complete document (overlay transforms applied)"
@@ -2045,6 +2044,285 @@ class TestD7ChangeA2GroupedH3Completeness:
         assert checked >= 55, "sanity check: the sweep must have actually walked the real catalog"
         assert not short, f"modules still missing root interface rows: {short}"
         assert not overflow, f"modules whose response overflowed a generous byte multiple of the cap: {overflow}"
+
+
+class TestNEW1ScopeForH2TitleDeterminism:
+    """NEW-1 (2026-07-22 pre-release re-review, BLOCKER): unit-level coverage
+    for `_scope_for_h2_title`'s substring-match fallback. Root cause: the old
+    implementation iterated `candidate_scopes` (a frozenset) in whatever
+    order it happened to hash-iterate in -- PYTHONHASHSEED-dependent -- so a
+    title containing more than one scope key as a substring resolved
+    nondeterministically. The catalog's one real instance: iam.md's
+    "## Submodule 8: iam-role-for-service-accounts (IRSA)" contains both
+    "iam-role" and "iam-role-for-service-accounts" as substrings.
+
+    Fix: try candidates longest-key-first (ties broken alphabetically), with
+    a name-boundary guard (the character right after a match must not
+    continue a hyphenated identifier -- reject "-"/alnum, accept
+    end-of-string/whitespace/punctuation).
+
+    A real frozenset's iteration order is fixed for one process's lifetime
+    (it derives from PYTHONHASHSEED, set once at interpreter start), so the
+    only way to exercise more than one order within a single test process is
+    to control it explicitly -- these tests pass plain, differently-ordered
+    tuples as `candidate_scopes` (the function only ever iterates its input,
+    never relies on it being a "real" frozenset), directly simulating what a
+    hash-randomized frozenset would produce across different seeded
+    processes. `TestNEW1SeedIndependentIamRendering` below additionally
+    proves this end-to-end under real different PYTHONHASHSEED values.
+    """
+
+    IAM_SCOPES = (
+        "iam-account",
+        "iam-group",
+        "iam-oidc-provider",
+        "iam-policy",
+        "iam-read-only-policy",
+        "iam-role",
+        "iam-role-for-service-accounts",
+        "iam-user",
+        "root",
+    )
+
+    IRSA_TITLE = "Submodule 8: iam-role-for-service-accounts (IRSA)"
+
+    @pytest.mark.parametrize(
+        "ordering",
+        [
+            IAM_SCOPES,
+            tuple(reversed(IAM_SCOPES)),
+            ("iam-role", "iam-role-for-service-accounts", "root", "iam-user", "iam-account"),
+            ("root", "iam-role-for-service-accounts", "iam-role"),
+            ("iam-role", "root", "iam-role-for-service-accounts"),
+        ],
+        ids=["forward", "reversed", "iam-role-first", "irsa-before-role", "role-before-irsa"],
+    )
+    def test_irsa_heading_resolves_correctly_regardless_of_iteration_order(self, ordering):
+        assert (
+            tfmod_mcp_server._scope_for_h2_title(self.IRSA_TITLE, ordering) == "iam-role-for-service-accounts"
+        ), f"ordering {ordering!r} must still resolve to the more specific scope"
+
+    @pytest.mark.parametrize("ordering", [IAM_SCOPES, tuple(reversed(IAM_SCOPES))])
+    def test_iam_role_heading_resolves_exactly_regardless_of_order(self, ordering):
+        assert tfmod_mcp_server._scope_for_h2_title("Submodule 4: iam-role", ordering) == "iam-role"
+
+    def test_boundary_guard_does_not_break_decorated_heading_with_space_suffix(self):
+        """The boundary guard must not regress the pre-existing decorated-
+        heading case ("Submodule 2: flow-log (Recommended)") -- its next
+        character after the match is a space, not "-"/alnum, so it must
+        still match."""
+        assert (
+            tfmod_mcp_server._scope_for_h2_title(
+                "Submodule 2: flow-log (Recommended)", ("flow-log", "flow-log-other", "root")
+            )
+            == "flow-log"
+        )
+
+    def test_restricted_scope_does_not_match_inside_longer_name(self):
+        """Simulates the get_module("iam//modules/iam-role", ...) restriction:
+        only_scopes narrows candidate_scopes down to {"iam-role"} BEFORE this
+        function ever runs. With the boundary guard, "iam-role" must NOT
+        match inside "iam-role-for-service-accounts" even though it IS a
+        substring -- this is manifestation 2 of NEW-1 (the deterministic
+        double-serve)."""
+        assert tfmod_mcp_server._scope_for_h2_title(self.IRSA_TITLE, frozenset({"iam-role"})) is None
+
+    def test_unambiguous_title_still_resolves(self):
+        """Sanity: an unambiguous submodule title is unaffected by the fix."""
+        assert (
+            tfmod_mcp_server._scope_for_h2_title("Submodule 1: iam-account", frozenset(self.IAM_SCOPES))
+            == "iam-account"
+        )
+
+
+class TestNEW1IamRealCatalogScopeResolution:
+    """NEW-1 integration coverage against the real, committed iam overlay and
+    doc (not a fixture) -- the exact reproduction the re-review measured."""
+
+    def test_iam_inputs_view_surfaces_irsa_only_fields(self, server_state):
+        """Pre-fix, this was nondeterministic: on the bad variant IRSA's real
+        inputs (attach_ebs_csi_policy and the other attach_*_policy toggles)
+        appeared nowhere in the response. Must now always be present."""
+        out = get_module_impl("iam", server_state, sections=["inputs"])
+        assert "`attach_ebs_csi_policy`" in out
+        assert "`attach_velero_policy`" in out
+
+    def test_iam_all_view_surfaces_irsa_only_fields(self, server_state):
+        out = get_module_impl("iam", server_state, sections=["all"])
+        assert "`attach_ebs_csi_policy`" in out
+
+    def test_iam_role_only_field_never_appears_under_irsa_heading(self, server_state):
+        """iam-role-only fields (never part of IRSA's own interface) must not
+        leak under the IRSA heading via a wrong-scope supersede."""
+        out = get_module_impl("iam", server_state, sections=["inputs"])
+        irsa_start = out.index("## Submodule 8: iam-role-for-service-accounts")
+        irsa_block = out[irsa_start:]
+        assert "`create_instance_profile`" not in irsa_block
+        assert "`enable_saml`" not in irsa_block
+
+    def test_submodule_address_iam_role_table_appears_exactly_once(self, server_state):
+        """get_module("iam//modules/iam-role", sections=["inputs"]) used to
+        deterministically serve iam-role's complete table TWICE -- once
+        correctly under "## Submodule 4: iam-role", once mislabeled under
+        "## Submodule 8: iam-role-for-service-accounts (IRSA)". A field
+        unique to iam-role's own interface must now appear exactly once."""
+        out = get_module_impl("iam//modules/iam-role", server_state, sections=["inputs"])
+        assert out.count("`create_instance_profile`") == 1
+        assert out.count("`source_trust_policy_documents`") == 1
+
+
+_IAM_SEED_RENDER_SCRIPT = """
+import sys
+sys.path.insert(0, "src")
+import logging
+from pathlib import Path
+from tfmod_search_lib import load_index
+from tfmod_mcp_server import ServerState, SearchWeights, get_module_impl
+
+logger = logging.getLogger("iam_seed_test")
+logger.addHandler(logging.NullHandler())
+index_path = Path("model/tfmod_e5_small_index.pkl")
+index = load_index(str(index_path), logger)
+weights = SearchWeights(w_kw=2.0, w_exact=3.0, w_bm25=1.0, w_sem=1.0)
+state = ServerState(index=index, weights=weights, index_path=index_path, logger=logger)
+sections = sys.argv[1].split(",")
+sys.stdout.write(get_module_impl("iam", state, sections=sections))
+"""
+
+
+class TestNEW1SeedIndependentIamRendering:
+    """NEW-1 end-to-end regression (2026-07-22 pre-release re-review,
+    BLOCKER): render get_module("iam", sections=[...]) in fresh subprocesses
+    under different real PYTHONHASHSEED values and assert byte-identical
+    output -- the direct reproduction of the reported nondeterminism
+    (measured pre-fix: PYTHONHASHSEED in {0, 1, 42} rendered one variant,
+    {2, 3} another). A frozenset's iteration order is fixed for one
+    process's lifetime, so this is the only way to genuinely exercise more
+    than one order for the real catalog's iam overlay from outside
+    `_scope_for_h2_title` itself."""
+
+    def _render_under_seed(self, seed: str, sections: str) -> str:
+        env = dict(os.environ, PYTHONHASHSEED=seed)
+        result = subprocess.run(
+            [sys.executable, "-c", _IAM_SEED_RENDER_SCRIPT, sections],
+            cwd=str(PROJECT_ROOT),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        assert result.returncode == 0, f"subprocess failed (seed={seed}): {result.stderr}"
+        return result.stdout
+
+    @pytest.mark.parametrize("sections", ["inputs", "all"])
+    def test_iam_render_is_byte_identical_across_hash_seeds(self, sections):
+        # One seed from each pre-fix "variant group" the re-review measured
+        # (0/1/42 vs 2/3), plus a third data point.
+        seeds = ["0", "2", "42"]
+        rendered = {seed: self._render_under_seed(seed, sections) for seed in seeds}
+        baseline_seed = seeds[0]
+        baseline = rendered[baseline_seed]
+        for seed in seeds[1:]:
+            assert rendered[seed] == baseline, (
+                f"get_module('iam', sections=['{sections}']) differs between "
+                f"PYTHONHASHSEED={baseline_seed} and PYTHONHASHSEED={seed}"
+            )
+        assert "attach_ebs_csi_policy" in baseline, "IRSA-only input must be present under every hash seed"
+
+
+class TestNEW2FullDocEscapeHatchGetsA2Completeness:
+    """NEW-2 (2026-07-22 pre-release re-review): the D7 Change A2 grouped-H3
+    completeness fallback (_append_missing_root_complete_tables) used to run
+    only on the sections=["inputs"|"outputs"] path -- the all/full escape
+    hatch relied on the inline supersede alone, which no-ops on grouped-H3
+    docs (eventbridge groups its root inputs under 5 H3 subsections), so
+    get_module("eventbridge", sections=["all"]) lacked append_rule_postfix
+    even though the CHANGELOG claimed all/full completeness. The fallback
+    now fires on this path too (via the shared `_full_document_view`)."""
+
+    def test_eventbridge_all_gains_previously_missing_root_input(self, server_state):
+        out = get_module_impl("eventbridge", server_state, sections=["all"])
+        assert "`append_rule_postfix`" in out
+
+    def test_eventbridge_all_appends_labeled_complete_table(self, server_state):
+        out = get_module_impl("eventbridge", server_state, sections=["all"])
+        assert "## Complete Root Inputs" in out
+
+    def test_already_superseded_module_full_doc_gets_no_duplicate_table(self, server_state):
+        """eks supersedes correctly inline on the full-doc view too -- the
+        A2 fallback must not append a second, duplicate complete table."""
+        out = get_module_impl("eks", server_state, sections=["all"])
+        assert "## Complete Root Inputs" not in out
+
+    def test_rootless_module_full_doc_does_not_crash_or_claim_completeness(self, server_state):
+        """iam's overlay root scope is empty -- the fallback must be a no-op
+        on the full-doc view exactly as it is on the sections view."""
+        out = get_module_impl("iam", server_state, sections=["all"])
+        assert "## Complete Root Inputs" not in out
+        assert "## Complete Root Outputs" not in out
+
+
+class TestNEW3AppendedTableCarriesAnyHint:
+    """NEW-3 (2026-07-22 pre-release re-review, nit): the D7 Change A2
+    appended "## Complete Root Inputs" table used to show a bare `any` Type
+    cell for any-typed rows (_inline_any_overlay_input_cells runs BEFORE the
+    A2 append and is heading-anchored on "### Main Input Variables", so it
+    never sees the appended table's own "## Complete Root Inputs" heading)
+    even though the same var's overlay entry carries a field-name hint.
+    Verified on eventbridge's connections/targets/pipes -- real catalog data."""
+
+    @pytest.mark.parametrize("var_name", ["connections", "targets", "pipes"])
+    def test_eventbridge_appended_table_row_shows_field_hint_not_bare_any(self, server_state, var_name):
+        out = get_module_impl("eventbridge", server_state, sections=["all"])
+        start = out.index("## Complete Root Inputs")
+        appended_block = out[start:]
+        row = next(line for line in appended_block.splitlines() if line.startswith(f"| `{var_name}`"))
+        cells = tfmod_mcp_server._split_table_row(row)
+        assert cells[1] != "`any`", f"{var_name}'s appended-table Type cell must not stay bare `any`"
+        assert cells[1].startswith("any -- fields:"), f"unexpected appended-table Type cell: {cells[1]!r}"
+
+    def test_eventbridge_sections_inputs_view_also_gets_hinted_appended_table(self, server_state):
+        """Same guarantee on the sections=["inputs"] view (not only all/full)."""
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        start = out.index("## Complete Root Inputs")
+        appended_block = out[start:]
+        row = next(line for line in appended_block.splitlines() if line.startswith("| `connections`"))
+        cells = tfmod_mcp_server._split_table_row(row)
+        assert cells[1].startswith("any -- fields:")
+
+
+class TestNEW5AppendedTableRendersAboveAppendix:
+    """NEW-5 (2026-07-22 pre-release re-review, nit): the D7 Change A2
+    appended complete table used to render BELOW the any-overlay appendix
+    (insert order was appendix-then-A2) -- the authoritative complete table
+    should read above the example/field-name appendix, not after it."""
+
+    def test_eventbridge_complete_table_precedes_any_overlay_appendix(self, server_state):
+        out = get_module_impl("eventbridge", server_state, sections=["inputs"])
+        table_idx = out.index("## Complete Root Inputs")
+        appendix_idx = out.index("any-typed input overlay")
+        assert table_idx < appendix_idx, "the complete table must render above the any-overlay appendix"
+
+    def test_eventbridge_full_doc_view_same_ordering(self, server_state):
+        out = get_module_impl("eventbridge", server_state, sections=["all"])
+        table_idx = out.index("## Complete Root Inputs")
+        appendix_idx = out.index("any-typed input overlay")
+        assert table_idx < appendix_idx
+
+
+class TestNEW4CompleteBranchFooterLooseBound:
+    """NEW-4 (accepted under clarity-over-bytes, 2026-07-22 pre-release
+    re-review): the complete-branch footer disclaimer (545 chars measured)
+    is deliberately NOT shrunk -- but it must stay under a much looser sane
+    bound so it cannot grow unbounded over time."""
+
+    def test_complete_branch_disclaimer_stays_under_loose_bound(self, server_state):
+        out = get_module_impl("eks", server_state, sections=["inputs"])
+        disclaimer_line = next(line for line in out.splitlines() if line.startswith("Curated subset."))
+        assert "already ARE the COMPLETE" in disclaimer_line, "sanity: must be the complete-branch wording"
+        assert (
+            len(disclaimer_line) < 700
+        ), f"complete-branch disclaimer line ({len(disclaimer_line)} chars) must stay under a loose sane bound"
 
 
 class TestCapCompleteTableRowsUnit:

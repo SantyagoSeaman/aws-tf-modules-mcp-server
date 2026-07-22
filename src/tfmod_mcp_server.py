@@ -2140,6 +2140,15 @@ def _cell_var_name(cell: str) -> str:
     return match.group(1) if match else cell.strip()
 
 
+def _root_any_overlay_entries_from_overlay(overlay: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Same extraction as `_root_any_overlay_entries`, but from an
+    already-loaded overlay dict -- used by callers (e.g.
+    `_append_missing_root_complete_tables`) that already have the overlay in
+    hand and have no document text to re-resolve/re-load it from a second
+    time."""
+    return {key.split("::", 1)[1]: entry for key, entry in overlay.get("vars", {}).items() if key.startswith("root::")}
+
+
 def _root_any_overlay_entries(text: str) -> dict[str, dict[str, Any]]:
     """Root-scope overlay entries (examples/field_names/provenance/note) from
     `text`'s committed overlay, keyed by the bare var name (the "root::"
@@ -2151,7 +2160,7 @@ def _root_any_overlay_entries(text: str) -> dict[str, dict[str, Any]]:
     overlay = _load_any_overlay(_resolve_overlay_module_id(text))
     if not overlay:
         return {}
-    return {key.split("::", 1)[1]: entry for key, entry in overlay.get("vars", {}).items() if key.startswith("root::")}
+    return _root_any_overlay_entries_from_overlay(overlay)
 
 
 def _root_any_var_names(text: str) -> frozenset[str]:
@@ -2209,6 +2218,75 @@ def _format_any_overlay_cell_hint(entry: dict[str, Any]) -> str | None:
     return None
 
 
+def _make_any_overlay_cell_for_row(entries: dict[str, dict[str, Any]]) -> Callable[[str, str], str | None]:
+    """
+    Build a ``cell_for_row`` callback (see ``_substitute_table_rows_from_
+    header``/``_substitute_input_table_cells``) that hints a bare ``any``
+    Type cell from `entries` (root-scope overlay entries keyed by var name --
+    see ``_root_any_overlay_entries``/``_root_any_overlay_entries_from_
+    overlay``). Shared by ``_inline_any_overlay_input_cells`` (the curated
+    table's rows) and ``_hint_any_cells_in_table_text`` (NEW-3 fix, 2026-07-22
+    pre-release re-review: the D7 Change A2 appended complete table's rows),
+    so both apply the identical hint logic.
+    """
+
+    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
+        if type_cell.strip().strip("`").strip().lower() != "any":
+            return None
+        entry = entries.get(var_name)
+        if entry is None:
+            return None
+        return _format_any_overlay_cell_hint(entry)
+
+    return _cell_for_row
+
+
+def _substitute_table_rows_from_header(
+    lines: list[str], header_line_idx: int, cell_for_row: Callable[[str, str], str | None]
+) -> bool:
+    """
+    Core per-table cell substitution, given `lines` (a document already
+    split with ``splitlines(keepends=True)``) and the line index of a
+    table's HEADER row -- the row immediately below any heading, already
+    located and validated by the caller. Rewrites each data row's Type cell
+    (via `cell_for_row`) IN PLACE and returns whether anything changed.
+
+    Extracted (NEW-3 fix, 2026-07-22 pre-release re-review) so this same
+    per-row logic can run both heading-anchored (`_substitute_input_table_
+    cells`, which walks every ``### Main Input Variables`` occurrence) and
+    directly on an already-isolated table string whose header sits at line 0
+    with no heading immediately above it (`_hint_any_cells_in_table_text`,
+    used on the D7 Change A2 appended "## Complete Root Inputs" table, which
+    has an explanatory paragraph -- not just the table -- between its own
+    heading and the header row).
+    """
+    header_cells = _split_table_row(lines[header_line_idx])
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return False
+
+    lower_headers = [c.lower() for c in header_cells]
+    if "variable" not in lower_headers or "type" not in lower_headers:
+        return False
+    var_idx = lower_headers.index("variable")
+    type_idx = lower_headers.index("type")
+
+    changed = False
+    row_idx = sep_idx + 1
+    while row_idx < len(lines) and _TABLE_ROW_RE.match(lines[row_idx].rstrip("\n")):
+        row = lines[row_idx]
+        cells = _split_table_row(row)
+        if len(cells) > max(var_idx, type_idx):
+            replacement = cell_for_row(_cell_var_name(cells[var_idx]), cells[type_idx])
+            if replacement is not None and "|" not in replacement and "\n" not in replacement:
+                cells[type_idx] = replacement
+                newline = "\n" if row.endswith("\n") else ""
+                lines[row_idx] = "| " + " | ".join(cells) + " |" + newline
+                changed = True
+        row_idx += 1
+    return changed
+
+
 def _substitute_input_table_cells(text: str, cell_for_row: Callable[[str, str], str | None]) -> str:
     """
     Walk EVERY ``### Main Input Variables`` table in `text` -- a document can
@@ -2245,33 +2323,37 @@ def _substitute_input_table_cells(text: str, cell_for_row: Callable[[str, str], 
             idx += 1
         if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
             continue
-        header_line_idx = idx
-        header_cells = _split_table_row(lines[header_line_idx])
-
-        sep_idx = header_line_idx + 1
-        if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
-            continue
-
-        lower_headers = [c.lower() for c in header_cells]
-        if "variable" not in lower_headers or "type" not in lower_headers:
-            continue
-        var_idx = lower_headers.index("variable")
-        type_idx = lower_headers.index("type")
-
-        row_idx = sep_idx + 1
-        while row_idx < len(lines) and _TABLE_ROW_RE.match(lines[row_idx].rstrip("\n")):
-            row = lines[row_idx]
-            cells = _split_table_row(row)
-            if len(cells) > max(var_idx, type_idx):
-                replacement = cell_for_row(_cell_var_name(cells[var_idx]), cells[type_idx])
-                if replacement is not None and "|" not in replacement and "\n" not in replacement:
-                    cells[type_idx] = replacement
-                    newline = "\n" if row.endswith("\n") else ""
-                    lines[row_idx] = "| " + " | ".join(cells) + " |" + newline
-                    changed = True
-            row_idx += 1
+        if _substitute_table_rows_from_header(lines, idx, cell_for_row):
+            changed = True
 
     return "".join(lines) if changed else text
+
+
+def _hint_any_cells_in_table_text(table_text: str, entries: dict[str, dict[str, Any]]) -> str:
+    """
+    Apply the same any-typed inline field-name/example hint
+    (``_format_any_overlay_cell_hint``) directly to an already-isolated pipe
+    table string whose header row sits at line 0 -- used by
+    ``_append_missing_root_complete_tables`` (NEW-3 fix, 2026-07-22
+    pre-release re-review) so the D7 Change A2 appended "## Complete Root
+    Inputs" table's ``any``-typed rows get the same inline hint the curated
+    table's rows get via ``_inline_any_overlay_input_cells``. That walker is
+    heading-anchored on ``### Main Input Variables`` and cannot see this
+    table -- it uses a different heading, plus carries an explanatory
+    paragraph between the heading and the table that defeats the
+    immediate-next-line header scan -- so this operates on the isolated
+    table string directly instead, where the header row is always line 0 by
+    construction (``_build_all_inputs_table``). A no-op (`table_text`
+    unchanged) when `entries` is empty, or the header/rows do not parse as
+    expected -- fails safe like every other substitution in this module.
+    """
+    if not entries:
+        return table_text
+    lines = table_text.splitlines(keepends=True)
+    if not lines or not _TABLE_ROW_RE.match(lines[0].rstrip("\n")):
+        return table_text
+    changed = _substitute_table_rows_from_header(lines, 0, _make_any_overlay_cell_for_row(entries))
+    return "".join(lines) if changed else table_text
 
 
 def _substitute_any_type_head_cells(head_text: str, any_var_names: frozenset[str]) -> str:
@@ -2337,16 +2419,7 @@ def _inline_any_overlay_input_cells(rendered: str, content: str) -> str:
     entries = _root_any_overlay_entries(content)
     if not entries:
         return rendered
-
-    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
-        if type_cell.strip().strip("`").strip().lower() != "any":
-            return None
-        entry = entries.get(var_name)
-        if entry is None:
-            return None
-        return _format_any_overlay_cell_hint(entry)
-
-    return _substitute_input_table_cells(rendered, _cell_for_row)
+    return _substitute_input_table_cells(rendered, _make_any_overlay_cell_for_row(entries))
 
 
 # --------------------------------------------------------------------------- #
@@ -2442,6 +2515,24 @@ def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | N
     heading (e.g. "Submodule 2: flow-log (Recommended)") still resolves.
     Returns None for anything else -- Description/Key Features/the compact
     "## Submodules" inventory/etc. -- so those blocks are never touched.
+
+    NEW-1 fix (2026-07-22 pre-release re-review, BLOCKER): the substring
+    fallback used to iterate `candidate_scopes` (a frozenset) in whatever
+    order it happened to hash-iterate in -- PYTHONHASHSEED-dependent, so a
+    title containing more than one scope key as a substring resolved
+    nondeterministically across processes. The catalog's one real instance:
+    iam.md's "## Submodule 8: iam-role-for-service-accounts (IRSA)" contains
+    both "iam-role" and "iam-role-for-service-accounts" as substrings. Fixed
+    two ways, together: (1) candidates are tried longest-key-first (ties
+    broken alphabetically), so the more specific
+    "iam-role-for-service-accounts" is always tried before "iam-role"; (2) a
+    name-boundary guard rejects a match whose next character continues a
+    hyphenated identifier (a "-" or alnum char) -- so "iam-role" can never
+    match inside "iam-role-for-service-accounts" (next char "-") even when a
+    restricted `candidate_scopes` excludes the longer key, while a genuinely
+    decorated heading like "flow-log (Recommended)" still matches "flow-log"
+    (next char is a space). Both together make the match fully deterministic
+    and correct regardless of `candidate_scopes`' iteration order.
     """
     tl = title.strip().lower()
     if tl.startswith(("main module", "root module")):
@@ -2456,9 +2547,15 @@ def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | N
     for scope in non_root:
         if name_lower == scope.lower():
             return scope
-    for scope in non_root:
-        if scope.lower() in name_lower:
-            return scope
+    for scope in sorted(non_root, key=lambda s: (-len(s), s)):
+        scope_lower = scope.lower()
+        idx = name_lower.find(scope_lower)
+        if idx == -1:
+            continue
+        end = idx + len(scope_lower)
+        if end < len(name_lower) and (name_lower[end].isalnum() or name_lower[end] == "-"):
+            continue
+        return scope
     return None
 
 
@@ -2925,7 +3022,12 @@ def _append_missing_root_complete_tables(
 
     Appended tables reuse `_build_all_inputs_table`/`_build_all_outputs_
     table`, so they respect the same `_COMPLETE_TABLE_BYTE_CAP` truncation
-    the inline supersede uses.
+    the inline supersede uses. The appended INPUTS table also gets the same
+    any-typed inline field-name/example hint the curated table's rows get
+    (NEW-3 fix, 2026-07-22 pre-release re-review) via
+    `_hint_any_cells_in_table_text` -- `_inline_any_overlay_input_cells`
+    cannot see this table itself (different heading, prose paragraph before
+    the table defeats its header scan).
     """
     if not overlay:
         return rendered
@@ -2934,6 +3036,7 @@ def _append_missing_root_complete_tables(
         root_inputs = (overlay.get("all_inputs") or {}).get("root")
         if root_inputs:
             table = _build_all_inputs_table(root_inputs, {})
+            table = _hint_any_cells_in_table_text(table, _root_any_overlay_entries_from_overlay(overlay))
             pieces.append(
                 f"{_MISSING_ROOT_INPUTS_HEADING}\n\n"
                 "The curated table above did not carry every root-scope input (inputs are "
@@ -2955,6 +3058,42 @@ def _append_missing_root_complete_tables(
     if not pieces:
         return rendered
     return _insert_before_footer(rendered, "\n\n".join(pieces), is_filtered=True)
+
+
+def _full_document_view(content: str) -> str:
+    """
+    Build the full-document escape-hatch response (``sections=["all"|"full"|
+    "everything"]``) for `content`: every resolvable input/output table
+    superseded with its overlay-complete data (every scope, not just root --
+    unlike the default root-scoped sections view), any root-scope
+    ``any``-typed cell inline-hinted, the D7 Change A2 fallback guaranteeing
+    root-scope completeness even when the inline supersede could not fire
+    (NEW-2 fix, 2026-07-22 pre-release re-review -- this escape hatch used to
+    rely on the inline supersede alone, which silently stayed partial on the
+    same ~16 grouped-H3 docs the sections=["inputs"|"outputs"] view needed
+    the A2 fallback for), and finally the any-overlay appendix. The A2 table
+    (when it fires) is appended BEFORE the appendix (NEW-5, same re-review)
+    so the authoritative complete table renders above the example/field-name
+    appendix, not below it.
+
+    Shared by both the plain module-identifier branch and the
+    submodule-address branch of ``get_module_impl``, which serve the
+    identical full PARENT document on this escape hatch -- kept as one
+    function so the two call sites cannot drift apart.
+    """
+    full_content, input_superseded_scopes = _content_with_complete_input_tables_ex(content)
+    full_content, output_superseded_scopes = _content_with_complete_output_tables_ex(full_content)
+    served = _inline_any_overlay_input_cells(full_content, content)
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    served = _append_missing_root_complete_tables(
+        served,
+        overlay,
+        requests_inputs=True,
+        input_superseded="root" in input_superseded_scopes,
+        requests_outputs=True,
+        output_superseded="root" in output_superseded_scopes,
+    )
+    return _with_any_overlay_appendix(served, content, is_filtered=False)
 
 
 def orientation_head(text: str, version_override: str | None = None) -> str:
@@ -3076,10 +3215,7 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         # any-overlay appendix, exactly like the non-submodule full-doc branch
         # below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            full_content = _content_with_complete_input_tables(content)
-            full_content = _content_with_complete_output_tables(full_content)
-            served = _inline_any_overlay_input_cells(full_content, content)
-            return _with_any_overlay_appendix(served, content, is_filtered=False)
+            return _full_document_view(content)
         # An explicit inputs/variables (resp. outputs) request supersedes the
         # curated (possibly PARTIAL) table with the module's COMPLETE input
         # (resp. output) list BEFORE section filtering (2026-07-21 fix), so the
@@ -3127,10 +3263,7 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            full_content = _content_with_complete_input_tables(content)
-            full_content = _content_with_complete_output_tables(full_content)
-            served = _inline_any_overlay_input_cells(full_content, content)
-            return _with_any_overlay_appendix(served, content, is_filtered=False)
+            return _full_document_view(content)
         # Complete-input-table / complete-output-table supersede (2026-07-21
         # fix, and its outputs-half follow-up) run BEFORE section filtering so
         # the extracted inputs/outputs H2/H3 already carries every input/
@@ -3211,7 +3344,6 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         )
         if requests_inputs:
             rendered = _inline_any_overlay_input_cells(rendered, content)
-            rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
         if requests_inputs or requests_outputs:
             # D7 Change A2 (2026-07-21 grouped-H3 completeness fix): the
             # inline supersede above only replaces a table it can actually
@@ -3228,6 +3360,10 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
             # network-firewall today) is covered too. A pure no-op for a
             # genuinely rootless module (cloudwatch, fsx, iam), whose overlay
             # root scope is empty.
+            #
+            # Runs BEFORE the any-overlay appendix is spliced in (NEW-5,
+            # 2026-07-22 pre-release re-review) so the authoritative complete
+            # table lands ABOVE the appendix in the response, not below it.
             rendered = _append_missing_root_complete_tables(
                 rendered,
                 overlay,
@@ -3236,6 +3372,9 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
                 requests_outputs=requests_outputs,
                 output_superseded="root" in output_superseded_scopes,
             )
+        if requests_inputs:
+            rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
+        if requests_inputs or requests_outputs:
             if restrict_to_root:
                 menu = _submodule_interface_menu(content, overlay)
                 if menu:
