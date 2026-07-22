@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.26.0] - 2026-07-22
+
+[0.26.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.26.0
+
+Interface-payload release, serve-time only. Two refinements to the complete inputs/outputs interface that 0.25.0 introduced, both over the same committed static data with no index rebuild. First, a genuinely oversized HCL object type in a complete inputs table is collapsed to its first-level keys: a `type` cell like the eks `self_managed_node_groups` monster (a `map(object({...}))` that runs to roughly 18,000 characters) now renders as `map(object{create, kubernetes_version, ... 102 keys})` instead of the full nested schema, with a footer noting where the full shape lives (`sections=["examples"]` or the module source). The collapse is threshold-gated at 200 characters, so the type cell of the overwhelming majority of inputs -- anything short -- is returned verbatim and unchanged; only true monsters collapse. Measured end to end, the eks root inputs+outputs view drops from roughly 51,300 bytes to roughly 27,500 with the complete interface preserved (every row still present, no "+N more rows" truncation). Second, the eks doc's "Notes for AI Agents" gains an explicit warning that its two name-similar cluster security-group outputs -- `cluster_primary_security_group_id` (the EKS-managed control-plane SG) and `cluster_security_group_id` (a separate, module-created SG) -- are not interchangeable.
+
+### Changed
+
+- **An oversized HCL object type in the complete inputs table is collapsed to its first-level keys** (serve-time, `_collapse_type_expression` in `tfmod_mcp_server.py`, threshold 200 characters). A `wrapper(object({...}))` type longer than the threshold renders as `wrapper(object{key1, key2, ... N keys})`; a non-object type longer than the threshold is truncated with a trailing marker; everything at or under the threshold is byte-identical to 0.25.0. A footer line is added to any table that collapsed at least one row, pointing to `sections=["examples"]` or the module source for the full nested shape. Covers every complete-inputs path: the root-scope supersede, the completeness append, and each submodule scope's own table. The 48,000-byte table safety cap remains as a backstop.
+- **The eks doc names its two cluster security-group outputs explicitly** ("Notes for AI Agents" item 17): `cluster_primary_security_group_id` is the EKS-managed control-plane SG (the value behind a raw `aws_eks_cluster.<name>.vpc_config[0].cluster_security_group_id`); `cluster_security_group_id` is a separate SG the module creates only when `create_security_group = true`. A documentation edit served fresh from disk -- no index change.
+
+### Unchanged
+
+- `search_modules` and `modules_list` are byte-identical. **The search index is not rebuilt** -- this release is serve-time rendering plus one documentation edit over committed static data, no embedding drift. The overlay data is untouched; a module whose every input type is under the collapse threshold serves an inputs table byte-identical to 0.25.0.
+
 ## [0.25.0] - 2026-07-21
 
 [0.25.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.25.0
