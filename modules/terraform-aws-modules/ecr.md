@@ -92,7 +92,7 @@ Creates an `aws_ecr_repository_creation_template` that tells ECR how to configur
 | `encryption_type` | `string` | `"AES256"` | `AES256` or `KMS` for repositories created from this template |
 | `kms_key_arn` | `string` | `null` | KMS key ARN used when `encryption_type = "KMS"` |
 | `lifecycle_policy` | `string` | `null` | Lifecycle policy JSON applied to created repositories |
-| `repository_policy_statements` | `map(object)` | `null` | Structured IAM policy statements merged into the generated repository policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
+| `repository_policy_statements` | `map(object)` | `null` | Structured IAM policy statements merged into the generated repository policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `resource_tags` | `map(string)` | `{}` | Tags applied to repositories created from this template |
 | `tags` | `map(string)` | `{}` | Tags applied to the template's own resources (IAM role, etc.) |
 
@@ -168,7 +168,7 @@ The root module manages the repository itself (private or public) plus every acc
 | `repository_force_delete` | `bool` | `null` (`false` behavior) | Delete the repository even if it still contains images |
 | `attach_repository_policy` | `bool` | `true` | Whether to create/attach the private repository's `aws_ecr_repository_policy` |
 | `create_repository_policy` | `bool` | `true` | Auto-generate the policy from access-ARN variables and `repository_policy_statements`; set `false` to use `repository_policy` verbatim |
-| `repository_policy_statements` | `map(object)` | `null` | Structured IAM statements (sid, actions, resources, principals, conditions) merged into the generated policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; see grep_module_docs) |
+| `repository_policy_statements` | `map(object)` | `null` | Structured IAM statements (sid, actions, resources, principals, conditions) merged into the generated policy — fields: `sid`, `actions`, `not_actions`, `effect`, `resources`, `not_resources`, `principals`, `not_principals`, … (8 shown; call get_module with sections=["inputs","outputs"] for the complete list) |
 | `repository_policy` | `string` | `null` | Raw JSON policy used when `create_repository_policy = false` |
 | `repository_read_access_arns` | `list(string)` | `[]` | IAM principal ARNs granted pull-only access |
 | `repository_read_write_access_arns` | `list(string)` | `[]` | IAM principal ARNs granted pull/push access |

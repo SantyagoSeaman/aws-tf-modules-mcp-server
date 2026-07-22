@@ -1,6 +1,6 @@
 [project]
 name = "tfmodsearch"
-version = "0.24.0"
+version = "0.25.0"
 description = "TFModSearch — MCP server for AI agents (Claude Code, Codex, Claude Desktop) to search Terraform AWS modules with hybrid search engine combining semantic similarity (sentence-transformers), BM25 text relevance, and keyword matching. FastMCP-based, CPU-only inference."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -106,7 +106,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.isort]
-known-first-party = ["tfmod_search_lib", "tfmod_mcp_server", "tfmod_search_cli", "tfmod_doc_grep", "tfmod_registry_docs"]
+known-first-party = ["tfmod_search_lib", "tfmod_mcp_server", "tfmod_search_cli", "tfmod_registry_docs"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests legitimately use assert (S101), spawn the packaged server as a
@@ -161,13 +161,14 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/tfmod_mcp_server.py", "src/tfmod_search_cli.py", "src/tfmod_search_lib.py", "src/tfmod_doc_grep.py", "src/tfmod_registry_docs.py", "src/tfmod_entry.py", "src/tfmod_proxy.py", "src/tfmod_server_args.py", "src/tfmod_onnx_encoder.py"]
+packages = ["src/tfmod_mcp_server.py", "src/tfmod_search_cli.py", "src/tfmod_search_lib.py", "src/tfmod_registry_docs.py", "src/tfmod_entry.py", "src/tfmod_proxy.py", "src/tfmod_server_args.py", "src/tfmod_onnx_encoder.py"]
 
 [tool.hatch.build.targets.wheel.sources]
 "src" = ""
 
 [tool.hatch.build.targets.wheel.force-include]
 "model/tfmod_e5_small_index.pkl" = "model/tfmod_e5_small_index.pkl"
+"model/any_overlay" = "model/any_overlay"
 "modules/terraform-aws-modules" = "modules/terraform-aws-modules"
 "modules/cloudposse" = "modules/cloudposse"
 "config.yaml" = "config.yaml"

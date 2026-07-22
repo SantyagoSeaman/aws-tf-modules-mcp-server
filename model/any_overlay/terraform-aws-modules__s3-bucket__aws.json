@@ -1,0 +1,1463 @@
+{
+  "all_inputs": {
+    "account-public-access": [
+      {
+        "default": "true",
+        "description": "Whether to create this resource or not?",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "AWS account ID",
+        "name": "account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether Amazon S3 should block public ACLs for buckets in this account.",
+        "name": "block_public_acls",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether Amazon S3 should block public bucket policies for buckets in this account.",
+        "name": "block_public_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether Amazon S3 should ignore public ACLs for buckets in this account.",
+        "name": "ignore_public_acls",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether Amazon S3 should restrict public bucket policies for buckets in this account.",
+        "name": "restrict_public_buckets",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "notification": [
+      {
+        "default": "true",
+        "description": "Whether to create a policy for SNS permissions or not?",
+        "name": "create_sns_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of S3 bucket to use",
+        "name": "bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of S3 bucket to use in policies",
+        "name": "bucket_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of S3 bucket notifications to SQS queue",
+        "name": "sqs_notifications",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of S3 bucket notifications to SNS topic",
+        "name": "sns_notifications",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create this resource or not?",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create a policy for SQS permissions or not?",
+        "name": "create_sqs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create Lambda permissions or not?",
+        "name": "create_lambda_permission",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable Amazon EventBridge notifications",
+        "name": "eventbridge",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of S3 bucket notifications to Lambda function",
+        "name": "lambda_notifications",
+        "required": false,
+        "type": "any"
+      }
+    ],
+    "object": [
+      {
+        "default": "null",
+        "description": "Base64-encoded data that will be decoded and uploaded as raw bytes for the object content. This allows safely uploading non-UTF8 binary data, but is recommended only for small content such as the result of the gzipbase64 function with small text strings. For larger objects, use source to stream the content from a disk file.",
+        "name": "content_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The canned ACL to apply. Valid values are private, public-read, public-read-write, aws-exec-read, authenticated-read, bucket-owner-read, and bucket-owner-full-control. Defaults to private.",
+        "name": "acl",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the desired Storage Class for the object. Can be either STANDARD, REDUCED_REDUNDANCY, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE, or STANDARD_IA. Defaults to STANDARD.",
+        "name": "storage_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Used to trigger updates. This attribute is not compatible with KMS encryption, kms_key_id or server_side_encryption = \"aws:kms\".",
+        "name": "etag",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether or not to use Amazon S3 Bucket Keys for SSE-KMS.",
+        "name": "bucket_key_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Triggers updates like etag but useful to address etag encryption limitations. Set using filemd5(\"path/to/source\") (Terraform 0.11.12 or later). (The value is only stored in state and not saved by AWS.)",
+        "name": "source_hash",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the bucket to put the file in. Alternatively, an S3 access point ARN can be specified.",
+        "name": "bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Literal string value to use as the object content, which will be uploaded as UTF-8-encoded text.",
+        "name": "content",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The language the content is in e.g. en-US or en-GB.",
+        "name": "content_language",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies a target URL for website redirect.",
+        "name": "website_redirect",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of keys/values to provision metadata (will be automatically prefixed by x-amz-meta-, note that only lowercase label are currently supported by the AWS Go API).",
+        "name": "metadata",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The legal hold status that you want to apply to the specified object. Valid values are ON and OFF.",
+        "name": "object_lock_legal_hold_status",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The date and time, in RFC3339 format, when this object's object lock will expire.",
+        "name": "object_lock_retain_until_date",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Ignore provider default_tags. S3 objects support a maximum of 10 tags.",
+        "name": "override_default_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies caching behavior along the request/reply chain.",
+        "name": "cache_control",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A standard MIME type describing the format of the object data, e.g. application/octet-stream. All Valid MIME Types are valid for this input.",
+        "name": "content_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies server-side encryption of the object in S3. Valid values are \"AES256\" and \"aws:kms\".",
+        "name": "server_side_encryption",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Allow the object to be deleted by removing any legal hold on any object version. Default is false. This value should be set to true only if the bucket has S3 object lock enabled.",
+        "name": "force_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The object lock retention mode that you want to apply to this object. Valid values are GOVERNANCE and COMPLIANCE.",
+        "name": "object_lock_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create this resource or not?",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies presentational information for the object.",
+        "name": "content_disposition",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies what content encodings have been applied to the object and thus what decoding mechanisms must be applied to obtain the media-type referenced by the Content-Type header field.",
+        "name": "content_encoding",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of the KMS Key to use for object encryption. If the S3 Bucket has server-side encryption enabled, that value will automatically be used. If referencing the aws_kms_key resource, use the arn attribute. If referencing the aws_kms_alias data source or resource, use the target_key_arn attribute. Terraform will only perform drift detection if a configuration value is provided.",
+        "name": "kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the object.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the object once it is in the bucket.",
+        "name": "key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The path to a file that will be read and uploaded as raw bytes for the object content.",
+        "name": "file_source",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should deny unencrypted object uploads policy attached.",
+        "name": "attach_deny_unencrypted_object_uploads",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether S3 bucket should have an Object Lock configuration enabled.",
+        "name": "object_lock_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The analytics source bucket ARN.",
+        "name": "analytics_source_bucket_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Availability Zone ID or Local Zone ID",
+        "name": "availability_zone_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Namespace for the bucket. Determines bucket naming scope. Valid values: account-regional, global. Defaults to global (AWS)",
+        "name": "bucket_namespace",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The canned ACL to apply. Conflicts with `grant`",
+        "name": "acl",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "(Optional) List of AWS Account IDs should be allowed to deliver access logs to this bucket.",
+        "name": "access_log_delivery_policy_source_accounts",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether or not the inventory source bucket is also the destination bucket.",
+        "name": "inventory_self_source_destination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The analytics source account id.",
+        "name": "analytics_source_account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether Amazon S3 should restrict public bucket policies for this bucket.",
+        "name": "restrict_public_buckets",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to manage S3 Bucket Ownership Controls on this bucket.",
+        "name": "control_object_ownership",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "If the s3 bucket created is a directory bucket",
+        "name": "is_directory_bucket",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing S3 inventory configuration.",
+        "name": "inventory_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The inventory source bucket ARN.",
+        "name": "inventory_source_bucket_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether or not the analytics source bucket is also the destination bucket.",
+        "name": "analytics_self_source_destination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have ELB log delivery policy attached",
+        "name": "attach_elb_log_delivery_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have bucket inventory destination policy attached.",
+        "name": "attach_inventory_destination_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) Sets the accelerate configuration of an existing bucket. Can be Enabled or Suspended.",
+        "name": "acceleration_status",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration state of the inventory table, indicating whether the inventory table is enabled or disabled. Valid values: ENABLED, DISABLED",
+        "name": "metadata_inventory_table_configuration_state",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should require the latest version of TLS",
+        "name": "attach_require_latest_tls_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "(Optional) List of S3 bucket ARNs which should be allowed to deliver access logs to this bucket.",
+        "name": "access_log_delivery_policy_source_buckets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create metadata configuration resource",
+        "name": "create_metadata_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Number of days to retain journal table records",
+        "name": "metadata_journal_table_record_expiration_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls if S3 bucket should be created",
+        "name": "create_bucket",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing static web-site hosting or redirect configuration.",
+        "name": "website",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The account ID of the expected bucket owner",
+        "name": "expected_bucket_owner",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing cross-region replication configuration.",
+        "name": "replication_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have bucket policy attached (set to `true` to use value of `policy` as bucket policy)",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have bucket analytics destination policy attached.",
+        "name": "attach_analytics_destination_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "(Optional) List of AWS Organization IDs should be allowed to deliver access logs to this bucket.",
+        "name": "access_log_delivery_policy_source_organizations",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing S3 object locking configuration.",
+        "name": "object_lock_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Whether journal table record expiration is enabled or disabled. Valid values: ENABLED, DISABLED",
+        "name": "metadata_journal_table_record_expiration",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have S3 access log delivery policy attached",
+        "name": "attach_access_log_delivery_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have CloudTrail log delivery policy attached",
+        "name": "attach_cloudtrail_log_delivery_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have ALB/NLB log delivery policy attached",
+        "name": "attach_lb_log_delivery_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if a user defined public bucket policy will be attached (set to `false` to allow upstream to apply defaults to the bucket)",
+        "name": "attach_public_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Forces new resource) Creates a unique bucket name beginning with the specified prefix. Conflicts with bucket.",
+        "name": "bucket_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) A valid bucket policy JSON document. Note that if the policy document is not specific enough (but still valid), Terraform may view the policy as constantly changing in a terraform plan. In this case, please make sure you use the verbose/specific version of the policy. For more information about building AWS IAM policy documents with Terraform, see the AWS IAM Policy Document Guide.",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "(Optional, Default:false ) A boolean that indicates all objects should be deleted from the bucket so that the bucket can be destroyed without error. These objects are not recoverable.",
+        "name": "force_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "An ACL policy grant. Conflicts with `acl`",
+        "name": "grant",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing intelligent tiering configuration.",
+        "name": "intelligent_tiering",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing bucket analytics configuration.",
+        "name": "analytics_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should deny incorrect encryption headers policy attached.",
+        "name": "attach_deny_incorrect_encryption_headers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to skip destroying the S3 Bucket Public Access Block configuration when destroying the bucket. Only used if `public_access_block` is set to true.",
+        "name": "skip_destroy_public_access_block",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Data redundancy. Valid values: `SingleAvailabilityZone`",
+        "name": "data_redundancy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Directory\"",
+        "description": "Bucket type. Valid values: `Directory`",
+        "name": "type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Location type. Valid values: `AvailabilityZone` or `LocalZone`",
+        "name": "location_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have deny non-SSL transport policy attached",
+        "name": "attach_deny_insecure_transport_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of maps containing configuration of object lifecycle management.",
+        "name": "lifecycle_rule",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"BucketOwnerEnforced\"",
+        "description": "Object ownership. Valid values: BucketOwnerEnforced, BucketOwnerPreferred or ObjectWriter. 'BucketOwnerEnforced': ACLs are disabled, and the bucket owner automatically owns and has full control over every object in the bucket. 'BucketOwnerPreferred': Objects uploaded to the bucket change ownership to the bucket owner if the objects are uploaded with the bucket-owner-full-control canned ACL. 'ObjectWriter': The uploading account will own the object if the object is uploaded with the bucket-owner-full-control canned ACL.",
+        "name": "object_ownership",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should deny SSEC encrypted object uploads.",
+        "name": "attach_deny_ssec_encrypted_object_uploads",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "(Optional) A mapping of tags to assign to the bucket.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing versioning configuration.",
+        "name": "versioning",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing access bucket logging configuration.",
+        "name": "logging",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Bucket owner's display name and ID. Conflicts with `acl`",
+        "name": "owner",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Encryption configuration block",
+        "name": "metadata_encryption_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket policy should deny usage of incorrect KMS key SSE.",
+        "name": "attach_deny_incorrect_kms_key_sse",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have WAF log delivery policy attached",
+        "name": "attach_waf_log_delivery_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Forces new resource) The name of the bucket. If omitted, Terraform will assign a random, unique name.",
+        "name": "bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of maps containing rules for Cross-Origin Resource Sharing.",
+        "name": "cors_rule",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "(Optional) List of AWS Organization IDs should be allowed to deliver ALB/NLB logs to this bucket.",
+        "name": "lb_log_delivery_policy_source_organizations",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The default minimum object size behavior applied to the lifecycle configuration. Valid values: all_storage_classes_128K (default), varies_by_storage_class",
+        "name": "transition_default_minimum_object_size",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether Amazon S3 should ignore public ACLs for this bucket.",
+        "name": "ignore_public_acls",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether Amazon S3 should block public ACLs for this bucket.",
+        "name": "block_public_acls",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of KMS key which should be allowed in PutObject",
+        "name": "allowed_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) Specifies who should bear the cost of Amazon S3 data transfer. Can be either BucketOwner or Requester. By default, the owner of the S3 bucket would incur the costs of any data transfer. See Requester Pays Buckets developer guide for more information.",
+        "name": "request_payer",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing server-side encryption configuration.",
+        "name": "server_side_encryption_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "Map containing bucket metric configuration.",
+        "name": "metric_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "The inventory source account id.",
+        "name": "inventory_source_account_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether Amazon S3 should block public bucket policies for this bucket.",
+        "name": "block_public_policy",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "table-bucket": [
+      {
+        "default": "null",
+        "description": "Map of encryption configurations",
+        "name": "encryption_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "table_bucket_policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Name of the table bucket. Must be between 3 and 63 characters in length. Can consist of lowercase letters, numbers, and hyphens, and must begin and end with a lowercase letter or number",
+        "name": "table_bucket_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of table bucket maintenance configurations",
+        "name": "maintenance_configuration",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create s3 table bucket policy",
+        "name": "create_table_bucket_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Web Services resource-based policy document in JSON format",
+        "name": "table_bucket_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "table_bucket_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "table_bucket_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of table configurations",
+        "name": "tables",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Key-value map of resource tags",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create s3 table resources",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "vectors": [
+      {
+        "default": "null",
+        "description": "Name of the S3 Vectors vector bucket",
+        "name": "vector_bucket_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the vector bucket",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Encryption configuration for the vector bucket",
+        "name": "encryption_configuration",
+        "required": false,
+        "type": "object({\n    sse_type    = string\n    kms_key_arn = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The policy document as a JSON string",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create the S3 Vectors vector bucket",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Boolean that indicates all indexes and vectors should be deleted from the vector bucket when the vector bucket is destroyed",
+        "name": "force_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the vector bucket will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create the S3 Vectors vector bucket policy",
+        "name": "create_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of vector indexes to create in the vector bucket. Each key is an arbitrary index name used for resource naming.",
+        "name": "indexes",
+        "required": false,
+        "type": "map(object({\n    index_name      = string\n    dimension       = number\n    distance_metric = string\n    data_type       = optional(string, \"float32\")\n    tags            = optional(map(string), {})\n    encryption_configuration = optional(object({\n      sse_type    = string\n      kms_key_arn = optional(string)\n    }), null)\n    metadata_configuration = optional(object({\n      non_filterable_metadata_keys = list(string)\n    }), null)\n  }))"
+      }
+    ]
+  },
+  "all_outputs": {
+    "account-public-access": [
+      {
+        "description": "AWS account ID",
+        "name": "s3_account_public_access_block_id"
+      }
+    ],
+    "notification": [
+      {
+        "description": "ID of S3 bucket",
+        "name": "s3_bucket_notification_id"
+      }
+    ],
+    "object": [
+      {
+        "description": "The key of S3 object",
+        "name": "s3_object_id"
+      },
+      {
+        "description": "The ETag generated for the object (an MD5 sum of the object content).",
+        "name": "s3_object_etag"
+      },
+      {
+        "description": "A unique version ID value for the object, if bucket versioning is enabled.",
+        "name": "s3_object_version_id"
+      }
+    ],
+    "root": [
+      {
+        "description": "The AWS region this bucket resides in.",
+        "name": "s3_bucket_region"
+      },
+      {
+        "description": "The versioning status of the bucket. Will be 'Enabled', 'Suspended', or 'Disabled'.",
+        "name": "aws_s3_bucket_versioning_status"
+      },
+      {
+        "description": "The ARN of the bucket. Will be of format arn:aws:s3:::bucketname.",
+        "name": "s3_bucket_arn"
+      },
+      {
+        "description": "The bucket region-specific domain name. The bucket domain name including the region name, please refer here for format. Note: The AWS CloudFront allows specifying S3 region-specific endpoint when creating S3 origin, it will prevent redirect issues from CloudFront to S3 Origin URL.",
+        "name": "s3_bucket_bucket_regional_domain_name"
+      },
+      {
+        "description": "Name of the directory bucket.",
+        "name": "s3_directory_bucket_name"
+      },
+      {
+        "description": "ARN of the directory bucket.",
+        "name": "s3_directory_bucket_arn"
+      },
+      {
+        "description": "The namespace of the bucket.",
+        "name": "s3_bucket_bucket_namespace"
+      },
+      {
+        "description": "The domain of the website endpoint, if the bucket is configured with a website. If not, this will be an empty string. This is used to create Route 53 alias records.",
+        "name": "s3_bucket_website_domain"
+      },
+      {
+        "description": "Tags of the bucket.",
+        "name": "s3_bucket_tags"
+      },
+      {
+        "description": "The name of the bucket.",
+        "name": "s3_bucket_id"
+      },
+      {
+        "description": "The Route 53 Hosted Zone ID for this bucket's region.",
+        "name": "s3_bucket_hosted_zone_id"
+      },
+      {
+        "description": "The lifecycle rules of the bucket, if the bucket is configured with lifecycle rules. If not, this will be an empty string.",
+        "name": "s3_bucket_lifecycle_configuration_rules"
+      },
+      {
+        "description": "The website endpoint, if the bucket is configured with a website. If not, this will be an empty string.",
+        "name": "s3_bucket_website_endpoint"
+      },
+      {
+        "description": "The bucket domain name. Will be of format bucketname.s3.amazonaws.com.",
+        "name": "s3_bucket_bucket_domain_name"
+      },
+      {
+        "description": "The policy of the bucket, if the bucket is configured with a policy. If not, this will be an empty string.",
+        "name": "s3_bucket_policy"
+      }
+    ],
+    "table-bucket": [
+      {
+        "description": "Date and time when the bucket was created.",
+        "name": "s3_table_bucket_created_at"
+      },
+      {
+        "description": "Account ID of the account that owns the table bucket.",
+        "name": "s3_table_bucket_owner_account_id"
+      },
+      {
+        "description": "Dates and times when the tables were created.",
+        "name": "s3_table_created_at"
+      },
+      {
+        "description": "Account IDs of the accounts that created the tables",
+        "name": "s3_table_created_by"
+      },
+      {
+        "description": "Dates and times when the tables was last modified.",
+        "name": "s3_table_modified_at"
+      },
+      {
+        "description": "S3 URIs pointing to the S3 Bucket that contains the table data.",
+        "name": "s3_table_warehouse_locations"
+      },
+      {
+        "description": "ARN of the table bucket.",
+        "name": "s3_table_bucket_arn"
+      },
+      {
+        "description": "The table ARNs.",
+        "name": "s3_table_arns"
+      },
+      {
+        "description": "Locations of table metadata.",
+        "name": "s3_table_metadata_locations"
+      },
+      {
+        "description": "Account IDs of the accounts that last modified the tables.",
+        "name": "s3_table_modified_by"
+      },
+      {
+        "description": "Account IDs of the accounts that owns the tables.",
+        "name": "s3_table_owner_account_ids"
+      },
+      {
+        "description": "Types of the tables. One of customer or aws.",
+        "name": "s3_table_types"
+      },
+      {
+        "description": "Identifiers for the current version of table data.",
+        "name": "s3_table_version_tokens"
+      }
+    ],
+    "vectors": [
+      {
+        "description": "ARN of the S3 Vectors vector bucket",
+        "name": "vector_bucket_arn"
+      },
+      {
+        "description": "Name of the S3 Vectors vector bucket",
+        "name": "vector_bucket_name"
+      },
+      {
+        "description": "Date and time when the vector bucket was created",
+        "name": "creation_time"
+      },
+      {
+        "description": "ARNs of the vector indexes",
+        "name": "index_arns"
+      },
+      {
+        "description": "Date and time when the vector indexes were created",
+        "name": "index_creation_times"
+      }
+    ]
+  },
+  "built_from_version": "5.15.1",
+  "module_id": "terraform-aws-modules/s3-bucket/aws",
+  "vars": {
+    "notification::lambda_notifications": {
+      "examples": [
+        "lambda_notifications = {\n    lambda1 = {\n      function_arn  = module.lambda_function1.lambda_function_arn\n      function_name = module.lambda_function1.lambda_function_name\n      events        = [\"s3:ObjectCreated:Put\"]\n      filter_prefix = \"prefix/\"\n      filter_suffix = \".json\"\n    }\n\n    lambda2 = {\n      function_arn  = module.lambda_function2.lambda_function_arn\n      function_name = module.lambda_function2.lambda_function_name\n      events        = [\"s3:ObjectCreated:Post\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "function_arn",
+        "function_name",
+        "id",
+        "qualifier",
+        "source_account"
+      ],
+      "provenance": "example+names"
+    },
+    "notification::sns_notifications": {
+      "examples": [
+        "sns_notifications = {\n    sns1 = {\n      topic_arn     = module.sns_topic1.sns_topic_arn\n      events        = [\"s3:ObjectRemoved:Delete\"]\n      filter_prefix = \"prefix3/\"\n      filter_suffix = \".csv\"\n    }\n\n    sns2 = {\n      topic_arn = module.sns_topic2.sns_topic_arn\n      events    = [\"s3:ObjectRemoved:DeleteMarkerCreated\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "id",
+        "topic_arn"
+      ],
+      "provenance": "example+names"
+    },
+    "notification::sqs_notifications": {
+      "examples": [
+        "sqs_notifications = {\n    sqs1 = {\n      queue_arn     = aws_sqs_queue.this[0].arn\n      events        = [\"s3:ObjectCreated:Put\"]\n      filter_prefix = \"prefix2/\"\n      filter_suffix = \".txt\"\n\n      #      queue_id =  aws_sqs_queue.this[0].id // optional\n    }\n  }"
+      ],
+      "field_names": [
+        "events",
+        "filter_prefix",
+        "filter_suffix",
+        "id",
+        "queue_arn",
+        "queue_id"
+      ],
+      "provenance": "example"
+    },
+    "root::analytics_configuration": {
+      "examples": [
+        "analytics_configuration = {\n\n    # No exporting\n    prefix_documents = {\n      filter = {\n        prefix = \"documents/\"\n      }\n    }\n\n    # Same source and destination bucket\n    tags = {\n      filter = {\n        tags = {\n          production = \"true\"\n        }\n      }\n      storage_class_analysis = {\n        output_schema_version = \"V_1\"\n      }\n    }\n\n    # Different destination bucket\n    all = {\n      storage_class_analysis = {\n        destination_bucket_arn = module.analytics_destination_bucket.s3_bucket_arn\n        prefix                 = \"analytics\"\n      }\n    }\n\n    # Different destination shared with inventory destination\n    example = {\n      storage_class_analysis = {\n        destination_bucket_arn = module.analytics_and_inventory_destination_bucket.s3_bucket_arn\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "filter",
+        "storage_class_analysis"
+      ],
+      "provenance": "example"
+    },
+    "root::cors_rule": {
+      "examples": [
+        "cors_rule = [\n    {\n      allowed_methods = [\"PUT\", \"POST\"]\n      allowed_origins = [\"https://modules.tf\", \"https://terraform-aws-modules.modules.tf\"]\n      allowed_headers = [\"*\"]\n      expose_headers  = [\"ETag\"]\n      max_age_seconds = 3000\n      }, {\n      allowed_methods = [\"PUT\"]\n      allowed_origins = [\"https://example.com\"]\n      allowed_headers = [\"*\"]\n      expose_headers  = [\"ETag\"]\n      max_age_seconds = 3000\n    }\n  ]"
+      ],
+      "field_names": [
+        "allowed_headers",
+        "allowed_methods",
+        "allowed_origins",
+        "expose_headers",
+        "id",
+        "max_age_seconds"
+      ],
+      "provenance": "example+names"
+    },
+    "root::grant": {
+      "examples": [
+        "grant = [{\n    type       = \"CanonicalUser\"\n    permission = \"FULL_CONTROL\"\n    id         = data.aws_canonical_user_id.current.id\n    }, {\n    type       = \"CanonicalUser\"\n    permission = \"FULL_CONTROL\"\n    id         = data.aws_cloudfront_log_delivery_canonical_user_id.cloudfront.id # Ref. https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/AccessLogs.html\n    }\n  ]"
+      ],
+      "field_names": [
+        "email",
+        "id",
+        "permission",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::intelligent_tiering": {
+      "examples": [
+        "intelligent_tiering = {\n    general = {\n      status = \"Enabled\"\n      filter = {\n        prefix = \"/\"\n        tags = {\n          Environment = \"dev\"\n        }\n      }\n      tiering = {\n        ARCHIVE_ACCESS = {\n          days = 180\n        }\n      }\n    },\n    documents = {\n      status = false\n      filter = {\n        prefix = \"documents/\"\n      }\n      tiering = {\n        ARCHIVE_ACCESS = {\n          days = 125\n        }\n        DEEP_ARCHIVE_ACCESS = {\n          days = 200\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "days",
+        "filter",
+        "status",
+        "tiering"
+      ],
+      "provenance": "example"
+    },
+    "root::inventory_configuration": {
+      "examples": [
+        "inventory_configuration = {\n    destination_other = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.analytics_and_inventory_destination_bucket.s3_bucket_arn\n        format     = \"CSV\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency       = \"Daily\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n  }",
+        "inventory_configuration = {\n    weekly = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.inventory_destination_bucket.s3_bucket_arn\n        format     = \"Parquet\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      filter = {\n        prefix = \"documents/\"\n      }\n      frequency       = \"Weekly\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n  }",
+        "inventory_configuration = {\n\n    # Same source and destination buckets\n    daily = {\n      included_object_versions = \"Current\"\n      destination = {\n        format = \"CSV\"\n        encryption = {\n          encryption_type = \"sse_kms\"\n          kms_key_id      = module.kms.key_arn\n        }\n      }\n      filter = {\n        prefix = \"documents/\"\n      }\n      frequency = \"Daily\"\n    }\n\n    weekly = {\n      included_object_versions = \"All\"\n      destination = {\n        format = \"CSV\"\n      }\n      frequency = \"Weekly\"\n    }\n\n    # Different destination bucket\n    destination_other = {\n      included_object_versions = \"All\"\n      destination = {\n        bucket_arn = module.inventory_destination_bucket.s3_bucket_arn\n        format     = \"Parquet\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency       = \"Weekly\"\n      optional_fields = [\"Size\", \"EncryptionStatus\", \"StorageClass\", \"ChecksumAlgorithm\"]\n    }\n\n    # Different source bucket\n    source_other = {\n      included_object_versions = \"Current\"\n      bucket                   = module.inventory_source_bucket.s3_bucket_id\n      destination = {\n        format = \"ORC\"\n        encryption = {\n          encryption_type = \"sse_s3\"\n        }\n      }\n      frequency = \"Daily\"\n    }\n  }"
+      ],
+      "field_names": [
+        "bucket",
+        "destination",
+        "enabled",
+        "filter",
+        "frequency",
+        "included_object_versions",
+        "optional_fields"
+      ],
+      "provenance": "example+names"
+    },
+    "root::lifecycle_rule": {
+      "examples": [
+        "lifecycle_rule = [\n    {\n      id     = \"test\"\n      status = \"Enabled\"\n      expiration = {\n        days = 7\n      }\n    },\n    {\n      id     = \"logs\"\n      status = \"Enabled\"\n      expiration = {\n        days = 5\n      }\n      filter = {\n        prefix                = \"logs/\"\n        object_size_less_than = 10\n      }\n    },\n    {\n      id     = \"other\"\n      status = \"Enabled\"\n      expiration = {\n        days = 2\n      }\n      filter = {\n        prefix = \"other/\"\n      }\n    }\n  ]",
+        "lifecycle_rule = [\n    {\n      id      = \"log\"\n      enabled = true\n\n      filter = {\n        tags = {\n          some    = \"value\"\n          another = \"value2\"\n        }\n      }\n\n      transition = [\n        {\n          days          = 30\n          storage_class = \"ONEZONE_IA\"\n          }, {\n          days          = 60\n          storage_class = \"GLACIER\"\n        }\n      ]\n\n      #        expiration = {\n      #          days = 90\n      #          expired_object_delete_marker = true\n      #        }\n\n      #        noncurrent_version_expiration = {\n      #          newer_noncurrent_versions = 5\n      #          days = 30\n      #        }\n    },\n    {\n      id                                     = \"log1\"\n      enabled                                = true\n      abort_incomplete_multipart_upload_days = 7\n\n      noncurrent_version_transition = [\n        {\n          days          = 30\n          storage_class = \"STANDARD_IA\"\n        },\n        {\n          days          = 60\n          storage_class = \"ONEZONE_IA\"\n        },\n        {\n          days          = 90\n          storage_class = \"GLACIER\"\n        },\n      ]\n\n      noncurrent_version_expiration = {\n        days = 300\n      }\n    },\n    {\n      id      = \"log2\"\n      enabled = true\n\n      filter = {\n        prefix                   = \"log1/\"\n        object_size_greater_than = 200000\n        object_size_less_than    = 500000\n        tags = {\n          some    = \"value\"\n          another = \"value2\"\n        }\n      }\n\n      noncurrent_version_transition = [\n        {\n          days          = 30\n          storage_class = \"STANDARD_IA\"\n        },\n      ]\n\n      noncurrent_version_expiration = {\n        days = 300\n      }\n    },\n  ]"
+      ],
+      "field_names": [
+        "abort_incomplete_multipart_upload_days",
+        "date",
+        "days",
+        "enabled",
+        "expiration",
+        "expired_object_delete_marker",
+        "filter",
+        "id",
+        "newer_noncurrent_versions",
+        "noncurrent_days",
+        "noncurrent_version_expiration",
+        "noncurrent_version_transition",
+        "object_size_greater_than",
+        "object_size_less_than",
+        "prefix",
+        "status",
+        "storage_class",
+        "tag",
+        "tags",
+        "transition"
+      ],
+      "provenance": "example+names"
+    },
+    "root::logging": {
+      "examples": [
+        "logging = {\n    target_bucket = module.log_bucket.s3_bucket_id\n    target_prefix = \"log/\"\n    target_object_key_format = {\n      partitioned_prefix = {\n        partition_date_source = \"DeliveryTime\" # \"EventTime\"\n      }\n      # simple_prefix = {}\n    }\n  }"
+      ],
+      "field_names": [
+        "partitioned_prefix",
+        "simple_prefix",
+        "target_bucket",
+        "target_object_key_format",
+        "target_prefix"
+      ],
+      "provenance": "example"
+    },
+    "root::metadata_encryption_configuration": {
+      "examples": [],
+      "field_names": [
+        "kms_key_arn",
+        "sse_algorithm"
+      ],
+      "provenance": "names-only"
+    },
+    "root::metric_configuration": {
+      "examples": [
+        "metric_configuration = {\n    all_objects = {\n      name = \"AllObjects\"\n    },\n    logs = {\n      name = \"Logs\"\n      filter = {\n        prefix = \"logs/\"\n      }\n    }\n  }",
+        "metric_configuration = [\n    {\n      name = \"documents\"\n      filter = {\n        prefix = \"documents/\"\n        tags = {\n          priority = \"high\"\n        }\n      }\n    },\n    {\n      name = \"other\"\n      filter = {\n        tags = {\n          production = \"true\"\n        }\n      }\n    },\n    {\n      name = \"all\"\n    }\n  ]"
+      ],
+      "field_names": [
+        "filter",
+        "name"
+      ],
+      "provenance": "example"
+    },
+    "root::object_lock_configuration": {
+      "examples": [
+        "object_lock_configuration = {\n    rule = {\n      default_retention = {\n        mode = \"GOVERNANCE\"\n        days = 1\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "rule",
+        "token"
+      ],
+      "provenance": "example+names"
+    },
+    "root::replication_configuration": {
+      "examples": [
+        "replication_configuration = {\n    role = aws_iam_role.replication.arn\n\n    rules = [\n      {\n        id       = \"something-with-kms-and-filter\"\n        status   = true\n        priority = 10\n\n        delete_marker_replication = false\n\n        source_selection_criteria = {\n          replica_modifications = {\n            status = \"Enabled\"\n          }\n          sse_kms_encrypted_objects = {\n            enabled = true\n          }\n        }\n\n        filter = {\n          prefix = \"one\"\n          tags = {\n            ReplicateMe = \"Yes\"\n          }\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n\n          replica_kms_key_id = aws_kms_key.replica.arn\n          account_id         = data.aws_caller_identity.current.account_id\n\n          access_control_translation = {\n            owner = \"Destination\"\n          }\n\n          replication_time = {\n            status  = \"Enabled\"\n            minutes = 15\n          }\n\n          metrics = {\n            status  = \"Enabled\"\n            minutes = 15\n          }\n        }\n      },\n      {\n        id       = \"something-with-filter\"\n        priority = 20\n\n        delete_marker_replication = false\n\n        filter = {\n          prefix = \"two\"\n          tags = {\n            ReplicateMe = \"Yes\"\n          }\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n      {\n        id       = \"everything-with-filter\"\n        status   = \"Enabled\"\n        priority = 30\n\n        delete_marker_replication = true\n\n        filter = {\n          prefix = \"\"\n        }\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n      {\n        id     = \"everything-without-filters\"\n        status = \"Enabled\"\n\n        delete_marker_replication = true\n\n        destination = {\n          bucket        = \"arn:aws:s3:::${local.destination_bucket_name}\"\n          storage_class = \"STANDARD\"\n        }\n      },\n    ]\n  }"
+      ],
+      "field_names": [
+        "access_control_translation",
+        "account",
+        "account_id",
+        "bucket",
+        "delete_marker_replication",
+        "delete_marker_replication_status",
+        "destination",
+        "encryption_configuration",
+        "existing_object_replication",
+        "existing_object_replication_status",
+        "filter",
+        "id",
+        "metrics",
+        "minutes",
+        "owner",
+        "prefix",
+        "priority",
+        "replica_kms_key_id",
+        "replica_modifications",
+        "replication_time",
+        "role",
+        "rule",
+        "rules",
+        "source_selection_criteria",
+        "sse_kms_encrypted_objects",
+        "status",
+        "storage_class",
+        "tag",
+        "tags"
+      ],
+      "provenance": "example+names"
+    },
+    "root::server_side_encryption_configuration": {
+      "examples": [
+        "server_side_encryption_configuration = {\n    rule = {\n      bucket_key_enabled = true # required for directory buckets\n      apply_server_side_encryption_by_default = {\n        sse_algorithm = \"AES256\"\n      }\n    }\n  }",
+        "server_side_encryption_configuration = {\n    rule = {\n      apply_server_side_encryption_by_default = {\n        kms_master_key_id = aws_kms_key.objects.arn\n        sse_algorithm     = \"aws:kms\"\n      }\n      blocked_encryption_types = [\"SSE-C\"]\n    }\n  }"
+      ],
+      "field_names": [
+        "apply_server_side_encryption_by_default",
+        "blocked_encryption_types",
+        "bucket_key_enabled",
+        "kms_master_key_id",
+        "rule",
+        "sse_algorithm"
+      ],
+      "provenance": "example"
+    },
+    "root::website": {
+      "examples": [
+        "website = {\n    # conflicts with \"error_document\"\n    #        redirect_all_requests_to = {\n    #          host_name = \"https://modules.tf\"\n    #        }\n\n    index_document = \"index.html\"\n    error_document = \"error.html\"\n    routing_rules = [{\n      condition = {\n        key_prefix_equals = \"docs/\"\n      },\n      redirect = {\n        replace_key_prefix_with = \"documents/\"\n      }\n      }, {\n      condition = {\n        http_error_code_returned_equals = 404\n        key_prefix_equals               = \"archive/\"\n      },\n      redirect = {\n        host_name          = \"archive.myhost.com\"\n        http_redirect_code = 301\n        protocol           = \"https\"\n        replace_key_with   = \"not_found.html\"\n      }\n    }]\n  }"
+      ],
+      "field_names": [
+        "condition",
+        "error_document",
+        "host_name",
+        "index_document",
+        "protocol",
+        "redirect",
+        "redirect_all_requests_to",
+        "routing_rules"
+      ],
+      "provenance": "example"
+    },
+    "table-bucket::encryption_configuration": {
+      "examples": [
+        "encryption_configuration = {\n    kms_key_arn   = module.kms.key_arn\n    sse_algorithm = \"aws:kms\"\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "table-bucket::maintenance_configuration": {
+      "examples": [
+        "maintenance_configuration = {\n    iceberg_unreferenced_file_removal = {\n      status = \"enabled\"\n\n      settings = {\n        non_current_days  = 7\n        unreferenced_days = 3\n      }\n    }\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "table-bucket::table_bucket_policy_statements": {
+      "examples": [
+        "table_bucket_policy_statements = [\n    {\n      effect = \"Allow\"\n      principals = [{\n        type        = \"AWS\"\n        identifiers = [data.aws_caller_identity.this.account_id]\n      }]\n      actions = [\n        \"s3tables:GetTableData\",\n        \"s3tables:GetTableMetadataLocation\"\n      ]\n    }\n  ]"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "table-bucket::tables": {
+      "examples": [
+        "tables = {\n    table1 = {\n      format    = \"ICEBERG\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n\n      encryption_configuration = {\n        kms_key_arn   = module.kms.key_arn\n        sse_algorithm = \"aws:kms\"\n      }\n\n      maintenance_configuration = {\n        iceberg_compaction = {\n          status = \"enabled\"\n          settings = {\n            target_file_size_mb = 64\n          }\n        }\n        iceberg_snapshot_management = {\n          status = \"enabled\"\n          settings = {\n            max_snapshot_age_hours = 40\n            min_snapshots_to_keep  = 3\n          }\n        }\n      }\n\n      create_table_policy = true\n      policy_statements = [\n        {\n          sid    = \"DeleteTable\"\n          effect = \"Allow\"\n          principals = [{\n            type        = \"AWS\"\n            identifiers = [data.aws_caller_identity.this.account_id]\n          }]\n          actions = [\n            \"s3tables:DeleteTable\",\n            \"s3tables:UpdateTableMetadataLocation\",\n            \"s3tables:PutTableData\",\n            \"s3tables:GetTableMetadataLocation\"\n          ]\n        }\n      ]\n\n      tags = {\n        table_name = \"table1\"\n      }\n    }\n    table2 = {\n      format    = \"ICEBERG\"\n      name      = \"table2\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n    }\n    table3 = {\n      format    = \"ICEBERG\"\n      namespace = aws_s3tables_namespace.namespace.namespace\n\n      metadata = {\n        iceberg = {\n          schema = {\n            field = {\n              created_at = {\n                name     = \"created_at\"\n                type     = \"timestamp\"\n                required = false\n              }\n              price = {\n                type     = \"decimal(10,2)\"\n                required = false\n              }\n            }\n          }\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "conditions",
+        "create_table_policy",
+        "effect",
+        "encryption_configuration",
+        "field",
+        "format",
+        "iceberg",
+        "identifiers",
+        "maintenance_configuration",
+        "metadata",
+        "name",
+        "namespace",
+        "not_actions",
+        "not_principals",
+        "policy_statements",
+        "principals",
+        "required",
+        "schema",
+        "sid",
+        "table_name",
+        "tags",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

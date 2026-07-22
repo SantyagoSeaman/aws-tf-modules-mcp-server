@@ -1,0 +1,1118 @@
+{
+  "all_inputs": {
+    "api-key": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`. Note: WAFv2 API Keys for `CLOUDFRONT` must be created in the `us-east-1` region",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The domains the API key may be used with (up to 5)",
+        "name": "token_domains",
+        "required": true,
+        "type": "list(string)"
+      }
+    ],
+    "ip-set": [
+      {
+        "default": "[]",
+        "description": "Contains an array of strings that specifies zero or more IP addresses or blocks of IP addresses in CIDR notation",
+        "name": "addresses",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "A friendly name of the IP set",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the IP set",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"IPV4\"",
+        "description": "Specify `IPV4` or `IPV6`. Valid values are `IPV4` or `IPV6`",
+        "name": "ip_address_version",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "logging-configuration": [
+      {
+        "default": "[]",
+        "description": "The parts of the request that you want to keep out of the logs. Each entry must specify exactly one of `method`, `query_string`, `uri_path`, or `single_header`",
+        "name": "redacted_fields",
+        "required": false,
+        "type": "list(object({\n    method        = optional(object({}))\n    query_string  = optional(object({}))\n    uri_path      = optional(object({}))\n    single_header = optional(object({ name = string }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A configuration block that specifies which web requests are kept in the logs and which are dropped",
+        "name": "logging_filter",
+        "required": false,
+        "type": "object({\n    default_behavior = string\n    filters = list(object({\n      behavior    = string\n      requirement = string\n      conditions = list(object({\n        action_condition = optional(object({\n          action = string\n        }))\n        label_name_condition = optional(object({\n          label_name = string\n        }))\n      }))\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the WAF logging configuration will be managed. Defaults to the provider region",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the Web ACL to associate with the logging configuration",
+        "name": "resource_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The Amazon Kinesis Data Firehose, CloudWatch Log Group, or S3 Bucket Amazon Resource Names (ARNs) that you want to associate with the Web ACL. Names must be prefixed with `aws-waf-logs-`",
+        "name": "log_destination_configs",
+        "required": true,
+        "type": "list(string)"
+      }
+    ],
+    "regex-pattern-set": [
+      {
+        "default": "[]",
+        "description": "Set of regex pattern strings",
+        "name": "regular_expressions",
+        "required": false,
+        "type": "set(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "A friendly name of the regex pattern set",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the regex pattern set",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "null",
+        "description": "Escape hatch: JSON string of WAF rules for cases where dynamic blocks cannot represent all provider features. Mutually exclusive with `rules`",
+        "name": "rule_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Specifies the domains that AWS WAF should accept in a web request token. Enables token use across multiple protected resources",
+        "name": "token_domains",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "CAPTCHA configuration for the Web ACL. Specifies how long a CAPTCHA timestamp is considered valid",
+        "name": "captcha_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Challenge configuration for the Web ACL. Specifies how long a challenge timestamp is considered valid",
+        "name": "challenge_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration for body inspection size limits per resource type. Keys are resource types (e.g., `CLOUDFRONT`, `API_GATEWAY`, `COGNITO_USER_POOL`, `APP_RUNNER_SERVICE`, `VERIFIED_ACCESS_INSTANCE`)",
+        "name": "association_config",
+        "required": false,
+        "type": "map(object({\n    default_size_inspection_limit = string\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Controls if a logging configuration should be created for the Web ACL",
+        "name": "create_logging_configuration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"allow\"",
+        "description": "Action to perform if none of the rules contained in the Web ACL match. Use `allow` or `block` for simple actions, or provide an object for custom request handling/response. See examples for object structure",
+        "name": "default_action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of custom response body configurations. Key is the reference key, used in custom responses",
+        "name": "custom_response_bodies",
+        "required": false,
+        "type": "map(object({\n    content      = string\n    content_type = string\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Kinesis Data Firehose, CloudWatch Log Group, or S3 Bucket ARNs for the logging destination. Names must be prefixed with `aws-waf-logs-`",
+        "name": "logging_log_destination_configs",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A configuration block that specifies which web requests are kept in the logs and which are dropped",
+        "name": "logging_filter",
+        "required": false,
+        "type": "object({\n    default_behavior = string\n    filters = list(object({\n      behavior    = string\n      requirement = string\n      conditions = list(object({\n        action_condition = optional(object({\n          action = string\n        }))\n        label_name_condition = optional(object({\n          label_name = string\n        }))\n      }))\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A friendly name of the Web ACL. Mutually exclusive with `name_prefix`",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Mutually exclusive with `name` (provider rejects both being set at apply time)",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Data protection configuration. `data_protections` is a list of objects with `field` (object with `field_keys` list and `field_type` one of `SINGLE_HEADER`/`SINGLE_COOKIE`/`SINGLE_QUERY_ARGUMENT`/`QUERY_STRING`/`BODY`), `action` (`HASH` or `SUBSTITUTION`), `exclude_rate_based_details` (bool, optional), and `exclude_rule_match_details` (bool, optional)",
+        "name": "data_protection_config",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Region where the WAF logging configuration will be managed. Defaults to the provider region",
+        "name": "logging_region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of resource ARNs to associate with the Web ACL. Key is a friendly name, value is the resource ARN",
+        "name": "association_resource_arns",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A friendly description of the Web ACL",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of WAF rule configurations. The key is used as the rule name.\n\nEach rule supports:\n- `priority`          - (Required) Rule priority (lower = evaluated first)\n- `action`            - Action for standalone rules. Use string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom response\n- `override_action`   - Override action for managed/rule group rules. Use string (`none`, `count`) or object\n- `statement`         - (Required) Rule statement configuration. See AWS provider docs for statement structure\n- `visibility_config` - CloudWatch metrics config. Auto-generated from rule key if omitted\n- `captcha_config`    - Optional CAPTCHA configuration\n- `challenge_config`  - Optional challenge configuration\n- `rule_labels`       - Optional list of labels to add to matching requests\n\nSee examples/complete for usage patterns.\n",
+        "name": "rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "The parts of the request that you want to keep out of the logs. Each entry must specify exactly one of `method`, `query_string`, `uri_path`, or `single_header`",
+        "name": "logging_redacted_fields",
+        "required": false,
+        "type": "list(object({\n    method        = optional(object({}))\n    query_string  = optional(object({}))\n    uri_path      = optional(object({}))\n    single_header = optional(object({ name = string }))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Visibility configuration for the Web ACL. Defines CloudWatch metrics configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      }
+    ],
+    "rule-group": [
+      {
+        "default": "null",
+        "description": "A friendly description of the rule group",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The web ACL capacity units (WCUs) required for this rule group. Valid range is 1 to 1500",
+        "name": "capacity",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "\"\"",
+        "description": "A friendly name of the rule group. Conflicts with `name_prefix`",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"REGIONAL\"",
+        "description": "Specifies whether this is for an AWS CloudFront distribution or for a regional application. Valid values are `CLOUDFRONT` or `REGIONAL`",
+        "name": "scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Visibility configuration for the rule group. Defines CloudWatch metrics configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of WAF rule configurations. The key is used as the rule name.\n\nEach rule supports:\n- `priority`          - (Required) Rule priority (lower = evaluated first)\n- `action`            - Action: string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom response\n- `statement`         - (Required) Rule statement configuration. See AWS provider docs for statement structure.\n                        NOTE: rule groups cannot reference managed rule groups, rate-based statements,\n                        or other rule groups, so those statement types are not supported here.\n- `visibility_config` - CloudWatch metrics config. Auto-generated from rule key if omitted\n- `captcha_config`    - Optional CAPTCHA configuration\n- `challenge_config`  - Optional challenge configuration\n- `rule_labels`       - Optional list of labels to add to matching requests\n",
+        "name": "rules",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of custom response body configurations. Key is the reference key, used in custom responses",
+        "name": "custom_response_body",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Conflicts with `name`",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "web-acl-association": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the Web ACL to associate with the resource",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The ARN of the resource to associate with the Web ACL (ALB, API Gateway, Cognito User Pool, AppSync, Verified Access)",
+        "name": "resource_arn",
+        "required": true,
+        "type": "string"
+      }
+    ],
+    "web-acl-rule": [
+      {
+        "default": "null",
+        "description": "Action to take when the rule matches. Use string (`allow`, `block`, `count`, `captcha`, `challenge`) or object for custom request handling/response. Conflicts with `override_action`",
+        "name": "action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Override action for managed rule groups and rule group reference statements. Use string (`none`, `count`) or object. Conflicts with `action`",
+        "name": "override_action",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "CAPTCHA configuration that overrides the Web ACL level setting",
+        "name": "captcha_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Challenge configuration that overrides the Web ACL level setting",
+        "name": "challenge_config",
+        "required": false,
+        "type": "object({\n    immunity_time_property = object({\n      immunity_time = number\n    })\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "ARN of the Web ACL to add the rule to",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "Rule statement configuration. Required. Supports the full WAFv2 statement schema including managed_rule_group_statement, rate_based_statement, rule_group_reference_statement, and nested AND/OR/NOT logical statements",
+        "name": "statement",
+        "required": true,
+        "type": "any"
+      },
+      {
+        "default": "",
+        "description": "CloudWatch metrics configuration for this rule",
+        "name": "visibility_config",
+        "required": true,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = optional(string)\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "[]",
+        "description": "List of labels to apply to matching web requests. Each entry must have a `name` field",
+        "name": "rule_label",
+        "required": false,
+        "type": "list(object({\n    name = string\n  }))"
+      },
+      {
+        "default": "",
+        "description": "Name of the rule. Must be unique within the Web ACL",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "Rule priority. Rules with lower priority are evaluated first",
+        "name": "priority",
+        "required": true,
+        "type": "number"
+      }
+    ],
+    "web-acl-rule-group-association": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Russian_invasion_of_Ukraine",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "Name of the rule to create in the Web ACL that references the rule group (1-128 chars)",
+        "name": "rule_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "ARN of the Web ACL to associate the Rule Group with",
+        "name": "web_acl_arn",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Managed Rule Group configuration. One of `managed_rule_group` or `rule_group_reference` must be set",
+        "name": "managed_rule_group",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "CloudWatch metrics + sampled requests configuration",
+        "name": "visibility_config",
+        "required": false,
+        "type": "object({\n    cloudwatch_metrics_enabled = optional(bool, true)\n    metric_name                = string\n    sampled_requests_enabled   = optional(bool, true)\n  })"
+      },
+      {
+        "default": "",
+        "description": "Priority of the rule within the Web ACL. Lower numbers are evaluated first",
+        "name": "priority",
+        "required": true,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Override action for the rule group. Valid values are `none` and `count`. Defaults to `none`",
+        "name": "override_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Custom Rule Group reference. One of `managed_rule_group` or `rule_group_reference` must be set",
+        "name": "rule_group_reference",
+        "required": false,
+        "type": "any"
+      }
+    ]
+  },
+  "all_outputs": {
+    "api-key": [
+      {
+        "description": "The generated API key. Sensitive — do not log",
+        "name": "api_key"
+      },
+      {
+        "description": "The scope (REGIONAL or CLOUDFRONT) of the API key",
+        "name": "scope"
+      },
+      {
+        "description": "The token domains the API key is bound to",
+        "name": "token_domains"
+      }
+    ],
+    "ip-set": [
+      {
+        "description": "The ID of the IP set",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the IP set",
+        "name": "arn"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "lock_token"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "logging-configuration": [
+      {
+        "description": "The ID of the WAF logging configuration",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the Web ACL associated with the logging configuration",
+        "name": "resource_arn"
+      }
+    ],
+    "regex-pattern-set": [
+      {
+        "description": "The ID of the regex pattern set",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the regex pattern set",
+        "name": "arn"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "lock_token"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "root": [
+      {
+        "description": "The name of the Web ACL",
+        "name": "web_acl_name"
+      },
+      {
+        "description": "The description of the Web ACL",
+        "name": "web_acl_description"
+      },
+      {
+        "description": "List of rule names in the Web ACL",
+        "name": "web_acl_rule_names"
+      },
+      {
+        "description": "A map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "web_acl_tags_all"
+      },
+      {
+        "description": "Map of Web ACL association IDs",
+        "name": "web_acl_association_ids"
+      },
+      {
+        "description": "The ID of the Web ACL",
+        "name": "web_acl_id"
+      },
+      {
+        "description": "The ARN of the Web ACL",
+        "name": "web_acl_arn"
+      },
+      {
+        "description": "Web ACL capacity units (WCUs) currently being used by this Web ACL",
+        "name": "web_acl_capacity"
+      },
+      {
+        "description": "A token used for optimistic locking",
+        "name": "web_acl_lock_token"
+      },
+      {
+        "description": "The URL to use in SDK integrations with managed rule groups",
+        "name": "web_acl_application_integration_url"
+      },
+      {
+        "description": "The visibility configuration of the Web ACL",
+        "name": "web_acl_visibility_config"
+      },
+      {
+        "description": "The ID of the WAF logging configuration",
+        "name": "logging_configuration_id"
+      }
+    ],
+    "rule-group": [
+      {
+        "description": "The ID of the WAF rule group",
+        "name": "id"
+      },
+      {
+        "description": "The ARN of the WAF rule group",
+        "name": "arn"
+      },
+      {
+        "description": "Lock token used by AWS to detect concurrent modifications",
+        "name": "lock_token"
+      },
+      {
+        "description": "The capacity (WCUs) configured for the rule group",
+        "name": "capacity"
+      },
+      {
+        "description": "Map of tags assigned to the resource, including those inherited from the provider default_tags configuration block",
+        "name": "tags_all"
+      }
+    ],
+    "web-acl-association": [
+      {
+        "description": "The ID of the Web ACL association",
+        "name": "id"
+      }
+    ],
+    "web-acl-rule": [
+      {
+        "description": "Name of the rule",
+        "name": "name"
+      },
+      {
+        "description": "Priority of the rule",
+        "name": "priority"
+      },
+      {
+        "description": "ARN of the Web ACL the rule is attached to",
+        "name": "web_acl_arn"
+      }
+    ],
+    "web-acl-rule-group-association": [
+      {
+        "description": "Priority of the rule",
+        "name": "priority"
+      },
+      {
+        "description": "ARN of the parent Web ACL",
+        "name": "web_acl_arn"
+      },
+      {
+        "description": "Name of the rule created in the Web ACL",
+        "name": "rule_name"
+      }
+    ]
+  },
+  "built_from_version": "2.1.0",
+  "module_id": "terraform-aws-modules/wafv2/aws",
+  "vars": {
+    "root::data_protection_config": {
+      "examples": [
+        "data_protection_config = {\n    data_protections = [\n      {\n        action = \"HASH\"\n        field = {\n          field_keys = [\"authorization\"]\n          field_type = \"SINGLE_HEADER\"\n        }\n        exclude_rate_based_details = false\n        exclude_rule_match_details = false\n      }\n    ]\n  }"
+      ],
+      "field_names": [
+        "action",
+        "data_protections",
+        "exclude_rate_based_details",
+        "exclude_rule_match_details",
+        "field"
+      ],
+      "provenance": "example"
+    },
+    "root::default_action": {
+      "examples": [
+        "default_action = \"allow\""
+      ],
+      "field_names": [
+        "allow",
+        "block",
+        "custom_request_handling",
+        "custom_response",
+        "custom_response_body_key",
+        "insert_headers",
+        "name",
+        "response_code",
+        "response_headers",
+        "value"
+      ],
+      "provenance": "example+names"
+    },
+    "root::rules": {
+      "examples": [
+        "rules = {\n    common-rule-set = {\n      priority        = 1\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesCommonRuleSet\"\n          vendor_name = \"AWS\"\n        }\n      }\n    }\n  }",
+        "rules = {\n    # AWS Managed Rule Groups\n    common-rule-set = {\n      priority        = 1\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesCommonRuleSet\"\n          vendor_name = \"AWS\"\n        }\n      }\n    }\n\n    sqli-rule-set = {\n      priority        = 2\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesSQLiRuleSet\"\n          vendor_name = \"AWS\"\n        }\n      }\n    }\n\n    known-bad-inputs = {\n      priority        = 3\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesKnownBadInputsRuleSet\"\n          vendor_name = \"AWS\"\n        }\n      }\n    }\n\n    # Managed rule group with scope_down_statement using regex_match_statement\n    # Excludes specific URI paths from the admin protection rule set\n    admin-protection-scoped = {\n      priority        = 4\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesAdminProtectionRuleSet\"\n          vendor_name = \"AWS\"\n\n          scope_down_statement = {\n            regex_match_statement = {\n              regex_string = \"^/admin/.*\"\n              field_to_match = {\n                uri_path = {}\n              }\n              text_transformations = [\n                {\n                  priority = 0\n                  type     = \"LOWERCASE\"\n                }\n              ]\n            }\n          }\n        }\n      }\n    }\n\n    # Managed rule group with scope_down_statement using not_statement\n    # Applies the common rule set only to requests NOT matching a specific path\n    common-rules-scoped = {\n      priority        = 5\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesCommonRuleSet\"\n          vendor_name = \"AWS\"\n\n          scope_down_statement = {\n            not_statement = {\n              statement = {\n                byte_match_statement = {\n                  positional_constraint = \"STARTS_WITH\"\n                  search_string         = \"/api/health\"\n                  field_to_match = {\n                    uri_path = {}\n                  }\n                  text_transformations = [\n                    {\n                      priority = 0\n                      type     = \"LOWERCASE\"\n                    }\n                  ]\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n\n    # Managed rule group with scope_down_statement using and_statement\n    # Applies the common rule set only to requests matching a specific path AND a http method POST\n    common-rules-scoped-with-and = {\n      priority        = 6\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesCommonRuleSet\"\n          vendor_name = \"AWS\"\n\n          scope_down_statement = {\n            and_statement = {\n              statements = [\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"STARTS_WITH\"\n                    search_string         = \"/login\"\n                    field_to_match = {\n                      uri_path = {}\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"LOWERCASE\"\n                      }\n                    ]\n                  }\n                },\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"EXACTLY\"\n                    search_string         = \"POST\"\n                    field_to_match = {\n                      method = {}\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"NONE\"\n                      }\n                    ]\n                  }\n                }\n              ]\n            }\n          }\n        }\n      }\n    }\n\n    # Managed rule group with scope_down_statement using or_statement\n    # Applies the common rule set only to requests matching a specific path OR a specific body\n    common-rules-scoped-with-or = {\n      priority        = 7\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesCommonRuleSet\"\n          vendor_name = \"AWS\"\n\n          scope_down_statement = {\n            or_statement = {\n              statements = [\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"STARTS_WITH\"\n                    search_string         = \"/login\"\n                    field_to_match = {\n                      uri_path = {}\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"LOWERCASE\"\n                      }\n                    ]\n                  }\n                },\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"EXACTLY\"\n                    search_string         = \"action: login\"\n                    field_to_match = {\n                      body = {\n                        oversize_handling = \"CONTINUE\"\n                      }\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"NONE\"\n                      }\n                    ]\n                  }\n                }\n              ]\n            }\n          }\n        }\n      }\n    }\n\n    # IP set reference rule\n    block-bad-ips = {\n      priority = 10\n      action   = \"block\"\n\n      statement = {\n        ip_set_reference_statement = {\n          arn = module.ip_set.arn\n        }\n      }\n    }\n\n    # Geo match rule - block specific countries\n    geo-block = {\n      priority = 20\n      action = {\n        block = {\n          custom_response = {\n            response_code            = 403\n            custom_response_body_key = \"blocked_response\"\n          }\n        }\n      }\n\n      statement = {\n        geo_match_statement = {\n          country_codes = [\"RU\", \"CN\"]\n        }\n      }\n    }\n\n    # Rate-based rule\n    rate-limit = {\n      priority = 30\n      action   = \"block\"\n\n      statement = {\n        rate_based_statement = {\n          limit                 = 1000\n          aggregate_key_type    = \"IP\"\n          evaluation_window_sec = 300\n        }\n      }\n    }\n\n    # Rate-based rule with compound scope_down_statement.\n    # Rate-limits only login POSTs to /login (URI AND method match).\n    rate-limit-login-scoped = {\n      priority = 31\n      action   = \"block\"\n\n      statement = {\n        rate_based_statement = {\n          limit                 = 100\n          aggregate_key_type    = \"IP\"\n          evaluation_window_sec = 300\n\n          scope_down_statement = {\n            and_statement = {\n              statements = [\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"STARTS_WITH\"\n                    search_string         = \"/login\"\n                    field_to_match = {\n                      uri_path = {}\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"LOWERCASE\"\n                      }\n                    ]\n                  }\n                },\n                {\n                  byte_match_statement = {\n                    positional_constraint = \"EXACTLY\"\n                    search_string         = \"POST\"\n                    field_to_match = {\n                      method = {}\n                    }\n                    text_transformations = [\n                      {\n                        priority = 0\n                        type     = \"NONE\"\n                      }\n                    ]\n                  }\n                }\n              ]\n            }\n          }\n        }\n      }\n    }\n\n    # Byte match rule - block requests without specific header\n    require-api-key = {\n      priority = 40\n      action   = \"block\"\n\n      statement = {\n        byte_match_statement = {\n          positional_constraint = \"EXACTLY\"\n          search_string         = \"valid-api-key\"\n          field_to_match = {\n            single_header = {\n              name = \"x-api-key\"\n            }\n          }\n          text_transformations = [\n            {\n              priority = 0\n              type     = \"NONE\"\n            }\n          ]\n        }\n      }\n    }\n\n    # Size constraint rule\n    limit-body-size = {\n      priority = 50\n      action   = \"block\"\n\n      statement = {\n        size_constraint_statement = {\n          comparison_operator = \"GT\"\n          size                = 8192\n          field_to_match = {\n            body = {\n              oversize_handling = \"MATCH\"\n            }\n          }\n          text_transformations = [\n            {\n              priority = 0\n              type     = \"NONE\"\n            }\n          ]\n        }\n      }\n    }\n\n    # Nested compound: AND containing an OR among its child statements.\n    # Demonstrates the L2 OR-inside-AND path together with the byte_match\n    # `body` field-target — both shipped in this PR.\n    nested-compound-demo = {\n      priority = 60\n      action   = \"block\"\n\n      statement = {\n        and_statement = {\n          statements = [\n            {\n              geo_match_statement = {\n                country_codes = [\"US\"]\n              }\n            },\n            {\n              or_statement = {\n                statements = [\n                  {\n                    byte_match_statement = {\n                      positional_constraint = \"CONTAINS\"\n                      search_string         = \"DROP TABLE\"\n                      field_to_match = {\n                        body = {\n                          oversize_handling = \"MATCH\"\n                        }\n                      }\n                      text_transformations = [\n                        {\n                          priority = 0\n                          type     = \"LOWERCASE\"\n                        }\n                      ]\n                    }\n                  },\n                  {\n                    ip_set_reference_statement = {\n                      arn = module.ip_set.arn\n                    }\n                  }\n                ]\n              }\n            }\n          ]\n        }\n      }\n    }\n\n    # ASN match — block requests originating from a specific Autonomous System\n    block-asn = {\n      priority = 70\n      action   = \"block\"\n\n      statement = {\n        asn_match_statement = {\n          asn_list = [12389, 65535]\n        }\n      }\n    }\n\n    # Byte match using uri_fragment + ja4_fingerprint\n    block-by-uri-fragment-and-ja4 = {\n      priority = 71\n      action   = \"block\"\n\n      statement = {\n        and_statement = {\n          statements = [\n            {\n              byte_match_statement = {\n                positional_constraint = \"CONTAINS\"\n                search_string         = \"debug\"\n                field_to_match = {\n                  uri_fragment = {\n                    fallback_behavior = \"MATCH\"\n                  }\n                }\n                text_transformations = [\n                  {\n                    priority = 0\n                    type     = \"LOWERCASE\"\n                  }\n                ]\n              }\n            },\n            {\n              byte_match_statement = {\n                positional_constraint = \"STARTS_WITH\"\n                search_string         = \"abc123\"\n                field_to_match = {\n                  ja4_fingerprint = {\n                    fallback_behavior = \"NO_MATCH\"\n                  }\n                }\n                text_transformations = [\n                  {\n                    priority = 0\n                    type     = \"NONE\"\n                  }\n                ]\n              }\n            }\n          ]\n        }\n      }\n    }\n\n    # Rate-based with JA3 fingerprint as a custom aggregate key\n    rate-by-ja3 = {\n      priority = 72\n      action   = \"block\"\n\n      statement = {\n        rate_based_statement = {\n          limit                 = 200\n          aggregate_key_type    = \"CUSTOM_KEYS\"\n          evaluation_window_sec = 300\n\n          custom_keys = [\n            {\n              ja3_fingerprint = {\n                fallback_behavior = \"NO_MATCH\"\n              }\n            },\n            {\n              header = {\n                name = \"x-client-id\"\n                text_transformations = [\n                  {\n                    priority = 0\n                    type     = \"NONE\"\n                  }\n                ]\n              }\n            }\n          ]\n        }\n      }\n    }\n\n    # Anti-DDoS managed rule group\n    aws-anti-ddos = {\n      priority        = 73\n      override_action = \"none\"\n\n      statement = {\n        managed_rule_group_statement = {\n          name        = \"AWSManagedRulesAntiDDoSRuleSet\"\n          vendor_name = \"AWS\"\n\n          managed_rule_group_configs = [\n            {\n              aws_managed_rules_anti_ddos_rule_set = {\n                sensitivity_to_block = \"MEDIUM\"\n                client_side_action_config = {\n                  challenge = {\n                    usage_of_action = \"ENABLED\"\n                    sensitivity     = \"HIGH\"\n                    exempt_uri_regular_expression = [\n                      {\n                        regex_string = \"^/health$\"\n                      }\n                    ]\n                  }\n                }\n              }\n            }\n          ]\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "action",
+        "aggregate_key_type",
+        "all",
+        "all_query_arguments",
+        "allow",
+        "and_statement",
+        "arn",
+        "asn_list",
+        "asn_match_statement",
+        "aws_managed_rules_acfp_rule_set",
+        "aws_managed_rules_anti_ddos_rule_set",
+        "aws_managed_rules_atp_rule_set",
+        "aws_managed_rules_bot_control_rule_set",
+        "block",
+        "body",
+        "body_contains",
+        "byte_match_statement",
+        "captcha",
+        "captcha_config",
+        "challenge",
+        "challenge_config",
+        "client_side_action_config",
+        "comparison_operator",
+        "cookie",
+        "cookies",
+        "count",
+        "country_codes",
+        "creation_path",
+        "custom_keys",
+        "custom_request_handling",
+        "custom_response",
+        "custom_response_body_key",
+        "email_field",
+        "enable_machine_learning",
+        "enable_regex_in_path",
+        "evaluation_window_sec",
+        "excluded_cookies",
+        "excluded_headers",
+        "exempt_uri_regular_expression",
+        "failure_codes",
+        "failure_strings",
+        "failure_values",
+        "fallback_behavior",
+        "field_to_match",
+        "forwarded_ip",
+        "forwarded_ip_config",
+        "geo_match_statement",
+        "header",
+        "header_name",
+        "header_order",
+        "headers",
+        "identifier",
+        "immunity_time_property",
+        "included_cookies",
+        "included_headers",
+        "included_paths",
+        "insert_headers",
+        "inspection_level",
+        "invalid_fallback_behavior",
+        "ip",
+        "ip_set_forwarded_ip_config",
+        "ip_set_reference_statement",
+        "ja3_fingerprint",
+        "ja4_fingerprint",
+        "json",
+        "json_body",
+        "key",
+        "label_match_statement",
+        "label_namespace",
+        "limit",
+        "login_path",
+        "managed_rule_group_configs",
+        "managed_rule_group_statement",
+        "match_pattern",
+        "match_scope",
+        "method",
+        "name",
+        "namespace",
+        "none",
+        "not_statement",
+        "or_statement",
+        "override_action",
+        "oversize_handling",
+        "password_field",
+        "payload_type",
+        "position",
+        "positional_constraint",
+        "priority",
+        "query_argument",
+        "query_string",
+        "rate_based_statement",
+        "regex_match_statement",
+        "regex_pattern_set_reference_statement",
+        "regex_string",
+        "registration_page_path",
+        "request_inspection",
+        "response_code",
+        "response_headers",
+        "response_inspection",
+        "rule_action_overrides",
+        "rule_group_reference_statement",
+        "rule_labels",
+        "scope",
+        "scope_down_statement",
+        "search_string",
+        "sensitivity",
+        "sensitivity_level",
+        "sensitivity_to_block",
+        "single_header",
+        "single_query_argument",
+        "size",
+        "size_constraint_statement",
+        "sqli_match_statement",
+        "statement",
+        "statements",
+        "status_code",
+        "success_codes",
+        "success_strings",
+        "success_values",
+        "text_transformations",
+        "type",
+        "uri_fragment",
+        "uri_path",
+        "usage_of_action",
+        "username_field",
+        "value",
+        "vendor_name",
+        "version",
+        "visibility_config",
+        "xss_match_statement"
+      ],
+      "provenance": "example+names"
+    },
+    "rule-group::custom_response_body": {
+      "examples": [],
+      "field_names": [
+        "content",
+        "content_type"
+      ],
+      "provenance": "names-only"
+    },
+    "rule-group::rules": {
+      "examples": [
+        "rules = {\n    block-high-risk-geos = {\n      priority = 0\n      action   = \"block\"\n      statement = {\n        geo_match_statement = {\n          country_codes = [\"RU\", \"BY\", \"KP\"]\n        }\n      }\n      visibility_config = {\n        cloudwatch_metrics_enabled = true\n        metric_name                = \"block-high-risk-geos\"\n        sampled_requests_enabled   = true\n      }\n    }\n\n    count-admin-uri = {\n      priority = 1\n      action   = \"count\"\n      statement = {\n        byte_match_statement = {\n          search_string         = \"/admin\"\n          positional_constraint = \"STARTS_WITH\"\n          field_to_match = {\n            uri_path = {}\n          }\n          text_transformations = [\n            {\n              priority = 0\n              type     = \"LOWERCASE\"\n            },\n          ]\n        }\n      }\n      visibility_config = {\n        cloudwatch_metrics_enabled = true\n        metric_name                = \"count-admin-uri\"\n        sampled_requests_enabled   = true\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "action",
+        "all",
+        "all_query_arguments",
+        "allow",
+        "and_statement",
+        "arn",
+        "block",
+        "body",
+        "byte_match_statement",
+        "captcha",
+        "captcha_config",
+        "challenge",
+        "comparison_operator",
+        "cookies",
+        "count",
+        "country_codes",
+        "custom_request_handling",
+        "custom_response",
+        "custom_response_body_key",
+        "excluded_cookies",
+        "excluded_headers",
+        "fallback_behavior",
+        "field_to_match",
+        "forwarded_ip_config",
+        "geo_match_statement",
+        "header_name",
+        "header_order",
+        "headers",
+        "immunity_time_property",
+        "included_cookies",
+        "included_headers",
+        "included_paths",
+        "insert_headers",
+        "invalid_fallback_behavior",
+        "ip_set_forwarded_ip_config",
+        "ip_set_reference_statement",
+        "ja3_fingerprint",
+        "json_body",
+        "key",
+        "label_match_statement",
+        "match_pattern",
+        "match_scope",
+        "method",
+        "name",
+        "not_statement",
+        "or_statement",
+        "oversize_handling",
+        "position",
+        "positional_constraint",
+        "priority",
+        "query_string",
+        "regex_match_statement",
+        "regex_pattern_set_reference_statement",
+        "regex_string",
+        "response_code",
+        "response_headers",
+        "rule_labels",
+        "scope",
+        "search_string",
+        "sensitivity_level",
+        "single_header",
+        "single_query_argument",
+        "size",
+        "size_constraint_statement",
+        "sqli_match_statement",
+        "statement",
+        "statements",
+        "text_transformations",
+        "type",
+        "uri_path",
+        "value",
+        "visibility_config",
+        "xss_match_statement"
+      ],
+      "provenance": "example+names"
+    },
+    "web-acl-rule-group-association::managed_rule_group": {
+      "examples": [
+        "managed_rule_group = {\n    name        = \"AWSManagedRulesCommonRuleSet\"\n    vendor_name = \"AWS\"\n  }"
+      ],
+      "field_names": [
+        "allow",
+        "aws_managed_rules_acfp_rule_set",
+        "aws_managed_rules_anti_ddos_rule_set",
+        "aws_managed_rules_atp_rule_set",
+        "aws_managed_rules_bot_control_rule_set",
+        "block",
+        "captcha",
+        "challenge",
+        "client_side_action_config",
+        "count",
+        "creation_path",
+        "enable_machine_learning",
+        "enable_regex_in_path",
+        "exempt_uri_regular_expression",
+        "inspection_level",
+        "login_path",
+        "managed_rule_group_configs",
+        "name",
+        "regex_string",
+        "registration_page_path",
+        "rule_action_overrides",
+        "sensitivity",
+        "sensitivity_to_block",
+        "usage_of_action",
+        "vendor_name",
+        "version"
+      ],
+      "provenance": "example+names"
+    },
+    "web-acl-rule-group-association::rule_group_reference": {
+      "examples": [
+        "rule_group_reference = {\n    arn = aws_wafv2_rule_group.this.arn\n  }"
+      ],
+      "field_names": [
+        "allow",
+        "arn",
+        "block",
+        "captcha",
+        "challenge",
+        "count",
+        "rule_action_overrides"
+      ],
+      "provenance": "example+names"
+    },
+    "web-acl-rule::action": {
+      "examples": [
+        "action = \"block\""
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "web-acl-rule::override_action": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "web-acl-rule::statement": {
+      "examples": [
+        "statement = {\n    geo_match_statement = {\n      country_codes = [\"RU\", \"BY\", \"KP\"]\n    }\n  }",
+        "statement = {\n    rate_based_statement = {\n      limit              = 2000\n      aggregate_key_type = \"IP\"\n    }\n  }"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    }
+  }
+}

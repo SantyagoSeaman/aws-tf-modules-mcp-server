@@ -1,0 +1,335 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "null",
+        "description": "The waiting period, specified in number of days. After the waiting period ends, AWS KMS deletes the KMS key. If you specify a value, it must be between `7` and `30`, inclusive. If you do not specify a value, it defaults to `30`",
+        "name": "deletion_window_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether key rotation is enabled. Defaults to `true`",
+        "name": "enable_key_rotation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key asymmetric sign and verify users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-users-crypto)",
+        "name": "key_asymmetric_sign_verify_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an external CMK (externally provided material) will be created or a standard CMK (AWS provided material)",
+        "name": "create_external",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for those who will have full key permissions (`kms:*`)",
+        "name": "key_owners",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key symmetric encryption users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-users-crypto)",
+        "name": "key_symmetric_encryption_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a replica standard CMK will be created (AWS provided material)",
+        "name": "create_replica",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A flag to indicate whether to bypass the key policy lockout safety check. Setting this value to true increases the risk that the KMS key becomes unmanageable",
+        "name": "bypass_policy_lockout_safety_check",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Base64 encoded 256-bit symmetric encryption key material to import. The CMK is permanently associated with this key material. External key only",
+        "name": "key_material_base64",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A valid policy JSON document. Although this is a key policy, not an IAM policy, an `aws_iam_policy_document`, in the form that designates a principal, can be used",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [AWSServiceRoleForAutoScaling roles](https://docs.aws.amazon.com/autoscaling/ec2/userguide/key-policy-requirements-EBS-encryption.html#policy-example-cmk-access)",
+        "name": "key_service_roles_for_autoscaling",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key HMAC users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-users-crypto)",
+        "name": "key_hmac_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specifies whether the key contains a symmetric key or an asymmetric key pair and the encryption algorithms or signing algorithms that the key supports. Valid values: SYMMETRIC_DEFAULT, RSA_2048, RSA_3072, RSA_4096, HMAC_224, HMAC_256, HMAC_384, HMAC_512, ECC_NIST_P256, ECC_NIST_P384, ECC_NIST_P521, ECC_SECG_P256K1, ML_DSA_44, ML_DSA_65, ML_DSA_87, or SM2 (China Regions only). Defaults to SYMMETRIC_DEFAULT",
+        "name": "key_spec",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The primary external key arn of a multi-region replica external key",
+        "name": "primary_external_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ID of the KMS Custom Key Store where the key will be stored instead of KMS (eg CloudHSM).",
+        "name": "custom_key_store_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key asymmetric public encryption users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-users-crypto)",
+        "name": "key_asymmetric_public_encryption_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "key_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the KMS policy used for Route53 DNSSEC signing is enabled",
+        "name": "enable_route53_dnssec",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Custom period of time between each rotation date. Must be a number between 90 and 2560 (inclusive)",
+        "name": "rotation_period_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether to enable the default key policy. Defaults to `true`",
+        "name": "enable_default_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key administrators](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-default-allow-administrators)",
+        "name": "key_administrators",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-default-allow-users)",
+        "name": "key_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether a replica external CMK will be created (externally provided material)",
+        "name": "create_replica_external",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of aliases to create. Values provided via the `name` key of the map can be computed from upstream resources",
+        "name": "computed_aliases",
+        "required": false,
+        "type": "map(object({\n    name = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The description of the key as viewed in AWS console",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies whether the key is enabled. Defaults to `true`",
+        "name": "is_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether the KMS key is a multi-Region (`true`) or regional (`false`) key. Defaults to `false`",
+        "name": "multi_region",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The primary key arn of a multi-region replica key",
+        "name": "primary_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of aliases to create. Note - due to the use of `toset()`, values must be static strings and not computed values",
+        "name": "aliases",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of grant definitions to create",
+        "name": "grants",
+        "required": false,
+        "type": "map(object({\n    constraints = optional(list(object({\n      encryption_context_equals = optional(map(string))\n      encryption_context_subset = optional(map(string))\n    })))\n    grant_creation_tokens = optional(list(string))\n    grantee_principal     = string\n    name                  = optional(string) # Will fall back to use map key\n    operations            = list(string)\n    retire_on_delete      = optional(bool)\n    retiring_principal    = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the intended use of the key. Valid values: `ENCRYPT_DECRYPT` or `SIGN_VERIFY`. Defaults to `ENCRYPT_DECRYPT`",
+        "name": "key_usage",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Time at which the imported key material expires. When the key material expires, AWS KMS deletes the key material and the CMK becomes unusable. If not specified, key material does not expire",
+        "name": "valid_to",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of IAM ARNs for [key service users](https://docs.aws.amazon.com/kms/latest/developerguide/key-policy-default.html#key-policy-service-integration)",
+        "name": "key_service_users",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the alias name is used as a prefix",
+        "name": "aliases_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies whether the key contains a symmetric key or an asymmetric key pair and the encryption algorithms or signing algorithms that the key supports. Valid values: `SYMMETRIC_DEFAULT`, `RSA_2048`, `RSA_3072`, `RSA_4096`, `HMAC_256`, `ECC_NIST_P256`, `ECC_NIST_P384`, `ECC_NIST_P521`, or `ECC_SECG_P256K1`. Defaults to `SYMMETRIC_DEFAULT`",
+        "name": "customer_master_key_spec",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A list of maps containing `account_ids` and Route53 `hosted_zone_arn` that will be allowed to sign DNSSEC records",
+        "name": "route53_dnssec_sources",
+        "required": false,
+        "type": "list(object({\n    account_ids     = optional(list(string))\n    hosted_zone_arn = optional(string)\n  }))"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The IAM resource policy set on the key",
+        "name": "key_policy"
+      },
+      {
+        "description": "Whether the key material expires. Empty when pending key material import, otherwise `KEY_MATERIAL_EXPIRES` or `KEY_MATERIAL_DOES_NOT_EXPIRE`",
+        "name": "external_key_expiration_model"
+      },
+      {
+        "description": "The state of the CMK",
+        "name": "external_key_state"
+      },
+      {
+        "description": "The cryptographic operations for which you can use the CMK",
+        "name": "external_key_usage"
+      },
+      {
+        "description": "A map of grants created and their attributes",
+        "name": "grants"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the key",
+        "name": "key_arn"
+      },
+      {
+        "description": "The globally unique identifier for the key",
+        "name": "key_id"
+      },
+      {
+        "description": "The region for the key",
+        "name": "key_region"
+      },
+      {
+        "description": "A map of aliases created and their attributes",
+        "name": "aliases"
+      }
+    ]
+  },
+  "built_from_version": "4.2.0",
+  "module_id": "terraform-aws-modules/kms/aws"
+}

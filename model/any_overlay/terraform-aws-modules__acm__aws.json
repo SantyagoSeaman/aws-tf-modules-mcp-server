@@ -1,0 +1,226 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "false",
+        "description": "Whether to create only Route53 records (e.g. using separate AWS provider)",
+        "name": "create_route53_records_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow overwrite of Route53 records",
+        "name": "validation_allow_overwrite_records",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether certificate details should be added to a certificate transparency log",
+        "name": "certificate_transparency_logging_preference",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "A domain name for which the certificate should be issued",
+        "name": "domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "60",
+        "description": "The TTL of DNS recursive resolvers to cache information about this record.",
+        "name": "dns_ttl",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A list of domain_validation_options created by the ACM certificate to create required Route53 records from it (used when create_route53_records_only is set to true)",
+        "name": "acm_certificate_domain_validation_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "List of distinct domains and SANs (used when create_route53_records_only is set to true)",
+        "name": "distinct_domain_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Whether the certificate can be exported. Valid values are ENABLED or DISABLED (default). Note Issuing an exportable certificate is subject to additional charges",
+        "name": "export",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create ACM certificate",
+        "name": "create_certificate",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Define maximum timeout to wait for the validation to complete",
+        "name": "validation_timeout",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Which method to use for validation. DNS or EMAIL are valid. This parameter must not be set for certificates that were imported into ACM and then into Terraform.",
+        "name": "validation_method",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "When validation is set to DNS, define whether to create the DNS records internally via Route53 or externally using any DNS provider",
+        "name": "create_route53_records",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "When validation is set to DNS and the DNS validation records are set externally, provide the fqdns for the validation",
+        "name": "validation_record_fqdns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Private Certificate Authority ARN for issuing private certificates",
+        "name": "private_authority_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to wait for the validation to complete",
+        "name": "wait_for_validation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region to create the resources into",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ID of the hosted zone to contain this record. Required when validating via Route53",
+        "name": "zone_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map containing the Route53 Zone IDs for additional domains.",
+        "name": "zones",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the algorithm of the public and private key pair that your Amazon issued certificate uses to encrypt data",
+        "name": "key_algorithm",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to validate certificate by creating Route53 record",
+        "name": "validate_certificate",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of domains that should be SANs in the issued certificate",
+        "name": "subject_alternative_names",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "The domain name that you want ACM to use to send you validation emails. This domain name is the suffix of the email addresses that you want ACM to use.",
+        "name": "validation_option",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A mapping of tags to assign to the resource",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "List of distinct domains names used for the validation.",
+        "name": "distinct_domain_names"
+      },
+      {
+        "description": "List of distinct domain validation options. This is useful if subject alternative names contain wildcards.",
+        "name": "validation_domains"
+      },
+      {
+        "description": "The ARN of the certificate",
+        "name": "acm_certificate_arn"
+      },
+      {
+        "description": "A list of attributes to feed into other resources to complete certificate validation. Can have more than one element, e.g. if SANs are defined. Only set if DNS-validation was used.",
+        "name": "acm_certificate_domain_validation_options"
+      },
+      {
+        "description": "Status of the certificate.",
+        "name": "acm_certificate_status"
+      },
+      {
+        "description": "A list of addresses that received a validation E-Mail. Only set if EMAIL-validation was used.",
+        "name": "acm_certificate_validation_emails"
+      },
+      {
+        "description": "List of FQDNs built using the zone domain and name.",
+        "name": "validation_route53_record_fqdns"
+      }
+    ]
+  },
+  "built_from_version": "6.3.0",
+  "module_id": "terraform-aws-modules/acm/aws",
+  "vars": {
+    "root::acm_certificate_domain_validation_options": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::validation_option": {
+      "examples": [
+        "validation_option = {\n    (var.domain_name) = {\n      validation_domain = var.validation_domain\n    }\n  }"
+      ],
+      "field_names": [
+        "domain_name",
+        "validation_domain"
+      ],
+      "provenance": "example"
+    }
+  }
+}

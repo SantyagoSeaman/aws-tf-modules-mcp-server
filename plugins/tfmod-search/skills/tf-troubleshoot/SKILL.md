@@ -30,10 +30,12 @@ delimited blocks. Never read a large log directly — extract first.
    for every finding naming a terraform-aws-modules module, `get_module`
    and check the failing variable against the documented inputs — renamed,
    removed, type mismatch, missing required, or deprecated. Escalate to
-   `grep_module_docs` when the curated doc is not enough: the failing variable
-   is absent from it (grep the exact name), the log shows an older pinned
-   version (grep at that `version`), or the module is not in the catalog (grep
-   its live docs and mark the diagnosis verified instead of inferred).
+   `get_module(name, sections=["inputs", "outputs"])` when the compact head is
+   not enough: it renders the module's complete root-scope interface in one
+   offline call, so a variable still absent there is a confirmed miss, not a
+   suspicion. When the log shows an older pinned version, or the module is not
+   in the catalog, verify against its live docs via your other Terraform
+   Registry tooling and mark the diagnosis verified instead of inferred.
 4. **Non-module failures** (provider auth, state locks, quotas) — say so
    and diagnose from the error text; do not force a module explanation.
 5. **Report per finding**: root cause (verified against the doc where

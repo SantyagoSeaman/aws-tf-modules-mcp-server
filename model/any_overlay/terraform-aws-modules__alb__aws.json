@@ -1,0 +1,500 @@
+{
+  "all_inputs": {
+    "lb_trust_store": [
+      {
+        "default": "null",
+        "description": "Name of the trust store. If omitted, Terraform will assign a random, unique name. This name must be unique per region, per account, can have a maximum of 32 characters, must contain only alphanumeric characters or hyphens, and must not begin or end with a hyphen.",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Conflicts with `name`. Cannot be longer than 6 characters.",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create a trust store revocation for use with an application load balancer.",
+        "name": "create_trust_store_revocation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of tags to assign to the resource.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Map of revocation list configurations.",
+        "name": "revocation_lists",
+        "required": false,
+        "type": "map(object({\n    revocations_s3_bucket         = string\n    revocations_s3_key            = string\n    revocations_s3_object_version = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created.",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "S3 bucket name holding the client certificate CA bundle.",
+        "name": "ca_certificates_bundle_s3_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "S3 object key holding the client certificate CA bundle.",
+        "name": "ca_certificates_bundle_s3_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Version ID of CA bundle S3 bucket object, if versioned, defaults to latest if omitted.",
+        "name": "ca_certificates_bundle_s3_object_version",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the load balancer",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Web Application Firewall (WAF) ARN of the resource to associate with the load balancer",
+        "name": "web_acl_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether the two headers (`x-amzn-tls-version` and `x-amzn-tls-cipher-suite`), which contain information about the negotiated TLS version and cipher suite, are added to the client request before sending it to the target. Only valid for Load Balancers of type `application`. Defaults to `false`",
+        "name": "enable_tls_version_and_cipher_suite_headers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the customer owned ipv4 pool to use for this load balancer",
+        "name": "customer_owned_ipv4_pool",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether to allow a WAF-enabled load balancer to route requests to targets if it is unable to forward the request to AWS WAF. Defaults to `false`",
+        "name": "enable_waf_fail_open",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Whether zonal shift is enabled",
+        "name": "enable_zonal_shift",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of security group IDs to assign to the LB",
+        "name": "security_groups",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of subnet mapping blocks describing subnets to attach to load balancer",
+        "name": "subnet_mapping",
+        "required": false,
+        "type": "list(object({\n    allocation_id        = optional(string)\n    ipv6_address         = optional(string)\n    private_ipv4_address = optional(string)\n    subnet_id            = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The name of the LB. This name must be unique within your AWS account, can have a maximum of 32 characters, must contain only alphanumeric characters or hyphens, and must not begin or end with a hyphen",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether the Application Load Balancer should preserve the Host header in the HTTP request and send it to the target without any change. Defaults to `false`",
+        "name": "preserve_host_header",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of listener configurations to create",
+        "name": "listeners",
+        "required": false,
+        "type": "map(object({\n    alpn_policy                 = optional(string)\n    certificate_arn             = optional(string)\n    additional_certificate_arns = optional(list(string), [])\n    authenticate_cognito = optional(object({\n      authentication_request_extra_params = optional(map(string))\n      on_unauthenticated_request          = optional(string)\n      scope                               = optional(string)\n      session_cookie_name                 = optional(string)\n      session_timeout                     = optional(number)\n      user_pool_arn                       = optional(string)\n      user_pool_client_id                 = optional(string)\n      user_pool_domain                    = optional(string)\n    }))\n    authenticate_oidc = optional(object({\n      authentication_request_extra_params = optional(map(string))\n      authorization_endpoint              = string\n      client_id                           = string\n      client_secret                       = string\n      issuer                              = string\n      on_unauthenticated_request          = optional(string)\n      scope                               = optional(string)\n      session_cookie_name                 = optional(string)\n      session_timeout                     = optional(number)\n      token_endpoint                      = string\n      user_info_endpoint                  = string\n    }))\n    fixed_response = optional(object({\n      content_type = string\n      message_body = optional(string)\n      status_code  = optional(string)\n    }))\n    forward = optional(object({\n      target_group_arn = optional(string)\n      target_group_key = optional(string)\n    }))\n    jwt_validation = optional(object({\n      issuer        = string\n      jwks_endpoint = string\n      additional_claim = optional(list(object({\n        format = string\n        name   = string\n        values = list(string)\n      })))\n    }))\n    weighted_forward = optional(object({\n      target_groups = optional(list(object({\n        target_group_arn = optional(string)\n        target_group_key = optional(string)\n        weight           = optional(number)\n      })))\n      stickiness = optional(object({\n        duration = optional(number)\n        enabled  = optional(bool)\n      }))\n    }))\n    redirect = optional(object({\n      host        = optional(string)\n      path        = optional(string)\n      port        = optional(string)\n      protocol    = optional(string)\n      query       = optional(string)\n      status_code = string\n    }))\n    mutual_authentication = optional(object({\n      advertise_trust_store_ca_names   = optional(string)\n      ignore_client_certificate_expiry = optional(bool)\n      mode                             = string\n      trust_store_arn                  = optional(string)\n    }))\n    order                                                                 = optional(number)\n    port                                                                  = optional(number)\n    protocol                                                              = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_header_name               = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_issuer_header_name        = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_leaf_header_name          = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_serial_number_header_name = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_subject_header_name       = optional(string)\n    routing_http_request_x_amzn_mtls_clientcert_validity_header_name      = optional(string)\n    routing_http_request_x_amzn_tls_cipher_suite_header_name              = optional(string)\n    routing_http_request_x_amzn_tls_version_header_name                   = optional(string)\n    routing_http_response_access_control_allow_credentials_header_value   = optional(string)\n    routing_http_response_access_control_allow_headers_header_value       = optional(string)\n    routing_http_response_access_control_allow_methods_header_value       = optional(string)\n    routing_http_response_access_control_allow_origin_header_value        = optional(string)\n    routing_http_response_access_control_expose_headers_header_value      = optional(string)\n    routing_http_response_access_control_max_age_header_value             = optional(string)\n    routing_http_response_content_security_policy_header_value            = optional(string)\n    routing_http_response_server_enabled                                  = optional(bool)\n    routing_http_response_strict_transport_security_header_value          = optional(string)\n    routing_http_response_x_content_type_options_header_value             = optional(string)\n    routing_http_response_x_frame_options_header_value                    = optional(string)\n    ssl_policy                                                            = optional(string)\n    tcp_idle_timeout_seconds                                              = optional(number)\n    tags                                                                  = optional(map(string), {})\n\n    # Listener rules\n    rules = optional(map(object({\n      actions = list(object({\n        authenticate_cognito = optional(object({\n          authentication_request_extra_params = optional(map(string))\n          on_unauthenticated_request          = optional(string)\n          scope                               = optional(string)\n          session_cookie_name                 = optional(string)\n          session_timeout                     = optional(number)\n          user_pool_arn                       = string\n          user_pool_client_id                 = string\n          user_pool_domain                    = string\n        }))\n        authenticate_oidc = optional(object({\n          authentication_request_extra_params = optional(map(string))\n          authorization_endpoint              = string\n          client_id                           = string\n          client_secret                       = string\n          issuer                              = string\n          on_unauthenticated_request          = optional(string)\n          scope                               = optional(string)\n          session_cookie_name                 = optional(string)\n          session_timeout                     = optional(number)\n          token_endpoint                      = string\n          user_info_endpoint                  = string\n        }))\n        jwt_validation = optional(object({\n          issuer        = string\n          jwks_endpoint = string\n          additional_claim = optional(list(object({\n            format = string\n            name   = string\n            values = list(string)\n          })))\n        }))\n        fixed_response = optional(object({\n          content_type = string\n          message_body = optional(string)\n          status_code  = optional(string)\n        }))\n        forward = optional(object({\n          target_group_arn = optional(string)\n          target_group_key = optional(string)\n        }))\n        order = optional(number)\n        redirect = optional(object({\n          host        = optional(string)\n          path        = optional(string)\n          port        = optional(string)\n          protocol    = optional(string)\n          query       = optional(string)\n          status_code = string\n        }))\n        weighted_forward = optional(object({\n          stickiness = optional(object({\n            duration = optional(number)\n            enabled  = optional(bool)\n          }))\n          target_groups = optional(list(object({\n            target_group_arn = optional(string)\n            target_group_key = optional(string)\n            weight           = optional(number)\n          })))\n        }))\n      }))\n      conditions = list(object({\n        host_header = optional(object({\n          values       = optional(list(string))\n          regex_values = optional(list(string))\n        }))\n        http_header = optional(object({\n          http_header_name = string\n          values           = optional(list(string))\n          regex_values     = optional(list(string))\n        }))\n        http_request_method = optional(object({\n          values = list(string)\n        }))\n        path_pattern = optional(object({\n          values       = optional(list(string))\n          regex_values = optional(list(string))\n        }))\n        query_string = optional(list(object({\n          key   = optional(string)\n          value = string\n        })))\n        source_ip = optional(object({\n          values = list(string)\n        }))\n      }))\n      listener_arn = optional(string)\n      listener_key = optional(string)\n      priority     = optional(number)\n      transform = optional(map(object({\n        type = optional(string)\n        host_header_rewrite_config = optional(object({\n          rewrite = optional(object({\n            regex   = string\n            replace = string\n          }))\n        }))\n        url_rewrite_config = optional(object({\n          rewrite = optional(object({\n            regex   = string\n            replace = string\n          }))\n        }))\n      })))\n      tags = optional(map(string), {})\n    })), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Identifier of the VPC where the security group will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, the LB will be internal. Defaults to `false`",
+        "name": "internal",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The IPAM pools to use with the load balancer",
+        "name": "ipam_pools",
+        "required": false,
+        "type": "object({\n    ipv4_ipam_pool_id = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Creates a unique name beginning with the specified prefix. Conflicts with `name`",
+        "name": "name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map containing access logging configuration for load balancer",
+        "name": "connection_logs",
+        "required": false,
+        "type": "object({\n    bucket  = string\n    enabled = optional(bool, true)\n    prefix  = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Determines how the load balancer handles requests that might pose a security risk to an application due to HTTP desync. Valid values are `monitor`, `defensive` (default), `strictest`",
+        "name": "desync_mitigation_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Indicates how traffic is distributed among the load balancer Availability Zones. Possible values are any_availability_zone (default), availability_zone_affinity, or partial_availability_zone_affinity. Only valid for network type load balancers",
+        "name": "dns_record_client_routing_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "If `true`, deletion of the load balancer will be disabled via the AWS API. This will prevent Terraform from deleting the load balancer. Defaults to `true`",
+        "name": "enable_deletion_protection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "80",
+        "description": "Default port used across the listener and target group",
+        "name": "default_port",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Determines how the load balancer modifies the X-Forwarded-For header in the HTTP request before sending the request to the target. The possible values are `append`, `preserve`, and `remove`. Only valid for Load Balancers of type `application`. The default is `append`",
+        "name": "xff_header_processing_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"HTTP\"",
+        "description": "Default protocol used across the listener and target group",
+        "name": "default_protocol",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of additional target group attachments to create. Use `target_group_key` to attach to the target group created in `target_groups`",
+        "name": "additional_target_group_attachments",
+        "required": false,
+        "type": "map(object({\n    target_group_key  = string\n    target_id         = string\n    target_type       = optional(string)\n    port              = optional(number)\n    availability_zone = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether HTTP headers with header fields that are not valid are removed by the load balancer (`true`) or routed to targets (`false`). The default is `true`. Elastic Load Balancing requires that message header names contain only alphanumeric characters and hyphens. Only valid for Load Balancers of type `application`",
+        "name": "drop_invalid_header_fields",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Map of Route53 records to create. Each record map should contain `zone_id`, `name`, and `type`",
+        "name": "route53_records",
+        "required": false,
+        "type": "map(object({\n    zone_id                = string\n    name                   = optional(string)\n    type                   = string\n    evaluate_target_health = optional(bool, true)\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether a Web Application Firewall (WAF) ACL should be associated with the load balancer",
+        "name": "associate_web_acl",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Client keep alive value in seconds. The valid range is 60-604800 seconds. The default is 3600 seconds",
+        "name": "client_keep_alive",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Map containing health check logging configuration for application load balancers",
+        "name": "health_check_logs",
+        "required": false,
+        "type": "object({\n    bucket  = string\n    enabled = optional(bool, true)\n    prefix  = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The time in seconds that the connection is allowed to be idle. Only valid for Load Balancers of type `application`. Default: `60`",
+        "name": "idle_timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Minimum capacity for a load balancer. Only valid for Load Balancers of type `application` or `network`",
+        "name": "minimum_load_balancer_capacity",
+        "required": false,
+        "type": "object({\n    capacity_units = number\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"application\"",
+        "description": "The type of load balancer to create. Possible values are `application`, `gateway`, or `network`. The default value is `application`",
+        "name": "load_balancer_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether HTTP/2 is enabled in application load balancers. Defaults to `true`",
+        "name": "enable_http2",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether the X-Forwarded-For header should preserve the source port that the client used to connect to the load balancer in `application` load balancers. Defaults to `false`",
+        "name": "enable_xff_client_port",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether inbound security group rules are enforced for traffic originating from a PrivateLink. Only valid for Load Balancers of type network. The possible values are on and off",
+        "name": "enforce_security_group_inbound_rules_on_private_link_traffic",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A list of subnet IDs to attach to the LB. Subnets cannot be updated for Load Balancers of type `network`. Changing this value for load balancers of type `network` will force a recreation of the resource",
+        "name": "subnets",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Map of target group configurations to create",
+        "name": "target_groups",
+        "required": false,
+        "type": "map(object({\n    connection_termination = optional(bool)\n    deregistration_delay   = optional(number)\n    health_check = optional(object({\n      enabled             = optional(bool)\n      healthy_threshold   = optional(number)\n      interval            = optional(number)\n      matcher             = optional(string)\n      path                = optional(string)\n      port                = optional(string)\n      protocol            = optional(string)\n      timeout             = optional(number)\n      unhealthy_threshold = optional(number)\n    }))\n    ip_address_type                    = optional(string)\n    lambda_multi_value_headers_enabled = optional(bool)\n    load_balancing_algorithm_type      = optional(string)\n    load_balancing_anomaly_mitigation  = optional(string)\n    load_balancing_cross_zone_enabled  = optional(string)\n    name                               = optional(string)\n    name_prefix                        = optional(string)\n    port                               = optional(number)\n    preserve_client_ip                 = optional(bool)\n    protocol                           = optional(string)\n    protocol_version                   = optional(string)\n    proxy_protocol_v2                  = optional(bool)\n    slow_start                         = optional(number)\n    stickiness = optional(object({\n      cookie_duration = optional(number)\n      cookie_name     = optional(string)\n      enabled         = optional(bool)\n      type            = string\n    }))\n    tags = optional(map(string))\n    target_failover = optional(list(object({\n      on_deregistration = string\n      on_unhealthy      = string\n    })))\n    target_group_health = optional(object({\n      dns_failover = optional(object({\n        minimum_healthy_targets_count      = optional(string)\n        minimum_healthy_targets_percentage = optional(string)\n      }))\n      unhealthy_state_routing = optional(object({\n        minimum_healthy_targets_count      = optional(number)\n        minimum_healthy_targets_percentage = optional(string)\n      }))\n    }))\n    target_health_state = optional(object({\n      enable_unhealthy_connection_termination = bool\n      unhealthy_draining_interval             = optional(number)\n    }))\n    target_type = optional(string)\n    target_id   = optional(string)\n    vpc_id      = optional(string)\n    # Attachment\n    create_attachment = optional(bool, true)\n    availability_zone = optional(string)\n    # Lambda\n    attach_lambda_permission  = optional(bool, false)\n    lambda_qualifier          = optional(string)\n    lambda_statement_id       = optional(string)\n    lambda_action             = optional(string)\n    lambda_principal          = optional(string)\n    lambda_source_account     = optional(string)\n    lambda_event_source_token = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map containing access logging configuration for load balancer",
+        "name": "access_logs",
+        "required": false,
+        "type": "object({\n    bucket  = string\n    enabled = optional(bool, true)\n    prefix  = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "If `true`, cross-zone load balancing of the load balancer will be enabled. For application load balancer this feature is always enabled (`true`) and cannot be disabled. Defaults to `true`",
+        "name": "enable_cross_zone_load_balancing",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The type of IP addresses used by the subnets for your load balancer. The possible values are `ipv4` and `dualstack`",
+        "name": "ip_address_type",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "lb_trust_store": [
+      {
+        "description": "ARN of the trust store (matches `arn`).",
+        "name": "trust_store_id"
+      },
+      {
+        "description": "Name of the trust store.",
+        "name": "trust_store_name"
+      },
+      {
+        "description": "Map of revocation lists and their attributes.",
+        "name": "revocation_lists"
+      },
+      {
+        "description": "ARN suffix for use with cloudwatch metrics.",
+        "name": "trust_store_arn_suffix"
+      },
+      {
+        "description": "ARN of the trust store (matches `id`).",
+        "name": "trust_store_arn"
+      }
+    ],
+    "root": [
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "The DNS name of the load balancer",
+        "name": "dns_name"
+      },
+      {
+        "description": "Map of target groups created and their attributes",
+        "name": "target_groups"
+      },
+      {
+        "description": "The Route53 records created and attached to the load balancer",
+        "name": "route53_records"
+      },
+      {
+        "description": "The ID and ARN of the load balancer we created",
+        "name": "id"
+      },
+      {
+        "description": "The ID and ARN of the load balancer we created",
+        "name": "arn"
+      },
+      {
+        "description": "ARN suffix of our load balancer - can be used with CloudWatch",
+        "name": "arn_suffix"
+      },
+      {
+        "description": "The zone_id of the load balancer to assist with creating DNS records",
+        "name": "zone_id"
+      },
+      {
+        "description": "Map of listeners created and their attributes",
+        "name": "listeners"
+      },
+      {
+        "description": "Map of listeners rules created and their attributes",
+        "name": "listener_rules"
+      }
+    ]
+  },
+  "built_from_version": "10.5.0",
+  "module_id": "terraform-aws-modules/alb/aws"
+}

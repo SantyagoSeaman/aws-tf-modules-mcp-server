@@ -1,0 +1,1916 @@
+{
+  "all_inputs": {
+    "alias": [
+      {
+        "default": "true",
+        "description": "Whether to refresh function version used in the alias. Useful when using this module together with external tool do deployments (eg, AWS CodeDeploy).",
+        "name": "refresh_alias",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map that defines the proportion of events that should be sent to different versions of a lambda function.",
+        "name": "routing_additional_version_weights",
+        "required": false,
+        "type": "map(number)"
+      },
+      {
+        "default": "null",
+        "description": "Maximum age of a request that Lambda sends to a function for processing in seconds. Valid values between 60 and 21600.",
+        "name": "maximum_event_age_in_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow triggers on version of Lambda Function used by alias (this will revoke permissions from previous version because Terraform manages only current resources)",
+        "name": "create_version_allowed_triggers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name for the alias you are creating.",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The function ARN of the Lambda function for which you want to create an alias.",
+        "name": "function_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Lambda function version for which you are creating the alias. Pattern: ($LATEST|[0-9]+).",
+        "name": "function_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of the destination resource for failed asynchronous invocations",
+        "name": "destination_on_failure",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether async event configuration for Lambda Function/Alias should be created",
+        "name": "create_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow async event configuration on qualified alias",
+        "name": "create_qualified_alias_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Description of the alias.",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum number of times to retry when the function returns an error. Valid values between 0 and 2. Defaults to 2.",
+        "name": "maximum_retry_attempts",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Whether to manage existing alias instead of creating a new one. Useful when using this module together with external tool do deployments (eg, AWS CodeDeploy).",
+        "name": "use_existing_alias",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow async event configuration on version of Lambda Function used by alias (this will revoke permissions from previous version because Terraform manages only current resources)",
+        "name": "create_version_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow triggers on qualified alias",
+        "name": "create_qualified_alias_allowed_triggers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of the destination resource for successful asynchronous invocations",
+        "name": "destination_on_success",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of allowed triggers to create Lambda permissions",
+        "name": "allowed_triggers",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of event source mapping",
+        "name": "event_source_mapping",
+        "required": false,
+        "type": "any"
+      }
+    ],
+    "deploy": [
+      {
+        "default": "\"\"",
+        "description": "ARN of Lambda function to execute before allow traffic during deployment. This function should be named CodeDeployHook_, to match the managed AWSCodeDeployForLambda policy, unless you're using a custom role",
+        "name": "before_allow_traffic_hook_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of AWS CodeDeploy application",
+        "name": "app_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether a defined automatic rollback configuration is currently enabled for this Deployment Group.",
+        "name": "auto_rollback_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether a deployment should continue if information about the current state of alarms cannot be retrieved from CloudWatch.",
+        "name": "alarm_ignore_poll_alarm_failure",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "IAM role name to create or use by CodeDeploy",
+        "name": "codedeploy_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to resources.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the Lambda function to deploy",
+        "name": "function_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Force deployment every time (even when nothing changes)",
+        "name": "force_deploy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Target version of Lambda function version to deploy",
+        "name": "target_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"/bin/bash\",\n  \"-c\"\n]",
+        "description": "List of interpreter arguments used to execute deploy script, first arg is path",
+        "name": "interpreter",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create new AWS CodeDeploy Deployment Group",
+        "name": "create_deployment_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether the alarm configuration is enabled. This option is useful when you want to temporarily deactivate alarm monitoring for a deployment group without having to add the same alarms again later.",
+        "name": "alarm_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of Lambda function to execute after allow traffic during deployment. This function should be named CodeDeployHook_, to match the managed AWSCodeDeployForLambda policy, unless you're using a custom role",
+        "name": "after_allow_traffic_hook_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of deployment group to use",
+        "name": "deployment_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of triggers which will be notified when event happens. Valid options for event types are DeploymentStart, DeploymentSuccess, DeploymentFailure, DeploymentStop, DeploymentRollback, DeploymentReady (Applies only to replacement instances in a blue/green deployment), InstanceStart, InstanceSuccess, InstanceFailure, InstanceReady. Note that not all are applicable for Lambda deployments.",
+        "name": "triggers",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to attach Invoke policy to CodeDeploy role when before allow traffic or after allow traffic hooks are defined.",
+        "name": "attach_hooks_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "5",
+        "description": "Adds additional sleep time to get-deployment command to avoid the service throttling",
+        "name": "get_deployment_sleep_timer",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"\"",
+        "description": "Current version of Lambda function version to deploy (can't be $LATEST)",
+        "name": "current_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use existing AWS CodeDeploy app",
+        "name": "use_existing_app",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Save deploy script locally",
+        "name": "save_deploy_script",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Wait until deployment completes. It can take a lot of time and your terraform process may lock execution for long time.",
+        "name": "wait_deployment_completion",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Description to use for the deployment",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of alarms configured for the deployment group. A maximum of 10 alarms can be added to a deployment group.",
+        "name": "alarms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Create the AWS resources and script for CodeDeploy",
+        "name": "create_deployment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create new AWS CodeDeploy IAM role",
+        "name": "create_codedeploy_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name for the alias",
+        "name": "alias_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use existing AWS CodeDeploy Deployment Group",
+        "name": "use_existing_deployment_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"CodeDeployDefault.LambdaAllAtOnce\"",
+        "description": "Name of deployment config to use",
+        "name": "deployment_config_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"aws\"",
+        "description": "Command to run as AWS CLI. May include extra arguments like region and profile.",
+        "name": "aws_cli_command",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Run AWS CLI command to start the deployment",
+        "name": "run_deployment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"codedeploy.amazonaws.com\"\n]",
+        "description": "List of CodeDeploy service principals to allow. The list can include global or regional endpoints.",
+        "name": "codedeploy_principals",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to create new AWS CodeDeploy app",
+        "name": "create_app",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"DEPLOYMENT_STOP_ON_ALARM\"\n]",
+        "description": "List of event types that trigger a rollback. Supported types are DEPLOYMENT_FAILURE and DEPLOYMENT_STOP_ON_ALARM.",
+        "name": "auto_rollback_events",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to attach SNS policy to CodeDeploy role when triggers are defined",
+        "name": "attach_triggers_policy",
+        "required": false,
+        "type": "bool"
+      }
+    ],
+    "docker-build": [
+      {
+        "default": "false",
+        "description": "Whether to delete the Docker image locally on destroy operation.",
+        "name": "keep_locally",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to use image tag in ECR repository URI or not. Disable this to deploy latest image using ID (sha256:...)",
+        "name": "use_image_tag",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Address of ECR repository for cross-account container image pulling (optional). Option `create_ecr_repo` must be `false`",
+        "name": "ecr_address",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of ECR repository to use or to create",
+        "name": "ecr_repo",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to keep Docker image in the remote registry on destroy operation.",
+        "name": "keep_remotely",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The target architecture platform to build the image for.",
+        "name": "platform",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of arbitrary strings that, when changed, will force the docker_image resource to be replaced. This can be used to rebuild an image when contents of source code folders change",
+        "name": "triggers",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of images to consider as cache sources when building the image.",
+        "name": "cache_from",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether ECR repository for Lambda image should be created",
+        "name": "create_ecr_repo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "If true, will delete the repository even if it contains images.",
+        "name": "ecr_force_delete",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to ECR repository",
+        "name": "ecr_repo_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of Docker build arguments.",
+        "name": "build_args",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A JSON formatted ECR lifecycle policy to automate the cleaning up of unused images.",
+        "name": "ecr_repo_lifecycle_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to remove image forcibly when the resource is destroyed.",
+        "name": "force_remove",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Image tag to use. If not specified current timestamp in format 'YYYYMMDDhhmmss' will be used. This can lead to unnecessary rebuilds.",
+        "name": "image_tag",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether images are scanned after being pushed to the repository",
+        "name": "scan_on_push",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The buildx builder to use for the Docker build.",
+        "name": "builder",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Set the target build stage to build",
+        "name": "build_target",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SAM metadata null resource should be created",
+        "name": "create_sam_metadata",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Path to folder containing application code",
+        "name": "source_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Dockerfile\"",
+        "description": "Path to Dockerfile in source package",
+        "name": "docker_file_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"MUTABLE\"",
+        "description": "The tag mutability setting for the repository. Must be one of: `MUTABLE` or `IMMUTABLE`",
+        "name": "image_tag_mutability",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as new Lambda Function Version.",
+        "name": "publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Allows outbound IPv6 traffic on VPC functions that are connected to dual-stack subnets",
+        "name": "ipv6_allowed_for_dual_stack",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Define maximum timeout for creating, updating, and deleting Lambda Function resources",
+        "name": "timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to IAM role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to keep the log group (and any logs it may contain) at destroy time.",
+        "name": "cloudwatch_logs_skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Instruction set architecture for your Lambda function. Valid values are [\"x86_64\"] and [\"arm64\"].",
+        "name": "architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "(Optional) Snap start settings for low-latency startups",
+        "name": "snap_start",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The absolute path to an existing zip-file to use",
+        "name": "local_existing_package",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path to the Docker entrypoint to use",
+        "name": "docker_entrypoint",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map that defines environment variables for the Lambda Function.",
+        "name": "environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to S3 bucket object.",
+        "name": "s3_object_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the IAM role used by Lambda Function",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Docker image to use for the build",
+        "name": "docker_image",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign only to the lambda function",
+        "name": "function_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) for a Code Signing Configuration",
+        "name": "code_signing_config_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The CMD for the docker image",
+        "name": "image_config_command",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional policy documents as JSON to attach to Lambda Function role",
+        "name": "policy_jsons",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"INFO\"",
+        "description": "The application log level of the Lambda Function. Valid values are \"TRACE\", \"DEBUG\", \"INFO\", \"WARN\", \"ERROR\", or \"FATAL\".",
+        "name": "logging_application_log_level",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Tracing mode of the Lambda Function. Valid value can be either PassThrough or Active.",
+        "name": "tracing_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"builds\"",
+        "description": "Directory name where artifacts should be stored",
+        "name": "artifacts_dir",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specifies a custom KMS key to use for S3 object encryption.",
+        "name": "s3_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Root dir where to build in Docker",
+        "name": "docker_build_root",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the Capacity Provider.",
+        "name": "managed_instances_capacity_provider_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "License info for your Lambda Layer. Eg, MIT or full url of a license.",
+        "name": "license_info",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "Additional options to pass to the docker run command (e.g. to set environment variables, volumes, etc.)",
+        "name": "docker_additional_options",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "A unique name for your Lambda Function",
+        "name": "function_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether IAM role for Lambda Function should be created",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "-1",
+        "description": "The amount of reserved concurrent executions for this Lambda Function. A value of 0 disables Lambda Function from being triggered and -1 removes any concurrency limitations. Defaults to Unreserved Concurrency Limits -1.",
+        "name": "reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"Zip\"",
+        "description": "The Lambda deployment package type. Valid options: Zip or Image",
+        "name": "package_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ECR image URI containing the function's deployment package.",
+        "name": "image_uri",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The working directory for the docker image",
+        "name": "image_config_working_directory",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to specify a wildcard in IAM policy used by Lambda@Edge to allow logging in all regions",
+        "name": "lambda_at_edge_logs_all_regions",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Set to true to not merge tags with s3_object_tags. Useful to avoid breaching S3 Object 10 tag limit.",
+        "name": "s3_object_tags_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy name. It override the default value, which is the same as role_name",
+        "name": "policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Set this to true if using Lambda@Edge, to enable publishing, limit the timeout, and allow edgelambda.amazonaws.com to invoke the function",
+        "name": "lambda_at_edge",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether Lambda package should be created",
+        "name": "create_package",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Lambda Function URL resource should be created",
+        "name": "create_lambda_function_url",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "CORS settings to be used by the Lambda Function URL",
+        "name": "cors",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Invoke mode of the Lambda Function URL. Valid values are BUFFERED (default) and RESPONSE_STREAM.",
+        "name": "invoke_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to the resource.",
+        "name": "cloudwatch_logs_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether X-Ray tracing policy should be added to IAM role for Lambda Function",
+        "name": "attach_tracing_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies JSON to attach to IAM role for Lambda Function",
+        "name": "number_of_policy_jsons",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting log data.",
+        "name": "cloudwatch_logs_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_json should be added to IAM role for Lambda Function",
+        "name": "attach_policy_json",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional trusted entities for assuming Lambda Function role (trust relationship)",
+        "name": "trusted_entities",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "Map of dynamic policy statements for assuming Lambda Function role (trust relationship)",
+        "name": "assume_role_policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Specifies server-side encryption of the object in S3. Valid values are \"AES256\" and \"aws:kms\".",
+        "name": "s3_server_side_encryption",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"INFO\"",
+        "description": "The system log level of the Lambda Function. Valid values are \"DEBUG\", \"INFO\", or \"WARN\".",
+        "name": "logging_system_log_level",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "128",
+        "description": "Amount of memory in MB your Lambda Function can use at runtime. Valid value between 128 MB to 10,240 MB (10 GB), in 64 MB increments.",
+        "name": "memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "[Deprecated] Set to false to not include the default tag in the tags map.",
+        "name": "include_default_tag",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Set to true if you do not wish the function to be deleted at destroy time, and instead just remove the function from the Terraform state. Useful for Lambda@Edge functions attached to CloudFront distributions.",
+        "name": "skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "-1",
+        "description": "Amount of capacity to allocate. Set to 1 or greater to enable, or set to 0 to disable provisioned concurrency.",
+        "name": "provisioned_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for Lambda Function",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether VPC/network policy should be added to IAM role for Lambda Function",
+        "name": "attach_network_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "512",
+        "description": "Amount of ephemeral storage (/tmp) in MB your Lambda Function can use at runtime. Valid value between 512 MB to 10,240 MB (10 GB).",
+        "name": "ephemeral_storage_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"\"",
+        "description": "Lambda Function entrypoint in your code",
+        "name": "handler",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of IAM role to use for Lambda Function",
+        "name": "role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to disable archive local execution output",
+        "name": "quiet_archive_local_exec",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow triggers on current version of Lambda Function (this will revoke permissions from previous version because Terraform manages only current resources)",
+        "name": "create_current_version_allowed_triggers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "3600",
+        "description": "Maximum session duration, in seconds, for the IAM role",
+        "name": "role_maximum_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_jsons should be added to IAM role for Lambda Function",
+        "name": "attach_policy_jsons",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The path where the function can access the file system, starting with /mnt/.",
+        "name": "file_system_local_mount_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The S3 bucket object with keys bucket, key, version pointing to an existing zip-file to use",
+        "name": "s3_existing_package",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "S3 bucket to store artifacts",
+        "name": "s3_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to mount a shared pip cache folder into docker environment or not",
+        "name": "docker_pip_cache",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"\"",
+        "description": " IAM role ARN attached to the Lambda Function. This governs both who / what can invoke your Lambda Function, as well as what resources our Lambda Function has access to. See Lambda Permission Model for more details.",
+        "name": "lambda_role",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) When true, all security groups defined in vpc_security_group_ids will be replaced with the default security group after the function is destroyed. Set the replacement_security_group_ids variable to use a custom list of security groups for replacement instead.",
+        "name": "replace_security_groups_on_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to use unqualified alias pointing to $LATEST version in Lambda Function URL",
+        "name": "create_unqualified_alias_lambda_function_url",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of Lambda Layer to create",
+        "name": "layer_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of allowed triggers to create Lambda permissions",
+        "name": "allowed_triggers",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of dynamic policy statements to attach to Lambda Function role",
+        "name": "policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to your Lambda Function.",
+        "name": "layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of security group IDs to assign to orphaned Lambda function network interfaces upon destruction. replace_security_groups_on_destroy must be set to true to use this attribute.",
+        "name": "replacement_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Maximum number of times to retry when the function returns an error. Valid values between 0 and 2. Defaults to 2.",
+        "name": "maximum_retry_attempts",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether CloudWatch Logs policy should be added to IAM role for Lambda Function",
+        "name": "attach_cloudwatch_logs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The string to add into hashing function. Useful when building same source path for different functions.",
+        "name": "hash_extra",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to recreate the Lambda package if the timestamp changes",
+        "name": "trigger_on_package_timestamp",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Number of days to retain the function's execution state. Valid values between 1 and 90. Defaults to 14 if durable_config is enabled.",
+        "name": "durable_config_retention_period",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow triggers on unqualified alias pointing to $LATEST version",
+        "name": "create_unqualified_alias_allowed_triggers",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"private\"",
+        "description": "The canned ACL to apply. Valid values are private, public-read, public-read-write, aws-exec-read, authenticated-read, bucket-owner-read, and bucket-owner-full-control. Defaults to private.",
+        "name": "s3_acl",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SAM metadata null resource should be created",
+        "name": "create_sam_metadata",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to override the default_tags from provider? NB: S3 objects support a maximum of 10 tags.",
+        "name": "s3_object_override_default_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the number of days you want to retain log events in the specified log group. Possible values are: 1, 3, 5, 7, 14, 30, 60, 90, 120, 150, 180, 365, 400, 545, 731, 1827, and 3653.",
+        "name": "cloudwatch_logs_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether SNS/SQS dead letter notification policy should be added to IAM role for Lambda Function",
+        "name": "attach_dead_letter_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The absolute path to a local file or directory containing your Lambda source code",
+        "name": "source_path",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether async event configuration for Lambda Function/Alias should be created",
+        "name": "create_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies to force detaching any policies the IAM role has before destroying it.",
+        "name": "role_force_detach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The Amazon Resource Name (ARN) of the Amazon EFS Access Point that provides access to the file system.",
+        "name": "file_system_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to store produced artifacts on S3 or locally.",
+        "name": "store_on_s3",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to recreate missing Lambda package if it is missing locally or not",
+        "name": "recreate_missing_package",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Maximum execution time in seconds for the durable function. Valid values between 1 and 31622400 (366 days).",
+        "name": "durable_config_execution_timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Map of event source mapping",
+        "name": "event_source_mapping",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to add the create log group permission to the CloudWatch logs policy",
+        "name": "attach_create_log_group_permission",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document ARN to attach to the Lambda Function role",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The ENTRYPOINT for the docker image",
+        "name": "image_config_entry_point",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of Architectures Lambda layer is compatible with. Currently x86_64 and arm64 can be specified.",
+        "name": "compatible_architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to build dependencies in Docker",
+        "name": "build_in_docker",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of policy statements ARN to attach to Lambda Function role",
+        "name": "policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to ignore changes to the function's source code hash. Set to true if you manage infrastructure and code deployments separately.",
+        "name": "ignore_source_code_hash",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"ONEZONE_IA\"",
+        "description": "Specifies the desired Storage Class for the artifact uploaded to S3. Can be either STANDARD, REDUCED_REDUNDANCY, ONEZONE_IA, INTELLIGENT_TIERING, or STANDARD_IA.",
+        "name": "s3_object_storage_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether Lambda Function resource should be created",
+        "name": "create_function",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_logs_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to pass SSH_AUTH_SOCK into docker environment or not",
+        "name": "docker_with_ssh_agent",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to resources.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow async event configuration on unqualified alias pointing to $LATEST version",
+        "name": "create_unqualified_alias_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of the destination resource for failed asynchronous invocations",
+        "name": "destination_on_failure",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies to attach to IAM role for Lambda Function",
+        "name": "number_of_policies",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The CloudWatch log group to send logs to.",
+        "name": "logging_log_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Description of your Lambda Function (or Layer)",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an SNS topic or SQS queue to notify when an invocation fails.",
+        "name": "dead_letter_target_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Lambda Function runtime",
+        "name": "runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Whether to allow async event configuration on current version of Lambda Function (this will revoke permissions from previous version because Terraform manages only current resources)",
+        "name": "create_current_version_async_event_config",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use an existing CloudWatch log group or create new",
+        "name": "use_existing_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable deletion protection for the log group.",
+        "name": "cloudwatch_logs_deletion_protection_enabled",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of IAM role to use for Lambda Function",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to retain the old version of a previously deployed Lambda Layer.",
+        "name": "layer_skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document as JSON to attach to the Lambda Function role",
+        "name": "policy_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Directory name where artifacts should be stored in the S3 bucket. If unset, the path from `artifacts_dir` is used",
+        "name": "s3_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Lambda function recursion configuration. Valid values are Allow or Terminate.",
+        "name": "recursive_loop",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "3",
+        "description": "The amount of time your Lambda Function has to run in seconds.",
+        "name": "timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"NONE\"",
+        "description": "The type of authentication that the Lambda Function URL uses. Set to 'AWS_IAM' to restrict access to authenticated IAM users only. Set to 'NONE' to bypass IAM authentication and create a public endpoint.",
+        "name": "authorization_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum age of a request that Lambda sends to a function for processing in seconds. Valid values between 60 and 21600.",
+        "name": "maximum_event_age_in_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"Text\"",
+        "description": "The log format of the Lambda Function. Valid values are \"JSON\" or \"Text\".",
+        "name": "logging_log_format",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of KMS key to use by your Lambda Function",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of Runtimes this layer is compatible with. Up to 5 runtimes can be specified.",
+        "name": "compatible_runtimes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of the destination resource for successful asynchronous invocations",
+        "name": "destination_on_success",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether async event policy should be added to IAM role for Lambda Function",
+        "name": "attach_async_event_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Path to a Dockerfile when building in Docker",
+        "name": "docker_file",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether Lambda Layer resource should be created",
+        "name": "create_layer",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when Lambda Function should run in the VPC. Usually private or intra subnets.",
+        "name": "vpc_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when Lambda Function should run in the VPC.",
+        "name": "vpc_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Enable tenant isolation mode for the Lambda Function",
+        "name": "tenant_isolation_mode",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy should be added to IAM role for Lambda Function",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether list of policies should be added to IAM role for Lambda Function",
+        "name": "attach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_statements should be added to IAM role for Lambda Function",
+        "name": "attach_policy_statements",
+        "required": false,
+        "type": "bool"
+      }
+    ]
+  },
+  "all_outputs": {
+    "alias": [
+      {
+        "description": "The name of the Lambda Function Alias",
+        "name": "lambda_alias_name"
+      },
+      {
+        "description": "The ARN of the Lambda Function Alias",
+        "name": "lambda_alias_arn"
+      },
+      {
+        "description": "The reason the event source mapping is in its current state",
+        "name": "lambda_alias_event_source_mapping_state_transition_reason"
+      },
+      {
+        "description": "The UUID of the created event source mapping",
+        "name": "lambda_alias_event_source_mapping_uuid"
+      },
+      {
+        "description": "The ARN to be used for invoking Lambda Function from API Gateway",
+        "name": "lambda_alias_invoke_arn"
+      },
+      {
+        "description": "Description of alias",
+        "name": "lambda_alias_description"
+      },
+      {
+        "description": "Lambda function version which the alias uses",
+        "name": "lambda_alias_function_version"
+      },
+      {
+        "description": "The the ARN of the Lambda function the event source mapping is sending events to",
+        "name": "lambda_alias_event_source_mapping_function_arn"
+      },
+      {
+        "description": "The state of the event source mapping",
+        "name": "lambda_alias_event_source_mapping_state"
+      }
+    ],
+    "deploy": [
+      {
+        "description": "CodeDeploy deployment group id",
+        "name": "codedeploy_deployment_group_id"
+      },
+      {
+        "description": "Name of IAM role used by CodeDeploy",
+        "name": "codedeploy_iam_role_name"
+      },
+      {
+        "description": "Appspec data as HCL",
+        "name": "appspec"
+      },
+      {
+        "description": "Path to a deployment script",
+        "name": "deploy_script"
+      },
+      {
+        "description": "Name of CodeDeploy application",
+        "name": "codedeploy_app_name"
+      },
+      {
+        "description": "CodeDeploy deployment group name",
+        "name": "codedeploy_deployment_group_name"
+      },
+      {
+        "description": "Appspec data as valid JSON",
+        "name": "appspec_content"
+      },
+      {
+        "description": "SHA256 of Appspec JSON",
+        "name": "appspec_sha256"
+      },
+      {
+        "description": "Deployment script",
+        "name": "script"
+      }
+    ],
+    "docker-build": [
+      {
+        "description": "The ECR image URI for deploying lambda",
+        "name": "image_uri"
+      },
+      {
+        "description": "The ID of the Docker image",
+        "name": "image_id"
+      }
+    ],
+    "root": [
+      {
+        "description": "The size in bytes of the function .zip file",
+        "name": "lambda_function_source_code_size"
+      },
+      {
+        "description": "The state of the event source mapping",
+        "name": "lambda_event_source_mapping_state"
+      },
+      {
+        "description": "The reason the event source mapping is in its current state",
+        "name": "lambda_event_source_mapping_state_transition_reason"
+      },
+      {
+        "description": "The map with S3 object data of zip archive deployed (if deployment was from S3)",
+        "name": "s3_object"
+      },
+      {
+        "description": "The name of the Lambda Function",
+        "name": "lambda_function_name"
+      },
+      {
+        "description": "The ARN for the KMS encryption key of Lambda Function",
+        "name": "lambda_function_kms_key_arn"
+      },
+      {
+        "description": "ARN of the signing profile version",
+        "name": "lambda_function_signing_profile_version_arn"
+      },
+      {
+        "description": "The URL of the Lambda Function URL",
+        "name": "lambda_function_url"
+      },
+      {
+        "description": "The the ARN of the Lambda function the event source mapping is sending events to",
+        "name": "lambda_event_source_mapping_function_arn"
+      },
+      {
+        "description": "The UUID of the created event source mapping",
+        "name": "lambda_event_source_mapping_uuid"
+      },
+      {
+        "description": "The ARN of the Lambda Function",
+        "name": "lambda_function_arn"
+      },
+      {
+        "description": "The base64-encoded representation of the source code package file",
+        "name": "lambda_function_code_sha256"
+      },
+      {
+        "description": "The ARN of the Lambda Layer with version",
+        "name": "lambda_layer_arn"
+      },
+      {
+        "description": "The date Lambda Layer resource was created",
+        "name": "lambda_layer_created_date"
+      },
+      {
+        "description": "The ARN of the IAM role created for the Lambda Function",
+        "name": "lambda_role_arn"
+      },
+      {
+        "description": "The name of the IAM role created for the Lambda Function",
+        "name": "lambda_role_name"
+      },
+      {
+        "description": "The ARN identifying your Lambda Function Version",
+        "name": "lambda_function_qualified_arn"
+      },
+      {
+        "description": "The Invoke ARN identifying your Lambda Function Version",
+        "name": "lambda_function_qualified_invoke_arn"
+      },
+      {
+        "description": "The user-defined hash of the source code package file",
+        "name": "lambda_function_source_code_hash"
+      },
+      {
+        "description": "The unique id of the IAM role created for the Lambda Function",
+        "name": "lambda_role_unique_id"
+      },
+      {
+        "description": "The date Lambda Function resource was last modified",
+        "name": "lambda_function_last_modified"
+      },
+      {
+        "description": "The event source mapping ARN",
+        "name": "lambda_event_source_mapping_arn"
+      },
+      {
+        "description": "ARN of the signing job",
+        "name": "lambda_function_signing_job_arn"
+      },
+      {
+        "description": "The Lambda Function URL generated id",
+        "name": "lambda_function_url_id"
+      },
+      {
+        "description": "The user-defined hash of the Lambda Layer source code package file",
+        "name": "lambda_layer_source_code_hash"
+      },
+      {
+        "description": "The Lambda Layer version",
+        "name": "lambda_layer_version"
+      },
+      {
+        "description": "The filename of zip archive deployed (if deployment was from local)",
+        "name": "local_filename"
+      },
+      {
+        "description": "The static ARN of the Lambda Function. Use this to avoid cycle errors between resources (e.g., Step Functions)",
+        "name": "lambda_function_arn_static"
+      },
+      {
+        "description": "Latest published version of Lambda Function",
+        "name": "lambda_function_version"
+      },
+      {
+        "description": "The ARN of the Lambda Layer without version",
+        "name": "lambda_layer_layer_arn"
+      },
+      {
+        "description": "The ARN of the Cloudwatch Log Group",
+        "name": "lambda_cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The Invoke ARN of the Lambda Function",
+        "name": "lambda_function_invoke_arn"
+      },
+      {
+        "description": "The base64-encoded representation of the Lambda Layer source code package file",
+        "name": "lambda_layer_code_sha256"
+      },
+      {
+        "description": "The size in bytes of the Lambda Layer .zip file",
+        "name": "lambda_layer_source_code_size"
+      },
+      {
+        "description": "The name of the Cloudwatch Log Group",
+        "name": "lambda_cloudwatch_log_group_name"
+      }
+    ]
+  },
+  "built_from_version": "8.8.0",
+  "module_id": "terraform-aws-modules/lambda/aws",
+  "vars": {
+    "alias::event_source_mapping": {
+      "examples": [
+        "event_source_mapping = {\n    sqs = {\n      service          = \"sqs\"\n      event_source_arn = module.sqs_events.sqs_queue_arn\n    }\n  }",
+        "event_source_mapping = {\n    sqs = {\n      service             = \"sqs\"\n      event_source_arn    = module.sqs_events.sqs_queue_arn\n      maximum_concurrency = 10\n    }\n  }"
+      ],
+      "field_names": [
+        "amazon_managed_kafka_event_source_config",
+        "batch_size",
+        "bisect_batch_on_function_error",
+        "consumer_group_id",
+        "destination_arn_on_failure",
+        "enabled",
+        "endpoints",
+        "event_source_arn",
+        "filter_criteria",
+        "function_response_types",
+        "maximum_batching_window_in_seconds",
+        "maximum_concurrency",
+        "maximum_record_age_in_seconds",
+        "maximum_retry_attempts",
+        "parallelization_factor",
+        "pattern",
+        "queues",
+        "scaling_config",
+        "self_managed_event_source",
+        "self_managed_kafka_event_source_config",
+        "source_access_configuration",
+        "starting_position",
+        "starting_position_timestamp",
+        "topics",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::assume_role_policy_statements": {
+      "examples": [
+        "assume_role_policy_statements = {\n    account_root = {\n      effect  = \"Allow\",\n      actions = [\"sts:AssumeRole\"],\n      principals = {\n        account_principal = {\n          type        = \"AWS\",\n          identifiers = [\"arn:aws:iam::${data.aws_caller_identity.current.account_id}:root\"]\n        }\n      }\n      condition = {\n        stringequals_condition = {\n          test     = \"StringEquals\"\n          variable = \"sts:ExternalId\"\n          values   = [\"12345\"]\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "principals",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::cors": {
+      "examples": [
+        "cors = {\n    allow_credentials = true\n    allow_origins     = [\"*\"]\n    allow_methods     = [\"*\"]\n    allow_headers     = [\"date\", \"keep-alive\"]\n    expose_headers    = [\"keep-alive\", \"date\"]\n    max_age           = 86400\n  }"
+      ],
+      "field_names": [
+        "allow_credentials",
+        "allow_headers",
+        "allow_methods",
+        "allow_origins",
+        "expose_headers",
+        "max_age"
+      ],
+      "provenance": "example"
+    },
+    "root::docker_pip_cache": {
+      "examples": [
+        "docker_pip_cache      = true"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::event_source_mapping": {
+      "examples": [
+        "event_source_mapping = {\n    sqs = {\n      event_source_arn        = aws_sqs_queue.this.arn\n      function_response_types = [\"ReportBatchItemFailures\"]\n      scaling_config = {\n        maximum_concurrency = 20\n      }\n      metrics_config = {\n        metrics = [\"EventCount\"]\n      }\n    }\n    dynamodb = {\n      event_source_arn           = aws_dynamodb_table.this.stream_arn\n      starting_position          = \"LATEST\"\n      destination_arn_on_failure = aws_sqs_queue.failure.arn\n      filter_criteria = [\n        {\n          pattern = jsonencode({\n            eventName : [\"INSERT\"]\n          })\n        },\n        {\n          pattern = jsonencode({\n            data : {\n              Temperature : [{ numeric : [\">\", 0, \"<=\", 100] }]\n              Location : [\"Oslo\"]\n            }\n          })\n        }\n      ]\n    }\n    kinesis = {\n      event_source_arn  = aws_kinesis_stream.this.arn\n      starting_position = \"LATEST\"\n      filter_criteria = {\n        pattern = jsonencode({\n          data : {\n            Temperature : [{ numeric : [\">\", 0, \"<=\", 100] }]\n            Location : [\"Oslo\"]\n          }\n        })\n      }\n    }\n    mq = {\n      event_source_arn = aws_mq_broker.this.arn\n      queues           = [\"my-queue\"]\n      source_access_configuration = [\n        {\n          type = \"BASIC_AUTH\"\n          uri  = aws_secretsmanager_secret.this.arn\n        },\n        {\n          type = \"VIRTUAL_HOST\"\n          uri  = \"/\"\n        }\n      ]\n      tags = { mapping = \"amq\" }\n    }\n    #    self_managed_kafka = {\n    #      batch_size        = 1\n    #      starting_position = \"TRIM_HORIZON\"\n    #      topics            = [\"topic1\", \"topic2\"]\n    #      self_managed_event_source = [\n    #        {\n    #          endpoints = {\n    #            KAFKA_BOOTSTRAP_SERVERS = \"kafka1.example.com:9092,kafka2.example.com:9092\"\n    #          }\n    #        }\n    #      ]\n    #      self_managed_kafka_event_source_config = [\n    #        {\n    #          consumer_group_id = \"example-consumer-group\"\n    #        }\n    #      ]\n    #      source_access_configuration = [\n    #        {\n    #          type = \"SASL_SCRAM_512_AUTH\",\n    #          uri  = \"SECRET_AUTH_INFO\"\n    #        },\n    #        {\n    #          type = \"VPC_SECURITY_GROUP\",\n    #          uri  = \"security_group:sg-12345678\"\n    #        },\n    #        {\n    #          type = \"VPC_SUBNET\"\n    #          uri  = \"subnet:subnet-12345678\"\n    #        }\n    #      ]\n    #    }\n  }"
+      ],
+      "field_names": [
+        "amazon_managed_kafka_event_source_config",
+        "batch_size",
+        "bisect_batch_on_function_error",
+        "collection_name",
+        "consumer_group_id",
+        "database_name",
+        "destination_arn_on_failure",
+        "document_db_event_source_config",
+        "enabled",
+        "endpoints",
+        "event_source_arn",
+        "filter_criteria",
+        "full_document",
+        "function_response_types",
+        "maximum_batching_window_in_seconds",
+        "maximum_concurrency",
+        "maximum_pollers",
+        "maximum_record_age_in_seconds",
+        "maximum_retry_attempts",
+        "metrics",
+        "metrics_config",
+        "minimum_pollers",
+        "parallelization_factor",
+        "pattern",
+        "provisioned_poller_config",
+        "queues",
+        "scaling_config",
+        "self_managed_event_source",
+        "self_managed_kafka_event_source_config",
+        "source_access_configuration",
+        "starting_position",
+        "starting_position_timestamp",
+        "tags",
+        "topics",
+        "tumbling_window_in_seconds",
+        "type",
+        "uri"
+      ],
+      "provenance": "example+names"
+    },
+    "root::policy_statements": {
+      "examples": [
+        "policy_statements = {\n    dynamodb = {\n      effect    = \"Allow\",\n      actions   = [\"dynamodb:BatchWriteItem\"],\n      resources = [\"arn:aws:dynamodb:eu-west-1:052212379155:table/Test\"]\n    },\n    s3_read = {\n      effect    = \"Deny\",\n      actions   = [\"s3:HeadObject\", \"s3:GetObject\"],\n      resources = [\"arn:aws:s3:::my-bucket/*\"]\n    }\n  }",
+        "policy_statements = {\n    # Allow failures to be sent to SQS queue\n    sqs_failure = {\n      effect    = \"Allow\",\n      actions   = [\"sqs:SendMessage\"],\n      resources = [aws_sqs_queue.failure.arn]\n    },\n    # Execution role permissions to read records from an Amazon MQ broker\n    # https://docs.aws.amazon.com/lambda/latest/dg/with-mq.html#events-mq-permissions\n    mq_event_source = {\n      effect    = \"Allow\",\n      actions   = [\"ec2:DescribeSubnets\", \"ec2:DescribeSecurityGroups\", \"ec2:DescribeVpcs\"],\n      resources = [\"*\"]\n    },\n    mq_describe_broker = {\n      effect    = \"Allow\",\n      actions   = [\"mq:DescribeBroker\"],\n      resources = [aws_mq_broker.this.arn]\n    },\n    secrets_manager_get_value = {\n      effect    = \"Allow\",\n      actions   = [\"secretsmanager:GetSecretValue\"],\n      resources = [aws_secretsmanager_secret.this.arn]\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::source_path": {
+      "examples": [
+        "source_path = \"${path.module}/../fixtures/python-app1\"",
+        "source_path = [\n    {\n      path       = \"${path.module}/../fixtures/python-app-uv\"\n      uv_install = true\n    }\n  ]",
+        "source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n    }\n  ]",
+        "source_path = [\n    {\n      path          = \"${path.module}/../fixtures/python-app-uv\"\n      uv_install    = true\n      prefix_in_zip = \"python\"\n    }\n  ]",
+        "source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n      poetry_tmp_dir = \"${path.cwd}/../fixtures\"\n    }\n  ]",
+        "source_path = [\n    {\n      path = \"${path.module}/../fixtures/runtimes/java21\"\n      commands = [\n        \"gradle build -i\",\n        \"cd build/output\",\n        \":zip\",\n      ]\n    }\n  ]",
+        "source_path = [\n    {\n      path             = \"${path.module}/../fixtures/python-app1\"\n      pip_requirements = true\n      prefix_in_zip    = \"python\" # required to get the path correct\n    }\n  ]",
+        "source_path = [\n    {\n      path             = \"${path.module}/../fixtures/nodejs14.x-app1\"\n      npm_requirements = false\n      # npm_requirements = true  # Will run \"npm install\" with package.json\n    }\n  ]",
+        "source_path = [{\n    path             = \"${path.module}/../fixtures/python-app1\"\n    pip_tmp_dir      = \"${path.cwd}/../fixtures\"\n    pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n  }]",
+        "source_path = [\n    {\n      path = \"${path.module}/../fixtures/runtimes/go\"\n      commands = [\n        \"GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o bootstrap main.go\",\n        \":zip\",\n      ]\n      patterns = [\n        \"!.*\",\n        \"bootstrap\",\n      ]\n    }\n  ]",
+        "source_path = [\n    #    {\n    #      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    #      pip_requirements = \"${path.module}/../deploy/requirements.txt\"\n    #    },\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    #    {\n    #      path = \"${path.module}/../fixtures/python-app1/index.py\"\n    #      patterns = <<END\n    #        # To use comments in heredoc patterns set the env var:\n    #        # export TF_LAMBDA_PACKAGE_PATTERN_COMMENTS=true\n    #        # The intent for comments just to use in examples and demo snippets.\n    #        # To write a comment start it with double spaces and the # sign\n    #        # if it follows a pattern.\n    #\n    #        !index\\.py         # Exclude a file with 'index.py' name\n    #        index\\..*          # Re-include\n    #      END\n    #    },\n    #    {\n    #      path = \"${path.module}/../fixtures/dirtree\"\n    #      #      prefix_in_zip = \"vendor\"\n    #      patterns = <<END\n    #        # To see step by step output how files and folders was skipped or added\n    #        # set an env var in your shell by a command similar to:\n    #        # export TF_LAMBDA_PACKAGE_LOG_LEVEL=DEBUG\n    #\n    #        # To play with this demo pattern you can go to a ../fixtures folder\n    #        # and run there a dirtree.sh script to create a demo dirs tree\n    #        # matchable by following patterns.\n    #\n    #      # !abc/.*           # Filter out everything in an abc folder with the folder itself\n    #      # !abc/.+           # Filter out just all folder's content but keep the folder even if it's empty\n    #         abc/def/.*       # Re-include everything in abc/def sub folder\n    #      # !abc/def/ghk/.*   # Filter out again in abc/def/ghk sub folder\n    #        !.*/fiv.*\n    #        !.*/zi--.*\n    #\n    #        ########################################################################\n    #        # Special cases\n    #\n    #        # !.*/  # Removes all explicit directories from a zip file, mean while\n    #                # the zip file still valid and unpacks correctly but will not\n    #                # contain any empty directories.\n    #\n    #        # !.*/bar/  # To remove just some directory use more qualified path to it.\n    #\n    #        # !([^/]+/){3,}  # Remove all directories more than 3 folders in depth.\n    #      END\n    #    }\n  ]",
+        "source_path = [\n    {\n      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    },\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    {\n      path     = \"${path.module}/../fixtures/python-app1/index.py\"\n      patterns = <<END\n            # To use comments in heredoc patterns set the env var:\n            # export TF_LAMBDA_PACKAGE_PATTERN_COMMENTS=true\n            # The intent for comments just to use in examples and demo snippets.\n            # To write a comment start it with double spaces and the # sign\n            # if it follows a pattern.\n\n            !index\\.py         # Exclude a file with 'index.py' name\n            index\\..*          # Re-include\n          END\n    },\n    {\n      path          = \"${path.module}/../fixtures/dirtree\"\n      prefix_in_zip = \"vendor\"\n      patterns      = <<END\n            # To see step by step output how files and folders was skipped or added\n            # set an env var in your shell by a command similar to:\n            # export TF_LAMBDA_PACKAGE_LOG_LEVEL=DEBUG\n\n            # To play with this demo pattern you can go to a ../fixtures folder\n            # and run there a dirtree.sh script to create a demo dirs tree\n            # matchable by following patterns.\n\n            !abc/.*           # Filter out everything in an abc folder with the folder itself\n            !abc/.+           # Filter out just all folder's content but keep the folder even if it's empty\n            abc/def/.*        # Re-include everything in abc/def sub folder\n            !abc/def/ghk/.*   # Filter out again in abc/def/ghk sub folder\n            !.*/fiv.*\n            !.*/zi--.*\n\n            ########################################################################\n            # Special cases\n\n            # !.*/  # Removes all explicit directories from a zip file, mean while\n                    # the zip file still valid and unpacks correctly but will not\n                    # contain any empty directories.\n\n            # !.*/bar/  # To remove just some directory use more qualified path to it.\n\n            # !([^/]+/){3,}  # Remove all directories more than 3 folders in depth.\n          END\n    }\n  ]\n}\n\n# Create zip-archive with the dependencies specified in requirements.txt\n# which will be building in a docker container where SSH agent will be available\n# (to access private repositories, for example).\nmodule \"package_with_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime = \"python3.12\"\n  source_path = [\n    \"${path.module}/../fixtures/python-app1/index.py\",\n    \"${path.module}/../fixtures/python-app1/dir1/dir2\",\n    {\n      pip_requirements = \"${path.module}/../fixtures/python-app1/requirements.txt\"\n    }\n  ]\n  hash_extra = \"something-unique-to-not-conflict-with-module.package_with_pip_requirements_in_docker\"\n\n  build_in_docker       = true\n  docker_pip_cache      = true\n  docker_with_ssh_agent = true\n  #  docker_file           = \"${path.module}/../fixtures/python-app1/docker/Dockerfile\"\n  docker_build_root = \"${path.module}/../fixtures/python-app1/docker\"\n  docker_image      = \"public.ecr.aws/sam/build-python3.12:latest\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be executed (default for nodejs runtime)\nmodule \"package_dir_with_npm_install\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime     = \"nodejs14.x\"\n  source_path = \"${path.module}/../fixtures/nodejs14.x-app1\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be\n# executed (default for nodejs runtime). This example has package-lock.json which\n# is respected when installing dependencies.\nmodule \"package_dir_with_npm_install_lock_file\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime     = \"nodejs14.x\"\n  source_path = \"${path.module}/../fixtures/nodejs14.x-app2\"\n}\n\n# Create zip-archive of a single directory without running \"npm install\" (which is the default for nodejs runtime)\nmodule \"package_dir_without_npm_install\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime = \"nodejs14.x\"\n  source_path = [\n    {\n      path             = \"${path.module}/../fixtures/nodejs14.x-app1\"\n      npm_requirements = false\n      # npm_requirements = true  # Will run \"npm install\" with package.json\n    }\n  ]\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be executed using docker\nmodule \"package_with_npm_requirements_in_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime         = \"nodejs14.x\"\n  source_path     = \"${path.module}/../fixtures/nodejs14.x-app1\"\n  build_in_docker = true\n  hash_extra      = \"something-unique-to-not-conflict-with-module.package_dir_with_npm_install\"\n}\n\n# Create zip-archive of a single directory where \"npm install\" will also be\n# executed using docker. This example has package-lock.json which is respected\n# when installing dependencies.\nmodule \"package_with_npm_lock_in_docker\" {\n  source = \"../../\"\n\n  create_function = false\n\n  runtime         = \"nodejs14.x\"\n  source_path     = \"${path.module}/../fixtures/nodejs14.x-app2\"\n  build_in_docker = true\n  hash_extra      = \"something-unique-to-not-conflict-with-module.package_dir_with_npm_install\"\n}\n\n################################\n# Build package in Docker and\n# use it to deploy Lambda Layer\n################################\n\nmodule \"lambda_layer\" {\n  source = \"../../\"\n\n  create_layer        = true\n  layer_name          = \"${random_pet.this.id}-layer-dockerfile\"\n  compatible_runtimes = [\"python3.12\"]\n\n  source_path = \"${path.module}/../fixtures/python-app1\"\n  hash_extra  = \"extra-hash-to-prevent-conflicts-with-module.package_dir\"\n\n  build_in_docker = true\n  runtime         = \"python3.12\"\n  docker_image    = \"public.ecr.aws/sam/build-python3.12:latest\"\n  docker_file     = \"${path.module}/../fixtures/python-app1/docker/Dockerfile\"\n  artifacts_dir   = \"${path.root}/builds/lambda_layer/\"\n}\n\nmodule \"lambda_layer_poetry\" {\n  source = \"../../\"\n\n  create_layer        = true\n  layer_name          = \"${random_pet.this.id}-layer-poetry-dockerfile\"\n  compatible_runtimes = [\"python3.12\"]\n\n  source_path = [\n    {\n      path           = \"${path.module}/../fixtures/python-app-poetry\"\n      poetry_install = true\n      poetry_tmp_dir = \"${path.cwd}/../fixtures\"\n    }\n  ]\n  hash_extra = \"extra-hash-to-prevent-conflicts-with-module.package_dir\"\n\n  build_in_docker = true\n  runtime         = \"python3.12\"\n  docker_image    = \"build-python-poetry\"\n  docker_file     = \"${path.module}/../fixtures/python-app-poetry/docker/Dockerfile\"\n  artifacts_dir   = \"${path.root}/builds/lambda_layer_poetry/\"\n}\n\n#######################\n# Deploy from packaged\n#######################\n\nmodule \"lambda_function_from_package\" {\n  source = \"../../\"\n\n  create_package         = false\n  local_existing_package = module.package_with_commands_and_patterns.local_filename\n\n  function_name = \"${random_pet.this.id}-function-packaged\"\n  handler       = \"index.lambda_handler\"\n  runtime       = \"python3.12\"\n\n  layers = [\n    module.lambda_layer.lambda_layer_arn\n  ]\n}\n\n################################################\n# Layer that supports requirements.txt install #\n###############################################\nmodule \"lambda_layer_pip_requirements\" {\n  source = \"../..\"\n\n  create_function = false\n  create_layer    = true\n\n  layer_name          = \"${random_pet.this.id}-layer-pip-requirements\"\n  compatible_runtimes = [\"python3.12\"]\n  runtime             = \"python3.12\" # required to force layers to do pip install\n\n  source_path = [\n    {\n      path             = \"${path.module}/../fixtures/python-app1\"\n      pip_requirements = true\n      prefix_in_zip    = \"python\" # required to get the path correct\n    }\n  ]\n}"
+      ],
+      "field_names": [],
+      "provenance": "example"
+    },
+    "root::trusted_entities": {
+      "examples": [
+        "trusted_entities = [\n    \"appsync.amazonaws.com\",\n    {\n      type = \"AWS\",\n      identifiers = [\n        \"arn:aws:iam::307990089504:root\",\n      ]\n    },\n    {\n      type = \"Service\",\n      identifiers = [\n        \"codedeploy.amazonaws.com\",\n        \"ecs.amazonaws.com\"\n      ]\n    }\n  ]"
+      ],
+      "field_names": [
+        "identifiers",
+        "type"
+      ],
+      "provenance": "example"
+    }
+  }
+}

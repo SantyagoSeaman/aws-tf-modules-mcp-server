@@ -43,7 +43,7 @@ def test_top_level_fields_empty_for_any():
 def test_roster_capped():
     r = lint.roster([f"f{i}" for i in range(12)], cap=8)
     assert "f0" in r and "f7" in r and "f8" not in r
-    assert "grep_module_docs" in r
+    assert "module source" in r
 
 
 def test_check_corpus_honors_allowlist(tmp_path):

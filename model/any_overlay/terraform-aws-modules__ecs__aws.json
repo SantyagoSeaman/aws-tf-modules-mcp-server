@@ -1,0 +1,2831 @@
+{
+  "all_inputs": {
+    "cluster": [
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of capacity provider definitions to create",
+        "name": "capacity_providers",
+        "required": false,
+        "type": "map(object({\n    auto_scaling_group_provider = optional(object({\n      auto_scaling_group_arn = string\n      managed_draining       = optional(string, \"ENABLED\")\n      managed_scaling = optional(object({\n        instance_warmup_period    = optional(number)\n        maximum_scaling_step_size = optional(number)\n        minimum_scaling_step_size = optional(number)\n        status                    = optional(string)\n        target_capacity           = optional(number)\n      }))\n      managed_termination_protection = optional(string)\n    }))\n    managed_instances_provider = optional(object({\n      infrastructure_role_arn = optional(string)\n      instance_launch_template = object({\n        capacity_option_type     = optional(string)\n        ec2_instance_profile_arn = optional(string)\n        instance_requirements = optional(object({\n          accelerator_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_manufacturers = optional(list(string))\n          accelerator_names         = optional(list(string))\n          accelerator_total_memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_types      = optional(list(string))\n          allowed_instance_types = optional(list(string))\n          bare_metal             = optional(string)\n          baseline_ebs_bandwidth_mbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          burstable_performance                                   = optional(string)\n          cpu_manufacturers                                       = optional(list(string))\n          excluded_instance_types                                 = optional(list(string))\n          instance_generations                                    = optional(list(string))\n          local_storage                                           = optional(string)\n          local_storage_types                                     = optional(list(string))\n          max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n          memory_gib_per_vcpu = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_bandwidth_gbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_interface_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          on_demand_max_price_percentage_over_lowest_price = optional(number)\n          require_hibernate_support                        = optional(bool)\n          spot_max_price_percentage_over_lowest_price      = optional(number)\n          total_local_storage_gb = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          vcpu_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n        }))\n        monitoring = optional(string)\n        network_configuration = optional(object({\n          security_groups = optional(list(string), [])\n          subnets         = list(string)\n        }))\n        storage_configuration = optional(object({\n          storage_size_gib = number\n        }))\n      })\n      propagate_tags = optional(string, \"CAPACITY_PROVIDER\")\n    }))\n    name = optional(string) # Will fall back to use map key if not set\n    tags = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "List of SSM parameter ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_ssm_param_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "infrastructure_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Map of default capacity provider strategy definitions to use for the cluster",
+        "name": "default_capacity_provider_strategy",
+        "required": false,
+        "type": "map(object({\n    base   = optional(number)\n    name   = optional(string) # Will fall back to use map key if not set\n    weight = optional(number)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "task_exec_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role/instance profile created",
+        "name": "node_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{\n  \"all_ipv4\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all IPv4 traffic\",\n    \"ip_protocol\": \"-1\"\n  },\n  \"all_ipv6\": {\n    \"cidr_ipv6\": \"::/0\",\n    \"description\": \"Allow all IPv6 traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "[]",
+        "description": "List of capacity provider names to associate with the ECS cluster. Note: any capacity providers created by this module will be automatically added",
+        "name": "cluster_capacity_providers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role/instance profile name (`node_iam_role_name`) is used as a prefix",
+        "name": "node_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "node_iam_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  {\n    \"name\": \"containerInsights\",\n    \"value\": \"enabled\"\n  }\n]",
+        "description": "List of configuration block(s) with cluster settings. For example, this can be used to enable CloudWatch Container Insights for a cluster",
+        "name": "setting",
+        "required": false,
+        "type": "list(object({\n    name  = string\n    value = string\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "infrastructure_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the cluster (up to 255 letters, numbers, hyphens, and underscores)",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the ECS task definition IAM role should be created",
+        "name": "create_task_exec_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "infrastructure_iam_role_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"ECS Managed Instances node IAM role\"",
+        "description": "Description of the role",
+        "name": "node_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{\n  \"execute_command_configuration\": {\n    \"log_configuration\": {\n      \"cloud_watch_log_group_name\": \"placeholder\"\n    }\n  }\n}",
+        "description": "The execute command configuration for the cluster",
+        "name": "configuration",
+        "required": false,
+        "type": "object({\n    execute_command_configuration = optional(object({\n      kms_key_id = optional(string)\n      log_configuration = optional(object({\n        cloud_watch_encryption_enabled = optional(bool)\n        cloud_watch_log_group_name     = optional(string)\n        s3_bucket_encryption_enabled   = optional(bool)\n        s3_bucket_name                 = optional(string)\n        s3_kms_key_id                  = optional(string)\n        s3_key_prefix                  = optional(string)\n      }))\n      logging = optional(string, \"OVERRIDE\")\n    }))\n    managed_storage_configuration = optional(object({\n      fargate_ephemeral_storage_kms_key_id = optional(string)\n      kms_key_id                           = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS infrastructure IAM role should be created",
+        "name": "create_infrastructure_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "infrastructure_iam_role_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role/instance profile created",
+        "name": "node_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`task_exec_iam_role_name`) is used as a prefix",
+        "name": "task_exec_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM role policy ARNs to attach to the IAM role",
+        "name": "task_exec_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "task_exec_iam_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the VPC where the security group will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM policy should be created. This includes permissions included in AmazonECSTaskExecutionRolePolicy as well as access to secrets and SSM parameters",
+        "name": "create_task_exec_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SecretsManager secret ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_secret_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role/instance profile path",
+        "name": "node_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "node_iam_role_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "[DEPRECATED - will be removed in v8.0] Determines whether to disable the default postfix added to resource names and descriptions added in v7.0",
+        "name": "disable_v7_default_name_description",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "infrastructure_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "task_exec_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configures a default Service Connect namespace",
+        "name": "service_connect_defaults",
+        "required": false,
+        "type": "object({\n    namespace = string\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "task_exec_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "infrastructure_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile",
+        "name": "create_node_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "node_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Custom name of CloudWatch Log Group for ECS cluster",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "node_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "node_iam_role_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "infrastructure_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "infrastructure_iam_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "\"20s\"",
+        "description": "Duration to wait after the ECS cluster has become active before attaching the cluster capacity providers",
+        "name": "cluster_capacity_providers_wait_duration",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "task_exec_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "infrastructure_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "task_exec_iam_role_name",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "container-definition": [
+      {
+        "default": "null",
+        "description": "Custom name of CloudWatch log group for a service associated with the container definition",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "14",
+        "description": "Number of days to retain log events. Set to `0` to keep logs indefinitely",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "When this parameter is true, networking is disabled within the container",
+        "name": "disableNetworking",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The entry point that is passed to the container",
+        "name": "entrypoint",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The FireLens configuration for the container. This is used to specify and configure a log router for container logs. For more information, see [Custom Log Routing](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/using_firelens.html) in the Amazon Elastic Container Service Developer Guide",
+        "name": "firelensConfiguration",
+        "required": false,
+        "type": "object({\n    options = optional(map(string))\n    type    = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The hostname to use for your container",
+        "name": "hostname",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The type and amount of a resource to assign to a container. The only supported resource is a GPU",
+        "name": "resourceRequirements",
+        "required": false,
+        "type": "list(object({\n    type  = string\n    value = string\n  }))"
+      },
+      {
+        "default": "\"disabled\"",
+        "description": "Specifies whether Amazon ECS will resolve the container image tag provided in the container definition to an image digest",
+        "name": "versionConsistency",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The dependencies defined for container startup and shutdown. A container can contain multiple dependencies. When a dependency is defined for container startup, for container shutdown it is reversed. The condition can be one of START, COMPLETE, SUCCESS or HEALTHY",
+        "name": "dependsOn",
+        "required": false,
+        "type": "list(object({\n    condition     = string\n    containerName = string\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "Linux-specific modifications that are applied to the container, such as Linux kernel capabilities. For more information see [KernelCapabilities](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_KernelCapabilities.html)",
+        "name": "linuxParameters",
+        "required": false,
+        "type": "object({\n    capabilities = optional(object({\n      add  = optional(list(string))\n      drop = optional(list(string))\n    }))\n    devices = optional(list(object({\n      containerPath = optional(string)\n      hostPath      = optional(string)\n      permissions   = optional(list(string))\n    })))\n    initProcessEnabled = optional(bool)\n    maxSwap            = optional(number)\n    sharedMemorySize   = optional(number)\n    swappiness         = optional(number)\n    tmpfs = optional(list(object({\n      containerPath = string\n      mountOptions  = optional(list(string))\n      size          = number\n    })))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "When this parameter is true, the container is given read-only access to its root file system",
+        "name": "readonlyRootFilesystem",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The secrets to pass to the container. For more information, see [Specifying Sensitive Data](https://docs.aws.amazon.com/AmazonECS/latest/developerguide/specifying-sensitive-data.html) in the Amazon Elastic Container Service Developer Guide",
+        "name": "secrets",
+        "required": false,
+        "type": "list(object({\n    name      = string\n    valueFrom = string\n  }))"
+      },
+      {
+        "default": "30",
+        "description": "Time duration (in seconds) to wait before giving up on resolving dependencies for a container",
+        "name": "startTimeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "120",
+        "description": "Time duration (in seconds) to wait before the container is forcefully killed if it doesn't exit normally on its own",
+        "name": "stopTimeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "A list of ulimits to set in the container. If a ulimit value is specified in a task definition, it overrides the default values set by Docker",
+        "name": "ulimits",
+        "required": false,
+        "type": "list(object({\n    hardLimit = number\n    name      = string\n    softLimit = number\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Specs for Credentials for gMSA (Windows containers).",
+        "name": "credentialSpecs",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of strings to provide custom labels for SELinux and AppArmor multi-level security systems. This field isn't valid for containers in tasks using the Fargate launch type",
+        "name": "dockerSecurityOptions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of namespaced kernel parameters to set in the container",
+        "name": "systemControls",
+        "required": false,
+        "type": "list(object({\n    namespace = optional(string)\n    value     = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The name of the service that the container definition is associated with. Used in CloudWatch log group default name (if one is not provided)",
+        "name": "service",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Container DNS search domains. A list of DNS search domains that are presented to the container",
+        "name": "dnsSearchDomains",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The container health check command and associated configuration parameters for the container. See [HealthCheck](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_HealthCheck.html)",
+        "name": "healthCheck",
+        "required": false,
+        "type": "object({\n    command     = optional(list(string), [])\n    interval    = optional(number, 30)\n    retries     = optional(number, 3)\n    startPeriod = optional(number)\n    timeout     = optional(number, 5)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "The log configuration for the container. For more information see [LogConfiguration](https://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_LogConfiguration.html)",
+        "name": "logConfiguration",
+        "required": false,
+        "type": "object({\n    logDriver = optional(string)\n    options   = optional(map(string))\n    secretOptions = optional(list(object({\n      name      = string\n      valueFrom = string\n    })))\n  })"
+      },
+      {
+        "default": "false",
+        "description": "When this parameter is true, a `TTY` is allocated",
+        "name": "pseudoTerminal",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"LINUX\"",
+        "description": "The OS family for task",
+        "name": "operating_system_family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The list of port mappings for the container. Port mappings allow containers to access ports on the host container instance to send or receive traffic. For task definitions that use the awsvpc network mode, only specify the containerPort. The hostPort can be left blank or it must be the same value as the containerPort",
+        "name": "portMappings",
+        "required": false,
+        "type": "list(object({\n    appProtocol        = optional(string)\n    containerPort      = optional(number)\n    containerPortRange = optional(string)\n    hostPort           = optional(number)\n    name               = optional(string)\n    protocol           = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Container repository credentials; required when using a private repo.  This map currently supports a single key; \"credentialsParameter\", which should be the ARN of a Secrets Manager's secret holding the credentials",
+        "name": "repositoryCredentials",
+        "required": false,
+        "type": "object({\n    credentialsParameter = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Data volumes to mount from another container",
+        "name": "volumesFrom",
+        "required": false,
+        "type": "list(object({\n    readOnly        = optional(bool)\n    sourceContainer = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether CloudWatch logging is configured for this container definition. Set to `false` to use other logging drivers",
+        "name": "enable_cloudwatch_logging",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the log group name should be used as a prefix",
+        "name": "cloudwatch_log_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The number of cpu units to reserve for the container. This is optional for tasks using Fargate launch type and the total amount of `cpu` of all containers in a task will need to be lower than the task-level cpu value",
+        "name": "cpu",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "A key/value map of labels to add to the container",
+        "name": "dockerLabels",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The environment variables to pass to the container",
+        "name": "environment",
+        "required": false,
+        "type": "list(object({\n    name  = string\n    value = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The links parameter allows containers to communicate with each other without the need for port mappings. This parameter is only supported if the network mode of a task definition is `bridge`",
+        "name": "links",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The soft limit (in MiB) of memory to reserve for the container. When system memory is under heavy contention, Docker attempts to keep the container memory to this soft limit. However, your container can consume more memory when it needs to, up to either the hard limit specified with the `memory` parameter (if applicable), or all of the available memory on the container instance",
+        "name": "memoryReservation",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The mount points for data volumes in your container",
+        "name": "mountPoints",
+        "required": false,
+        "type": "list(object({\n    containerPath = optional(string)\n    readOnly      = optional(bool)\n    sourceVolume  = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The name of a container. If you're linking multiple containers together in a task definition, the name of one container can be entered in the links of another container to connect the containers. Up to 255 letters (uppercase and lowercase), numbers, underscores, and hyphens are allowed",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The user to run as inside the container. Can be any of these formats: user, user:group, uid, uid:gid, user:gid, uid:group. The default (null) will use the container's configured `USER` directive or root if not set",
+        "name": "user",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Container DNS servers. This is a list of strings specifying the IP addresses of the DNS servers",
+        "name": "dnsServers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Specifies whether to enable Amazon ECS Exec for the tasks within the service",
+        "name": "enable_execute_command",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If the `essential` parameter of a container is marked as `true`, and that container fails or stops for any reason, all other containers that are part of the task are stopped",
+        "name": "essential",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A list of hostnames and IP address mappings to append to the `/etc/hosts` file on the container",
+        "name": "extraHosts",
+        "required": false,
+        "type": "list(object({\n    hostname  = string\n    ipAddress = string\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "When this parameter is `true`, you can deploy containerized applications that require `stdin` or a `tty` to be allocated",
+        "name": "interactive",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"enabled\": true\n}",
+        "description": "Container restart policy; helps overcome transient failures faster and maintain task availability",
+        "name": "restartPolicy",
+        "required": false,
+        "type": "object({\n    enabled              = optional(bool, true)\n    ignoredExitCodes     = optional(list(number))\n    restartAttemptPeriod = optional(number)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The command that's passed to the container",
+        "name": "command",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A list of files containing the environment variables to pass to a container",
+        "name": "environmentFiles",
+        "required": false,
+        "type": "list(object({\n    value = string\n    type  = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The image used to start a container. This string is passed directly to the Docker daemon. By default, images in the Docker Hub registry are available. Other repositories are specified with either `repository-url/image:tag` or `repository-url/image@digest`",
+        "name": "image",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The amount (in MiB) of memory to present to the container. If your container attempts to exceed the memory specified here, the container is killed. The total amount of memory reserved for all containers within a task must be lower than the task `memory` value, if one is specified",
+        "name": "memory",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "When this parameter is true, the container is given elevated privileges on the host container instance (similar to the root user)",
+        "name": "privileged",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The working directory to run commands inside the container",
+        "name": "workingDirectory",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "express-service": [
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "task_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM role should be created",
+        "name": "create_execution_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "execution_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Amount of memory (in MiB) used by the task. Valid values are between `512` and `8192`",
+        "name": "memory",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The auto-scaling configuration for this service revision",
+        "name": "scaling_target",
+        "required": false,
+        "type": "object({\n    auto_scaling_metric       = string\n    auto_scaling_target_value = number\n    max_task_count            = number\n    min_task_count            = number\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Custom name of CloudWatch Log Group for ECS cluster",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SSM parameter ARNs the task execution role will be permitted to get/read",
+        "name": "execution_ssm_param_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "task_iam_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The primary container configuration for this service revision",
+        "name": "primary_container",
+        "required": false,
+        "type": "object({\n    aws_logs_configuration = optional(object({\n      log_group         = string\n      log_stream_prefix = string\n    }))\n    command        = optional(list(string))\n    container_port = optional(number)\n    environment = optional(list(object({\n      name  = string\n      value = string\n    })))\n    image = string\n    repository_credentials = optional(object({\n      credentials_parameter = string\n    }))\n    secret = optional(list(object({\n      name       = string\n      value_from = string\n    })))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "execution_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "task_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM policy should be created. This includes permissions included in AmazonECSTaskExecutionRolePolicy as well as access to secrets and SSM parameters",
+        "name": "create_execution_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "infrastructure_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "infrastructure_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "execution_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "execution_iam_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "task_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "task_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of additioanl IAM role policy ARNs to attach to the IAM role",
+        "name": "task_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "execution_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS infrastructure IAM role should be created",
+        "name": "create_infrastructure_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Maximum session duration (in seconds) for ECS task role. Default is 3600.",
+        "name": "task_iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task IAM role should be created",
+        "name": "create_task_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SecretsManager secret ARNs the task execution role will be permitted to get/read",
+        "name": "execution_secret_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "14",
+        "description": "Number of days to retain log events",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Path for health check requests. Defaults to `/ping`",
+        "name": "health_check_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the VPC where the security group will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "execution_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The network configuration for task in this service revision",
+        "name": "network_configuration",
+        "required": false,
+        "type": "object({\n    security_groups = optional(list(string), [])\n    subnets         = optional(list(string))\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`execution_iam_role_name`) is used as a prefix",
+        "name": "execution_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Maximum session duration (in seconds) for ECS task execution role. Default is 3600.",
+        "name": "execution_iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Path for the iam role",
+        "name": "execution_iam_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "infrastructure_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "task_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name or ARN of the ECS cluster. Defaults to `default`",
+        "name": "cluster",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the service. If not specified, a name will be generated. Changing this forces a new resource to be created",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "execution_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "infrastructure_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "infrastructure_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "infrastructure_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "infrastructure_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`task_iam_role_name`) is used as a prefix",
+        "name": "task_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "task_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Number of CPU units used by the task. Valid values are powers of `2` between `256` and `4096`",
+        "name": "cpu",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM role policy ARNs to attach to the IAM role",
+        "name": "execution_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "root": [
+      {
+        "default": "null",
+        "description": "The ID of the VPC where the security group will be created",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`task_exec_iam_role_name`) is used as a prefix",
+        "name": "task_exec_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "node_iam_role_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Map of service definitions to create",
+        "name": "services",
+        "required": false,
+        "type": "map(object({\n    create         = optional(bool)\n    create_service = optional(bool)\n    tags           = optional(map(string))\n\n    # Service\n    ignore_task_definition_changes = optional(bool)\n    alarms = optional(object({\n      alarm_names = list(string)\n      enable      = optional(bool)\n      rollback    = optional(bool)\n    }))\n    availability_zone_rebalancing = optional(string)\n    capacity_provider_strategy = optional(map(object({\n      base              = optional(number)\n      capacity_provider = string\n      weight            = optional(number)\n    })))\n    deployment_circuit_breaker = optional(object({\n      enable   = bool\n      rollback = bool\n    }))\n    deployment_configuration = optional(object({\n      strategy             = optional(string)\n      bake_time_in_minutes = optional(string)\n      canary_configuration = optional(object({\n        canary_bake_time_in_minutes = optional(string)\n        canary_percent              = optional(string)\n      }))\n      linear_configuration = optional(object({\n        step_bake_time_in_minutes = optional(string)\n        step_percent              = optional(string)\n      }))\n      lifecycle_hook = optional(map(object({\n        hook_target_arn  = string\n        role_arn         = optional(string)\n        lifecycle_stages = list(string)\n        hook_details     = optional(string)\n      })))\n    }))\n    deployment_controller = optional(object({\n      type = optional(string)\n    }))\n    deployment_maximum_percent         = optional(number, 200)\n    deployment_minimum_healthy_percent = optional(number, 66)\n    desired_count                      = optional(number, 1)\n    enable_ecs_managed_tags            = optional(bool)\n    enable_execute_command             = optional(bool)\n    force_delete                       = optional(bool)\n    force_new_deployment               = optional(bool)\n    health_check_grace_period_seconds  = optional(number)\n    launch_type                        = optional(string)\n    load_balancer = optional(map(object({\n      container_name   = string\n      container_port   = number\n      elb_name         = optional(string)\n      target_group_arn = optional(string)\n      advanced_configuration = optional(object({\n        alternate_target_group_arn = string\n        production_listener_rule   = string # Should be optional but bug in provider\n        role_arn                   = optional(string)\n        test_listener_rule         = optional(string)\n      }))\n    })))\n    name               = optional(string) # Will fall back to use map key if not set\n    assign_public_ip   = optional(bool)\n    security_group_ids = optional(list(string))\n    subnet_ids         = optional(list(string))\n    ordered_placement_strategy = optional(list(object({\n      field = optional(string)\n      type  = string\n    })))\n    placement_constraints = optional(map(object({\n      expression = optional(string)\n      type       = string\n    })))\n    platform_version    = optional(string)\n    propagate_tags      = optional(string)\n    scheduling_strategy = optional(string)\n    service_connect_configuration = optional(object({\n      enabled = optional(bool)\n      access_log_configuration = optional(object({\n        format                   = string\n        include_query_parameters = optional(string)\n      }))\n      log_configuration = optional(object({\n        log_driver = string\n        options    = optional(map(string))\n        secret_option = optional(list(object({\n          name       = string\n          value_from = string\n        })))\n      }))\n      namespace = optional(string)\n      service = optional(list(object({\n        client_alias = optional(object({\n          dns_name = optional(string)\n          port     = number\n          test_traffic_rules = optional(list(object({\n            header = optional(object({\n              name = string\n              value = object({\n                exact = string\n              })\n            }))\n          })))\n        }))\n        discovery_name        = optional(string)\n        ingress_port_override = optional(number)\n        port_name             = string\n        timeout = optional(object({\n          idle_timeout_seconds        = optional(number)\n          per_request_timeout_seconds = optional(number)\n        }))\n        tls = optional(object({\n          issuer_cert_authority = object({\n            aws_pca_authority_arn = string\n          })\n          kms_key  = optional(string)\n          role_arn = optional(string)\n        }))\n      })))\n    }))\n    service_registries = optional(object({\n      container_name = optional(string)\n      container_port = optional(number)\n      port           = optional(number)\n      registry_arn   = string\n    }))\n    sigint_rollback = optional(bool)\n    timeouts = optional(object({\n      create = optional(string)\n      update = optional(string)\n      delete = optional(string)\n    }))\n    triggers = optional(map(string))\n    volume_configuration = optional(object({\n      name = string\n      managed_ebs_volume = object({\n        encrypted        = optional(bool)\n        file_system_type = optional(string)\n        iops             = optional(number)\n        kms_key_id       = optional(string)\n        size_in_gb       = optional(number)\n        snapshot_id      = optional(string)\n        tag_specifications = optional(list(object({\n          propagate_tags = optional(string)\n          resource_type  = string\n          tags           = optional(map(string))\n        })))\n        throughput                 = optional(number)\n        volume_initialization_rate = optional(number)\n        volume_type                = optional(string)\n      })\n    }))\n    vpc_lattice_configurations = optional(object({\n      role_arn         = string\n      target_group_arn = string\n      port_name        = string\n    }))\n    wait_for_steady_state = optional(bool)\n    service_tags          = optional(map(string))\n    # Service - IAM Role\n    create_iam_role               = optional(bool)\n    iam_role_arn                  = optional(string)\n    iam_role_name                 = optional(string)\n    iam_role_use_name_prefix      = optional(bool)\n    iam_role_path                 = optional(string)\n    iam_role_description          = optional(string)\n    iam_role_permissions_boundary = optional(string)\n    iam_role_tags                 = optional(map(string))\n    iam_role_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    # Task Definition\n    create_task_definition = optional(bool)\n    task_definition_arn    = optional(string)\n    container_definitions = optional(map(object({\n      operating_system_family = optional(string)\n      tags                    = optional(map(string))\n\n      # Container definition\n      command         = optional(list(string))\n      cpu             = optional(number)\n      credentialSpecs = optional(list(string))\n      dependsOn = optional(list(object({\n        condition     = string\n        containerName = string\n      })))\n      disableNetworking      = optional(bool)\n      dnsSearchDomains       = optional(list(string))\n      dnsServers             = optional(list(string))\n      dockerLabels           = optional(map(string))\n      dockerSecurityOptions  = optional(list(string))\n      enable_execute_command = optional(bool)\n      entrypoint             = optional(list(string))\n      environment = optional(list(object({\n        name  = string\n        value = string\n      })))\n      environmentFiles = optional(list(object({\n        type  = string\n        value = string\n      })))\n      essential = optional(bool)\n      extraHosts = optional(list(object({\n        hostname  = string\n        ipAddress = string\n      })))\n      firelensConfiguration = optional(object({\n        options = optional(map(string))\n        type    = optional(string)\n      }))\n      healthCheck = optional(object({\n        command     = optional(list(string))\n        interval    = optional(number)\n        retries     = optional(number)\n        startPeriod = optional(number)\n        timeout     = optional(number)\n      }))\n      hostname    = optional(string)\n      image       = optional(string)\n      interactive = optional(bool)\n      links       = optional(list(string))\n      linuxParameters = optional(object({\n        capabilities = optional(object({\n          add  = optional(list(string))\n          drop = optional(list(string))\n        }))\n        devices = optional(list(object({\n          containerPath = optional(string)\n          hostPath      = optional(string)\n          permissions   = optional(list(string))\n        })))\n        initProcessEnabled = optional(bool)\n        maxSwap            = optional(number)\n        sharedMemorySize   = optional(number)\n        swappiness         = optional(number)\n        tmpfs = optional(list(object({\n          containerPath = string\n          mountOptions  = optional(list(string))\n          size          = number\n        })))\n      }))\n      logConfiguration = optional(object({\n        logDriver = optional(string)\n        options   = optional(map(string))\n        secretOptions = optional(list(object({\n          name      = string\n          valueFrom = string\n        })))\n      }))\n      memory            = optional(number)\n      memoryReservation = optional(number)\n      mountPoints = optional(list(object({\n        containerPath = optional(string)\n        readOnly      = optional(bool)\n        sourceVolume  = optional(string)\n      })), [])\n      name = optional(string)\n      portMappings = optional(list(object({\n        appProtocol        = optional(string)\n        containerPort      = optional(number)\n        containerPortRange = optional(string)\n        hostPort           = optional(number)\n        name               = optional(string)\n        protocol           = optional(string)\n      })), [])\n      privileged             = optional(bool)\n      pseudoTerminal         = optional(bool)\n      readonlyRootFilesystem = optional(bool)\n      repositoryCredentials = optional(object({\n        credentialsParameter = optional(string)\n      }))\n      resourceRequirements = optional(list(object({\n        type  = string\n        value = string\n      })))\n      restartPolicy = optional(object({\n        enabled              = optional(bool)\n        ignoredExitCodes     = optional(list(number))\n        restartAttemptPeriod = optional(number)\n      }))\n      secrets = optional(list(object({\n        name      = string\n        valueFrom = string\n      })))\n      startTimeout = optional(number)\n      stopTimeout  = optional(number)\n      systemControls = optional(list(object({\n        namespace = optional(string)\n        value     = optional(string)\n      })))\n      ulimits = optional(list(object({\n        hardLimit = number\n        name      = string\n        softLimit = number\n      })))\n      user               = optional(string)\n      versionConsistency = optional(string)\n      volumesFrom = optional(list(object({\n        readOnly        = optional(bool)\n        sourceContainer = optional(string)\n      })))\n      workingDirectory = optional(string)\n\n      # Cloudwatch Log Group\n      service                                = optional(string, \"\")\n      enable_cloudwatch_logging              = optional(bool)\n      create_cloudwatch_log_group            = optional(bool)\n      cloudwatch_log_group_name              = optional(string)\n      cloudwatch_log_group_use_name_prefix   = optional(bool)\n      cloudwatch_log_group_class             = optional(string)\n      cloudwatch_log_group_retention_in_days = optional(number)\n      cloudwatch_log_group_kms_key_id        = optional(string)\n    })))\n    cpu                    = optional(number, 1024)\n    enable_fault_injection = optional(bool)\n    ephemeral_storage = optional(object({\n      size_in_gib = number\n    }))\n    family       = optional(string)\n    ipc_mode     = optional(string)\n    memory       = optional(number, 2048)\n    network_mode = optional(string)\n    pid_mode     = optional(string)\n    proxy_configuration = optional(object({\n      container_name = string\n      properties     = optional(map(string))\n      type           = optional(string)\n    }))\n    requires_compatibilities = optional(list(string))\n    runtime_platform = optional(object({\n      cpu_architecture        = optional(string)\n      operating_system_family = optional(string)\n    }))\n    skip_destroy = optional(bool)\n    task_definition_placement_constraints = optional(map(object({\n      expression = optional(string)\n      type       = string\n    })))\n    track_latest = optional(bool)\n    volume = optional(map(object({\n      configure_at_launch = optional(bool)\n      docker_volume_configuration = optional(object({\n        autoprovision = optional(bool)\n        driver        = optional(string)\n        driver_opts   = optional(map(string))\n        labels        = optional(map(string))\n        scope         = optional(string)\n      }))\n      efs_volume_configuration = optional(object({\n        authorization_config = optional(object({\n          access_point_id = optional(string)\n          iam             = optional(string)\n        }))\n        file_system_id          = string\n        root_directory          = optional(string)\n        transit_encryption      = optional(string)\n        transit_encryption_port = optional(number)\n      }))\n      fsx_windows_file_server_volume_configuration = optional(object({\n        authorization_config = optional(object({\n          credentials_parameter = string\n          domain                = string\n        }))\n        file_system_id = string\n        root_directory = string\n      }))\n      host_path = optional(string)\n      name      = optional(string)\n    })))\n    task_tags = optional(map(string))\n    # Task Execution - IAM Role\n    create_task_exec_iam_role               = optional(bool)\n    task_exec_iam_role_arn                  = optional(string)\n    task_exec_iam_role_name                 = optional(string)\n    task_exec_iam_role_use_name_prefix      = optional(bool)\n    task_exec_iam_role_path                 = optional(string)\n    task_exec_iam_role_description          = optional(string)\n    task_exec_iam_role_permissions_boundary = optional(string)\n    task_exec_iam_role_tags                 = optional(map(string))\n    task_exec_iam_role_policies             = optional(map(string))\n    task_exec_iam_role_max_session_duration = optional(number)\n    create_task_exec_policy                 = optional(bool)\n    task_exec_ssm_param_arns                = optional(list(string))\n    task_exec_secret_arns                   = optional(list(string))\n    task_exec_iam_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    task_exec_iam_policy_path = optional(string)\n    # Tasks - IAM Role\n    create_tasks_iam_role               = optional(bool)\n    tasks_iam_role_arn                  = optional(string)\n    tasks_iam_role_name                 = optional(string)\n    tasks_iam_role_use_name_prefix      = optional(bool)\n    tasks_iam_role_path                 = optional(string)\n    tasks_iam_role_description          = optional(string)\n    tasks_iam_role_permissions_boundary = optional(string)\n    tasks_iam_role_tags                 = optional(map(string))\n    tasks_iam_role_policies             = optional(map(string))\n    tasks_iam_role_max_session_duration = optional(number)\n    tasks_iam_role_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n    # Task Set\n    external_id = optional(string)\n    scale = optional(object({\n      unit  = optional(string)\n      value = optional(number)\n    }))\n    wait_until_stable         = optional(bool)\n    wait_until_stable_timeout = optional(string)\n    # Autoscaling\n    enable_autoscaling       = optional(bool)\n    autoscaling_min_capacity = optional(number)\n    autoscaling_max_capacity = optional(number)\n    autoscaling_policies = optional(map(object({\n      name        = optional(string) # Will fall back to the key name if not provided\n      policy_type = optional(string)\n      predictive_scaling_policy_configuration = optional(object({\n        max_capacity_breach_behavior = optional(string)\n        max_capacity_buffer          = optional(number)\n        metric_specification = list(object({\n          customized_capacity_metric_specification = optional(object({\n            metric_data_query = list(object({\n              expression = optional(string)\n              id         = string\n              label      = optional(string)\n              metric_stat = optional(object({\n                metric = object({\n                  dimension = optional(list(object({\n                    name  = string\n                    value = string\n                  })))\n                  metric_name = optional(string)\n                  namespace   = optional(string)\n                })\n                stat = string\n                unit = optional(string)\n              }))\n              return_data = optional(bool)\n            }))\n          }))\n          customized_load_metric_specification = optional(object({\n            metric_data_query = list(object({\n              expression = optional(string)\n              id         = string\n              label      = optional(string)\n              metric_stat = optional(object({\n                metric = object({\n                  dimension = optional(list(object({\n                    name  = string\n                    value = string\n                  })))\n                  metric_name = optional(string)\n                  namespace   = optional(string)\n                })\n                stat = string\n                unit = optional(string)\n              }))\n              return_data = optional(bool)\n            }))\n          }))\n          customized_scaling_metric_specification = optional(object({\n            metric_data_query = list(object({\n              expression = optional(string)\n              id         = string\n              label      = optional(string)\n              metric_stat = optional(object({\n                metric = object({\n                  dimension = optional(list(object({\n                    name  = string\n                    value = string\n                  })))\n                  metric_name = optional(string)\n                  namespace   = optional(string)\n                })\n                stat = string\n                unit = optional(string)\n              }))\n              return_data = optional(bool)\n            }))\n          }))\n          predefined_load_metric_specification = optional(object({\n            predefined_metric_type = string\n            resource_label         = optional(string)\n          }))\n          predefined_metric_pair_specification = optional(object({\n            predefined_metric_type = string\n            resource_label         = optional(string)\n          }))\n          predefined_scaling_metric_specification = optional(object({\n            predefined_metric_type = string\n            resource_label         = optional(string)\n          }))\n          target_value = number\n        }))\n        mode                   = optional(string)\n        scheduling_buffer_time = optional(number)\n      }))\n      step_scaling_policy_configuration = optional(object({\n        adjustment_type          = optional(string)\n        cooldown                 = optional(number)\n        metric_aggregation_type  = optional(string)\n        min_adjustment_magnitude = optional(number)\n        step_adjustment = optional(list(object({\n          metric_interval_lower_bound = optional(string)\n          metric_interval_upper_bound = optional(string)\n          scaling_adjustment          = number\n        })))\n      }))\n      target_tracking_scaling_policy_configuration = optional(object({\n        customized_metric_specification = optional(object({\n          dimensions = optional(list(object({\n            name  = string\n            value = string\n          })))\n          metric_name = optional(string)\n          metrics = optional(list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimensions = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = string\n                namespace   = string\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          })))\n          namespace = optional(string)\n          statistic = optional(string)\n          unit      = optional(string)\n        }))\n\n        disable_scale_in = optional(bool)\n        predefined_metric_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        scale_in_cooldown  = optional(number)\n        scale_out_cooldown = optional(number)\n        target_value       = optional(number)\n      }))\n    })))\n    autoscaling_scheduled_actions = optional(map(object({\n      name         = optional(string)\n      min_capacity = number\n      max_capacity = number\n      schedule     = string\n      start_time   = optional(string)\n      end_time     = optional(string)\n      timezone     = optional(string)\n    })))\n    autoscaling_suspended_state = optional(object({\n      dynamic_scaling_in_suspended  = optional(bool)\n      dynamic_scaling_out_suspended = optional(bool)\n      scheduled_scaling_suspended   = optional(bool)\n    }))\n    # Security Group\n    create_security_group          = optional(bool)\n    vpc_id                         = optional(string)\n    security_group_name            = optional(string)\n    security_group_use_name_prefix = optional(bool)\n    security_group_description     = optional(string)\n    security_group_ingress_rules = optional(map(object({\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })))\n    security_group_egress_rules = optional(map(object({\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string)\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      tags                         = optional(map(string))\n      to_port                      = optional(string)\n    })))\n    security_group_tags = optional(map(string))\n    # ECS Infrastructure IAM Role\n    create_infrastructure_iam_role               = optional(bool)\n    infrastructure_iam_role_arn                  = optional(string)\n    infrastructure_iam_role_name                 = optional(string)\n    infrastructure_iam_role_use_name_prefix      = optional(bool)\n    infrastructure_iam_role_path                 = optional(string)\n    infrastructure_iam_role_description          = optional(string)\n    infrastructure_iam_role_permissions_boundary = optional(string)\n    infrastructure_iam_role_tags                 = optional(map(string))\n  }))"
+      },
+      {
+        "default": "[\n  {\n    \"name\": \"containerInsights\",\n    \"value\": \"enabled\"\n  }\n]",
+        "description": "List of configuration block(s) with cluster settings. For example, this can be used to enable CloudWatch Container Insights for a cluster",
+        "name": "cluster_setting",
+        "required": false,
+        "type": "list(object({\n    name  = string\n    value = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Custom name of CloudWatch Log Group for ECS cluster",
+        "name": "cloudwatch_log_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "task_exec_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "infrastructure_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"ECS Managed Instances node IAM role\"",
+        "description": "Description of the role",
+        "name": "node_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role/instance profile created",
+        "name": "node_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specified the log class of the log group. Possible values are: `STANDARD` or `INFREQUENT_ACCESS`",
+        "name": "cloudwatch_log_group_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of capacity provider names to associate with the ECS cluster. Note: any capacity providers created by this module will be automatically added",
+        "name": "cluster_capacity_providers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of SecretsManager secret ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_secret_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "infrastructure_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional policies to be added to the IAM role",
+        "name": "node_iam_role_additional_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "node_iam_role_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "infrastructure_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role/instance profile name (`node_iam_role_name`) is used as a prefix",
+        "name": "node_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"execute_command_configuration\": {\n    \"log_configuration\": {\n      \"cloud_watch_log_group_name\": \"placeholder\"\n    }\n  }\n}",
+        "description": "The execute command configuration for the cluster",
+        "name": "cluster_configuration",
+        "required": false,
+        "type": "object({\n    execute_command_configuration = optional(object({\n      kms_key_id = optional(string)\n      log_configuration = optional(object({\n        cloud_watch_encryption_enabled = optional(bool)\n        cloud_watch_log_group_name     = optional(string)\n        s3_bucket_encryption_enabled   = optional(bool)\n        s3_bucket_name                 = optional(string)\n        s3_kms_key_id                  = optional(string)\n        s3_key_prefix                  = optional(string)\n      }))\n      logging = optional(string, \"OVERRIDE\")\n    }))\n    managed_storage_configuration = optional(object({\n      fargate_ephemeral_storage_kms_key_id = optional(string)\n      kms_key_id                           = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configures a default Service Connect namespace",
+        "name": "cluster_service_connect_defaults",
+        "required": false,
+        "type": "object({\n    namespace = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "task_exec_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"all_ipv4\": {\n    \"cidr_ipv4\": \"0.0.0.0/0\",\n    \"description\": \"Allow all IPv4 traffic\",\n    \"ip_protocol\": \"-1\"\n  },\n  \"all_ipv6\": {\n    \"cidr_ipv6\": \"::/0\",\n    \"description\": \"Allow all IPv6 traffic\",\n    \"ip_protocol\": \"-1\"\n  }\n}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the ECS task definition IAM role should be created",
+        "name": "create_task_exec_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "task_exec_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "[DEPRECATED - will be removed in v8.0] Determines whether to disable the default postfix added to resource names and descriptions added in v7.0",
+        "name": "disable_v7_default_name_description",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the cluster (up to 255 letters, numbers, hyphens, and underscores)",
+        "name": "cluster_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "task_exec_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. In merging, statements with non-blank `sid`s will override statements with the same `sid`",
+        "name": "infrastructure_iam_role_override_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the cluster",
+        "name": "cluster_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether a log group is created by this module for the cluster logs. If not, AWS will automatically create one if logging is enabled",
+        "name": "create_cloudwatch_log_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "90",
+        "description": "Number of days to retain log events",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "infrastructure_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "infrastructure_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of IAM policy documents that are merged together into the exported document. Statements must have unique `sid`s",
+        "name": "infrastructure_iam_role_source_policy_documents",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM role policy ARNs to attach to the IAM role",
+        "name": "task_exec_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Map of capacity provider definitions to create for the cluster",
+        "name": "capacity_providers",
+        "required": false,
+        "type": "map(object({\n    auto_scaling_group_provider = optional(object({\n      auto_scaling_group_arn = string\n      managed_draining       = optional(string, \"ENABLED\")\n      managed_scaling = optional(object({\n        instance_warmup_period    = optional(number)\n        maximum_scaling_step_size = optional(number)\n        minimum_scaling_step_size = optional(number)\n        status                    = optional(string)\n        target_capacity           = optional(number)\n      }))\n      managed_termination_protection = optional(string)\n    }))\n    managed_instances_provider = optional(object({\n      infrastructure_role_arn = optional(string)\n      instance_launch_template = object({\n        capacity_option_type     = optional(string)\n        ec2_instance_profile_arn = optional(string)\n        instance_requirements = optional(object({\n          accelerator_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_manufacturers = optional(list(string))\n          accelerator_names         = optional(list(string))\n          accelerator_total_memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_types      = optional(list(string))\n          allowed_instance_types = optional(list(string))\n          bare_metal             = optional(string)\n          baseline_ebs_bandwidth_mbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          burstable_performance                                   = optional(string)\n          cpu_manufacturers                                       = optional(list(string))\n          excluded_instance_types                                 = optional(list(string))\n          instance_generations                                    = optional(list(string))\n          local_storage                                           = optional(string)\n          local_storage_types                                     = optional(list(string))\n          max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n          memory_gib_per_vcpu = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_bandwidth_gbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_interface_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          on_demand_max_price_percentage_over_lowest_price = optional(number)\n          require_hibernate_support                        = optional(bool)\n          spot_max_price_percentage_over_lowest_price      = optional(number)\n          total_local_storage_gb = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          vcpu_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n        }))\n        monitoring = optional(string)\n        network_configuration = optional(object({\n          security_groups = optional(list(string), [])\n          subnets         = list(string)\n        }))\n        storage_configuration = optional(object({\n          storage_size_gib = number\n        }))\n      })\n      propagate_tags = optional(string, \"CAPACITY_PROVIDER\")\n    }))\n    name = optional(string) # Will fall back to use map key if not set\n    tags = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "task_exec_iam_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS infrastructure IAM role should be created",
+        "name": "create_infrastructure_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile",
+        "name": "create_node_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SSM parameter ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_ssm_param_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role/instance profile created",
+        "name": "node_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role/instance profile path",
+        "name": "node_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "node_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the log group created",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "infrastructure_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "node_iam_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM policy should be created. This includes permissions included in AmazonECSTaskExecutionRolePolicy as well as access to secrets and SSM parameters",
+        "name": "create_task_exec_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "If a KMS Key ARN is set, this key will be used to encrypt the corresponding log group. Please be sure that the KMS Key has an appropriate key policy (https://docs.aws.amazon.com/AmazonCloudWatch/latest/logs/encrypt-log-data-kms.html)",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of default capacity provider strategy definitions to use for the cluster",
+        "name": "default_capacity_provider_strategy",
+        "required": false,
+        "type": "map(object({\n    base   = optional(number)\n    name   = optional(string) # Will fall back to use map key if not set\n    weight = optional(number)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "infrastructure_iam_role_statements",
+        "required": false,
+        "type": "map(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string, \"Allow\")\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      variable = string\n      values   = list(string)\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "task_exec_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      }
+    ],
+    "service": [
+      {
+        "default": "true",
+        "description": "Determines whether the ECS tasks IAM role should be created",
+        "name": "create_tasks_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "infrastructure_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for deployment controller configuration",
+        "name": "deployment_controller",
+        "required": false,
+        "type": "object({\n    type = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Enable to force a new task deployment of the service. This can be used to update tasks to use a newer Docker image with same image/tag combination, roll Fargate tasks onto a newer platform version, or immediately deploy `ordered_placement_strategy` and `placement_constraints` updates",
+        "name": "force_new_deployment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Process namespace to use for the containers in the task. The valid values are `host` and `task`",
+        "name": "pid_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of the ECS cluster where the resources will be provisioned",
+        "name": "cluster_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS service IAM role should be created",
+        "name": "create_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "2048",
+        "description": "Amount (in MiB) of memory used by the task. If the `requires_compatibilities` is `FARGATE` this field is required",
+        "name": "memory",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "task_exec_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "task_exec_iam_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of the service (up to 255 letters, numbers, hyphens, and underscores)",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for rules that are taken into consideration during task placement (up to max of 10). This is set at the service, see `task_definition_placement_constraints` for setting at the task definition",
+        "name": "placement_constraints",
+        "required": false,
+        "type": "map(object({\n    expression = optional(string)\n    type       = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "tasks_iam_role_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "infrastructure_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the security group name (`security_group_name`) is used as a prefix",
+        "name": "security_group_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ECS automatically redistributes tasks within a service across Availability Zones (AZs) to mitigate the risk of impaired application availability due to underlying infrastructure failures and task lifecycle activities. The valid values are `ENABLED` and `DISABLED`. Defaults to `DISABLED`",
+        "name": "availability_zone_rebalancing",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Specifies whether to enable Amazon ECS Exec for the tasks within the service",
+        "name": "enable_execute_command",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block that specifies whether the scaling activities for the service are in a suspended state",
+        "name": "autoscaling_suspended_state",
+        "required": false,
+        "type": "object({\n    dynamic_scaling_in_suspended  = optional(bool, false)\n    dynamic_scaling_out_suspended = optional(bool, false)\n    scheduled_scaling_suspended   = optional(bool, false)\n  })"
+      },
+      {
+        "default": "1",
+        "description": "Number of instances of the task definition to place and keep running",
+        "name": "desired_count",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "List of security groups to associate with the task or service",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ECS Service Connect configuration for this service to discover and connect to services, and be discovered by, and connected from, other services within a namespace",
+        "name": "service_connect_configuration",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool, true)\n    access_log_configuration = optional(object({\n      format                   = string\n      include_query_parameters = optional(string)\n    }))\n    log_configuration = optional(object({\n      log_driver = string\n      options    = optional(map(string))\n      secret_option = optional(list(object({\n        name       = string\n        value_from = string\n      })))\n    }))\n    namespace = optional(string)\n    service = optional(list(object({\n      client_alias = optional(object({\n        dns_name = optional(string)\n        port     = number\n        test_traffic_rules = optional(list(object({\n          header = optional(object({\n            name = string\n            value = object({\n              exact = string\n            })\n          }))\n        })))\n      }))\n      discovery_name        = optional(string)\n      ingress_port_override = optional(number)\n      port_name             = string\n      timeout = optional(object({\n        idle_timeout_seconds        = optional(number)\n        per_request_timeout_seconds = optional(number)\n      }))\n      tls = optional(object({\n        issuer_cert_authority = object({\n          aws_pca_authority_arn = string\n        })\n        kms_key  = optional(string)\n        role_arn = optional(string)\n      }))\n    })))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`tasks_iam_role_name`) is used as a prefix",
+        "name": "tasks_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"cpu\": {\n    \"policy_type\": \"TargetTrackingScaling\",\n    \"target_tracking_scaling_policy_configuration\": {\n      \"predefined_metric_specification\": {\n        \"predefined_metric_type\": \"ECSServiceAverageCPUUtilization\"\n      }\n    }\n  },\n  \"memory\": {\n    \"policy_type\": \"TargetTrackingScaling\",\n    \"target_tracking_scaling_policy_configuration\": {\n      \"predefined_metric_specification\": {\n        \"predefined_metric_type\": \"ECSServiceAverageMemoryUtilization\"\n      }\n    }\n  }\n}",
+        "description": "Map of autoscaling policies to create for the service",
+        "name": "autoscaling_policies",
+        "required": false,
+        "type": "map(object({\n    name        = optional(string) # Will fall back to the key name if not provided\n    policy_type = optional(string, \"TargetTrackingScaling\")\n    predictive_scaling_policy_configuration = optional(object({\n      max_capacity_breach_behavior = optional(string)\n      max_capacity_buffer          = optional(number)\n      metric_specification = list(object({\n        customized_capacity_metric_specification = optional(object({\n          metric_data_query = list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimension = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = optional(string)\n                namespace   = optional(string)\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          }))\n        }))\n        customized_load_metric_specification = optional(object({\n          metric_data_query = list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimension = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = optional(string)\n                namespace   = optional(string)\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          }))\n        }))\n        customized_scaling_metric_specification = optional(object({\n          metric_data_query = list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimension = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = optional(string)\n                namespace   = optional(string)\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          }))\n        }))\n        predefined_load_metric_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        predefined_metric_pair_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        predefined_scaling_metric_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        target_value = number\n      }))\n      mode                   = optional(string)\n      scheduling_buffer_time = optional(number)\n    }))\n    step_scaling_policy_configuration = optional(object({\n      adjustment_type          = optional(string)\n      cooldown                 = optional(number)\n      metric_aggregation_type  = optional(string)\n      min_adjustment_magnitude = optional(number)\n      step_adjustment = optional(list(object({\n        metric_interval_lower_bound = optional(string)\n        metric_interval_upper_bound = optional(string)\n        scaling_adjustment          = number\n      })))\n    }))\n    target_tracking_scaling_policy_configuration = optional(object({\n      customized_metric_specification = optional(object({\n        dimensions = optional(list(object({\n          name  = string\n          value = string\n        })))\n        metric_name = optional(string)\n        metrics = optional(list(object({\n          expression = optional(string)\n          id         = string\n          label      = optional(string)\n          metric_stat = optional(object({\n            metric = object({\n              dimensions = optional(list(object({\n                name  = string\n                value = string\n              })))\n              metric_name = string\n              namespace   = string\n            })\n            stat = string\n            unit = optional(string)\n          }))\n          return_data = optional(bool)\n        })))\n        namespace = optional(string)\n        statistic = optional(string)\n        unit      = optional(string)\n      }))\n      disable_scale_in = optional(bool)\n      predefined_metric_specification = optional(object({\n        predefined_metric_type = string\n        resource_label         = optional(string)\n      }))\n      scale_in_cooldown  = optional(number, 300)\n      scale_out_cooldown = optional(number, 60)\n      target_value       = optional(number, 75)\n    }))\n  }))"
+      },
+      {
+        "default": "false",
+        "description": "Assign a public IP address to the ENI (Fargate launch type only)",
+        "name": "assign_public_ip",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Map of arbitrary keys and values that, when changed, will trigger an in-place update (redeployment). Useful with `timestamp()`",
+        "name": "triggers",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "If true, Terraform will wait for the service to reach a steady state before continuing. Default is `false`",
+        "name": "wait_for_steady_state",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Maximum session duration (in seconds) for ECS tasks role. Default is 3600.",
+        "name": "tasks_iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "tasks_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for the App Mesh proxy",
+        "name": "proxy_configuration",
+        "required": false,
+        "type": "object({\n    container_name = string\n    properties     = optional(map(string))\n    type           = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for volumes that containers in your task may use",
+        "name": "volume",
+        "required": false,
+        "type": "map(object({\n    configure_at_launch = optional(bool)\n    docker_volume_configuration = optional(object({\n      autoprovision = optional(bool)\n      driver        = optional(string)\n      driver_opts   = optional(map(string))\n      labels        = optional(map(string))\n      scope         = optional(string)\n    }))\n    efs_volume_configuration = optional(object({\n      authorization_config = optional(object({\n        access_point_id = optional(string)\n        iam             = optional(string)\n      }))\n      file_system_id          = string\n      root_directory          = optional(string)\n      transit_encryption      = optional(string)\n      transit_encryption_port = optional(number)\n    }))\n    fsx_windows_file_server_volume_configuration = optional(object({\n      authorization_config = optional(object({\n        credentials_parameter = string\n        domain                = string\n      }))\n      file_system_id = string\n      root_directory = string\n    }))\n    host_path = optional(string)\n    name      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for deployment settings",
+        "name": "deployment_configuration",
+        "required": false,
+        "type": "object({\n    strategy             = optional(string)\n    bake_time_in_minutes = optional(string)\n    canary_configuration = optional(object({\n      canary_bake_time_in_minutes = optional(string)\n      canary_percent              = optional(string)\n    }))\n    linear_configuration = optional(object({\n      step_bake_time_in_minutes = optional(string)\n      step_percent              = optional(string)\n    }))\n    lifecycle_hook = optional(map(object({\n      hook_target_arn  = string\n      role_arn         = optional(string)\n      lifecycle_stages = list(string)\n      hook_details     = optional(string)\n    })))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Enable to delete a service even if it wasn't scaled down to zero tasks. It's only necessary to use this if the service uses the `REPLICA` scheduling strategy",
+        "name": "force_delete",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of subnets to associate with the task or service",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Existing task definition ARN. Required when `create_task_definition` is `false`",
+        "name": "task_definition_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "infrastructure_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Seconds to ignore failing load balancer health checks on newly instantiated tasks to prevent premature shutdown, up to 2147483647. Only valid for services configured to use load balancers",
+        "name": "health_check_grace_period_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the service",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "\"awsvpc\"",
+        "description": "Docker networking mode to use for the containers in the task. Valid values are `none`, `bridge`, `awsvpc`, and `host`",
+        "name": "network_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Security group ingress rules to add to the security group created",
+        "name": "security_group_ingress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The VPC ID where to deploy the task or service. If not provided, the VPC ID is derived from the subnets provided",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether service resource will be created (set to `false` in case you want to create task definition only)",
+        "name": "create_service",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the service",
+        "name": "service_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether should track latest `ACTIVE` task definition on AWS or the one created with the resource stored in state. Useful in the event the task definition is modified outside of this resource",
+        "name": "track_latest",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "10",
+        "description": "Maximum number of tasks to run in your service",
+        "name": "autoscaling_max_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the security group created",
+        "name": "security_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Information about the CloudWatch alarms",
+        "name": "alarms",
+        "required": false,
+        "type": "object({\n    alarm_names = list(string)\n    enable      = optional(bool, true)\n    rollback    = optional(bool, true)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Wait timeout for task set to reach `STEADY_STATE`. Valid time units include `ns`, `us` (or µs), `ms`, `s`, `m`, and `h`. Default `10m`",
+        "name": "wait_until_stable_timeout",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to enable autoscaling for the service",
+        "name": "enable_autoscaling",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create a task definition or use existing/provided",
+        "name": "create_task_definition",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "tasks_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether terraform should wait until the task set has reached `STEADY_STATE`",
+        "name": "wait_until_stable",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies whether to propagate the tags from the task definition or the service to the tasks. The valid values are `SERVICE` and `TASK_DEFINITION`",
+        "name": "propagate_tags",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of additioanl IAM role policy ARNs to attach to the IAM role",
+        "name": "tasks_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Map of autoscaling scheduled actions to create for the service",
+        "name": "autoscaling_scheduled_actions",
+        "required": false,
+        "type": "map(object({\n    name         = optional(string)\n    min_capacity = number\n    max_capacity = number\n    schedule     = string\n    start_time   = optional(string)\n    end_time     = optional(string)\n    timezone     = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on security group created",
+        "name": "security_group_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Capacity provider strategies to use for the service. Can be one or more",
+        "name": "capacity_provider_strategy",
+        "required": false,
+        "type": "map(object({\n    base              = optional(number)\n    capacity_provider = string\n    weight            = optional(number)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IPC resource namespace to be used for the containers in the task The valid values are `host`, `task`, and `none`",
+        "name": "ipc_mode",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for rules that are taken into consideration during task placement (up to max of 10). This is set at the task definition, see `placement_constraints` for setting at the service",
+        "name": "task_definition_placement_constraints",
+        "required": false,
+        "type": "map(object({\n    expression = optional(string)\n    type       = string\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "task_exec_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`task_exec_iam_role_name`) is used as a prefix",
+        "name": "task_exec_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SSM parameter ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_ssm_param_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Configuration for a volume specified in the task definition as a volume that is configured at launch time",
+        "name": "volume_configuration",
+        "required": false,
+        "type": "object({\n    name = string\n    managed_ebs_volume = object({\n      encrypted        = optional(bool)\n      file_system_type = optional(string)\n      iops             = optional(number)\n      kms_key_id       = optional(string)\n      size_in_gb       = optional(number)\n      snapshot_id      = optional(string)\n      tag_specifications = optional(list(object({\n        propagate_tags = optional(string, \"TASK_DEFINITION\")\n        resource_type  = string\n        tags           = optional(map(string))\n      })))\n      throughput                 = optional(number)\n      volume_initialization_rate = optional(number)\n      volume_type                = optional(string)\n    })\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM policy should be created. This includes permissions included in AmazonECSTaskExecutionRolePolicy as well as access to secrets and SSM parameters",
+        "name": "create_task_exec_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether resources will be created (affects all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Platform version on which to run your service. Only applicable for `launch_type` set to `FARGATE`. Defaults to `LATEST`",
+        "name": "platform_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The amount of ephemeral storage to allocate for the task. This parameter is used to expand the total amount of ephemeral storage available, beyond the default amount, for tasks hosted on AWS Fargate",
+        "name": "ephemeral_storage",
+        "required": false,
+        "type": "object({\n    size_in_gib = number\n  })"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "tasks_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "[DEPRECATED - will be removed in v8.0] Determines whether to disable the default postfix added to resource names and descriptions added in v7.0",
+        "name": "disable_v7_default_name_description",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Service level strategy rules that are taken into consideration during task placement. List from top to bottom in order of precedence",
+        "name": "ordered_placement_strategy",
+        "required": false,
+        "type": "list(object({\n    field = optional(string)\n    type  = string\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "task_exec_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Path for the iam role",
+        "name": "task_exec_iam_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether changes to service `task_definition` changes should be ignored",
+        "name": "ignore_task_definition_changes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of SecretsManager secret ARNs the task execution role will be permitted to get/read",
+        "name": "task_exec_secret_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "infrastructure_iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The VPC Lattice configuration for your service that allows Lattice to connect, secure, and monitor your service across multiple accounts and VPCs",
+        "name": "vpc_lattice_configurations",
+        "required": false,
+        "type": "object({\n    role_arn         = string\n    target_group_arn = string\n    port_name        = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Enables fault injection and allows for fault injection requests to be accepted from the task's containers. Default is `false`",
+        "name": "enable_fault_injection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The external ID associated with the task set",
+        "name": "external_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "task_exec_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Maximum session duration (in seconds) for ECS task execution role. Default is 3600.",
+        "name": "task_exec_iam_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "tasks_iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Security group egress rules to add to the security group created",
+        "name": "security_group_egress_rules",
+        "required": false,
+        "type": "map(object({\n    name = optional(string)\n\n    cidr_ipv4                    = optional(string)\n    cidr_ipv6                    = optional(string)\n    description                  = optional(string)\n    from_port                    = optional(string)\n    ip_protocol                  = optional(string, \"tcp\")\n    prefix_list_id               = optional(string)\n    referenced_security_group_id = optional(string)\n    tags                         = optional(map(string), {})\n    to_port                      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for deployment circuit breaker",
+        "name": "deployment_circuit_breaker",
+        "required": false,
+        "type": "object({\n    enable   = bool\n    rollback = bool\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Specifies whether to enable Amazon ECS managed tags for the tasks within the service",
+        "name": "enable_ecs_managed_tags",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Service discovery registries for the service",
+        "name": "service_registries",
+        "required": false,
+        "type": "object({\n    container_name = optional(string)\n    container_port = optional(number)\n    port           = optional(number)\n    registry_arn   = string\n  })"
+      },
+      {
+        "default": "null",
+        "description": "A unique name for your task definition",
+        "name": "family",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A map of IAM policy [statements](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/iam_policy_document#statement) for custom permission usage",
+        "name": "iam_role_statements",
+        "required": false,
+        "type": "list(object({\n    sid           = optional(string)\n    actions       = optional(list(string))\n    not_actions   = optional(list(string))\n    effect        = optional(string)\n    resources     = optional(list(string))\n    not_resources = optional(list(string))\n    principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    not_principals = optional(list(object({\n      type        = string\n      identifiers = list(string)\n    })))\n    condition = optional(list(object({\n      test     = string\n      values   = list(string)\n      variable = string\n    })))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Existing IAM role ARN",
+        "name": "tasks_iam_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, the task is not deleted when the service is deleted",
+        "name": "skip_destroy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "task_exec_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS infrastructure IAM role should be created",
+        "name": "create_infrastructure_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "200",
+        "description": "Upper limit (as a percentage of the service's `desired_count`) of the number of running tasks that can be running in a service during a deployment",
+        "name": "deployment_maximum_percent",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "infrastructure_iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines if a security group is created",
+        "name": "create_security_group",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Description of the security group created",
+        "name": "security_group_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Whether to enable graceful termination of deployments using SIGINT signals. Only applicable when using ECS deployment controller and requires wait_for_steady_state = true. Default is false",
+        "name": "sigint_rollback",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "1024",
+        "description": "Number of cpu units used by the task. If the `requires_compatibilities` is `FARGATE` this field is required",
+        "name": "cpu",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the task definition/set created",
+        "name": "task_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "task_exec_iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of IAM role policy ARNs to attach to the IAM role",
+        "name": "task_exec_iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{\n  \"cpu_architecture\": \"X86_64\",\n  \"operating_system_family\": \"LINUX\"\n}",
+        "description": "Configuration block for `runtime_platform` that containers in your task may use",
+        "name": "runtime_platform",
+        "required": false,
+        "type": "object({\n    cpu_architecture        = optional(string, \"X86_64\")\n    operating_system_family = optional(string, \"LINUX\")\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the ECS task definition IAM role should be created",
+        "name": "create_task_exec_iam_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "tasks_iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "66",
+        "description": "Lower limit (as a percentage of the service's `desired_count`) of the number of running tasks that must remain running and healthy in a service during a deployment",
+        "name": "deployment_minimum_healthy_percent",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "1",
+        "description": "Minimum number of tasks to run in your service",
+        "name": "autoscaling_min_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block for load balancers",
+        "name": "load_balancer",
+        "required": false,
+        "type": "map(object({\n    container_name   = string\n    container_port   = number\n    elb_name         = optional(string)\n    target_group_arn = optional(string)\n    advanced_configuration = optional(object({\n      alternate_target_group_arn = string\n      production_listener_rule   = string # Should be optional but bug in provider\n      role_arn                   = optional(string)\n      test_listener_rule         = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Scheduling strategy to use for the service. The valid values are `REPLICA` and `DAEMON`. Defaults to `REPLICA`",
+        "name": "scheduling_strategy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of valid [container definitions](http://docs.aws.amazon.com/AmazonECS/latest/APIReference/API_ContainerDefinition.html). Please note that you should only provide values that are part of the container definition document",
+        "name": "container_definitions",
+        "required": false,
+        "type": "map(object({\n    create                  = optional(bool, true)\n    operating_system_family = optional(string)\n    tags                    = optional(map(string))\n\n    # Container definition\n    command         = optional(list(string))\n    cpu             = optional(number)\n    credentialSpecs = optional(list(string))\n    dependsOn = optional(list(object({\n      condition     = string\n      containerName = string\n    })))\n    disableNetworking     = optional(bool)\n    dnsSearchDomains      = optional(list(string))\n    dnsServers            = optional(list(string))\n    dockerLabels          = optional(map(string))\n    dockerSecurityOptions = optional(list(string))\n    # enable_execute_command = optional(bool, false) Set in standalone variable\n    entrypoint = optional(list(string))\n    environment = optional(list(object({\n      name  = string\n      value = string\n    })))\n    environmentFiles = optional(list(object({\n      type  = string\n      value = string\n    })))\n    essential = optional(bool)\n    extraHosts = optional(list(object({\n      hostname  = string\n      ipAddress = string\n    })))\n    firelensConfiguration = optional(object({\n      options = optional(map(string))\n      type    = optional(string)\n    }))\n    healthCheck = optional(object({\n      command     = optional(list(string), [])\n      interval    = optional(number, 30)\n      retries     = optional(number, 3)\n      startPeriod = optional(number)\n      timeout     = optional(number, 5)\n    }))\n    hostname    = optional(string)\n    image       = optional(string)\n    interactive = optional(bool)\n    links       = optional(list(string))\n    linuxParameters = optional(object({\n      capabilities = optional(object({\n        add  = optional(list(string))\n        drop = optional(list(string))\n      }))\n      devices = optional(list(object({\n        containerPath = optional(string)\n        hostPath      = optional(string)\n        permissions   = optional(list(string))\n      })))\n      initProcessEnabled = optional(bool)\n      maxSwap            = optional(number)\n      sharedMemorySize   = optional(number)\n      swappiness         = optional(number)\n      tmpfs = optional(list(object({\n        containerPath = string\n        mountOptions  = optional(list(string))\n        size          = number\n      })))\n    }))\n    logConfiguration = optional(object({\n      logDriver = optional(string)\n      options   = optional(map(string))\n      secretOptions = optional(list(object({\n        name      = string\n        valueFrom = string\n      })))\n    }))\n    memory            = optional(number)\n    memoryReservation = optional(number)\n    mountPoints = optional(list(object({\n      containerPath = optional(string)\n      readOnly      = optional(bool)\n      sourceVolume  = optional(string)\n    })))\n    name = optional(string)\n    portMappings = optional(list(object({\n      appProtocol        = optional(string)\n      containerPort      = optional(number)\n      containerPortRange = optional(string)\n      hostPort           = optional(number)\n      name               = optional(string)\n      protocol           = optional(string)\n    })))\n    privileged             = optional(bool)\n    pseudoTerminal         = optional(bool)\n    readonlyRootFilesystem = optional(bool)\n    repositoryCredentials = optional(object({\n      credentialsParameter = optional(string)\n    }))\n    resourceRequirements = optional(list(object({\n      type  = string\n      value = string\n    })))\n    restartPolicy = optional(object({\n      enabled              = optional(bool)\n      ignoredExitCodes     = optional(list(number))\n      restartAttemptPeriod = optional(number)\n      })\n    )\n    secrets = optional(list(object({\n      name      = string\n      valueFrom = string\n    })))\n    startTimeout = optional(number, 30)\n    stopTimeout  = optional(number, 120)\n    systemControls = optional(list(object({\n      namespace = optional(string)\n      value     = optional(string)\n    })))\n    ulimits = optional(list(object({\n      hardLimit = number\n      name      = string\n      softLimit = number\n    })))\n    user               = optional(string)\n    versionConsistency = optional(string)\n    volumesFrom = optional(list(object({\n      readOnly        = optional(bool)\n      sourceContainer = optional(string)\n    })))\n    workingDirectory = optional(string)\n\n    # Cloudwatch Log Group\n    service                                = optional(string)\n    enable_cloudwatch_logging              = optional(bool)\n    create_cloudwatch_log_group            = optional(bool)\n    cloudwatch_log_group_name              = optional(string)\n    cloudwatch_log_group_use_name_prefix   = optional(bool)\n    cloudwatch_log_group_class             = optional(string)\n    cloudwatch_log_group_retention_in_days = optional(number)\n    cloudwatch_log_group_kms_key_id        = optional(string)\n  }))"
+      },
+      {
+        "default": "[\n  \"FARGATE\"\n]",
+        "description": "Set of launch types required by the task. The valid values are `EC2`, `FARGATE`, `EXTERNAL`, and `MANAGED_INSTANCES`",
+        "name": "requires_compatibilities",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "A floating-point percentage of the desired number of tasks to place and keep running in the task set",
+        "name": "scale",
+        "required": false,
+        "type": "object({\n    unit  = optional(string)\n    value = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "infrastructure_iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"FARGATE\"",
+        "description": "Launch type on which to run your service. The valid values are `EC2`, `FARGATE`, and `EXTERNAL`. Defaults to `FARGATE`",
+        "name": "launch_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "infrastructure_iam_role_path",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "cluster": [
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "node_iam_role_unique_id"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "node_iam_instance_profile_arn"
+      },
+      {
+        "description": "ARN that identifies the cluster",
+        "name": "arn"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "task_exec_iam_role_arn"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "infrastructure_iam_role_arn"
+      },
+      {
+        "description": "ID that identifies the cluster",
+        "name": "id"
+      },
+      {
+        "description": "Name that identifies the cluster",
+        "name": "name"
+      },
+      {
+        "description": "Name of CloudWatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "Map of cluster capacity providers attributes",
+        "name": "cluster_capacity_providers"
+      },
+      {
+        "description": "Map of autoscaling capacity providers created and their attributes",
+        "name": "capacity_providers"
+      },
+      {
+        "description": "IAM role name",
+        "name": "node_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "node_iam_instance_profile_unique"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "node_iam_instance_profile_id"
+      },
+      {
+        "description": "IAM role name",
+        "name": "infrastructure_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "infrastructure_iam_role_unique_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "node_iam_role_arn"
+      },
+      {
+        "description": "ARN of CloudWatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "IAM role name",
+        "name": "task_exec_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "task_exec_iam_role_unique_id"
+      }
+    ],
+    "container-definition": [
+      {
+        "description": "Name of CloudWatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "ARN of CloudWatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "Container definition",
+        "name": "container_definition"
+      },
+      {
+        "description": "Container definition. NOTE: use `jsonencode([module.ecs_container_definition.container_definition])` instead of this output when passing into a Task Definition",
+        "name": "container_definition_json"
+      }
+    ],
+    "express-service": [
+      {
+        "description": "Task IAM role name",
+        "name": "task_iam_role_name"
+      },
+      {
+        "description": "Task IAM role ARN",
+        "name": "task_iam_role_arn"
+      },
+      {
+        "description": "List of ingress paths associated with the service",
+        "name": "ingress_paths"
+      },
+      {
+        "description": "ARN of the ECS Express Service revision",
+        "name": "service_revision_arn"
+      },
+      {
+        "description": "URL of the ECS Express Service",
+        "name": "service_url"
+      },
+      {
+        "description": "Task execution IAM role name",
+        "name": "execution_iam_role_name"
+      },
+      {
+        "description": "Infrastructure IAM role ARN",
+        "name": "infrastructure_iam_role_arn"
+      },
+      {
+        "description": "Name of CloudWatch log group created",
+        "name": "cloudwatch_log_group_name"
+      },
+      {
+        "description": "ARN of CloudWatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "ARN of the ECS Express Service",
+        "name": "service_arn"
+      },
+      {
+        "description": "Task execution IAM role ARN",
+        "name": "execution_iam_role_arn"
+      },
+      {
+        "description": "Infrastructure IAM role name",
+        "name": "infrastructure_iam_role_name"
+      },
+      {
+        "description": "Details about the current deployment",
+        "name": "current_deployment"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      }
+    ],
+    "root": [
+      {
+        "description": "ARN of CloudWatch log group created",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "Task execution IAM role name",
+        "name": "task_exec_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "infrastructure_iam_role_unique_id"
+      },
+      {
+        "description": "IAM role name",
+        "name": "node_iam_role_name"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "node_iam_instance_profile_arn"
+      },
+      {
+        "description": "ID that identifies the cluster",
+        "name": "cluster_id"
+      },
+      {
+        "description": "Name that identifies the cluster",
+        "name": "cluster_name"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "node_iam_instance_profile_id"
+      },
+      {
+        "description": "Map of services created and their attributes",
+        "name": "services"
+      },
+      {
+        "description": "Map of cluster capacity providers attributes",
+        "name": "cluster_capacity_providers"
+      },
+      {
+        "description": "Map of autoscaling capacity providers created and their attributes",
+        "name": "capacity_providers"
+      },
+      {
+        "description": "Task execution IAM role ARN",
+        "name": "task_exec_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the task execution IAM role",
+        "name": "task_exec_iam_role_unique_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "infrastructure_iam_role_arn"
+      },
+      {
+        "description": "IAM role name",
+        "name": "infrastructure_iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "node_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "node_iam_role_unique_id"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "node_iam_instance_profile_unique"
+      },
+      {
+        "description": "ARN that identifies the cluster",
+        "name": "cluster_arn"
+      },
+      {
+        "description": "Name of CloudWatch log group created",
+        "name": "cloudwatch_log_group_name"
+      }
+    ],
+    "service": [
+      {
+        "description": "Revision of the task in a particular family",
+        "name": "task_definition_revision"
+      },
+      {
+        "description": "The ID of the task set",
+        "name": "task_set_id"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) that identifies the task set",
+        "name": "task_set_arn"
+      },
+      {
+        "description": "Service IAM role name",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "Full ARN of the Task Definition (including both `family` and `revision`)",
+        "name": "task_definition_arn"
+      },
+      {
+        "description": "Task execution IAM role name",
+        "name": "task_exec_iam_role_name"
+      },
+      {
+        "description": "Stable and unique string identifying the task execution IAM role",
+        "name": "task_exec_iam_role_unique_id"
+      },
+      {
+        "description": "ID of the security group",
+        "name": "security_group_id"
+      },
+      {
+        "description": "Infrastructure IAM role ARN",
+        "name": "infrastructure_iam_role_arn"
+      },
+      {
+        "description": "Container definitions",
+        "name": "container_definitions"
+      },
+      {
+        "description": "The unique name of the task definition",
+        "name": "task_definition_family"
+      },
+      {
+        "description": "The status of the task set",
+        "name": "task_set_status"
+      },
+      {
+        "description": "Map of autoscaling scheduled actions and their attributes",
+        "name": "autoscaling_scheduled_actions"
+      },
+      {
+        "description": "Amazon Resource Name (ARN) of the security group",
+        "name": "security_group_arn"
+      },
+      {
+        "description": "Name of the service",
+        "name": "name"
+      },
+      {
+        "description": "Task execution IAM role ARN",
+        "name": "task_exec_iam_role_arn"
+      },
+      {
+        "description": "Tasks IAM role name",
+        "name": "tasks_iam_role_name"
+      },
+      {
+        "description": "Tasks IAM role ARN",
+        "name": "tasks_iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the tasks IAM role",
+        "name": "tasks_iam_role_unique_id"
+      },
+      {
+        "description": "The stability status. This indicates whether the task set has reached a steady state",
+        "name": "task_set_stability_status"
+      },
+      {
+        "description": "Map of autoscaling policies and their attributes",
+        "name": "autoscaling_policies"
+      },
+      {
+        "description": "Infrastructure IAM role name",
+        "name": "infrastructure_iam_role_name"
+      },
+      {
+        "description": "ARN that identifies the service",
+        "name": "id"
+      },
+      {
+        "description": "Service IAM role ARN",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the service IAM role",
+        "name": "iam_role_unique_id"
+      }
+    ]
+  },
+  "built_from_version": "7.5.0",
+  "module_id": "terraform-aws-modules/ecs/aws"
+}

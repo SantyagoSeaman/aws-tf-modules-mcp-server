@@ -1,0 +1,413 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "-1",
+        "description": "The amount of reserved concurrent executions for this lambda function. A value of 0 disables lambda from being triggered and -1 removes any concurrency limitations",
+        "name": "reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the IAM role",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for Lambda Function",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when Lambda Function should run in the VPC.",
+        "name": "lambda_function_vpc_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The description of the Lambda function",
+        "name": "lambda_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The fully-formed AWS policy as JSON.",
+        "name": "sns_topic_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "IAM role for SNS topic delivery status logs.  If this is set then a role will not be created for you.",
+        "name": "sns_topic_lambda_feedback_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the role",
+        "name": "iam_role_boundary_policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "S3 bucket to store artifacts",
+        "name": "lambda_function_s3_bucket",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "512",
+        "description": "Amount of ephemeral storage (/tmp) in MB your Lambda Function can use at runtime. Valid value between 512 MB to 10,240 MB (10 GB).",
+        "name": "lambda_function_ephemeral_storage_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the SNS topic",
+        "name": "sns_topic_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for SNS topic delivery status logging",
+        "name": "sns_topic_feedback_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Boolean flag to enabled/disable logging of incoming events",
+        "name": "log_events",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"INFO\"",
+        "description": "Logging level for the Lambda function",
+        "name": "log_level",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) A valid filter policy that will be used in the subscription to filter messages seen by the target resource.",
+        "name": "subscription_filter_policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Instruction set architecture for your Lambda function. Valid values are [\"x86_64\"] and [\"arm64\"].",
+        "name": "architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The string to add into hashing function. Useful when building same source path for different functions.",
+        "name": "hash_extra",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether SNS/SQS dead letter notification policy should be added to IAM role for Lambda Function",
+        "name": "lambda_attach_dead_letter_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies to force detaching any policies the IAM role has before destroying it.",
+        "name": "sns_topic_feedback_role_force_detach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the IAM role used by SNS topic delivery status logging",
+        "name": "sns_topic_feedback_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "",
+        "description": "The name of the channel in Slack for notifications",
+        "name": "slack_channel",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "\"lambda\"",
+        "description": "A unique role name beginning with the specified prefix",
+        "name": "iam_role_name_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"python3.13\"",
+        "description": "Lambda Function runtime",
+        "name": "runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"notify_slack\"",
+        "description": "The name of the Lambda function to create",
+        "name": "lambda_function_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The source path of the custom Lambda function",
+        "name": "lambda_source_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to store produced artifacts on S3 or locally.",
+        "name": "lambda_function_store_on_s3",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Cloudwatch log group",
+        "name": "cloudwatch_log_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of an SNS topic or SQS queue to notify when an invocation fails.",
+        "name": "lambda_dead_letter_target_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Description of IAM role to use for SNS topic delivery status logging",
+        "name": "sns_topic_feedback_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to IAM the SNS topic feedback role",
+        "name": "sns_topic_feedback_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "",
+        "description": "The URL of Slack webhook",
+        "name": "slack_webhook_url",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of the KMS key used for decrypting slack webhook url",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "0",
+        "description": "Specifies the number of days you want to retain log events in log group for Lambda.",
+        "name": "cloudwatch_log_group_retention_in_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Lambda function",
+        "name": "lambda_function_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "(Optional) Whether or not to ignore the file timestamp when deciding to create the archive",
+        "name": "trigger_on_package_timestamp",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "IAM role attached to the Lambda Function.  If this is set then a role will not be created for you.",
+        "name": "lambda_role",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to enable SNS topic delivery status logs",
+        "name": "enable_sns_topic_delivery_status_logs",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "100",
+        "description": "The percentage of successful deliveries to log",
+        "name": "sns_topic_lambda_feedback_sample_rate",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "",
+        "description": "The username that will appear on Slack messages",
+        "name": "slack_username",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to recreate missing Lambda package if it is missing locally or not",
+        "name": "recreate_missing_package",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the KMS Key to use when encrypting log data for Lambda",
+        "name": "cloudwatch_log_group_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) A valid filter policy scope MessageAttributes|MessageBody",
+        "name": "subscription_filter_policy_scope",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create new SNS topic",
+        "name": "create_sns_topic",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "",
+        "description": "The name of the SNS topic to create",
+        "name": "sns_topic_name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when Lambda Function should run in the VPC. Usually private or intra subnets.",
+        "name": "lambda_function_vpc_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create all resources",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of the KMS key used for enabling SSE on the topic",
+        "name": "sns_topic_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Name of the IAM role to use for SNS topic delivery status logging",
+        "name": "sns_topic_feedback_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\":aws:\"",
+        "description": "A custom emoji that will appear on Slack messages",
+        "name": "slack_emoji",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The ARN of the SNS topic from which messages will be sent to Slack",
+        "name": "slack_topic_arn"
+      },
+      {
+        "description": "The ARN of the IAM role used by Lambda function",
+        "name": "lambda_iam_role_arn"
+      },
+      {
+        "description": "The ARN of the Lambda function",
+        "name": "notify_slack_lambda_function_arn"
+      },
+      {
+        "description": "The name of the Lambda function",
+        "name": "notify_slack_lambda_function_name"
+      },
+      {
+        "description": "Latest published version of your Lambda function",
+        "name": "notify_slack_lambda_function_version"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the IAM role used for SNS delivery status logging",
+        "name": "sns_topic_feedback_role_arn"
+      },
+      {
+        "description": "The ARN of the SNS topic from which messages will be sent to Slack (backward compatibility for version 4.x)",
+        "name": "this_slack_topic_arn"
+      },
+      {
+        "description": "The name of the IAM role used by Lambda function",
+        "name": "lambda_iam_role_name"
+      },
+      {
+        "description": "The ARN to be used for invoking Lambda function from API Gateway",
+        "name": "notify_slack_lambda_function_invoke_arn"
+      },
+      {
+        "description": "The date Lambda function was last modified",
+        "name": "notify_slack_lambda_function_last_modified"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the log group",
+        "name": "lambda_cloudwatch_log_group_arn"
+      }
+    ]
+  },
+  "built_from_version": "7.5.1",
+  "module_id": "terraform-aws-modules/notify-slack/aws"
+}

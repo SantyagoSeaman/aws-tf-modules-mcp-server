@@ -1,0 +1,785 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the IAM role created",
+        "name": "iam_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Launch template version. Can be version number, `$Latest`, or `$Default`",
+        "name": "launch_template_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The minimum size of the autoscaling group",
+        "name": "min_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `name` as is or create a unique name beginning with the `name` as the prefix",
+        "name": "use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Allows setting instance protection. The autoscaling group will not select instances with this setting for termination during scale in events.",
+        "name": "protect_from_scale_in",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The attribute requirements for the type of instance. If present then `instance_type` cannot be present",
+        "name": "instance_requirements",
+        "required": false,
+        "type": "object({\n    accelerator_count = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    accelerator_manufacturers = optional(list(string))\n    accelerator_names         = optional(list(string))\n    accelerator_total_memory_mib = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    accelerator_types      = optional(list(string))\n    allowed_instance_types = optional(list(string))\n    bare_metal             = optional(string)\n    baseline_ebs_bandwidth_mbps = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    burstable_performance                                   = optional(string)\n    cpu_manufacturers                                       = optional(list(string))\n    excluded_instance_types                                 = optional(list(string))\n    instance_generations                                    = optional(list(string))\n    local_storage                                           = optional(string)\n    local_storage_types                                     = optional(list(string))\n    max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n    memory_gib_per_vcpu = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    memory_mib = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    network_bandwidth_gbps = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    network_interface_count = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    on_demand_max_price_percentage_over_lowest_price = optional(number)\n    require_hibernate_support                        = optional(bool)\n    spot_max_price_percentage_over_lowest_price      = optional(number)\n    total_local_storage_gb = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n    vcpu_count = optional(object({\n      max = optional(number)\n      min = optional(number)\n    }))\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to use `launch_template_name` as is or create a unique name beginning with the `launch_template_name` as the prefix",
+        "name": "launch_template_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The network performance options for the launch template",
+        "name": "network_performance_options",
+        "required": false,
+        "type": "object({\n    bandwidth_weighting = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The Base64-encoded user data to provide when launching the instance",
+        "name": "user_data",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of metrics to collect. The allowed values are `GroupDesiredCapacity`, `GroupInServiceCapacity`, `GroupPendingCapacity`, `GroupMinSize`, `GroupMaxSize`, `GroupInServiceInstances`, `GroupPendingInstances`, `GroupStandbyInstances`, `GroupStandbyCapacity`, `GroupTerminatingCapacity`, `GroupTerminatingInstances`, `GroupTotalCapacity`, `GroupTotalInstances`",
+        "name": "enabled_metrics",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether the `desired_capacity` value is ignored after initial apply. See README note for more details",
+        "name": "ignore_desired_capacity_changes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "A list of processes to suspend for the Auto Scaling Group. The allowed values are `Launch`, `Terminate`, `HealthCheck`, `ReplaceUnhealthy`, `AZRebalance`, `AlarmNotification`, `ScheduledActions`, `AddToLoadBalancer`, `InstanceRefresh`. Note that if you suspend either the `Launch` or `Terminate` process types, it can prevent your Auto Scaling Group from functioning properly",
+        "name": "suspended_processes",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The CPU options for the instance",
+        "name": "cpu_options",
+        "required": false,
+        "type": "object({\n    amd_sev_snp           = optional(string)\n    core_count            = optional(number)\n    nested_virtualization = optional(string)\n    threads_per_core      = optional(number)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 instance termination protection",
+        "name": "disable_api_termination",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The market (purchasing) option for the instance",
+        "name": "instance_market_options",
+        "required": false,
+        "type": "object({\n    market_type = optional(string)\n    spot_options = optional(object({\n      block_duration_minutes         = optional(number)\n      instance_interruption_behavior = optional(string)\n      max_price                      = optional(string)\n      spot_instance_type             = optional(string)\n      valid_until                    = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Secondary interfaces to associate with instances launched from the template",
+        "name": "secondary_interfaces",
+        "required": false,
+        "type": "list(object({\n    delete_on_termination    = optional(bool)\n    device_index             = optional(number)\n    interface_type           = optional(string)\n    network_card_index       = optional(number)\n    private_ip_address_count = optional(number)\n    private_ip_addresses     = optional(list(string))\n    secondary_subnet_id      = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The name of the IAM instance profile to be created (`create_iam_instance_profile` = `true`) or existing (`create_iam_instance_profile` = `false`)",
+        "name": "iam_instance_profile_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Time (in seconds) after instance comes into service before checking health",
+        "name": "health_check_grace_period",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the service-linked role that the ASG will use to call other AWS services",
+        "name": "service_linked_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name that is propogated to launched EC2 instances via a tag - if not provided, defaults to `var.name`",
+        "name": "instance_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A maximum duration that Terraform should wait for ASG instances to be healthy before timing out. (See also Waiting for Capacity below.) Setting this to '0' causes Terraform to skip all Capacity Waiting behavior.",
+        "name": "wait_for_capacity_timeout",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The kernel ID",
+        "name": "kernel_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The maintenance options for the instance",
+        "name": "maintenance_options",
+        "required": false,
+        "type": "object({\n    auto_recovery = optional(string)\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the launch template",
+        "name": "launch_template_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "A list of policies to decide how the instances in the Auto Scaling Group should be terminated. The allowed values are `OldestInstance`, `NewestInstance`, `OldestLaunchConfiguration`, `ClosestToNextInstanceHour`, `OldestLaunchTemplate`, `AllocationStrategy`, `Default`",
+        "name": "termination_policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The type of the instance. If present then `instance_requirements` cannot be present",
+        "name": "instance_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The placement of the instance",
+        "name": "placement",
+        "required": false,
+        "type": "object({\n    affinity                = optional(string)\n    availability_zone       = optional(string)\n    group_id                = optional(string)\n    group_name              = optional(string)\n    host_id                 = optional(string)\n    host_resource_group_arn = optional(string)\n    partition_number        = optional(number)\n    spread_domain           = optional(string)\n    tenancy                 = optional(string)\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether an IAM instance profile is created or to use an existing IAM instance profile",
+        "name": "create_iam_instance_profile",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name to use on IAM role created",
+        "name": "iam_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role path",
+        "name": "iam_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "ARN of the policy that is used to set the permissions boundary for the IAM role",
+        "name": "iam_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The unit of measurement for the value specified for desired_capacity. Supported for attribute-based instance type selection only. Valid values: `units`, `vcpu`, `memory-mib`.",
+        "name": "desired_capacity_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If this block is configured, add a Warm Pool to the specified Auto Scaling group",
+        "name": "warm_pool",
+        "required": false,
+        "type": "object({\n    instance_reuse_policy = optional(object({\n      reuse_on_scale_in = optional(bool)\n    }))\n    max_group_prepared_capacity = optional(number)\n    min_size                    = optional(number)\n    pool_state                  = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Indicates whether capacity rebalance is enabled",
+        "name": "capacity_rebalance",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "ID of an existing launch template to be used (created outside of this module)",
+        "name": "launch_template_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Setting this causes Terraform to wait for this number of instances to show up healthy in the ELB only on creation. Updates will not wait on ELB instance number changes",
+        "name": "min_elb_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Timeout configurations for the autoscaling group",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Description of the launch template",
+        "name": "launch_template_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "If true, enables EC2 instance stop protection",
+        "name": "disable_api_stop",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A map of configuration for capacity distribution across availability zones",
+        "name": "availability_zone_distribution",
+        "required": false,
+        "type": "object({\n    capacity_distribution_strategy = optional(string)\n  })"
+      },
+      {
+        "default": "false",
+        "description": "Whether to ignore failed Auto Scaling scaling activities while waiting for capacity. The default is false -- failed scaling activities cause errors to be returned.",
+        "name": "ignore_failed_scaling_activities",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Setting this will cause Terraform to wait for exactly this number of healthy instances in all attached load balancers on both create and update operations. Takes precedence over `min_elb_capacity` behavior.",
+        "name": "wait_for_elb_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Specify volumes to attach to the instance besides the volumes specified by the AMI",
+        "name": "block_device_mappings",
+        "required": false,
+        "type": "list(object({\n    device_name = optional(string)\n    ebs = optional(object({\n      delete_on_termination      = optional(bool)\n      encrypted                  = optional(bool)\n      iops                       = optional(number)\n      kms_key_id                 = optional(string)\n      snapshot_id                = optional(string)\n      throughput                 = optional(number)\n      volume_initialization_rate = optional(number)\n      volume_size                = optional(number)\n      volume_type                = optional(string)\n    }))\n    no_device    = optional(string)\n    virtual_name = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the ram disk",
+        "name": "ram_disk_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Map of target scaling policy schedule to create",
+        "name": "scaling_policies",
+        "required": false,
+        "type": "map(object({\n    adjustment_type           = optional(string)\n    cooldown                  = optional(number)\n    enabled                   = optional(bool)\n    estimated_instance_warmup = optional(number)\n    metric_aggregation_type   = optional(string)\n    min_adjustment_magnitude  = optional(number)\n    name                      = optional(string) # Will fall back to the map key if not provided\n    policy_type               = optional(string)\n    predictive_scaling_configuration = optional(object({\n      max_capacity_breach_behavior = optional(string)\n      max_capacity_buffer          = optional(number)\n      metric_specification = object({\n        customized_capacity_metric_specification = optional(object({\n          metric_data_queries = optional(list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimensions = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = string\n                namespace   = string\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          })))\n        }))\n        customized_load_metric_specification = optional(object({\n          metric_data_queries = optional(list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimensions = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = string\n                namespace   = string\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          })))\n        }))\n        customized_scaling_metric_specification = optional(object({\n          metric_data_queries = optional(list(object({\n            expression = optional(string)\n            id         = string\n            label      = optional(string)\n            metric_stat = optional(object({\n              metric = object({\n                dimensions = optional(list(object({\n                  name  = string\n                  value = string\n                })))\n                metric_name = string\n                namespace   = string\n              })\n              stat = string\n              unit = optional(string)\n            }))\n            return_data = optional(bool)\n          })))\n        }))\n        predefined_load_metric_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        predefined_metric_pair_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        predefined_scaling_metric_specification = optional(object({\n          predefined_metric_type = string\n          resource_label         = optional(string)\n        }))\n        target_value = optional(number)\n      })\n      mode                   = optional(string)\n      scheduling_buffer_time = optional(number)\n    }))\n    scaling_adjustment = optional(number)\n    step_adjustment = optional(list(object({\n      metric_interval_lower_bound = optional(number)\n      metric_interval_upper_bound = optional(number)\n      scaling_adjustment          = number\n    })))\n    target_tracking_configuration = optional(object({\n      customized_metric_specification = optional(object({\n        metric_dimension = optional(list(object({\n          name  = string\n          value = string\n        })))\n        metric_name = optional(string)\n        metrics = optional(list(object({\n          expression = optional(string)\n          id         = string\n          label      = optional(string)\n          metric_stat = optional(object({\n            metric = object({\n              dimensions = optional(list(object({\n                name  = string\n                value = string\n              })))\n              metric_name = string\n              namespace   = string\n            })\n            period = optional(number)\n            stat   = string\n            unit   = optional(string)\n          }))\n          return_data = optional(bool)\n        })))\n        namespace = optional(string)\n        period    = optional(number)\n        statistic = optional(string)\n        unit      = optional(string)\n      }))\n      disable_scale_in = optional(bool)\n      predefined_metric_specification = optional(object({\n        predefined_metric_type = string\n        resource_label         = optional(string)\n      }))\n      target_value = number\n    }))\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Allows deleting the Auto Scaling Group without waiting for all instances in the pool to terminate. You can force an Auto Scaling Group to delete even if it's in the process of scaling a resource. Normally, Terraform drains all the instances before deleting the group. This bypasses that behavior and potentially leaves resources dangling",
+        "name": "force_delete",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create autoscaling group or not",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "`EC2` or `ELB`. Controls how health checking is done",
+        "name": "health_check_type",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "One or more Lifecycle Hooks to attach to the Auto Scaling Group before instances are launched. The syntax is exactly the same as the separate `aws_autoscaling_lifecycle_hook` resource, without the `autoscaling_group_name` attribute. Please note that this will only work when creating a new Auto Scaling Group. For all other use-cases, please use `aws_autoscaling_lifecycle_hook` resource",
+        "name": "initial_lifecycle_hooks",
+        "required": false,
+        "type": "list(object({\n    default_result          = optional(string)\n    heartbeat_timeout       = optional(number)\n    lifecycle_transition    = string\n    name                    = string\n    notification_metadata   = optional(string)\n    notification_target_arn = optional(string)\n    role_arn                = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "The maximum amount of time, in seconds, that an instance can be in service, values must be either equal to 0 or between 86400 and 31536000 seconds",
+        "name": "max_instance_lifetime",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The name of the placement group into which you'll launch your instances, if any",
+        "name": "placement_group",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"http_endpoint\": \"enabled\",\n  \"http_put_response_hop_limit\": 1,\n  \"http_tokens\": \"required\"\n}",
+        "description": "Customize the metadata options for the instance",
+        "name": "metadata_options",
+        "required": false,
+        "type": "object({\n    http_endpoint               = optional(string, \"enabled\")\n    http_protocol_ipv6          = optional(string)\n    http_put_response_hop_limit = optional(number, 1)\n    http_tokens                 = optional(string, \"required\")\n    instance_metadata_tags      = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "If this block is configured, start an Instance Refresh when this Auto Scaling Group is updated",
+        "name": "instance_refresh",
+        "required": false,
+        "type": "object({\n    preferences = optional(object({\n      alarm_specification = optional(object({\n        alarms = optional(list(string))\n      }))\n      auto_rollback                = optional(bool)\n      checkpoint_delay             = optional(number)\n      checkpoint_percentages       = optional(list(number))\n      instance_warmup              = optional(number)\n      max_healthy_percentage       = optional(number)\n      min_healthy_percentage       = optional(number)\n      scale_in_protected_instances = optional(string)\n      skip_matching                = optional(bool)\n      standby_instances            = optional(string)\n    }))\n    strategy = string\n    triggers = optional(list(string))\n  })"
+      },
+      {
+        "default": "[]",
+        "description": "A list of tag keys that should NOT be propagated to launched EC2 instances",
+        "name": "autoscaling_group_tags_not_propagate_at_launch",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Default Version of the launch template",
+        "name": "default_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Customize network interfaces to be attached at instance boot time",
+        "name": "network_interfaces",
+        "required": false,
+        "type": "list(object({\n    associate_carrier_ip_address = optional(bool)\n    associate_public_ip_address  = optional(bool)\n    connection_tracking_specification = optional(object({\n      tcp_established_timeout = optional(number)\n      udp_stream_timeout      = optional(number)\n      udp_timeout             = optional(number)\n    }))\n    delete_on_termination = optional(bool)\n    description           = optional(string)\n    device_index          = optional(number)\n    ena_srd_specification = optional(object({\n      ena_srd_enabled = optional(bool)\n      ena_srd_udp_specification = optional(object({\n        ena_srd_udp_enabled = optional(bool)\n      }))\n    }))\n    interface_type       = optional(string)\n    ipv4_address_count   = optional(number)\n    ipv4_addresses       = optional(list(string))\n    ipv4_prefix_count    = optional(number)\n    ipv4_prefixes        = optional(list(string))\n    ipv6_address_count   = optional(number)\n    ipv6_addresses       = optional(list(string))\n    ipv6_prefix_count    = optional(number)\n    ipv6_prefixes        = optional(list(string))\n    network_card_index   = optional(number)\n    network_interface_id = optional(string)\n    primary_ipv6         = optional(bool)\n    private_ip_address   = optional(string)\n    security_groups      = optional(list(string), [])\n    subnet_id            = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Whether to update Default Version each update. Conflicts with `default_version`",
+        "name": "update_default_version",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether the IAM role name (`iam_role_name`) is used as a prefix",
+        "name": "iam_role_use_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The amount of time, in seconds, after a scaling activity completes before another scaling activity can start",
+        "name": "default_cooldown",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The maximum size of the autoscaling group",
+        "name": "max_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The granularity to associate with the metrics to collect. The only valid value is `1Minute`",
+        "name": "metrics_granularity",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of additional tags to add to the autoscaling group",
+        "name": "autoscaling_group_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create launch template or not",
+        "name": "create_launch_template",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Shutdown behavior for the instance. Can be `stop` or `terminate`. (Default: `stop`)",
+        "name": "instance_initiated_shutdown_behavior",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of security group IDs to associate",
+        "name": "security_groups",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Do you agree that Putin doesn't respect Ukrainian sovereignty and territorial integrity? More info: https://en.wikipedia.org/wiki/Putin_khuylo!",
+        "name": "putin_khuylo",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "A list of Availability Zones where instances in the Auto Scaling group can be created. Used for launching into the default VPC subnet in each Availability Zone when not using the `vpc_zone_identifier` attribute, or for attaching a network interface when an existing network interface ID is specified in a launch template. Conflicts with `vpc_zone_identifier`",
+        "name": "availability_zones",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Customize the credit specification of the instance",
+        "name": "credit_specification",
+        "required": false,
+        "type": "object({\n    cpu_credits = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "If true, the launched EC2 instance will be EBS-optimized",
+        "name": "ebs_optimized",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The hibernation options for the instance",
+        "name": "hibernation_options",
+        "required": false,
+        "type": "object({\n    configured = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The key name that should be used for the instance",
+        "name": "key_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Allows deleting the Auto Scaling Group without waiting for all instances in the warm pool to terminate",
+        "name": "force_delete_warm_pool",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Enables/disables detailed monitoring",
+        "name": "enable_monitoring",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Map of autoscaling group schedule to create",
+        "name": "schedules",
+        "required": false,
+        "type": "map(object({\n    desired_capacity = optional(number)\n    end_time         = optional(string)\n    max_size         = optional(number)\n    min_size         = optional(number)\n    recurrence       = optional(string)\n    start_time       = optional(string)\n    time_zone        = optional(string)\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Description of the role",
+        "name": "iam_role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The number of Amazon EC2 instances that should be running in the autoscaling group",
+        "name": "desired_capacity",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to use a mixed instances policy in the autoscaling group or not",
+        "name": "use_mixed_instances_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Enable Nitro Enclaves on launched instances",
+        "name": "enclave_options",
+        "required": false,
+        "type": "object({\n    enabled = optional(bool)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The tags to apply to the resources during launch",
+        "name": "tag_specifications",
+        "required": false,
+        "type": "list(object({\n    resource_type = optional(string)\n    tags          = optional(map(string), {})\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Reserved",
+        "name": "context",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Amount of time, in seconds, until a newly launched instance can contribute to the Amazon CloudWatch metrics. This delay lets an instance finish initializing before Amazon EC2 Auto Scaling aggregates instance metrics, resulting in more reliable usage data. Set this value equal to the amount of time that it takes for resource consumption to become stable after an instance reaches the InService state.",
+        "name": "default_instance_warmup",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "",
+        "description": "Name used across the resources created",
+        "name": "name",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "A list of license specifications to associate with",
+        "name": "license_specifications",
+        "required": false,
+        "type": "list(object({\n    license_configuration_arn = string\n  }))"
+      },
+      {
+        "default": "\"\"",
+        "description": "Name of launch template to be created",
+        "name": "launch_template_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Configuration block containing settings to define launch targets for Auto Scaling groups",
+        "name": "mixed_instances_policy",
+        "required": false,
+        "type": "object({\n    instances_distribution = optional(object({\n      on_demand_allocation_strategy            = optional(string)\n      on_demand_base_capacity                  = optional(number)\n      on_demand_percentage_above_base_capacity = optional(number)\n      spot_allocation_strategy                 = optional(string)\n      spot_instance_pools                      = optional(number)\n      spot_max_price                           = optional(string)\n    }))\n    launch_template = object({\n      override = optional(list(object({\n        instance_requirements = optional(object({\n          accelerator_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_manufacturers = optional(list(string))\n          accelerator_names         = optional(list(string))\n          accelerator_total_memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          accelerator_types      = optional(list(string))\n          allowed_instance_types = optional(list(string))\n          bare_metal             = optional(string)\n          baseline_ebs_bandwidth_mbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          burstable_performance                                   = optional(string)\n          cpu_manufacturers                                       = optional(list(string))\n          excluded_instance_types                                 = optional(list(string))\n          instance_generations                                    = optional(list(string))\n          local_storage                                           = optional(string)\n          local_storage_types                                     = optional(list(string))\n          max_spot_price_as_percentage_of_optimal_on_demand_price = optional(number)\n          memory_gib_per_vcpu = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          memory_mib = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_bandwidth_gbps = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          network_interface_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          on_demand_max_price_percentage_over_lowest_price = optional(number)\n          require_hibernate_support                        = optional(bool)\n          spot_max_price_percentage_over_lowest_price      = optional(number)\n          total_local_storage_gb = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n          vcpu_count = optional(object({\n            max = optional(number)\n            min = optional(number)\n          }))\n        }))\n        instance_type = optional(string)\n        launch_template_specification = optional(object({\n          launch_template_id   = optional(string)\n          launch_template_name = optional(string)\n          version              = optional(string)\n        }))\n        weighted_capacity = optional(string)\n      })))\n    })\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The options for the instance hostname. The default values are inherited from the subnet",
+        "name": "private_dns_name_options",
+        "required": false,
+        "type": "object({\n    enable_resource_name_dns_aaaa_record = optional(bool)\n    enable_resource_name_dns_a_record    = optional(bool)\n    hostname_type                        = optional(string)\n  })"
+      },
+      {
+        "default": "null",
+        "description": "Map of traffic source attachment definitions to create",
+        "name": "traffic_source_attachments",
+        "required": false,
+        "type": "map(object({\n    traffic_source_identifier = string\n    traffic_source_type       = optional(string, \"elbv2\")\n  }))"
+      },
+      {
+        "default": "null",
+        "description": "A list of subnet IDs to launch resources in. Subnets automatically determine which availability zones the group will reside. Conflicts with `availability_zones`",
+        "name": "vpc_zone_identifier",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Targeting for EC2 capacity reservations",
+        "name": "capacity_reservation_specification",
+        "required": false,
+        "type": "object({\n    capacity_reservation_preference = optional(string)\n    capacity_reservation_target = optional(object({\n      capacity_reservation_id                 = optional(string)\n      capacity_reservation_resource_group_arn = optional(string)\n    }))\n  })"
+      },
+      {
+        "default": "null",
+        "description": "If this block is configured, add a instance maintenance policy to the specified Auto Scaling group",
+        "name": "instance_maintenance_policy",
+        "required": false,
+        "type": "object({\n    max_healthy_percentage = number\n    min_healthy_percentage = number\n  })"
+      },
+      {
+        "default": "null",
+        "description": "The AMI from which to launch the instance",
+        "name": "image_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Amazon Resource Name (ARN) of an existing IAM instance profile. Used when `create_iam_instance_profile` = `false`",
+        "name": "iam_instance_profile_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "IAM policies to attach to the IAM role",
+        "name": "iam_role_policies",
+        "required": false,
+        "type": "map(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The name of the launch template",
+        "name": "launch_template_name"
+      },
+      {
+        "description": "The default version of the launch template",
+        "name": "launch_template_default_version"
+      },
+      {
+        "description": "List of metrics enabled for collection",
+        "name": "autoscaling_group_enabled_metrics"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM role",
+        "name": "iam_role_unique_id"
+      },
+      {
+        "description": "The ID of the launch template",
+        "name": "launch_template_id"
+      },
+      {
+        "description": "The latest version of the launch template",
+        "name": "launch_template_latest_version"
+      },
+      {
+        "description": "The ARN for this AutoScaling Group",
+        "name": "autoscaling_group_arn"
+      },
+      {
+        "description": "The minimum size of the autoscale group",
+        "name": "autoscaling_group_min_size"
+      },
+      {
+        "description": "EC2 or ELB. Controls how health checking is done",
+        "name": "autoscaling_group_health_check_type"
+      },
+      {
+        "description": "The load balancer names associated with the autoscaling group",
+        "name": "autoscaling_group_load_balancers"
+      },
+      {
+        "description": "List of Target Group ARNs that apply to this AutoScaling Group",
+        "name": "autoscaling_group_target_group_arns"
+      },
+      {
+        "description": "Instance profile's ID",
+        "name": "iam_instance_profile_id"
+      },
+      {
+        "description": "The ARN of the launch template",
+        "name": "launch_template_arn"
+      },
+      {
+        "description": "The number of Amazon EC2 instances that should be running in the group",
+        "name": "autoscaling_group_desired_capacity"
+      },
+      {
+        "description": "Time after instance comes into service before checking health",
+        "name": "autoscaling_group_health_check_grace_period"
+      },
+      {
+        "description": "The availability zones of the autoscale group",
+        "name": "autoscaling_group_availability_zones"
+      },
+      {
+        "description": "The VPC zone identifier",
+        "name": "autoscaling_group_vpc_zone_identifier"
+      },
+      {
+        "description": "ARNs of autoscaling policies",
+        "name": "autoscaling_policy_arns"
+      },
+      {
+        "description": "The name of the IAM role",
+        "name": "iam_role_name"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) specifying the IAM role",
+        "name": "iam_role_arn"
+      },
+      {
+        "description": "The autoscaling group id",
+        "name": "autoscaling_group_id"
+      },
+      {
+        "description": "The autoscaling group name",
+        "name": "autoscaling_group_name"
+      },
+      {
+        "description": "The maximum size of the autoscale group",
+        "name": "autoscaling_group_max_size"
+      },
+      {
+        "description": "Time between a scaling activity and the succeeding scaling activity",
+        "name": "autoscaling_group_default_cooldown"
+      },
+      {
+        "description": "ARNs of autoscaling group schedules",
+        "name": "autoscaling_schedule_arns"
+      },
+      {
+        "description": "ARN assigned by AWS to the instance profile",
+        "name": "iam_instance_profile_arn"
+      },
+      {
+        "description": "Stable and unique string identifying the IAM instance profile",
+        "name": "iam_instance_profile_unique"
+      }
+    ]
+  },
+  "built_from_version": "9.2.1",
+  "module_id": "terraform-aws-modules/autoscaling/aws"
+}

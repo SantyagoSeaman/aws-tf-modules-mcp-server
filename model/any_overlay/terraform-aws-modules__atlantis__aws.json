@@ -1,0 +1,265 @@
+{
+  "all_inputs": {
+    "github-repository-webhook": [
+      {
+        "default": "true",
+        "description": "Whether to create Github repository webhook for Atlantis",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of names of repositories which belong to the owner specified in `github_owner`",
+        "name": "repositories",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Webhook URL",
+        "name": "webhook_url",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Webhook secret",
+        "name": "webhook_secret",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "gitlab-repository-webhook": [
+      {
+        "default": "true",
+        "description": "Whether to create Gitlab repository webhook for Atlantis",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of names of repositories which belong to the `gitlab_base_url` specified",
+        "name": "repositories",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Webhook URL",
+        "name": "webhook_url",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Webhook secret",
+        "name": "webhook_secret",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "root": [
+      {
+        "default": "true",
+        "description": "Controls if resources should be created (affects nearly all resources)",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"atlantis\"",
+        "description": "Common name to use on all resources created unless a more specific name is provided",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the Region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of values passed to Atlantis container definition. See the [ECS container definition module](https://github.com/terraform-aws-modules/terraform-aws-ecs/tree/master/modules/container-definition) for full list of arguments supported",
+        "name": "atlantis",
+        "required": false,
+        "type": "object({\n    uid = optional(string, 100)\n    gid = optional(string, 1000)\n\n    command = optional(list(string))\n    cpu     = optional(number, 2048)\n    dependsOn = optional(list(object({\n      condition     = string\n      containerName = string\n    })))\n    disableNetworking     = optional(bool)\n    dnsSearchDomains      = optional(list(string))\n    dnsServers            = optional(list(string))\n    dockerLabels          = optional(map(string))\n    dockerSecurityOptions = optional(list(string))\n    entrypoint            = optional(list(string))\n    environment = optional(list(object({\n      name  = string\n      value = string\n    })), [])\n    environmentFiles = optional(list(object({\n      type  = string\n      value = string\n    })))\n    extraHosts = optional(list(object({\n      hostname  = string\n      ipAddress = string\n    })))\n    firelensConfiguration = optional(object({\n      type    = string\n      options = optional(map(string))\n      configFile = optional(object({\n        type    = string\n        content = string\n      }))\n    }))\n    fqdn = optional(string)\n    healthCheck = optional(object({\n      command     = optional(list(string), [])\n      interval    = optional(number, 30)\n      retries     = optional(number, 3)\n      startPeriod = optional(number)\n      timeout     = optional(number, 5)\n    }))\n    hostname = optional(string)\n    image    = optional(string, \"ghcr.io/runatlantis/atlantis:latest\")\n    linuxParameters = optional(object({\n      capabilities = optional(object({\n        add  = optional(list(string))\n        drop = optional(list(string))\n      }))\n      devices = optional(list(object({\n        containerPath = optional(string)\n        hostPath      = optional(string)\n        permissions   = optional(list(string))\n      })))\n      initProcessEnabled = optional(bool)\n      maxSwap            = optional(number)\n      sharedMemorySize   = optional(number)\n      swappiness         = optional(number)\n      tmpfs = optional(list(object({\n        containerPath = string\n        mountOptions  = optional(list(string))\n        size          = number\n      })))\n    }))\n    logConfiguration = optional(object({\n      logDriver = optional(string)\n      options   = optional(map(string))\n      secretOptions = optional(list(object({\n        name      = string\n        valueFrom = string\n      })))\n    }))\n    memory            = optional(number, 4096)\n    memoryReservation = optional(number)\n    mountPoints = optional(list(object({\n      containerPath = optional(string)\n      readOnly      = optional(bool)\n      sourceVolume  = optional(string)\n    })))\n    port                   = optional(number, 4141)\n    privileged             = optional(bool, false)\n    readonlyRootFilesystem = optional(bool, false)\n    repositoryCredentials = optional(object({\n      credentialsParameter = optional(string)\n    }))\n    resourceRequirements = optional(list(object({\n      type  = string\n      value = string\n    })))\n    restartPolicy = optional(object({\n      enabled              = optional(bool, true)\n      ignoredExitCodes     = optional(list(number))\n      restartAttemptPeriod = optional(number)\n      }),\n      # Default\n      {\n        enabled = true\n      }\n    )\n    secrets = optional(list(object({\n      name      = string\n      valueFrom = string\n    })))\n    startTimeout = optional(number, 30)\n    stopTimeout  = optional(number, 120)\n    user         = optional(string, \"atlantis\")\n    volumesFrom = optional(list(object({\n      readOnly        = optional(bool)\n      sourceContainer = optional(string)\n    })))\n    workingDirectory = optional(string)\n\n    # CloudWatch Log Group\n    enable_cloudwatch_logging              = optional(bool, true)\n    create_cloudwatch_log_group            = optional(bool, true)\n    cloudwatch_log_group_use_name_prefix   = optional(bool, true)\n    cloudwatch_log_group_retention_in_days = optional(number, 14)\n    cloudwatch_log_group_class             = optional(string)\n    cloudwatch_log_group_kms_key_id        = optional(string)\n  })"
+      },
+      {
+        "default": "\"\"",
+        "description": "ID of an existing security group that will be used by ALB. Required if `create_alb` is `false`",
+        "name": "alb_security_group_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Route53 domain name to use for ACM certificate. Route53 zone for this domain should be created in advance. Specify if it is different from value in `route53_zone_name`",
+        "name": "certificate_domain_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to validate ACM certificate using Route53 DNS. If `false`, certificate will be created but not validated",
+        "name": "validate_certificate",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of Route53 record to create ACM certificate in and main A-record. If null is specified, var.name is used instead. Provide empty string to point root domain name to ALB.",
+        "name": "route53_record_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Map of values passed to ECS cluster module definition. See the [ECS cluster module](https://github.com/terraform-aws-modules/terraform-aws-ecs/tree/master/modules/cluster) for full list of arguments supported",
+        "name": "cluster",
+        "required": false,
+        "type": "object({\n    # Cluster\n    name = optional(string)\n    configuration = optional(object({\n      execute_command_configuration = optional(object({\n        kms_key_id = optional(string)\n        log_configuration = optional(object({\n          cloud_watch_encryption_enabled = optional(bool)\n          cloud_watch_log_group_name     = optional(string)\n          s3_bucket_encryption_enabled   = optional(bool)\n          s3_bucket_name                 = optional(string)\n          s3_kms_key_id                  = optional(string)\n          s3_key_prefix                  = optional(string)\n        }))\n        logging = optional(string, \"OVERRIDE\")\n      }))\n      managed_storage_configuration = optional(object({\n        fargate_ephemeral_storage_kms_key_id = optional(string)\n        kms_key_id                           = optional(string)\n      }))\n      }),\n      # Default\n      {\n        execute_command_configuration = {\n          log_configuration = {\n            cloud_watch_log_group_name = \"placeholder\" # will use CloudWatch log group created by module\n          }\n        }\n      }\n    )\n    setting = optional(list(object({\n      name  = string\n      value = string\n      })),\n      # Default\n      [{\n        name  = \"containerInsights\"\n        value = \"enabled\"\n      }]\n    )\n\n    # Cloudwatch log group\n    create_cloudwatch_log_group            = optional(bool, true)\n    cloudwatch_log_group_retention_in_days = optional(number, 90)\n    cloudwatch_log_group_kms_key_id        = optional(string)\n    cloudwatch_log_group_class             = optional(string)\n    cloudwatch_log_group_tags              = optional(map(string), {})\n\n    # Capacity providers\n    default_capacity_provider_strategy = optional(\n      map(object({\n        base   = optional(number)\n        name   = optional(string) # Will fall back to use map key if not set\n        weight = optional(number)\n      })),\n      # Default\n      {\n        FARGATE = {\n          weight = 100\n        }\n      }\n    )\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of values passed to ECS service module definition. See the [ECS service module](https://github.com/terraform-aws-modules/terraform-aws-ecs/tree/master/modules/service) for full list of arguments supported",
+        "name": "service",
+        "required": false,
+        "type": "object({\n    capacity_provider_strategy = optional(map(object({\n      base              = optional(number)\n      capacity_provider = string\n      weight            = optional(number)\n    })))\n    deployment_circuit_breaker = optional(object({\n      enable   = bool\n      rollback = bool\n    }))\n    enable_ecs_managed_tags           = optional(bool, true)\n    force_new_deployment              = optional(bool, true)\n    health_check_grace_period_seconds = optional(number)\n    launch_type                       = optional(string, \"FARGATE\")\n    load_balancer                     = optional(any, {})\n    name                              = optional(string)\n    assign_public_ip                  = optional(bool, false)\n    security_group_ids                = optional(list(string), [])\n    subnet_ids                        = optional(list(string), [])\n    platform_version                  = optional(string)\n    propagate_tags                    = optional(string)\n    timeouts = optional(object({\n      create = optional(string)\n      delete = optional(string)\n      update = optional(string)\n    }))\n    triggers              = optional(map(string))\n    wait_for_steady_state = optional(bool)\n\n    # Service IAM Role\n    create_iam_role               = optional(bool, true)\n    iam_role_arn                  = optional(string)\n    iam_role_name                 = optional(string)\n    iam_role_use_name_prefix      = optional(bool, true)\n    iam_role_path                 = optional(string)\n    iam_role_description          = optional(string)\n    iam_role_permissions_boundary = optional(string)\n    iam_role_tags                 = optional(map(string), {})\n    iam_role_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n\n    # Task Definition\n    create_task_definition = optional(bool, true)\n    task_definition_arn    = optional(string)\n    container_definitions  = optional(any, {})\n    cpu                    = optional(number, 2048)\n    ephemeral_storage = optional(object({\n      size_in_gib = number\n    }))\n    family                   = optional(string)\n    memory                   = optional(number, 4096)\n    requires_compatibilities = optional(list(string), [\"FARGATE\"])\n    runtime_platform = optional(\n      object({\n        cpu_architecture        = optional(string)\n        operating_system_family = optional(string)\n      }),\n      # Default\n      {\n        operating_system_family = \"LINUX\"\n        cpu_architecture        = \"ARM64\"\n      }\n    )\n    volume    = optional(any, {})\n    task_tags = optional(map(string), {})\n\n    # Task Execution IAM Role\n    create_task_exec_iam_role               = optional(bool, true)\n    task_exec_iam_role_arn                  = optional(string)\n    task_exec_iam_role_name                 = optional(string)\n    task_exec_iam_role_use_name_prefix      = optional(bool, true)\n    task_exec_iam_role_path                 = optional(string)\n    task_exec_iam_role_description          = optional(string)\n    task_exec_iam_role_permissions_boundary = optional(string)\n    task_exec_iam_role_tags                 = optional(map(string), {})\n    task_exec_iam_role_policies             = optional(map(string), {})\n    task_exec_iam_role_max_session_duration = optional(number)\n\n    # Task Execution IAM Role Policy\n    create_task_exec_policy  = optional(bool, true)\n    task_exec_ssm_param_arns = optional(list(string), [])\n    task_exec_secret_arns    = optional(list(string), [])\n    task_exec_iam_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n\n    # Tasks - IAM role\n    create_tasks_iam_role               = optional(bool, true)\n    tasks_iam_role_arn                  = optional(string)\n    tasks_iam_role_name                 = optional(string)\n    tasks_iam_role_use_name_prefix      = optional(bool, true)\n    tasks_iam_role_path                 = optional(string)\n    tasks_iam_role_description          = optional(string)\n    tasks_iam_role_permissions_boundary = optional(string)\n    tasks_iam_role_tags                 = optional(map(string), {})\n    tasks_iam_role_policies             = optional(map(string), {})\n    tasks_iam_role_statements = optional(list(object({\n      sid           = optional(string)\n      actions       = optional(list(string))\n      not_actions   = optional(list(string))\n      effect        = optional(string)\n      resources     = optional(list(string))\n      not_resources = optional(list(string))\n      principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      not_principals = optional(list(object({\n        type        = string\n        identifiers = list(string)\n      })))\n      condition = optional(list(object({\n        test     = string\n        values   = list(string)\n        variable = string\n      })))\n    })))\n\n    # Security Group\n    create_security_group          = optional(bool, true)\n    security_group_name            = optional(string)\n    security_group_use_name_prefix = optional(bool, true)\n    security_group_description     = optional(string)\n    security_group_ingress_rules   = optional(any, {})\n    security_group_egress_rules = optional(any,\n      {\n        egress = {\n          ip_protocol = \"-1\"\n          cidr_ipv4   = \"0.0.0.0/0\"\n        }\n      }\n    )\n    security_group_tags = optional(map(string), {})\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of values passed to EFS module definition. See the [EFS module](https://github.com/terraform-aws-modules/terraform-aws-efs) for full list of arguments supported",
+        "name": "efs",
+        "required": false,
+        "type": "object({\n    name = optional(string)\n\n    # File System\n    availability_zone_name          = optional(string)\n    creation_token                  = optional(string)\n    performance_mode                = optional(string)\n    encrypted                       = optional(bool, true)\n    kms_key_arn                     = optional(string)\n    provisioned_throughput_in_mibps = optional(number)\n    throughput_mode                 = optional(string)\n    lifecycle_policy = optional(object({\n      transition_to_ia                    = optional(string)\n      transition_to_archive               = optional(string)\n      transition_to_primary_storage_class = optional(string)\n    }))\n    protection = optional(object({\n      replication_overwrite = optional(string)\n    }))\n\n    # File System Policy\n    attach_policy                             = optional(bool, true)\n    bypass_policy_lockout_safety_check        = optional(bool)\n    source_policy_documents                   = optional(list(string), [])\n    override_policy_documents                 = optional(list(string), [])\n    policy_statements                         = optional(any, {})\n    deny_nonsecure_transport                  = optional(bool, true)\n    deny_nonsecure_transport_via_mount_target = optional(bool, true)\n\n    # Mount targets\n    mount_targets = optional(map(object({\n      ip_address      = optional(string)\n      ip_address_type = optional(string)\n      ipv6_address    = optional(string)\n      region          = optional(string)\n      security_groups = optional(list(string), [])\n      subnet_id       = string\n      })),\n      # Default\n      {}\n    )\n\n    # Security Group\n    create_security_group          = optional(bool, true)\n    security_group_name            = optional(string)\n    security_group_use_name_prefix = optional(bool, true)\n    security_group_description     = optional(string)\n    security_group_ingress_rules   = optional(any, {})\n\n    # Access Point(s)\n    access_points = optional(any, {})\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "Map of values passed to ALB module definition. See the [ALB module](https://github.com/terraform-aws-modules/terraform-aws-alb) for full list of arguments supported",
+        "name": "alb",
+        "required": false,
+        "type": "object({\n    # Load Balancer\n    access_logs = optional(object({\n      bucket  = string\n      enabled = optional(bool, true)\n      prefix  = optional(string)\n    }))\n    connection_logs = optional(object({\n      bucket  = string\n      enabled = optional(bool, true)\n      prefix  = optional(string)\n    }))\n    drop_invalid_header_fields       = optional(bool, true)\n    enable_cross_zone_load_balancing = optional(bool, true)\n    enable_deletion_protection       = optional(bool, true)\n    enable_http2                     = optional(bool, true)\n    enable_waf_fail_open             = optional(bool)\n    enable_zonal_shift               = optional(bool, true)\n    idle_timeout                     = optional(number)\n    internal                         = optional(bool)\n    ip_address_type                  = optional(string)\n    name                             = optional(string)\n    preserve_host_header             = optional(bool)\n    security_groups                  = optional(list(string), [])\n    subnet_ids                       = optional(list(string), [])\n\n    # Listener(s)\n    default_port              = optional(number, 80)\n    default_protocol          = optional(string, \"HTTP\")\n    https_listener_ssl_policy = optional(string, \"ELBSecurityPolicy-TLS13-1-2-2021-06\")\n    https_default_action = optional(any, {\n      forward = {\n        target_group_key = \"atlantis\"\n      }\n    })\n    https_listener = optional(any, {})\n    listeners      = optional(any, {})\n\n    # Target Group(s)\n    target_groups = optional(any, {})\n\n    # Securtity Group(s)\n    create_security_group          = optional(bool, true)\n    security_group_name            = optional(string)\n    security_group_use_name_prefix = optional(bool, true)\n    security_group_description     = optional(string)\n    security_group_ingress_rules = optional(map(object({\n      name                         = optional(string)\n      cidr_ipv4                    = optional(string)\n      cidr_ipv6                    = optional(string)\n      description                  = optional(string)\n      from_port                    = optional(string)\n      ip_protocol                  = optional(string, \"tcp\")\n      prefix_list_id               = optional(string)\n      referenced_security_group_id = optional(string)\n      tags                         = optional(map(string), {})\n      to_port                      = optional(string)\n      })),\n      # Default\n      {\n        http = {\n          from_port = 80\n          cidr_ipv4 = \"0.0.0.0/0\"\n        }\n        https = {\n          from_port = 443\n          cidr_ipv4 = \"0.0.0.0/0\"\n        }\n      }\n    )\n    security_group_egress_rules = optional(\n      map(object({\n        name                         = optional(string)\n        cidr_ipv4                    = optional(string)\n        cidr_ipv6                    = optional(string)\n        description                  = optional(string)\n        from_port                    = optional(string)\n        ip_protocol                  = optional(string, \"tcp\")\n        prefix_list_id               = optional(string)\n        referenced_security_group_id = optional(string)\n        tags                         = optional(map(string), {})\n        to_port                      = optional(string)\n      })),\n      # Default\n      {\n        all = {\n          ip_protocol = \"-1\"\n          cidr_ipv4   = \"0.0.0.0/0\"\n        }\n      }\n    )\n    security_group_tags = optional(map(string), {})\n\n    # Route53 Record(s)\n    route53_records = optional(map(object({\n      zone_id                = string\n      name                   = optional(string)\n      type                   = string\n      evaluate_target_health = optional(bool, true)\n    })))\n\n    # WAF\n    associate_web_acl = optional(bool, false)\n    web_acl_arn       = optional(string)\n\n    tags = optional(map(string), {})\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create an ACM certificate or not. If `false`, `certificate_arn` must be provided",
+        "name": "create_certificate",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create an ALB or not",
+        "name": "create_alb",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of an existing ALB target group that will be used to route traffic to the Atlantis service. Required if `create_alb` is `false`",
+        "name": "alb_target_group_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of an existing ECS cluster where resources will be created. Required when `create_cluster` is `false`",
+        "name": "cluster_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "ID of the VPC where the resources will be provisioned",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Route53 zone ID to use for ACM certificate and Route53 records",
+        "name": "route53_zone_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether to create an ECS cluster or not",
+        "name": "create_cluster",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Determines whether to create and utilize an EFS filesystem",
+        "name": "enable_efs",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Determines whether to create Route53 `A` and `AAAA` records for the loadbalancer",
+        "name": "create_route53_records",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of certificate issued by AWS ACM. If empty, a new ACM certificate will be created and validated using Route53 DNS",
+        "name": "certificate_arn",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "github-repository-webhook": [
+      {
+        "description": "Webhook URL",
+        "name": "repository_webhook_urls"
+      }
+    ],
+    "gitlab-repository-webhook": [
+      {
+        "description": "Webhook URL",
+        "name": "repository_webhook_urls"
+      }
+    ],
+    "root": [
+      {
+        "description": "URL of Atlantis",
+        "name": "url"
+      },
+      {
+        "description": "ALB created and all of its associated outputs",
+        "name": "alb"
+      },
+      {
+        "description": "ECS cluster created and all of its associated outputs",
+        "name": "cluster"
+      },
+      {
+        "description": "ECS service created and all of its associated outputs",
+        "name": "service"
+      },
+      {
+        "description": "EFS created and all of its associated outputs",
+        "name": "efs"
+      }
+    ]
+  },
+  "built_from_version": "5.1.0",
+  "module_id": "terraform-aws-modules/atlantis/aws"
+}

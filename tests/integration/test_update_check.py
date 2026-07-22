@@ -190,10 +190,10 @@ async def test_health_reports_update_fields(initialized_state):
 # model_serializer(mode="wrap") (used to drop a None update_notice from
 # serialized JSON) made pydantic's serialization-mode JSON schema collapse to
 # `{}` for every model built on it. FastMCP publishes exactly that
-# serialization-mode schema as a tool's `outputSchema`, so search_modules,
-# modules_list, and grep_module_docs all advertised an empty result schema in
-# list_tools -- a real contract regression even though the JSON payload
-# itself was fine. These tests pin that the advertised schema is real again.
+# serialization-mode schema as a tool's `outputSchema`, so search_modules and
+# modules_list both advertised an empty result schema in list_tools -- a
+# real contract regression even though the JSON payload itself was fine.
+# These tests pin that the advertised schema is real again.
 class TestToolOutputSchemasNotEmpty:
     @pytest.mark.asyncio
     async def test_search_modules_schema_has_results(self):
@@ -214,19 +214,26 @@ class TestToolOutputSchemasNotEmpty:
         assert properties.get("count"), "modules_list output_schema must describe the 'count' property"
 
     @pytest.mark.asyncio
-    async def test_grep_module_docs_schema_has_matches(self):
-        tool = await app.get_tool("grep_module_docs")
-        schema = tool.output_schema
-        assert schema, "grep_module_docs output_schema must not be empty"
-        assert schema.get("properties", {}).get(
-            "matches"
-        ), "grep_module_docs output_schema must describe the 'matches' property"
-
-    @pytest.mark.asyncio
-    async def test_none_of_the_three_tools_has_empty_defs_entry(self):
+    async def test_none_of_the_tools_has_empty_defs_entry(self):
         """No $defs entry for any referenced model may be the degenerate `{}`."""
-        for name in ("search_modules", "modules_list", "grep_module_docs"):
+        for name in ("search_modules", "modules_list"):
             tool = await app.get_tool(name)
             schema = tool.output_schema
             for def_name, def_schema in schema.get("$defs", {}).items():
                 assert def_schema, f"{name}: $defs['{def_name}'] must not be empty"
+
+
+# D7 (2026-07-21): grep_module_docs -- the only networked TOOL, the measured
+# cost-sink, and a persistent signage headache -- was removed outright (no
+# deprecated stub). This server is now a fully offline, curated AWS catalog;
+# the only remaining network use is the opt-in background PyPI update check.
+class TestGrepModuleDocsRemoved:
+    @pytest.mark.asyncio
+    async def test_grep_module_docs_is_not_a_registered_tool(self):
+        async with Client(app) as client:
+            names = {tool.name for tool in await client.list_tools()}
+        assert names == {
+            "search_modules",
+            "modules_list",
+            "get_module",
+        }, f"Server tool list must be exactly {{search_modules, modules_list, get_module}}, got {names}"

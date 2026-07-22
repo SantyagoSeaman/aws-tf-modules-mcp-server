@@ -30,7 +30,7 @@ Generate the following bullet points in order:
 2. **Module ID**:
  - Format: - **Module ID**: `{namespace}/{name}/{provider}`
  - The Terraform Registry coordinate of the ROOT module — no `//modules/...` submodule suffix
- - Equals the root **Source** value; consumed by the `grep_module_docs` MCP tool
+ - Equals the root **Source** value; the registry coordinate returned alongside search results
  - Example: `terraform-aws-modules/vpc/aws`
 
 3. **Source**:

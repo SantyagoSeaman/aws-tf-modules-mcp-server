@@ -1,0 +1,311 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "\"\"",
+        "description": "Name to be used on all the resources as identifier",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether resource attachments are automatically associated with the default association route table",
+        "name": "enable_default_route_table_association",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "One or more IPv4 or IPv6 CIDR blocks for the transit gateway. Must be a size /24 CIDR block or larger for IPv4, or a size /64 CIDR block or larger for IPv6",
+        "name": "transit_gateway_cidr_blocks",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the TGW",
+        "name": "tgw_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for VPC attachments",
+        "name": "tgw_vpc_attachment_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The name of the resource share of TGW",
+        "name": "ram_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "A list of principals to share TGW with. Possible values are an AWS account ID, an AWS Organizations Organization ARN, or an AWS Organizations Organization Unit ARN",
+        "name": "ram_principals",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Whether resource attachments automatically propagate routes to the default propagation route table",
+        "name": "enable_default_route_table_propagation",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether multicast support is enabled",
+        "name": "enable_multicast_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Should be true to enable DNS support in the TGW",
+        "name": "enable_dns_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Should be true to enable encryption support in the TGW",
+        "name": "enable_encryption_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Maps of maps of VPC details to attach to TGW. Type 'any' to disable type validation by Terraform.",
+        "name": "vpc_attachments",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Whether to share your transit gateway with other accounts",
+        "name": "share_tgw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The Autonomous System Number (ASN) for the Amazon side of the gateway. By default the TGW is created with the current default Amazon ASN.",
+        "name": "amazon_side_asn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Indicates whether principals outside your organization can be associated with a resource share.",
+        "name": "ram_allow_external_principals",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "ARN of RAM resource share",
+        "name": "ram_resource_share_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Whether VPN Equal Cost Multipath Protocol support is enabled",
+        "name": "enable_vpn_ecmp_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the TGW route table",
+        "name": "tgw_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the RAM",
+        "name": "ram_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to add to all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if TGW should be created (it affects almost all resources)",
+        "name": "create_tgw",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Indicates whether to enable security group referencing support",
+        "name": "enable_sg_referencing_support",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Identifier of EC2 Transit Gateway Route Table to use with the Target Gateway when reusing it between multiple TGWs",
+        "name": "transit_gateway_route_table_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Additional tags for the Default TGW route table",
+        "name": "tgw_default_route_table_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Description of the EC2 Transit Gateway",
+        "name": "description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether resource attachment requests are automatically accepted",
+        "name": "enable_auto_accept_shared_attachments",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Create, update, and delete timeout configurations for the transit gateway",
+        "name": "timeouts",
+        "required": false,
+        "type": "object({\n    create = optional(string)\n    update = optional(string)\n    delete = optional(string)\n  })"
+      },
+      {
+        "default": "true",
+        "description": "Controls if TGW Route Table / Routes should be created",
+        "name": "create_tgw_routes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "Map of EC2 Transit Gateway Route Table Association attributes",
+        "name": "ec2_transit_gateway_route_table_association"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the Resource Share and the principal, separated by a comma",
+        "name": "ram_principal_association_id"
+      },
+      {
+        "description": "Identifier of the default association route table",
+        "name": "ec2_transit_gateway_association_default_route_table_id"
+      },
+      {
+        "description": "EC2 Transit Gateway Route Table identifier",
+        "name": "ec2_transit_gateway_route_table_id"
+      },
+      {
+        "description": "Boolean whether this is the default association route table for the EC2 Transit Gateway",
+        "name": "ec2_transit_gateway_route_table_default_association_route_table"
+      },
+      {
+        "description": "List of EC2 Transit Gateway Route Table identifier combined with destination",
+        "name": "ec2_transit_gateway_route_ids"
+      },
+      {
+        "description": "Identifier of the default propagation route table",
+        "name": "ec2_transit_gateway_propagation_default_route_table_id"
+      },
+      {
+        "description": "List of EC2 Transit Gateway VPC Attachment identifiers",
+        "name": "ec2_transit_gateway_vpc_attachment_ids"
+      },
+      {
+        "description": "List of EC2 Transit Gateway Route Table Propagation identifiers",
+        "name": "ec2_transit_gateway_route_table_propagation_ids"
+      },
+      {
+        "description": "The Amazon Resource Name (ARN) of the resource share",
+        "name": "ram_resource_share_id"
+      },
+      {
+        "description": "EC2 Transit Gateway Amazon Resource Name (ARN)",
+        "name": "ec2_transit_gateway_arn"
+      },
+      {
+        "description": "EC2 Transit Gateway identifier",
+        "name": "ec2_transit_gateway_id"
+      },
+      {
+        "description": "Identifier of the AWS account that owns the EC2 Transit Gateway",
+        "name": "ec2_transit_gateway_owner_id"
+      },
+      {
+        "description": "Boolean whether this is the default propagation route table for the EC2 Transit Gateway",
+        "name": "ec2_transit_gateway_route_table_default_propagation_route_table"
+      },
+      {
+        "description": "Map of EC2 Transit Gateway Route Table Propagation attributes",
+        "name": "ec2_transit_gateway_route_table_propagation"
+      },
+      {
+        "description": "Map of EC2 Transit Gateway VPC Attachment attributes",
+        "name": "ec2_transit_gateway_vpc_attachment"
+      },
+      {
+        "description": "List of EC2 Transit Gateway Route Table Association identifiers",
+        "name": "ec2_transit_gateway_route_table_association_ids"
+      }
+    ]
+  },
+  "built_from_version": "3.3.0",
+  "module_id": "terraform-aws-modules/transit-gateway/aws",
+  "vars": {
+    "root::vpc_attachments": {
+      "examples": [
+        "vpc_attachments = {\n    vpc1 = {\n      tgw_id       = module.tgw.ec2_transit_gateway_id\n      vpc_id       = module.vpc1.vpc_id\n      subnet_ids   = module.vpc1.private_subnets\n      dns_support  = true\n      ipv6_support = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      vpc_route_table_ids  = module.vpc1.private_route_table_ids\n      tgw_destination_cidr = \"0.0.0.0/0\"\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n  }",
+        "vpc_attachments = {\n    vpc1 = {\n      vpc_id       = module.vpc1.vpc_id\n      subnet_ids   = module.vpc1.private_subnets\n      dns_support  = true\n      ipv6_support = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n    vpc2 = {\n      vpc_id     = module.vpc2.vpc_id\n      subnet_ids = module.vpc2.private_subnets\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"50.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"10.10.10.10/32\"\n        }\n      ]\n    },\n  }",
+        "vpc_attachments = {\n    vpc1 = {\n      vpc_id                             = module.vpc1.vpc_id\n      subnet_ids                         = module.vpc1.private_subnets\n      security_group_referencing_support = true\n      dns_support                        = true\n      ipv6_support                       = true\n\n      transit_gateway_default_route_table_association = false\n      transit_gateway_default_route_table_propagation = false\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"30.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"0.0.0.0/0\"\n        }\n      ]\n    },\n    vpc2 = {\n      vpc_id     = module.vpc2.vpc_id\n      subnet_ids = module.vpc2.private_subnets\n\n      tgw_routes = [\n        {\n          destination_cidr_block = \"50.0.0.0/16\"\n        },\n        {\n          blackhole              = true\n          destination_cidr_block = \"10.10.10.10/32\"\n        }\n      ]\n      tags = {\n        Name = \"${local.name}-vpc2\"\n      }\n    },\n  }"
+      ],
+      "field_names": [
+        "appliance_mode_support",
+        "cidr",
+        "dns_support",
+        "ipv6_support",
+        "rtb_id",
+        "security_group_referencing_support",
+        "subnet_ids",
+        "tags",
+        "tgw_destination_cidr",
+        "tgw_id",
+        "tgw_routes",
+        "transit_gateway_default_route_table_association",
+        "transit_gateway_default_route_table_propagation",
+        "transit_gateway_route_table_id",
+        "vpc_id",
+        "vpc_route_table_ids"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

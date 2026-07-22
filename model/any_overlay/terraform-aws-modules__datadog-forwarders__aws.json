@@ -1,0 +1,2429 @@
+{
+  "all_inputs": {
+    "log_forwarder": [
+      {
+        "default": "{}",
+        "description": "A map of keys/values to provision metadata (will be automatically prefixed by `x-amz-meta-`",
+        "name": "s3_zip_metadata",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "Forwarder version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when Lambda Function should run in the VPC. Usually private or intra subnets",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the forwarder lambda function",
+        "name": "environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  \"SSE-C\"\n]",
+        "description": "List of encryption types to block on the bucket (e.g. `[\"SSE-C\"]`). Set to `[]` to block none. Defaults to blocking SSE-C, matching AWS's own default enforcement direction for new buckets, so the attribute doesn't drift against the provider's returned state on every plan",
+        "name": "bucket_blocked_encryption_types",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the desired Storage Class for the zip object. Can be either `STANDARD`, `REDUCED_REDUNDANCY`, `ONEZONE_IA`, `INTELLIGENT_TIERING`, or `STANDARD_IA`",
+        "name": "s3_zip_storage_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the bucket",
+        "name": "bucket_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls if S3 bucket should have deny non-SSL transport policy attacheds",
+        "name": "bucket_attach_deny_insecure_transport_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder policy name",
+        "name": "policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new Lambda Function Version",
+        "name": "publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "7",
+        "description": "Forwarder CloudWatch log group retention in days",
+        "name": "log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder role name",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when Lambda Function should run in the VPC",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder lambda function",
+        "name": "lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the forwarder",
+        "name": "create_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for forwarder lambda function to utilize",
+        "name": "policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Datadog API key, which can be found from the APIs page (/account/settings#api). It will be stored in AWS Secrets Manager securely",
+        "name": "dd_api_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an S3 bucket should be created for the forwarder",
+        "name": "create_bucket",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{\n  \"sse_algorithm\": \"AES256\"\n}",
+        "description": "S3 bucket server side encryption settings",
+        "name": "bucket_encryption_settings",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "S3 object key prefix to prepend to zip archive name",
+        "name": "bucket_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Set to true to not merge `var.tags` with `s3_zip_tags`. Useful to avoid breaching S3 Object 10 tag limit",
+        "name": "s3_zip_tags_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the forwarder lambda",
+        "name": "layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for object encryption",
+        "name": "s3_zip_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the forwarder",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `role_name` for the forwarder role",
+        "name": "use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `policy_name` for the forwarder policy",
+        "name": "use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder policy path",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "S3 log buckets for forwarder to read and forward logs to Datadog",
+        "name": "s3_log_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder S3 bucket name",
+        "name": "bucket_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "1024",
+        "description": "Memory size for the forwarder lambda function",
+        "name": "memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "120",
+        "description": "The amount of time the forwarder lambda has to execute in seconds",
+        "name": "timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether the forwarder resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to use on all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Server-side encryption of the zip object in S3. Valid values are `AES256` and `aws:kms`",
+        "name": "s3_zip_server_side_encryption",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the zip archive in S3",
+        "name": "s3_zip_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for forwarder lambda function to utilize",
+        "name": "role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"datadog-log-forwarder\"",
+        "description": "Forwarder lambda name",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "100",
+        "description": "The amount of reserved concurrent executions for the forwarder lambda function",
+        "name": "reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder role path",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the forwarder role",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN of the Secrets Manager secret storing the Datadog API key, if you already have it stored in Secrets Manager",
+        "name": "dd_api_key_secret_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"datadoghq.com\"",
+        "description": "Define your Datadog Site to send data to. For the Datadog EU site, set to datadoghq.eu",
+        "name": "dd_site",
+        "required": false,
+        "type": "string"
+      }
+    ],
+    "rds_enhanced_monitoring_forwarder": [
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the forwarder",
+        "name": "create_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `policy_name` for the forwarder policy",
+        "name": "use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"datadog-rds-enhanced-monitoring-forwarder\"",
+        "description": "Forwarder lambda name",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when Lambda Function should run in the VPC. Usually private or intra subnets",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the forwarder role",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether the forwarder resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"datadoghq.com\"",
+        "description": "Define your Datadog Site to send data to. For the Datadog EU site, set to datadoghq.eu",
+        "name": "dd_site",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `role_name` for the forwarder role",
+        "name": "use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "10",
+        "description": "The amount of time the forwarder lambda has to execute in seconds",
+        "name": "timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for forwarder lambda function to utilize",
+        "name": "role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder role name",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder role path",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for forwarder lambda function to utilize",
+        "name": "policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder policy name",
+        "name": "policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder lambda function",
+        "name": "lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "7",
+        "description": "Forwarder CloudWatch log group retention in days",
+        "name": "log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to use on all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Datadog API key, which can be found from the APIs page (/account/settings#api). It will be stored in AWS Secrets Manager securely",
+        "name": "dd_api_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder policy path",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "Forwarder version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the forwarder lambda function",
+        "name": "environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new Lambda Function Version",
+        "name": "publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "10",
+        "description": "The amount of reserved concurrent executions for the forwarder lambda function",
+        "name": "reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the forwarder",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the forwarder lambda",
+        "name": "layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "256",
+        "description": "Memory size for the forwarder lambda function",
+        "name": "memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN of the Secrets Manager secret storing the Datadog API key, if you already have it stored in Secrets Manager",
+        "name": "dd_api_key_secret_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when Lambda Function should run in the VPC",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      }
+    ],
+    "root": [
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the log forwarder lambda function",
+        "name": "log_forwarder_lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the RDS enhanced monitoring forwarder role",
+        "name": "rds_em_forwarder_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"datadog-vpc-flow-log-forwarder\"",
+        "description": "VPC flow log forwarder lambda name",
+        "name": "vpc_fl_forwarder_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "10",
+        "description": "The amount of time the VPC flow log forwarder lambda has to execute in seconds",
+        "name": "vpc_fl_forwarder_timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to traces endpoint",
+        "name": "traces_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "RDS enhanced monitoring forwarder policy path",
+        "name": "rds_em_forwarder_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to agent endpoint",
+        "name": "agent_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for object encryption",
+        "name": "log_forwarder_s3_zip_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when forwarder lambda function should run in the VPC. Usually private or intra subnets",
+        "name": "log_forwarder_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "RDS enhanced monitoring forwarder role name",
+        "name": "rds_em_forwarder_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the RDS enhanced monitoring forwarder role",
+        "name": "rds_em_forwarder_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "10",
+        "description": "The amount of reserved concurrent executions for the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "VPC flow log forwarder role name",
+        "name": "vpc_fl_forwarder_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the VPC flow log forwarder role",
+        "name": "vpc_fl_forwarder_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"datadoghq.com\"",
+        "description": "Define your Datadog Site to send data to. For the Datadog EU site, set to datadoghq.eu",
+        "name": "dd_site",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the VPC flow log forwarder role",
+        "name": "vpc_fl_forwarder_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the agent endpoint that controls access to the service. Defaults to full access",
+        "name": "agent_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the Datadog agent endpoint",
+        "name": "agent_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to API endpoint",
+        "name": "api_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the processes endpoint that controls access to the service. Defaults to full access",
+        "name": "processes_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the traces endpoint",
+        "name": "traces_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the zip archive in S3",
+        "name": "log_forwarder_s3_zip_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for log forwarder lambda function to utilize",
+        "name": "log_forwarder_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether log forwarder resources should be created",
+        "name": "create_log_forwarder",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "rds_em_forwarder_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with log forwarder endpoint",
+        "name": "log_forwarder_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the log forwarder bucket",
+        "name": "log_forwarder_bucket_tags",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "log_forwarder_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "Forwarder version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "log_forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "log_forwarder_runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the VPC flow log forwarder",
+        "name": "create_vpc_fl_forwarder_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "VPC flow log forwarder policy path",
+        "name": "vpc_fl_forwarder_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether the VPC flow log forwarder will read CloudWatch log groups for VPC flow logs",
+        "name": "vpc_fl_forwarder_read_cloudwatch_logs",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new fambda function Version",
+        "name": "vpc_fl_forwarder_publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for log forwarder lambda function to utilize",
+        "name": "log_forwarder_policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the log forwarder lambda",
+        "name": "log_forwarder_layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the log forwarder lambda function",
+        "name": "log_forwarder_environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for VPC flow log forwarder lambda function to utilize",
+        "name": "vpc_fl_forwarder_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with agent endpoint",
+        "name": "agent_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the log forwarder endpoint",
+        "name": "log_forwarder_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "RDS enhanced monitoring forwarder role path",
+        "name": "rds_em_forwarder_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "VPC flow log forwarder role path",
+        "name": "vpc_fl_forwarder_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the VPC flow log forwarder",
+        "name": "create_vpc_fl_forwarder_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "VPC flow log forwarder policy name",
+        "name": "vpc_fl_forwarder_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Datadog application key associated with the user account that created it, which can be found from the APIs page",
+        "name": "dd_app_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for RDS enhanced monitoring forwarder lambda function to utilize",
+        "name": "rds_em_forwarder_policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether RDS enhanced monitoring forwarder resources should be created",
+        "name": "create_rds_em_forwarder",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "10",
+        "description": "The amount of reserved concurrent executions for the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "100",
+        "description": "The amount of reserved concurrent executions for the log forwarder lambda function",
+        "name": "log_forwarder_reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the metrics endpoint that controls access to the service. Defaults to full access",
+        "name": "metrics_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with processes endpoint",
+        "name": "processes_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to use on all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `rds_em_forwarder_role_name` for the RDS enhanced monitoring forwarder role",
+        "name": "rds_em_forwarder_use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "rds_em_forwarder_log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to log forwarder endpoint",
+        "name": "log_forwarder_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Datadog API key, which can be found from the APIs page (/account/settings#api). It will be stored in AWS Secrets Manager securely. If DdApiKeySecretArn is also set, this value will not be used. This value must still be set, however",
+        "name": "dd_api_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "RDS enhanced monitoring forwarder policy name",
+        "name": "rds_em_forwarder_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"datadog-rds-enhanced-monitoring-forwarder\"",
+        "description": "RDS enhanced monitoring forwarder lambda name",
+        "name": "rds_em_forwarder_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for VPC flow log forwarder lambda function to utilize",
+        "name": "vpc_fl_forwarder_policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN of the Secrets Manager secret storing the Datadog API key, if you already have it stored in Secrets Manager. You still need to set a dummy value for `dd_api_key` to satisfy the requirement, though that value won't be used",
+        "name": "dd_api_key_secret_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "RDS enhanced monitoring lambda version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "rds_em_forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "120",
+        "description": "The amount of time the log forwarder lambda has to execute in seconds",
+        "name": "log_forwarder_timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "vpc_fl_forwarder_architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with metrics endpoint",
+        "name": "metrics_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Lambda artifact S3 bucket name",
+        "name": "bucket_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{\n  \"sse_algorithm\": \"AES256\"\n}",
+        "description": "S3 bucket server side encryption settings",
+        "name": "bucket_encryption_settings",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "7",
+        "description": "Log forwarder CloudWatch log group retention in days",
+        "name": "log_forwarder_log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "rds_em_forwarder_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when forwarder lambda function should run in the VPC",
+        "name": "rds_em_forwarder_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the API endpoint",
+        "name": "api_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to processes endpoint",
+        "name": "processes_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "S3 log buckets for forwarder to read and forward logs to Datadog",
+        "name": "log_forwarder_s3_log_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "log_forwarder_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether an agent endpoint should be created",
+        "name": "create_agent_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the log forwarder endpoint that controls access to the service. Defaults to full access",
+        "name": "log_forwarder_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether a API endpoint should be created",
+        "name": "create_api_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with API endpoint",
+        "name": "api_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the traces endpoint that controls access to the service. Defaults to full access",
+        "name": "traces_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the RDS enhanced monitoring forwarder",
+        "name": "create_rds_em_forwarder_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `vpc_fl_forwarder_policy_name` for the VPC flow log forwarder role",
+        "name": "vpc_fl_forwarder_use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether a metrics VPC endpoint should be created",
+        "name": "create_metrics_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Specifies the desired Storage Class for the zip object. Can be either `STANDARD`, `REDUCED_REDUNDANCY`, `ONEZONE_IA`, `INTELLIGENT_TIERING`, or `STANDARD_IA`",
+        "name": "log_forwarder_s3_zip_storage_class",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Log forwarder policy path",
+        "name": "log_forwarder_policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when forwarder lambda function should run in the VPC",
+        "name": "log_forwarder_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the metrics endpoint",
+        "name": "metrics_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Server-side encryption of the zip object in S3. Valid values are `AES256` and `aws:kms`",
+        "name": "log_forwarder_s3_zip_server_side_encryption",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the log forwarder resources",
+        "name": "log_forwarder_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `rds_em_forwarder_policy_name` for the RDS enhanced monitoring forwarder role",
+        "name": "rds_em_forwarder_use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "VPC flow log lambda version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "vpc_fl_forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "vpc_fl_forwarder_kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Policy to attach to the API endpoint that controls access to the service. Defaults to full access",
+        "name": "api_vpce_policy",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether VPC flow log forwarder resources should be created",
+        "name": "create_vpc_fl_forwarder",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new Lambda Function Version",
+        "name": "log_forwarder_publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `vpc_fl_forwarder_role_name` for the VPC flow log forwarder role",
+        "name": "vpc_fl_forwarder_use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Log forwarder role path",
+        "name": "log_forwarder_role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the RDS enhanced monitoring forwarder lambda",
+        "name": "rds_em_forwarder_layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "S3 log buckets for VPC flow log forwarder to read and forward to Datadog",
+        "name": "vpc_fl_forwarder_s3_log_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of keys/values to provision metadata (will be automatically prefixed by `x-amz-meta-`",
+        "name": "log_forwarder_s3_zip_metadata",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "10",
+        "description": "The amount of time the RDS enhanced monitoring forwarder lambda has to execute in seconds",
+        "name": "rds_em_forwarder_timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the VPC flow log forwarder resources",
+        "name": "vpc_fl_forwarder_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "7",
+        "description": "VPC flow log forwarder CloudWatch log group retention in days",
+        "name": "vpc_fl_forwarder_log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the log forwarder",
+        "name": "create_log_forwarder_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when forwarder lambda function should run in the VPC. Usually private or intra subnets",
+        "name": "rds_em_forwarder_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "256",
+        "description": "Memory size for the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the processes endpoint",
+        "name": "processes_vpce_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether a traces endpoint should be created",
+        "name": "create_traces_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `role_name` for the log forwarder role",
+        "name": "log_forwarder_use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "1024",
+        "description": "Memory size for the log forwarder lambda function",
+        "name": "log_forwarder_memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the RDS enhanced monitoring forwarder",
+        "name": "create_rds_em_forwarder_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "rds_em_forwarder_architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "7",
+        "description": "RDS enhanced monitoring forwarder CloudWatch log group retention in days",
+        "name": "rds_em_forwarder_log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "vpc_fl_forwarder_runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when forwarder lambda function should run in the VPC",
+        "name": "vpc_fl_forwarder_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "vpc_fl_forwarder_log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an S3 artifact bucket should be created. this is used for the zip archive as well as caching tags",
+        "name": "create_bucket",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"datadog-log-forwarder\"",
+        "description": "Log forwarder lambda name",
+        "name": "log_forwarder_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "log_forwarder_log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for RDS enhanced monitoring forwarder lambda function to utilize",
+        "name": "rds_em_forwarder_role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether a log forwarder endpoint should be created",
+        "name": "create_log_forwarder_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether a processes endpoint should be created",
+        "name": "create_processes_vpce",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new fambda function Version",
+        "name": "rds_em_forwarder_publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when forwarder lambda function should run in the VPC. Usually private or intra subnets",
+        "name": "vpc_fl_forwarder_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "",
+        "description": "Alias of KMS key used to encrypt the Datadog API keys - must start with `alias/`",
+        "name": "kms_alias",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"SSE-C\"\n]",
+        "description": "List of encryption types to block on the bucket (e.g. `[\"SSE-C\"]`). Set to `[]` to block none. Defaults to blocking SSE-C, matching AWS's own default enforcement direction for new buckets, so the attribute doesn't drift against the provider's returned state on every plan",
+        "name": "bucket_blocked_encryption_types",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the log forwarder",
+        "name": "create_log_forwarder_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the log forwarder role",
+        "name": "log_forwarder_role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the log forwarder role",
+        "name": "log_forwarder_role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `policy_name` for the log forwarder policy",
+        "name": "log_forwarder_use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "256",
+        "description": "Memory size for the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "ID of VPC to provision endpoints within",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "log_forwarder_architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "S3 object key prefix to prepend to zip archive name",
+        "name": "log_forwarder_bucket_prefix",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of subnets to associate with traces endpoint",
+        "name": "traces_vpce_subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"\"",
+        "description": "Log forwarder role name",
+        "name": "log_forwarder_role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the VPC flow log forwarder lambda",
+        "name": "vpc_fl_forwarder_layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "IDs of security groups to attach to metrics endpoint",
+        "name": "metrics_vpce_security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls if S3 bucket should have deny non-SSL transport policy attacheds",
+        "name": "bucket_attach_deny_insecure_transport_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Set to true to not merge `var.tags` with `log_forwarder_s3_zip_tags`. Useful to avoid breaching S3 Object 10 tag limit",
+        "name": "log_forwarder_s3_zip_tags_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Log forwarder policy name",
+        "name": "log_forwarder_policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "rds_em_forwarder_runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the RDS enhanced monitoring forwarder resources",
+        "name": "rds_em_forwarder_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "vpc_fl_forwarder_role_max_session_duration",
+        "required": false,
+        "type": "number"
+      }
+    ],
+    "vpc_flow_log_forwarder": [
+      {
+        "default": "null",
+        "description": "The maximum session duration (in seconds) that you want to set for the specified role. If you do not specify a value for this setting, the default maximum of one hour is applied. This setting can have a value from 1 hour to 12 hours",
+        "name": "role_max_session_duration",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder policy path",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"python3.12\"",
+        "description": "Lambda function runtime",
+        "name": "runtime",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether to publish creation/change as a new Lambda Function Version",
+        "name": "publish",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether the forwarder resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The Datadog application key associated with the user account that created it, which can be found from the APIs page",
+        "name": "dd_app_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role is created for the forwarder",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `role_name` for the forwarder role",
+        "name": "use_role_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "\"datadog-vpc-flow-log-forwarder\"",
+        "description": "Forwarder lambda name",
+        "name": "name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[\n  \"arm64\"\n]",
+        "description": "Instruction set architecture for your Lambda function. Valid values are `[\"x86_64\"]` and `[\"arm64\"]`. Default is `[\"arm64\"]`",
+        "name": "architectures",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "256",
+        "description": "Memory size for the forwarder lambda function",
+        "name": "memory_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "10",
+        "description": "The amount of time the forwarder lambda has to execute in seconds",
+        "name": "timeout",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "false",
+        "description": "Whether to use unique name beginning with the specified `policy_name` for the forwarder policy",
+        "name": "use_policy_name_prefix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "List of Lambda Layer Version ARNs (maximum of 5) to attach to the forwarder lambda",
+        "name": "layers",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of environment variables for the forwarder lambda function",
+        "name": "environment_variables",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "7",
+        "description": "Forwarder CloudWatch log group retention in days",
+        "name": "log_retention_days",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "\"4.12.0\"",
+        "description": "VPC flow log monitoring version - see https://github.com/DataDog/datadog-serverless-functions/releases",
+        "name": "forwarder_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "List of subnet ids when Lambda Function should run in the VPC. Usually private or intra subnets",
+        "name": "subnet_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "\"datadoghq.com\"",
+        "description": "Define your Datadog Site to send data to. For the Datadog EU site, set to datadoghq.eu",
+        "name": "dd_site",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder role name",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "S3 log buckets for forwarder to read and forward VPC flow logs to Datadog",
+        "name": "s3_log_bucket_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "KMS key that is used to encrypt environment variables. If this configuration is not provided when environment variables are in use, AWS Lambda uses a default service key",
+        "name": "kms_key_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The AWS KMS Key ARN to use for CloudWatch log group encryption",
+        "name": "log_kms_key_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The ARN of the Secrets Manager secret storing the Datadog API key, if you already have it stored in Secrets Manager",
+        "name": "dd_api_key_secret_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the forwarder role",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether an IAM role policy is created for the forwarder",
+        "name": "create_role_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "Forwarder policy name",
+        "name": "policy_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Whether the forwarder will read CloudWatch log groups for VPC flow logs",
+        "name": "read_cloudwatch_logs",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "List of security group ids when Lambda Function should run in the VPC",
+        "name": "security_group_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "",
+        "description": "Alias of KMS key used to encrypt the Datadog API keys - must start with `alias/`",
+        "name": "kms_alias",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Forwarder role path",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "IAM policy arn for forwarder lambda function to utilize",
+        "name": "policy_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to apply to the forwarder lambda function",
+        "name": "lambda_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to use on all resources",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "IAM role arn for forwarder lambda function to utilize",
+        "name": "role_arn",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "10",
+        "description": "The amount of reserved concurrent executions for the forwarder lambda function",
+        "name": "reserved_concurrent_executions",
+        "required": false,
+        "type": "number"
+      }
+    ]
+  },
+  "all_outputs": {
+    "log_forwarder": [
+      {
+        "description": "The stable and unique string identifying the forwarder lambda role",
+        "name": "role_unique_id"
+      },
+      {
+        "description": "The ETag generated for the forwarder lambda zip object (an MD5 sum of the object content)",
+        "name": "s3_object_etag"
+      },
+      {
+        "description": "A unique version ID value for the forwarder lambda zip object, if bucket versioning is enabled",
+        "name": "s3_object_version"
+      },
+      {
+        "description": "The ARN of the bucket. Will be of format arn:aws:s3:::bucketname",
+        "name": "s3_bucket_arn"
+      },
+      {
+        "description": "The bucket region-specific domain name. The bucket domain name including the region name",
+        "name": "s3_bucket_regional_domain_name"
+      },
+      {
+        "description": "The ARN of the forwarder lambda role policy",
+        "name": "role_policy_arn"
+      },
+      {
+        "description": "The `key` of the forwarder lambda zip archive",
+        "name": "s3_object_id"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function CloudWatch log group",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The ID of the forwarder lambda role policy",
+        "name": "role_policy_id"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function",
+        "name": "lambda_arn"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "lambda_qualified_arn"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the forwarder lambda function",
+        "name": "lambda_kms_key_arn"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the zip file, provided either via filename or s3_* parameters",
+        "name": "lambda_source_code_hash"
+      },
+      {
+        "description": "The bucket domain name. Will be of format bucketname.s3.amazonaws.com",
+        "name": "s3_bucket_domain_name"
+      },
+      {
+        "description": "The forwarder lambda role arn",
+        "name": "role_arn"
+      },
+      {
+        "description": "The forwarder lambda role name",
+        "name": "role_name"
+      },
+      {
+        "description": "The name of the forwarder lambda role policy",
+        "name": "role_policy_name"
+      },
+      {
+        "description": "Latest published version of the forwarder lambda function",
+        "name": "lambda_version"
+      },
+      {
+        "description": "The name of the bucket",
+        "name": "s3_bucket_id"
+      },
+      {
+        "description": "The forwarder lambda role id",
+        "name": "role_id"
+      }
+    ],
+    "rds_enhanced_monitoring_forwarder": [
+      {
+        "description": "The name of the forwarder lambda role policy",
+        "name": "role_policy_name"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the forwarder lambda function",
+        "name": "lambda_kms_key_arn"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the zip file, provided either via filename or s3_* parameters",
+        "name": "lambda_source_code_hash"
+      },
+      {
+        "description": "The forwarder lambda role arn",
+        "name": "role_arn"
+      },
+      {
+        "description": "The forwarder lambda role id",
+        "name": "role_id"
+      },
+      {
+        "description": "The forwarder lambda role name",
+        "name": "role_name"
+      },
+      {
+        "description": "The ID of the forwarder lambda role policy",
+        "name": "role_policy_id"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function",
+        "name": "lambda_arn"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "lambda_qualified_arn"
+      },
+      {
+        "description": "Latest published version of the forwarder lambda function",
+        "name": "lambda_version"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function CloudWatch log group",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The stable and unique string identifying the forwarder lambda role",
+        "name": "role_unique_id"
+      },
+      {
+        "description": "The ARN of the forwarder lambda role policy",
+        "name": "role_policy_arn"
+      }
+    ],
+    "root": [
+      {
+        "description": "The RDS enhanced monitoring forwarder lambda role name",
+        "name": "rds_em_forwarder_role_name"
+      },
+      {
+        "description": "The state of the agent VPC endpoint",
+        "name": "agent_endpoint_state"
+      },
+      {
+        "description": "ARN of the traces VPC endpoint",
+        "name": "traces_endpoint_arn"
+      },
+      {
+        "description": "The ARN of the log forwarder bucket. Will be of format arn:aws:s3:::bucketname",
+        "name": "log_forwarder_s3_bucket_arn"
+      },
+      {
+        "description": "The log forwarder lambda role name",
+        "name": "log_forwarder_role_name"
+      },
+      {
+        "description": "The VPC flow log forwarder lambda role id",
+        "name": "vpc_fl_forwarder_role_id"
+      },
+      {
+        "description": "The ID of the VPC flow log forwarder lambda role policy",
+        "name": "vpc_fl_forwarder_role_policy_id"
+      },
+      {
+        "description": "The ARN of the VPC flow log forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "vpc_fl_forwarder_lambda_qualified_arn"
+      },
+      {
+        "description": "One or more network interfaces for the agent VPC endpoint",
+        "name": "agent_endpoint_network_interface_ids"
+      },
+      {
+        "description": "ARN of the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_arn"
+      },
+      {
+        "description": "One or more network interfaces for API api VPC endpoint",
+        "name": "api_endpoint_network_interface_ids"
+      },
+      {
+        "description": "The ARN of the log forwarder lambda function CloudWatch log group",
+        "name": "log_forwarder_cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The ARN of the RDS enhanced monitoring forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "rds_em_forwarder_lambda_qualified_arn"
+      },
+      {
+        "description": "The VPC flow log forwarder lambda role arn",
+        "name": "vpc_fl_forwarder_role_arn"
+      },
+      {
+        "description": "ID of the traces VPC endpoint",
+        "name": "traces_endpoint_id"
+      },
+      {
+        "description": "DNS entries of the traces VPC endpoint",
+        "name": "traces_endpoint_dns_entry"
+      },
+      {
+        "description": "The ID of the AWS account that owns the traces VPC endpoint",
+        "name": "traces_endpoint_owner_id"
+      },
+      {
+        "description": "The ETag generated for the log forwarder lambda zip object (an MD5 sum of the object content)",
+        "name": "log_forwarder_s3_object_etag"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the RDS enhanced monitoring lambda forwarder zip file, provided either via filename or s3_* parameters",
+        "name": "rds_em_forwarder_lambda_source_code_hash"
+      },
+      {
+        "description": "The stable and unique string identifying the VPC flow log forwarder lambda role.",
+        "name": "vpc_fl_forwarder_role_unique_id"
+      },
+      {
+        "description": "The ARN of the VPC flow log forwarder lambda role policy",
+        "name": "vpc_fl_forwarder_role_policy_arn"
+      },
+      {
+        "description": "Latest published version of the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_lambda_version"
+      },
+      {
+        "description": "The ARN of the VPC flow log forwarder lambda function CloudWatch log group",
+        "name": "vpc_fl_forwarder_cloudwatch_log_group_arn"
+      },
+      {
+        "description": "ARN of the agent VPC endpoint",
+        "name": "agent_endpoint_arn"
+      },
+      {
+        "description": "ID of the processes VPC endpoint",
+        "name": "processes_endpoint_id"
+      },
+      {
+        "description": "One or more network interfaces for the processes VPC endpoint",
+        "name": "processes_endpoint_network_interface_ids"
+      },
+      {
+        "description": "The log forwarder bucket domain name. Will be of format bucketname.s3.amazonaws.com",
+        "name": "log_forwarder_s3_bucket_domain_name"
+      },
+      {
+        "description": "The stable and unique string identifying the log forwarder lambda role",
+        "name": "log_forwarder_role_unique_id"
+      },
+      {
+        "description": "The ID of the log forwarder lambda role policy",
+        "name": "log_forwarder_role_policy_id"
+      },
+      {
+        "description": "The ID of the RDS enhanced monitoring forwarder lambda role policy",
+        "name": "rds_em_forwarder_role_policy_id"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_lambda_kms_key_arn"
+      },
+      {
+        "description": "The ARN of the log forwarder lambda role policy",
+        "name": "log_forwarder_role_policy_arn"
+      },
+      {
+        "description": "The ARN of the RDS enhanced monitoring forwarder lambda role policy",
+        "name": "rds_em_forwarder_role_policy_arn"
+      },
+      {
+        "description": "The name of the RDS enhanced monitoring forwarder lambda role policy",
+        "name": "rds_em_forwarder_role_policy_name"
+      },
+      {
+        "description": "The ARN of the VPC flow log forwarder lambda function",
+        "name": "vpc_fl_forwarder_lambda_arn"
+      },
+      {
+        "description": "ARN of the API VPC endpoint",
+        "name": "api_endpoint_arn"
+      },
+      {
+        "description": "DNS entries of the API VPC endpoint",
+        "name": "api_endpoint_dns_entry"
+      },
+      {
+        "description": "The stable and unique string identifying the RDS enhanced monitoring forwarder lambda role.",
+        "name": "rds_em_forwarder_role_unique_id"
+      },
+      {
+        "description": "The ARN of the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_lambda_arn"
+      },
+      {
+        "description": "Latest published version of the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_lambda_version"
+      },
+      {
+        "description": "The ID of the AWS account that owns the agent VPC endpoint",
+        "name": "agent_endpoint_owner_id"
+      },
+      {
+        "description": "DNS entries of the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_dns_entry"
+      },
+      {
+        "description": "The state of the metrics VPC endpoint",
+        "name": "metrics_endpoint_state"
+      },
+      {
+        "description": "Latest published version of the log forwarder lambda function",
+        "name": "log_forwarder_lambda_version"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the log forwarder zip file, provided either via filename or s3_* parameters",
+        "name": "log_forwarder_lambda_source_code_hash"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the RDS enhanced monitoring forwarder lambda function",
+        "name": "rds_em_forwarder_lambda_kms_key_arn"
+      },
+      {
+        "description": "ID of the metrics VPC endpoint",
+        "name": "metrics_endpoint_id"
+      },
+      {
+        "description": "The state of the traces VPC endpoint",
+        "name": "traces_endpoint_state"
+      },
+      {
+        "description": "ID of the agent VPC endpoint",
+        "name": "agent_endpoint_id"
+      },
+      {
+        "description": "One or more network interfaces for the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_network_interface_ids"
+      },
+      {
+        "description": "The ID of the AWS account that owns the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_owner_id"
+      },
+      {
+        "description": "The ID of the AWS account that owns the API VPC endpoint",
+        "name": "api_endpoint_owner_id"
+      },
+      {
+        "description": "ARN of the processes VPC endpoint",
+        "name": "processes_endpoint_arn"
+      },
+      {
+        "description": "The log forwarder lambda role id",
+        "name": "log_forwarder_role_id"
+      },
+      {
+        "description": "The RDS enhanced monitoring forwarder lambda role id",
+        "name": "rds_em_forwarder_role_id"
+      },
+      {
+        "description": "One or more network interfaces for the metrics VPC endpoint",
+        "name": "metrics_endpoint_network_interface_ids"
+      },
+      {
+        "description": "The state of the processes VPC endpoint",
+        "name": "processes_endpoint_state"
+      },
+      {
+        "description": "The ARN of the log forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "log_forwarder_lambda_qualified_arn"
+      },
+      {
+        "description": "The name of the VPC flow log forwarder lambda role policy",
+        "name": "vpc_fl_forwarder_role_policy_name"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the VPC flow log forwarder lambda zip file, provided either via filename or s3_* parameters",
+        "name": "vpc_fl_forwarder_lambda_source_code_hash"
+      },
+      {
+        "description": "ARN of the metrics VPC endpoint",
+        "name": "metrics_endpoint_arn"
+      },
+      {
+        "description": "DNS entries of the agent VPC endpoint",
+        "name": "agent_endpoint_dns_entry"
+      },
+      {
+        "description": "The name of the log forwarder lambda role policy",
+        "name": "log_forwarder_role_policy_name"
+      },
+      {
+        "description": "The `key` of the log forwarder lambda zip archive",
+        "name": "log_forwarder_s3_object_id"
+      },
+      {
+        "description": "The ARN of the RDS enhanced monitoring forwarder lambda function CloudWatch log group",
+        "name": "rds_em_forwarder_cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The log forwarder bucket region-specific domain name. The bucket domain name including the region name",
+        "name": "log_forwarder_s3_bucket_regional_domain_name"
+      },
+      {
+        "description": "DNS entries of the metrics VPC endpoint",
+        "name": "metrics_endpoint_dns_entry"
+      },
+      {
+        "description": "The ID of the AWS account that owns the metrics VPC endpoint",
+        "name": "metrics_endpoint_owner_id"
+      },
+      {
+        "description": "ID of the API VPC endpoint",
+        "name": "api_endpoint_id"
+      },
+      {
+        "description": "The state of the API VPC endpoint",
+        "name": "api_endpoint_state"
+      },
+      {
+        "description": "DNS entries of the processes VPC endpoint",
+        "name": "processes_endpoint_dns_entry"
+      },
+      {
+        "description": "The ID of the AWS account that owns the processes VPC endpoint",
+        "name": "processes_endpoint_owner_id"
+      },
+      {
+        "description": "One or more network interfaces for the traces VPC endpoint",
+        "name": "traces_endpoint_network_interface_ids"
+      },
+      {
+        "description": "A unique version ID value for the log forwarder lambda zip object, if bucket versioning is enabled",
+        "name": "log_forwarder_s3_object_version"
+      },
+      {
+        "description": "The RDS enhanced monitoring forwarder lambda role arn",
+        "name": "rds_em_forwarder_role_arn"
+      },
+      {
+        "description": "The VPC flow log forwarder lambda role name",
+        "name": "vpc_fl_forwarder_role_name"
+      },
+      {
+        "description": "ID of the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_id"
+      },
+      {
+        "description": "The state of the log forwarder VPC endpoint",
+        "name": "log_forwarder_endpoint_state"
+      },
+      {
+        "description": "The name of the log forwarder bucket",
+        "name": "log_forwarder_s3_bucket_id"
+      },
+      {
+        "description": "The log forwarder lambda role arn",
+        "name": "log_forwarder_role_arn"
+      },
+      {
+        "description": "The ARN of the log forwarder lambda function",
+        "name": "log_forwarder_lambda_arn"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the log forwarder lambda function",
+        "name": "log_forwarder_lambda_kms_key_arn"
+      }
+    ],
+    "vpc_flow_log_forwarder": [
+      {
+        "description": "The forwarder lambda role name",
+        "name": "role_name"
+      },
+      {
+        "description": "The stable and unique string identifying the forwarder lambda role",
+        "name": "role_unique_id"
+      },
+      {
+        "description": "The name of the forwarder lambda role policy",
+        "name": "role_policy_name"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function",
+        "name": "lambda_arn"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function (if versioning is enabled via publish = true)",
+        "name": "lambda_qualified_arn"
+      },
+      {
+        "description": "(Optional) The ARN for the KMS encryption key for the forwarder lambda function",
+        "name": "lambda_kms_key_arn"
+      },
+      {
+        "description": "The ARN of the forwarder lambda function CloudWatch log group",
+        "name": "cloudwatch_log_group_arn"
+      },
+      {
+        "description": "The forwarder lambda role arn",
+        "name": "role_arn"
+      },
+      {
+        "description": "The forwarder lambda role id",
+        "name": "role_id"
+      },
+      {
+        "description": "The ARN of the forwarder lambda role policy",
+        "name": "role_policy_arn"
+      },
+      {
+        "description": "The ID of the forwarder lambda role policy",
+        "name": "role_policy_id"
+      },
+      {
+        "description": "Latest published version of the forwarder lambda function",
+        "name": "lambda_version"
+      },
+      {
+        "description": "Base64-encoded representation of raw SHA-256 sum of the zip file, provided either via filename or s3_* parameters",
+        "name": "lambda_source_code_hash"
+      }
+    ]
+  },
+  "built_from_version": "7.2.0",
+  "module_id": "terraform-aws-modules/datadog-forwarders/aws",
+  "vars": {
+    "root::agent_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::api_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::log_forwarder_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::metrics_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::processes_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    },
+    "root::traces_vpce_policy": {
+      "examples": [],
+      "field_names": [],
+      "note": "no example and no observed field names found in the module source; likely pass-through/context plumbing or a runtime-polymorphic value - stays honest `any`, see the module source directly for the raw shape",
+      "provenance": "honest-any"
+    }
+  }
+}

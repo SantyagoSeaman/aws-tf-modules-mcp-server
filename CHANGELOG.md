@@ -1,5 +1,31 @@
 # Changelog
 
+## [0.25.0] - 2026-07-21
+
+[0.25.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.25.0
+
+The interface release. `get_module` becomes the COMPLETE, fully-offline interface for the whole curated catalog, and the one networked tool -- `grep_module_docs` -- is removed. Every one of the 63 catalog modules now serves its complete registry-declared inputs/outputs (name, type, required, default, description for inputs; name and description for outputs), superseding the hand-picked curated-doc subset that frequently hid most of the real interface (`rds`, for example, curated 41 of its 111 root inputs, leaving 70 invisible). The complete table renders **root-scope-only by default** -- a submodule's complete interface is one call away via the submodule address (`get_module("eks//modules/karpenter", sections=["inputs"])`), and the footer lists the reachable submodule scopes by name. The 22 modules with at least one `type = any` input additionally carry apply-verified example HCL and observed field names per `any` variable, so an agent can confirm a nested shape without leaving the one call. `grep_module_docs` -- the only networked tool, and the measured cost driver in eval runs -- is gone: the server now exposes exactly three fully-offline tools (`search_modules`, `modules_list`, `get_module`), and non-catalog / version-pinned / live lookups are punted to the agent's other Terraform Registry tooling (e.g. the HashiCorp MCP). All of this is a serve-time and documentation change layered on committed static data -- the search index is not rebuilt, so there is no embedding drift.
+
+### Added
+
+- **A committed `model/any_overlay/<id>.json` overlay for every one of the 63 catalog modules** (built via `scripts/build_any_overlay.py` against live registry data). Each carries `all_inputs`/`all_outputs` keyed by scope (`root` plus one key per submodule), covering the module's complete registry-declared interface at its `built_from_version`.
+- **`get_module`'s inputs/outputs views render the complete table from the overlay**, superseding the curated Markdown subset whenever a bundle's scope resolves against the overlay (root or a named submodule); it falls back to the curated table exactly as before when a module has no overlay or a scope cannot be resolved. Applies to `sections=["inputs"|"outputs"]`, the `all`/`full` escape hatch, and submodule-address requests.
+- **Root-scope-by-default rendering**: only the module's own root-level interface renders by default, not every submodule's concatenated together (serving all scopes had pushed large modules like `eks` past the MCP tool output cap). A **submodule-scope menu** in the footer names every reachable submodule scope with the exact `get_module("<name>//modules/<sub>", sections=[...])` call to pull it, and a **48,000-byte safety cap** on the rendered table truncates with a "+N more rows" pointer rather than ever emitting a response large enough to trip the output cap.
+- **Any-typed input overlay for the 22 modules with at least one `any` input**: per `any` variable, the module maintainers' own apply-verified example HCL (extracted from the module's committed `examples/` at build time) plus a list of field names observed in the module source, appended to the inputs view. Every appendix is honestly labeled (apply-verified from a specific version, not a schema, with a version-skew note), and an `any`-typed Type cell in the orientation head gains a one-line `any -- see sections=["inputs"]` pointer.
+- **`src/tfmod_any_examples.py`** (the example/field-name extraction library) and **`scripts/build_any_overlay.py`** (the build-time overlay generator).
+
+### Changed / Removed
+
+- **`grep_module_docs` removed outright** -- the tool, its pydantic output models, and its helpers are gone from `tfmod_mcp_server.py`; `src/tfmod_doc_grep.py` (the pure grep engine) is deleted; `tfmod_registry_docs.py` is stripped of the grep-only registry-docs cache machinery (document assembly, disk cache, the live HTTP fetch path), keeping only the PyPI update-check functions and the build-time overlay-builder fetch helpers; the now-unused `doc_cache_dir`/`doc_cache_ttl_hours` config plumbing is dropped from `config.yaml` and the config loader. The server has no networked tools now -- only the opt-in background PyPI update-check thread in HTTP mode remains.
+- **Every server instruction, footer, and escalation pointer that used to route to `grep_module_docs`** now points completeness and name-confirmation at `get_module(sections=["inputs","outputs"])`; a non-catalog module, a pinned older version, or a `map(object)`/`any` field's exact nested shape is punted to the module source or the agent's other Terraform Registry tooling.
+- **The `get_module` response for the 41 modules with no `any`-typed input is no longer byte-identical to 0.24.0** -- their curated, possibly-partial input/output table is now superseded by the complete registry-sourced one on every inputs/outputs request.
+- **`s3-bucket`'s pinned version moved 5.14.1 -> 5.15.1** (patch-level; one new output, no input changes) so its overlay builds from the doc's current pin.
+- **Plugin skills, subagents, and module docs reworded**: the `tf-grep` skill is removed entirely; the other model-invoked skills (`aws-terraform-modules`, `tf-module`, `tf-stack`, `tf-migrate`, `tf-module-upgrade`, `tf-review`, `tf-troubleshoot`) and both subagents (`tf-log-analyst`, `tf-diff-reviewer`) drop their grep guidance; 19 `modules/**/*.md` "Notes for AI Agents" escalations route to `get_module` instead.
+
+### Unchanged
+
+- `search_modules` and `modules_list` are byte-identical. **The search index is not rebuilt** -- this whole release is serve-time and documentation over committed static data, no embedding drift. The overlay data and the update-check / overlay-build code paths are intact, so a future "universal reach" (a `get_module` that live-fetches a non-catalog module's structured interface, no regex) remains buildable without resurrecting the grep engine.
+
 ## [0.24.0] - 2026-07-17
 
 [0.24.0]: https://github.com/SantyagoSeaman/tfmodsearch/releases/tag/v0.24.0

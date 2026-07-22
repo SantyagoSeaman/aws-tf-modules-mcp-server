@@ -1,0 +1,964 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "[]",
+        "description": "List of policy statements ARN to attach to IAM role",
+        "name": "policies",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Connection definitions.",
+        "name": "connections",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "null",
+        "description": "Description of IAM role to use for EventBridge",
+        "name": "role_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM policy to use for EventBridge",
+        "name": "policy_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS SNS's you want to use as EventBridge targets",
+        "name": "sns_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "Additional trusted entities for assuming roles (trust relationship)",
+        "name": "trusted_entities",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-pipe' to the name of the pipe",
+        "name": "append_pipe_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SNS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sns_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the StepFunctions you want to use as EventBridge targets",
+        "name": "sfn_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_jsons should be added to IAM role",
+        "name": "attach_policy_jsons",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies JSON to attach to IAM role",
+        "name": "number_of_policy_jsons",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The configuration block for the EventBridge bus log config settings",
+        "name": "log_config",
+        "required": false,
+        "type": "object({\n    include_detail = string\n    level          = string\n  })"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Permission definitions.",
+        "name": "permissions",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the StepFunction policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sfn_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Kinesis Streams you want to use as EventBridge targets",
+        "name": "kinesis_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_json should be added to IAM role",
+        "name": "attach_policy_json",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether resources should be created",
+        "name": "create",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge log delivery source resource should be created",
+        "name": "create_log_delivery_source",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Specifies to force detaching any policies the IAM role has before destroying it.",
+        "name": "role_force_detach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-destination' to the name of the destination",
+        "name": "append_destination_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Connection resources should be created",
+        "name": "create_connections",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether default schemas discoverer should be created",
+        "name": "create_schemas_discoverer",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The partner event source that the new event bus will be matched with. Must match name.",
+        "name": "event_source_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"Auto schemas discoverer event\"",
+        "description": "Default schemas discoverer description",
+        "name": "schemas_discoverer_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy should be added to IAM role",
+        "name": "attach_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether policy_statements should be added to IAM role",
+        "name": "attach_policy_statements",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-group' to the name of the schedule group",
+        "name": "append_schedule_group_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Region where the resource(s) will be managed. Defaults to the region set in the provider configuration",
+        "name": "region",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule Group definitions.",
+        "name": "schedule_groups",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-connection' to the name of the connection",
+        "name": "append_connection_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Event bus description",
+        "name": "bus_description",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Target definitions.",
+        "name": "targets",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to resources.",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule Group create and delete timeouts.",
+        "name": "schedule_group_timeouts",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of approved roles to be passed",
+        "name": "ecs_pass_role_resources",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether list of policies should be added to IAM role",
+        "name": "attach_policies",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-schedule' to the name of the schedule",
+        "name": "append_schedule_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "The identifier of the AWS KMS customer managed key for EventBridge to use, if you choose to use a customer managed key to encrypt events on this event bus. The identifier can be the key Amazon Resource Name (ARN), KeyId, key alias, or key alias ARN.",
+        "name": "kms_key_identifier",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "{}",
+        "description": "Configuration details of the Amazon SQS queue for EventBridge to use as a dead-letter queue (DLQ)",
+        "name": "dead_letter_config",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether X-Ray tracing policy should be added to IAM role for EventBridge",
+        "name": "attach_tracing_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Kinesis Firehose Delivery Streams you want to use as EventBridge targets",
+        "name": "kinesis_firehose_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[]",
+        "description": "List of additional policy documents as JSON to attach to IAM role",
+        "name": "policy_jsons",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the ECS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_ecs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether IAM roles should be created",
+        "name": "create_role",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Bus resource should be created",
+        "name": "create_bus",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "Map of the configuration block for the EventBridge bus log delivery settings (key is the type of log delivery: cloudwatch_logs, s3, firehose)",
+        "name": "log_delivery",
+        "required": false,
+        "type": "map(object({\n    enabled         = optional(bool, true)\n    destination_arn = string\n    source_name     = optional(string)\n    name            = optional(string)\n    output_format   = optional(string)\n    field_delimiter = optional(string)\n    record_fields   = optional(list(string))\n    s3_delivery_configuration = optional(object({\n      enable_hive_compatible_path = optional(bool)\n      suffix_path                 = optional(string)\n    }))\n  }))"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Schedule definitions.",
+        "name": "schedules",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "0",
+        "description": "Number of policies to attach to IAM role",
+        "name": "number_of_policies",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with the EventBridge Archive definitions.",
+        "name": "archives",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Destination definitions.",
+        "name": "api_destinations",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the API Destination policy should be added to IAM role for EventBridge Target",
+        "name": "attach_api_destination_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Lambda Functions you want to use as EventBridge targets",
+        "name": "lambda_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Permission resources should be created",
+        "name": "create_permissions",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether an IAM role should be created for the pipes only",
+        "name": "create_pipe_role_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Path of IAM role to use for EventBridge",
+        "name": "role_path",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS SQS Queues you want to use as EventBridge targets",
+        "name": "sqs_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "[\n  \"*\"\n]",
+        "description": "The Amazon Resource Name (ARN) of the AWS KMS's configured for AWS SNS you want Decrypt/GenerateDataKey for",
+        "name": "sns_kms_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Map of dynamic policy statements to attach to IAM role",
+        "name": "policy_statements",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Schedule resources should be created",
+        "name": "create_schedules",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge log delivery resources should be created",
+        "name": "create_log_delivery",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of log delivery source",
+        "name": "log_delivery_source_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The ARN of the policy that is used to set the permissions boundary for the IAM role used by EventBridge",
+        "name": "role_permissions_boundary",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document as JSON to attach to IAM role",
+        "name": "policy_json",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "An additional policy document ARN to attach to IAM role",
+        "name": "policy",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Target resources should be created",
+        "name": "create_targets",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Destination resources should be created",
+        "name": "create_api_destinations",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of tags to assign to IAM role",
+        "name": "role_tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Kinesis policy should be added to IAM role for EventBridge Target",
+        "name": "attach_kinesis_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Kinesis Firehose policy should be added to IAM role for EventBridge Target",
+        "name": "attach_kinesis_firehose_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Lambda Function policy should be added to IAM role for EventBridge Target",
+        "name": "attach_lambda_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the Cloudwatch policy should be added to IAM role for EventBridge Target",
+        "name": "attach_cloudwatch_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Schedule Group resources should be created",
+        "name": "create_schedule_groups",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"default\"",
+        "description": "A unique name for your EventBridge Bus",
+        "name": "bus_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the AWS ECS Tasks you want to use as EventBridge targets",
+        "name": "ecs_target_arns",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether EventBridge Archive resources should be created",
+        "name": "create_archives",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether to append '-rule' to the name of the rule",
+        "name": "append_rule_postfix",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Rule resources should be created",
+        "name": "create_rules",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Rule definitions.",
+        "name": "rules",
+        "required": false,
+        "type": "map(any)"
+      },
+      {
+        "default": "{}",
+        "description": "A map of objects with EventBridge Pipe definitions.",
+        "name": "pipes",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "true",
+        "description": "Controls whether EventBridge Pipes resources should be created",
+        "name": "create_pipes",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "Name of IAM role to use for EventBridge",
+        "name": "role_name",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Controls whether the SQS policy should be added to IAM role for EventBridge Target",
+        "name": "attach_sqs_policy",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "[]",
+        "description": "The Amazon Resource Name (ARN) of the Cloudwatch Log Streams you want to use as EventBridge targets",
+        "name": "cloudwatch_target_arns",
+        "required": false,
+        "type": "list(string)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "The EventBridge Schedule Group ARNs",
+        "name": "eventbridge_schedule_group_arns"
+      },
+      {
+        "description": "The EventBridge Schedule Group states",
+        "name": "eventbridge_schedule_group_states"
+      },
+      {
+        "description": "The EventBridge Pipes ARNs",
+        "name": "eventbridge_pipe_arns"
+      },
+      {
+        "description": "The EventBridge Targets created and their attributes",
+        "name": "eventbridge_targets"
+      },
+      {
+        "description": "The EventBridge Permission IDs",
+        "name": "eventbridge_permission_ids"
+      },
+      {
+        "description": "The EventBridge Schedule Groups created and their attributes",
+        "name": "eventbridge_schedule_groups"
+      },
+      {
+        "description": "The EventBridge Bus Name",
+        "name": "eventbridge_bus_name"
+      },
+      {
+        "description": "The EventBridge Connection Arns",
+        "name": "eventbridge_connection_arns"
+      },
+      {
+        "description": "The EventBridge Schedule IDs created",
+        "name": "eventbridge_schedule_ids"
+      },
+      {
+        "description": "The EventBridge Schedule ARNs created",
+        "name": "eventbridge_schedule_arns"
+      },
+      {
+        "description": "The ARNs of the IAM role created for EventBridge Pipes",
+        "name": "eventbridge_pipe_role_arns"
+      },
+      {
+        "description": "The EventBridge Rules created and their attributes",
+        "name": "eventbridge_rules"
+      },
+      {
+        "description": "The EventBridge IAM roles created and their attributes",
+        "name": "eventbridge_iam_roles"
+      },
+      {
+        "description": "The EventBridge Archive ARNs",
+        "name": "eventbridge_archive_arns"
+      },
+      {
+        "description": "The EventBridge API Destination ARNs",
+        "name": "eventbridge_api_destination_arns"
+      },
+      {
+        "description": "The EventBridge Rule ARNs",
+        "name": "eventbridge_rule_arns"
+      },
+      {
+        "description": "The EventBridge Schedule Group IDs",
+        "name": "eventbridge_schedule_group_ids"
+      },
+      {
+        "description": "The name of the IAM role created for EventBridge",
+        "name": "eventbridge_role_name"
+      },
+      {
+        "description": "The EventBridge Bus ARN",
+        "name": "eventbridge_bus_arn"
+      },
+      {
+        "description": "The EventBridge Bus created and their attributes",
+        "name": "eventbridge_bus"
+      },
+      {
+        "description": "The EventBridge Archives created and their attributes",
+        "name": "eventbridge_archives"
+      },
+      {
+        "description": "The EventBridge Pipes IAM roles created and their attributes",
+        "name": "eventbridge_pipes_iam_roles"
+      },
+      {
+        "description": "The EventBridge Connection IDs",
+        "name": "eventbridge_connection_ids"
+      },
+      {
+        "description": "The ARN of the IAM role created for EventBridge",
+        "name": "eventbridge_role_arn"
+      },
+      {
+        "description": "The names of the IAM role created for EventBridge Pipes",
+        "name": "eventbridge_pipe_role_names"
+      },
+      {
+        "description": "The EventBridge Rule IDs",
+        "name": "eventbridge_rule_ids"
+      },
+      {
+        "description": "The EventBridge Pipes IDs",
+        "name": "eventbridge_pipe_ids"
+      },
+      {
+        "description": "The EventBridge Permissions created and their attributes",
+        "name": "eventbridge_permissions"
+      },
+      {
+        "description": "The EventBridge Pipes created and their attributes",
+        "name": "eventbridge_pipes"
+      },
+      {
+        "description": "The EventBridge Bus CloudWatch Log Delivery Source ARN",
+        "name": "eventbridge_log_delivery_source_arn"
+      },
+      {
+        "description": "The EventBridge Bus CloudWatch Log Delivery Source Name",
+        "name": "eventbridge_log_delivery_source_name"
+      },
+      {
+        "description": "The EventBridge Connections created and their attributes",
+        "name": "eventbridge_connections"
+      },
+      {
+        "description": "The EventBridge API Destinations created and their attributes",
+        "name": "eventbridge_api_destinations"
+      },
+      {
+        "description": "The EventBridge Schedules created and their attributes",
+        "name": "eventbridge_schedules"
+      }
+    ]
+  },
+  "built_from_version": "4.3.0",
+  "module_id": "terraform-aws-modules/eventbridge/aws",
+  "vars": {
+    "root::connections": {
+      "examples": [
+        "connections = {\n    smee = {\n      authorization_type = \"API_KEY\"\n      auth_parameters = {\n        api_key = {\n          key   = \"x-signature-id\"\n          value = random_pet.this.id\n        }\n      }\n    }\n  }",
+        "connections = {\n    requestbin = {\n      authorization_type = \"BASIC\"\n      auth_parameters = {\n\n        basic = {\n          username = random_pet.this.id\n          password = random_pet.this.id\n        }\n\n        invocation_http_parameters = {\n          body = [{\n            key             = \"body-parameter-key\"\n            value           = \"body-parameter-value\"\n            is_value_secret = false\n            }, {\n            key             = \"body-secret-key\"\n            value           = \"body-secret-value\"\n            is_value_secret = true\n            }\n          ]\n\n          header = [{\n            key             = \"header-parameter-key1\"\n            value           = \"header-parameter-value1\"\n            is_value_secret = false\n            }, {\n            key   = \"header-parameter-key2\"\n            value = \"header-parameter-value2\"\n          }]\n\n          query_string = [{\n            key             = \"query-string-parameter-key1\"\n            value           = \"query-string-parameter-value1\"\n            is_value_secret = false\n            }, {\n            key   = \"query-string-parameter-key2\"\n            value = \"query-string-parameter-value2\"\n          }]\n        }\n      }\n    }\n\n    smee = {\n      authorization_type = \"OAUTH_CLIENT_CREDENTIALS\"\n      auth_parameters = {\n        oauth = {\n          authorization_endpoint = \"https://smee.io/hgoubgoibwekt331\"\n          http_method            = \"GET\"\n\n          client_parameters = {\n            client_id     = \"1234567890\"\n            client_secret = \"Pass1234!\"\n          }\n\n          oauth_http_parameters = {\n            body = [{\n              key             = \"body-parameter-key\"\n              value           = \"body-parameter-value\"\n              is_value_secret = false\n            }]\n\n            header = [{\n              key   = \"header-parameter-key1\"\n              value = \"header-parameter-value1\"\n              }, {\n              key             = \"header-parameter-key2\"\n              value           = \"header-parameter-value2\"\n              is_value_secret = true\n            }]\n\n            query_string = [{\n              key             = \"query-string-parameter-key\"\n              value           = \"query-string-parameter-value\"\n              is_value_secret = false\n            }]\n          }\n        }\n      }\n    }\n\n    github = {\n      authorization_type = \"API_KEY\"\n      auth_parameters = {\n        api_key = {\n          key   = \"x-signature-id\"\n          value = random_pet.this.id\n        }\n      }\n      kms_key_identifier = module.kms.key_arn\n    }\n  }"
+      ],
+      "field_names": [
+        "auth_parameters",
+        "authorization_endpoint",
+        "authorization_type",
+        "client_id",
+        "client_secret",
+        "description",
+        "http_method",
+        "invocation_connectivity_parameters",
+        "is_value_secret",
+        "key",
+        "kms_key_identifier",
+        "password",
+        "resource_configuration_arn",
+        "username",
+        "value"
+      ],
+      "provenance": "example+names"
+    },
+    "root::dead_letter_config": {
+      "examples": [],
+      "field_names": [
+        "arn"
+      ],
+      "provenance": "names-only"
+    },
+    "root::pipes": {
+      "examples": [
+        "pipes = {\n    # With enrichment via API Destination\n    enrichment = {\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      enrichment = \"smee\"\n      # This key should match the key inside \"api_destinations\"\n      enrichment_parameters = {\n        input_template = jsonencode({ input : \"yes\" })\n\n        http_parameters = {\n          path_parameter_values = [\"example-path-param\"]\n\n          header_parameters = {\n            \"example-header\"        = \"example-value\"\n            \"second-example-header\" = \"second-example-value\"\n          }\n\n          query_string_parameters = {\n            \"example-query-string\"        = \"example-value\"\n            \"second-example-query-string\" = \"second-example-value\"\n          }\n        }\n      }\n\n      tags = {\n        Pipe = \"enrichment\"\n      }\n    }\n\n    # With enrichment via API Destination created outside of the module\n    external_enrichment = {\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      enrichment = aws_cloudwatch_event_api_destination.external.arn\n\n      tags = {\n        Pipe = \"external_enrichment\"\n      }\n    }\n\n    # With SQS source/target parameters and filtering\n    sqs_source_sqs_target = {\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      source_parameters = {\n        # Filter criteria (max 5 filters)\n        filter_criteria = {\n          filter1 = {\n            pattern = jsonencode({ source = [\"event-source1\"] })\n          }\n          filter2 = {\n            pattern = jsonencode({ source = [\"event-source2\"] })\n          }\n        }\n\n        sqs_queue_parameters = {\n          batch_size                         = 2\n          maximum_batching_window_in_seconds = 61\n        }\n      }\n\n      log_configuration = {\n        level                  = \"TRACE\"\n        include_execution_data = [\"ALL\"]\n        cloudwatch_logs_log_destination = {\n          log_group_arn = aws_cloudwatch_log_group.logs.arn\n        }\n      }\n\n      # target_parameters = {\n      #   # Only supported for target FIFO SQS Queues\n      #   sqs_queue_parameters = {\n      #     message_deduplication_id = \"deduplication-id\"\n      #     message_group_id         = \"group1\"\n      #   }\n      # }\n\n      tags = {\n        Pipe = \"sqs_source_sqs_target\"\n      }\n    }\n\n    # With DynamoDB Stream source and SQS target\n    dynamodb_stream_source_sqs_target = {\n      source = aws_dynamodb_table.source.stream_arn\n      target = aws_sqs_queue.target.arn\n\n      source_parameters = {\n        dynamodb_stream_parameters = {\n          batch_size                         = 10\n          maximum_batching_window_in_seconds = 50\n          maximum_record_age_in_seconds      = 100\n          maximum_retry_attempts             = 300\n          on_partial_batch_item_failure      = \"AUTOMATIC_BISECT\"\n          parallelization_factor             = 5\n          starting_position                  = \"LATEST\"\n          dead_letter_config = {\n            arn = aws_sqs_queue.dlq.arn\n          }\n        }\n      }\n\n      target_parameters = {\n        input_template = \"{\\\"data\\\":<$.dynamodb>}\"\n      }\n\n      tags = {\n        Pipe = \"dynamodb_stream_source_sqs_target\"\n      }\n    }\n\n    # With Kinesis Stream source and CloudWatch Log\n    kinesis_source_cloudwatch_target = {\n      source = aws_kinesis_stream.source.arn\n      target = aws_cloudwatch_log_group.target.arn\n\n      source_parameters = {\n        kinesis_stream_parameters = {\n          batch_size                         = 7\n          maximum_batching_window_in_seconds = 90\n          maximum_record_age_in_seconds      = 100\n          maximum_retry_attempts             = 4\n          on_partial_batch_item_failure      = \"AUTOMATIC_BISECT\"\n          parallelization_factor             = 5\n          starting_position                  = \"TRIM_HORIZON\"\n          starting_position_timestamp        = null\n          dead_letter_config = {\n            arn = aws_sqs_queue.dlq.arn\n          }\n        }\n      }\n\n      target_parameters = {\n        cloudwatch_logs_parameters = {\n          log_stream_name = aws_cloudwatch_log_stream.target.arn\n        }\n      }\n\n      tags = {\n        Pipe = \"kinesis_source_cloudwatch_target\"\n      }\n    }\n\n    # With Kinesis Stream source and Kinesis Stream target\n    kinesis_source_kinesis_target = {\n      source = aws_kinesis_stream.source.arn\n      target = aws_kinesis_stream.target.arn\n\n      source_parameters = {\n        kinesis_stream_parameters = {\n          batch_size                         = 7\n          maximum_batching_window_in_seconds = 90\n          maximum_record_age_in_seconds      = 100\n          maximum_retry_attempts             = 4\n          on_partial_batch_item_failure      = \"AUTOMATIC_BISECT\"\n          parallelization_factor             = 5\n          starting_position                  = \"TRIM_HORIZON\"\n          starting_position_timestamp        = null\n          dead_letter_config = {\n            arn = aws_sqs_queue.dlq.arn\n          }\n        }\n      }\n\n      target_parameters = {\n        kinesis_stream_parameters = {\n          # Must be a json path and start with $.\n          partition_key = \"$.id\"\n        }\n      }\n\n      tags = {\n        Pipe = \"kinesis_source_kinesis_target\"\n      }\n    }\n\n    # With SQS Queue source and EventBridge target\n    sqs_source_eventbridge_target = {\n      source = aws_sqs_queue.source.arn\n      target = aws_cloudwatch_event_bus.target.arn\n\n      target_parameters = {\n        eventbridge_event_bus_parameters = {\n          detail_type = \"my-target\"\n          endpoint_id = \"endpoint.com\"\n          resources   = []\n          source      = 20\n        }\n      }\n\n      log_configuration = {\n        level = \"INFO\"\n        s3_log_destination = {\n          bucket_name   = module.logs_bucket.s3_bucket_id\n          bucket_owner  = data.aws_caller_identity.current.account_id\n          output_format = \"json\"\n        }\n      }\n\n      tags = {\n        Pipe = \"sqs_source_eventbridge_target\"\n      }\n    }\n\n    # With SQS Queue source and Lambda target\n    sqs_source_lambda_target = {\n      source = aws_sqs_queue.source.arn\n      target = module.lambda_target.lambda_function_arn\n\n      target_parameters = {\n        lambda_function_parameters = {\n          invocation_type = \"REQUEST_RESPONSE\"\n        }\n      }\n\n      log_configuration = {\n        level = \"INFO\"\n        firehose_log_destination = {\n          delivery_stream_arn = aws_kinesis_firehose_delivery_stream.logs.arn\n        }\n      }\n\n      tags = {\n        Pipe = \"sqs_source_lambda_target\"\n      }\n    }\n\n    # With SQS Queue source and StepFunction target\n    sqs_source_step_function_target = {\n      source = aws_sqs_queue.source.arn\n      target = module.step_function_target.state_machine_arn\n\n      target_parameters = {\n        step_function_state_machine_parameters = {\n          invocation_type = \"FIRE_AND_FORGET\"\n        }\n      }\n\n      tags = {\n        Pipe = \"sqs_source_step_function_target\"\n      }\n    }\n\n    # With SQS Queue source and HTTP target\n    sqs_source_http_target = {\n      source = aws_sqs_queue.source.arn\n      target = aws_cloudwatch_event_api_destination.external.arn\n\n      target_parameters = {\n        http_parameters = {\n          header_parameters = {\n            \"x-my-header\" = \"my-value\"\n          }\n          path_parameter_values = [\"user1\"]\n          query_string_parameters = {\n            \"key1\" = \"value1\"\n          }\n        }\n      }\n\n      tags = {\n        Pipe = \"sqs_source_http_target\"\n      }\n    }\n\n    # Minimal with specific IAM role name to create\n    minimal_role_name_prefix = {\n      role_name_prefix = \"something\"\n\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      role_tags = {\n        MyRoleTag = \"TagValue\"\n      }\n\n      tags = {\n        Pipe = \"minimal_role_name_prefix\"\n      }\n    }\n\n    custom_kms_key = {\n      source             = aws_sqs_queue.source.arn\n      target             = aws_sqs_queue.target.arn\n      kms_key_identifier = module.kms.key_id\n\n      tags = {\n        Pipe = \"minimal\"\n      }\n    }\n\n    # Minimal with IAM role created outside of the module\n    minimal_external_role = {\n      create_role = false\n      role_arn    = aws_iam_role.eventbridge_pipe.arn\n\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      tags = {\n        Pipe = \"minimal_external_role\"\n      }\n    }\n\n    # No filtering, source/target parameters, enrichment\n    minimal = {\n      source = aws_sqs_queue.source.arn\n      target = aws_sqs_queue.target.arn\n\n      tags = {\n        Pipe = \"minimal\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "additional_bootstrap_servers",
+        "arn",
+        "assign_public_ip",
+        "attach_policies_for_integrations",
+        "basic_auth",
+        "batch_size",
+        "bucket_name",
+        "bucket_owner",
+        "client_certificate_tls_auth",
+        "cloudwatch_logs_log_destination",
+        "cloudwatch_logs_parameters",
+        "command",
+        "consumer_group_id",
+        "container_name",
+        "create_role",
+        "credentials",
+        "dead_letter_config",
+        "delivery_stream_arn",
+        "description",
+        "desired_state",
+        "detail_type",
+        "dynamodb_stream_parameters",
+        "ecs_task_parameters",
+        "enable_ecs_managed_tags",
+        "enable_execute_command",
+        "endpoint_id",
+        "enrichment",
+        "enrichment_parameters",
+        "environment",
+        "eventbridge_event_bus_parameters",
+        "filter_criteria",
+        "firehose_log_destination",
+        "header_parameters",
+        "http_parameters",
+        "include_execution_data",
+        "input_template",
+        "invocation_type",
+        "kinesis_stream_parameters",
+        "kms_key_identifier",
+        "lambda_function_parameters",
+        "launch_type",
+        "level",
+        "log_configuration",
+        "log_group_arn",
+        "log_stream_name",
+        "managed_streaming_kafka_parameters",
+        "maximum_batching_window_in_seconds",
+        "maximum_record_age_in_seconds",
+        "maximum_retry_attempts",
+        "message_deduplication_id",
+        "message_group_id",
+        "on_partial_batch_item_failure",
+        "output_format",
+        "parallelization_factor",
+        "partition_key",
+        "path_parameter_values",
+        "pattern",
+        "platform_version",
+        "prefix",
+        "query_string_parameters",
+        "queue_name",
+        "rabbitmq_broker_parameters",
+        "resources",
+        "role_arn",
+        "role_description",
+        "role_force_detach_policies",
+        "role_name_prefix",
+        "role_path",
+        "role_permissions_boundary",
+        "role_tags",
+        "s3_log_destination",
+        "sasl_scram_256_auth",
+        "sasl_scram_512_auth",
+        "security_groups",
+        "self_managed_kafka_parameters",
+        "server_root_ca_certificate",
+        "source",
+        "source_parameters",
+        "sqs_queue_parameters",
+        "starting_position",
+        "starting_position_timestamp",
+        "step_function_state_machine_parameters",
+        "subnets",
+        "tags",
+        "target",
+        "target_parameters",
+        "task_count",
+        "task_definition_arn",
+        "time",
+        "timestamp",
+        "topic_name",
+        "value",
+        "virtual_host",
+        "vpc"
+      ],
+      "provenance": "example+names"
+    },
+    "root::policy_statements": {
+      "examples": [
+        "policy_statements = {\n    dynamodb = {\n      effect    = \"Allow\",\n      actions   = [\"dynamodb:BatchWriteItem\"],\n      resources = [\"arn:aws:dynamodb:eu-west-1:052212379155:table/Test\"]\n    },\n    s3_read = {\n      effect    = \"Deny\",\n      actions   = [\"s3:HeadObject\", \"s3:GetObject\"],\n      resources = [\"arn:aws:s3:::my-bucket/*\"]\n      condition = {\n        stringequals_condition = {\n          test     = \"StringEquals\"\n          variable = \"aws:PrincipalOrgID\"\n          values   = [\"123456789012\"]\n        }\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "actions",
+        "condition",
+        "effect",
+        "identifiers",
+        "not_actions",
+        "not_principals",
+        "not_resources",
+        "principals",
+        "resources",
+        "sid",
+        "test",
+        "type",
+        "values",
+        "variable"
+      ],
+      "provenance": "example+names"
+    },
+    "root::schedule_groups": {
+      "examples": [
+        "schedule_groups = {\n    dev = {\n      name_prefix = \"tmp-dev-\"\n    }\n    prod = {\n      name = \"prod\"\n      tags = {\n        Env = \"SuperProd\"\n      }\n    }\n  }"
+      ],
+      "field_names": [
+        "name",
+        "name_prefix",
+        "tags"
+      ],
+      "provenance": "example"
+    },
+    "root::targets": {
+      "examples": [
+        "targets = {\n    product_create = [\n      {\n        arn  = aws_sqs_queue.products.arn\n        name = \"send-product-to-sqs\"\n      }\n    ]\n  }",
+        "targets = {\n    crons = [\n      {\n        name  = \"lambda-loves-cron\"\n        arn   = module.lambda.lambda_function_arn\n        input = jsonencode({ \"job\" : \"cron-by-rate\" })\n      }\n    ]\n  }",
+        "targets = {\n    orders_create = [\n      {\n        name            = \"send-orders-to-sqs\"\n        arn             = aws_sqs_queue.queue.arn\n        dead_letter_arn = aws_sqs_queue.dlq.arn\n        target_id       = \"send-orders-to-sqs\"\n      }\n    ]\n  }",
+        "targets = {\n    orders = [\n      {\n        name            = \"send-orders-to-requestbin\"\n        destination     = \"requestbin\"\n        attach_role_arn = aws_iam_role.eventbridge.arn\n      },\n      {\n        name            = \"send-orders-to-github\"\n        destination     = \"github\"\n        attach_role_arn = true\n      }\n    ]\n    refunds = [\n      {\n        name            = \"send-refunds-to-github\"\n        destination     = \"refunds_github\"\n        attach_role_arn = true\n      }\n    ]\n  }",
+        "targets = {\n    orders = [\n      {\n        name            = \"orders\"\n        arn             = module.ecs_cluster.cluster_arn\n        attach_role_arn = true\n\n        ecs_target = {\n          # If a capacity_provider_strategy specified, the launch_type parameter must be omitted.\n          # launch_type         = \"FARGATE\"\n          task_count              = 1\n          task_definition_arn     = module.ecs_cluster.services[\"hello-world\"].task_definition_arn\n          enable_ecs_managed_tags = true\n          tags = {\n            production = true\n          }\n\n          network_configuration = {\n            assign_public_ip = true\n            subnets          = data.aws_subnets.default.ids\n            security_groups  = [data.aws_security_group.default.id]\n          }\n\n          # If a capacity_provider_strategy is specified, the launch_type parameter must be omitted.\n          # If no capacity_provider_strategy or launch_type is specified, the default capacity provider strategy for the cluster is used.\n          capacity_provider_strategy = [\n            {\n              capacity_provider = \"FARGATE\"\n              base              = 1\n              weight            = 100\n            },\n            {\n              capacity_provider = \"FARGATE_SPOT\"\n              weight            = 100\n            }\n          ]\n        }\n      }\n    ]\n  }",
+        "targets = {\n    orders = [\n      {\n        name              = \"send-orders-to-sqs\"\n        arn               = aws_sqs_queue.queue.arn\n        input_transformer = local.order_input_transformer\n      },\n      {\n        name            = \"send-orders-to-sqs-wth-dead-letter\"\n        arn             = aws_sqs_queue.queue.arn\n        dead_letter_arn = aws_sqs_queue.dlq.arn\n      },\n      {\n        name            = \"send-orders-to-sqs-with-retry-policy\"\n        arn             = aws_sqs_queue.queue.arn\n        dead_letter_arn = aws_sqs_queue.dlq.arn\n        retry_policy = {\n          maximum_retry_attempts       = 10\n          maximum_event_age_in_seconds = 300\n        }\n      },\n      {\n        name             = \"send-orders-to-fifo-sqs\"\n        arn              = aws_sqs_queue.fifo.arn\n        dead_letter_arn  = aws_sqs_queue.dlq.arn\n        message_group_id = \"send-orders-to-fifo-sqs\"\n      },\n      {\n        name = \"log-orders-to-cloudwatch\"\n        arn  = aws_cloudwatch_log_group.this.arn\n      }\n    ]\n\n    emails = [\n      {\n        name            = \"process-email-with-sfn\"\n        arn             = module.step_function.state_machine_arn\n        attach_role_arn = true\n      },\n      {\n        name               = \"send-orders-to-kinesis\"\n        arn                = aws_kinesis_stream.this.arn\n        dead_letter_arn    = aws_sqs_queue.dlq.arn\n        input_transformer  = local.order_input_transformer\n        partition_key_path = \"$.id\"\n        attach_role_arn    = true\n      },\n      {\n        name            = \"process-email-with-ecs-task\",\n        arn             = module.ecs.cluster_arn,\n        attach_role_arn = true\n        ecs_target = {\n          task_count          = 1\n          task_definition_arn = module.ecs.services.hello-world.task_definition_arn\n        }\n      }\n    ]\n\n    crons = [\n      {\n        name  = \"something-for-cron\"\n        arn   = module.lambda.lambda_function_arn\n        input = jsonencode({ \"job\" : \"crons\" })\n      }\n    ]\n\n    ecs = [\n      {\n        name = \"something-for-ecs\"\n        arn  = module.sns.topic_arn\n      }\n    ]\n  }"
+      ],
+      "field_names": [
+        "appsync_target",
+        "arn",
+        "array_size",
+        "assign_public_ip",
+        "attach_role_arn",
+        "base",
+        "batch_target",
+        "capacity_provider",
+        "capacity_provider_strategy",
+        "dead_letter_arn",
+        "destination",
+        "ecs_target",
+        "enable_ecs_managed_tags",
+        "enable_execute_command",
+        "expression",
+        "field",
+        "force_destroy",
+        "graphql_operation",
+        "group",
+        "header_parameters",
+        "http_target",
+        "input",
+        "input_path",
+        "input_paths",
+        "input_template",
+        "input_transformer",
+        "job_attempts",
+        "job_definition",
+        "job_name",
+        "key",
+        "launch_type",
+        "maximum_event_age_in_seconds",
+        "maximum_retry_attempts",
+        "message_group_id",
+        "name",
+        "network_configuration",
+        "ordered_placement_strategy",
+        "partition_key_path",
+        "path_parameter_values",
+        "placement_constraint",
+        "platform_version",
+        "propagate_tags",
+        "query_string_parameters",
+        "retry_policy",
+        "run_command_targets",
+        "security_groups",
+        "subnets",
+        "tags",
+        "target_id",
+        "task_count",
+        "task_definition_arn",
+        "type",
+        "values",
+        "weight"
+      ],
+      "provenance": "example+names"
+    }
+  }
+}

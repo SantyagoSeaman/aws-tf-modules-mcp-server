@@ -18,14 +18,17 @@ diff — your report must stand on its own, with file:line references.
 3. **Verify against current docs.** For each distinct terraform-aws-modules
    module: `get_module` (tfmod-search MCP server), then check:
    - every variable used exists in the current inputs (a variable absent from
-     the curated doc is *suspicious*, not proven dead — confirm with
-     `grep_module_docs` at the version the block pins before reporting it, and
-     quote the line)
+     the compact head is *suspicious*, not proven dead — confirm with
+     `get_module(name, sections=["inputs", "outputs"])`, the module's complete
+     root-scope interface in one offline call, before reporting it, and quote
+     the row)
    - required inputs are present
    - `version` is pinned; flag unpinned or a major behind current
    - deprecated arguments per the doc's notes
-   Module blocks whose `source` is outside the curated catalog are verified the
-   same way via `grep_module_docs` and marked live-doc-verified, not skipped.
+   Module blocks whose `source` is outside the curated catalog, or that pin a
+   version older than the catalog's documented one, are verified the same way
+   against their live docs via your other Terraform Registry tooling and
+   marked live-doc-verified, not skipped.
 4. **Raw-resource check.** If the diff adds clusters of hand-written `aws_*`
    resources that a catalog module covers (security group + rules, VPC +
    subnets + NAT, S3 bucket + policy/encryption), flag it as a *suggestion*

@@ -18,14 +18,14 @@ current variable names, is the deliverable.
    first — on `"low"`, the top hit is not clearly asserted as covering that
    component; try a different phrasing for that component before picking it.
 2. **Read before writing.** `get_module` for every chosen module, pulling the
-   interface for the wiring: `sections=["inputs", "outputs"]` (the default
-   response is a compact head). Blocks are written from the retrieved docs,
-   never from memory. Pin each module's `version` to the documented current
-   version. When you are unsure of an exact
-   output or input name for the wiring, grep it with `grep_module_docs`
-   (`scope=["outputs"]` for outputs) rather than guessing; a component with
-   no catalog module (non-AWS, third-party) can still be wired from its live
-   docs the same way.
+   complete interface for the wiring: `sections=["inputs", "outputs"]` (the
+   default response is a compact head; `sections=["inputs", "outputs"]`
+   renders the module's complete root-scope interface in one offline call, so
+   never guess an output or input name for the wiring). Blocks are written
+   from the retrieved docs, never from memory. Pin each module's `version` to
+   the documented current version. A component with no catalog module
+   (non-AWS, third-party) can still be wired correctly by consulting its live
+   docs via your other Terraform Registry tooling.
 3. **Produce one coherent configuration:**
    - `terraform` block with `required_providers` (aws provider version per
      the docs' compatibility notes)

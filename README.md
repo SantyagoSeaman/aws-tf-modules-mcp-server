@@ -18,15 +18,16 @@ When an AI assistant writes Terraform, it often guesses at module names, invents
 
 - **Find the right module from intent** — "I need a Redis cache" resolves to `elasticache`, not a hallucinated module name.
 - **Ground generated code in real inputs/outputs** — the assistant pulls the full, current module documentation (submodules, variables, outputs, examples) on demand instead of improvising.
-- **Stay fast, private, and deterministic** — *search* runs locally on CPU against a pre-built index. No external API calls, no rate limits, no network round-trips.
-- **Grep any module's live docs when you need to** — for a pinpoint variable/default lookup, a module outside the curated AWS catalog, or a specific older version, `grep_module_docs` fetches the registry's current docs (cached, version-pinnable) and returns just the matching lines with context.
+- **Stay fast, private, and deterministic** — the whole server runs locally on CPU against a pre-built index, fully offline. No external API calls, no rate limits, no network round-trips.
+- **Get the complete interface, not a curated excerpt** — `get_module`'s inputs/outputs views return the module's COMPLETE Registry-declared interface in one call, so you never have to guess whether an omitted variable is real.
 
 Think of it as an always-available, searchable reference card for every terraform-aws-modules module — kept accurate and shipped ready to run.
 
 ## 🚀 Features
 
 - **Hybrid Search Engine**: Combines keyword matching (IDF-weighted), BM25 text relevance, exact module name matching, and semantic similarity for accurate results
-- **Live Registry Grep**: `grep_module_docs` regex-searches the full, current docs of *any* Terraform Registry module (version-pinnable, cached), returning only matching lines with context — pinpoint lookups without dumping 100k-token documents
+- **Complete Inputs/Outputs for Every Module**: `get_module`'s inputs/outputs views serve the module's COMPLETE Registry-sourced interface for all 63 catalog modules — not a curated subset — from a committed per-module artifact (`model/any_overlay/`); the 22 modules with `type = any` inputs additionally get the module maintainers' own apply-verified example HCL and observed field names per `any`-typed variable — all offline and honestly labeled as an example rather than a schema
+- **Fully Offline**: no networked tools — every response is served from the local pre-built index and committed per-module artifacts; the only network use anywhere in the server is an opt-in daily PyPI update check in HTTP mode
 - **MCP Integration**: Seamlessly integrates with Claude Desktop and other MCP clients
 - **Fast & Efficient**: Pre-built search index with CPU-only inference using `intfloat/e5-small-v2` model
 - **Ready to Use**: Includes pre-built index (`model/tfmod_e5_small_index.pkl`) with embeddings from `intfloat/e5-small-v2` model and curated Terraform AWS module documentation
@@ -80,10 +81,9 @@ The plugin configures the MCP server automatically **and** adds workflow skills 
 
 Both bundle:
 - The **tfmod-search MCP server** (runs via `uvx tfmodsearch` by default — [uv](https://github.com/astral-sh/uv) required; the Claude Code plugin can optionally run it via Docker instead, see [Docker](#-docker-opt-in) below)
-- **Eight skills**:
+- **Seven skills**:
   - `aws-terraform-modules` — auto-invoked when writing Terraform for AWS: search first, write from current docs, pin versions
   - `/tf-module <query>` — instant module lookup with a ready-to-paste snippet
-  - `/tf-grep <module> <pattern>` — grep the live registry docs of any module (version-pinnable, non-AWS too) for an exact quote
   - `/tf-stack <requirement>` — scaffold a multi-module stack with correct output→input wiring
   - `tf-migrate` — replace hand-written `aws_*` resources with a covering module, verified attribute-by-attribute
   - `tf-module-upgrade` — audit pinned versions and variable usage against current docs
@@ -134,9 +134,8 @@ Then add to your MCP client config:
 GHCR for environments that prefer or require a container — air-gapped/offline setups, CI runners
 without a Python/uv toolchain, or teams that standardize MCP server deployment on Docker. The
 image bakes in the embedding model, the search index, and the NLTK tokenizer data at build time,
-so **`search_modules`, `get_module`, and `modules_list` make zero network calls at runtime**.
-(`grep_module_docs` is the one tool designed to reach the live Terraform Registry — that still
-needs real network; only a `--network none` warmup, which never calls it, is fully offline.)
+so **all three tools — `search_modules`, `get_module`, and `modules_list` — make zero network
+calls at runtime**; a `--network none` run works for every tool call, not just the warmup.
 
 > **Since 0.19.0, the image runs the ONNX encode backend instead of torch**: `model.onnx` +
 > `tokenizer.json` are baked in at build time (see "Embedding backends" below) instead of the
@@ -153,7 +152,7 @@ JSON-RPC stream):
   "mcpServers": {
     "terraform-modules": {
       "command": "docker",
-      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.24.0"]
+      "args": ["run", "-i", "--rm", "ghcr.io/santyagoseaman/tfmodsearch:0.25.0"]
     }
   }
 }
@@ -165,7 +164,7 @@ launching Claude Code):
 ```bash
 export TFMODSEARCH_DOCKER=1
 # optional: pin a different tag
-export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.24.0
+export TFMODSEARCH_IMAGE=ghcr.io/santyagoseaman/tfmodsearch:0.25.0
 ```
 If Docker is requested but not on `PATH`, the launcher falls back to `uvx` with a warning instead
 of failing. This dual-mode launcher currently applies to the **Claude Code plugin only** — the
@@ -179,7 +178,7 @@ its `mcp.json`).
 
 Verify the offline property yourself:
 ```bash
-docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.24.0 --warmup
+docker run --network none -i --rm ghcr.io/santyagoseaman/tfmodsearch:0.25.0 --warmup
 ```
 
 ### 🌐 Shared HTTP instance (opt-in)
@@ -199,7 +198,7 @@ across sessions/subagents on a machine.
 ```bash
 docker run -d --name tfmodsearch-http --restart unless-stopped \
   -p 127.0.0.1:8765:8765 \
-  ghcr.io/santyagoseaman/tfmodsearch:0.24.0 \
+  ghcr.io/santyagoseaman/tfmodsearch:0.25.0 \
   --transport http --host 0.0.0.0 --port 8765
 ```
 
@@ -247,7 +246,7 @@ sure only one `tfmod-search` server is registered. Disable the plugin, then add 
 claude plugin disable tfmod-search
 claude mcp add --transport http --scope user tfmod-search http://127.0.0.1:8765/mcp
 ```
-The HTTP daemon exposes the exact same four tools, so agent workflows keep working. To go back:
+The HTTP daemon exposes the exact same three tools, so agent workflows keep working. To go back:
 `claude mcp remove tfmod-search` and re-enable the plugin.
 
 **Codex CLI**: the plugin stays stdio-only, but recent Codex CLI versions can connect to a
@@ -264,7 +263,7 @@ and warms the embedding model *before* it starts listening, so expect connection
 startup, then 200 once the port is up:
 ```bash
 curl -s http://127.0.0.1:8765/health
-# {"status": "ok", "version": "0.24.0", "modules": 63,
+# {"status": "ok", "version": "0.25.0", "modules": 63,
 #  "latest_version": null, "update_available": false}
 ```
 
@@ -290,17 +289,18 @@ docker logs -f tfmodsearch-http    # server + uvicorn logs (READY line, warnings
 # upgrade when a new release ships: bump the pinned tag in docker-compose.yml, then
 docker compose pull && docker compose up -d
 ```
-The compose file mounts a named volume (`tfmodsearch-cache`) over `/home/app/.cache`, so the
-`grep_module_docs` registry-doc cache survives container recreates and image upgrades. Running
-the non-Docker variant as a daemon is on you (a terminal multiplexer, `nohup`, or a
-launchd/systemd unit) — the server itself is just a foreground process.
+The compose file mounts a named volume (`tfmodsearch-cache`) over `/home/app/.cache`; this
+historically persisted the now-removed `grep_module_docs` registry-doc cache and is currently
+unused, kept for forward compatibility with any future on-disk cache. Running the non-Docker
+variant as a daemon is on you (a terminal multiplexer, `nohup`, or a launchd/systemd unit) — the
+server itself is just a foreground process.
 
 **Update notifications** (since 0.17.0): a pinned image tag means the daemon otherwise runs
 forever with no signal that a newer release exists. In HTTP mode the server checks PyPI once a
 day and surfaces what it finds through three channels — `curl /health` gains `latest_version`/
 `update_available` fields, a WARNING lands in `docker logs` once per cycle while stale, and an
-`update_notice` field appears on `search_modules`/`modules_list`/`grep_module_docs` responses
-(absent entirely when there is nothing to report) so your agent can relay it directly. Nothing
+`update_notice` field appears on `search_modules`/`modules_list` responses (absent entirely when
+there is nothing to report) so your agent can relay it directly. Nothing
 auto-updates — the operator still owns bumping the tag and running
 `docker compose pull && docker compose up -d`. Set `TFMODSEARCH_UPDATE_CHECK=0` to disable the check entirely
 (air-gapped deployments).
@@ -605,7 +605,8 @@ python src/tfmod_search_cli.py search \
 
 ## 🛠️ MCP Tools
 
-The MCP server exposes four tools for Terraform module discovery and documentation retrieval:
+The MCP server exposes three tools for Terraform module discovery and documentation retrieval —
+fully offline, no networked tools:
 
 ### `modules_list()`
 
@@ -640,7 +641,7 @@ Search for Terraform modules using keywords, exact names, or natural language qu
 - `query` (string): Free-text search query
 - `top_k` (int, optional): Number of results to return, 1–10 (default 3). Raise it for ambiguous queries like `"iam"`.
 
-**Returns**: Top-ranked modules with metadata and relevance scores. Each hit also carries `module_id` (the registry coordinate, e.g. `terraform-aws-modules/vpc/aws`) and `latest_version`, so an assistant can chain a hit straight into `grep_module_docs` without guessing coordinates.
+**Returns**: Top-ranked modules with metadata and relevance scores. Each hit also carries `module_id` (the registry coordinate, e.g. `terraform-aws-modules/vpc/aws`) and `latest_version` for reference.
 
 **Example queries**:
 - `"vpc"` - Find VPC module by exact name
@@ -655,41 +656,17 @@ Get documentation for a specific Terraform module. **By default returns a compac
 **Parameters**:
 - `module_identifier` (string): Module name (e.g., `"vpc"`), relative path (e.g., `"modules/terraform-aws-modules/vpc.md"`), or **submodule address** (e.g., `"iam//modules/iam-role"`, or the full `"terraform-aws-modules/iam/aws//modules/iam-role"`) — returns an orientation head **scoped to that submodule's section** in one call, instead of the whole parent doc.
 - `sections` (list of strings, optional): Control what comes back.
-  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. The footer also states that the curated doc is a subset and points to `grep_module_docs` for the complete, exact inputs/outputs and to module source for resource-creation conditions. For a module **with submodules**, the head also inlines the compact submodule **inventory** — each submodule's name, purpose, and pinnable source string — so when the right answer is a submodule you can pin its source or drill in via the submodule address above.
+  - **Omitted** → the **orientation head**: description, module info, an exact **version-pin hint**, notes for AI agents, any Important Gotchas the doc carries, key features, use cases, plus a footer with the **full section inventory** — an explicit menu of the logical keys and every heading in the doc — so the next call knows exactly what it can request. The footer also flags that the curated prose (description, examples, best practices) is a hand-picked subset and points to module source for resource-creation conditions and for a `map(object)`/`any` field's nested type/shape; the inputs/outputs table itself is already the module's complete Registry-declared interface (see below), so `get_module(sections=["inputs", "outputs"])` is the exhaustive-confirmation / name-exists check, in one offline call. For a module **with submodules**, the head also inlines the compact submodule **inventory** — each submodule's name, purpose, and pinnable source string — so when the right answer is a submodule you can pin its source or drill in via the submodule address above.
   - **Logical keys or heading substrings** → those sections added on top of the always-included core. Accepts `inputs`, `outputs`, `examples`, `submodules`, `features`, `use-cases`, `best-practices`, `resources`, or case-insensitive substrings of headings (e.g. `"karpenter"` for a single EKS submodule). The `inputs`/`outputs`/`examples` keys also resolve on modules that bundle their interface into a combined `Main Module:`/`Root Module:` section or spread it across submodules.
   - **`["all"]`** (or `"full"`/`"everything"`) → the complete document verbatim.
 
 **Returns**: The compact orientation head by default, a filtered subset when specific sections are requested, or the complete markdown document when an `all`/`full` key is given.
 
+**Complete inputs/outputs interface**: `get_module`'s inputs and outputs views (`sections=["inputs"]`/`["outputs"]`, an `all`/`full` request, or a submodule-scoped request) serve the module's COMPLETE Registry-declared interface — every input (name, type, required, default, description) and every output (name, description) — for all 63 catalog modules, superseding the curated Markdown table wherever that table was only a hand-picked subset. For example, `rds` curates 41 of its 111 root-level inputs (238 across all submodules) in the doc body; the complete table now surfaces all of them in one call. `sections=["inputs"]`/`["outputs"]`/`["inputs", "outputs"]` render the **root scope only** by default; a submodule's complete interface is one more call away via the submodule address (`get_module("eks//modules/karpenter", sections=["inputs"])`), and the root response's footer lists the available submodule scopes by name. This is sourced from a committed per-module artifact, `model/any_overlay/<id>.json` (built by `scripts/build_any_overlay.py` from the Terraform Registry API detail at the doc's own pinned version) — a plain file read at serve time, so `get_module` stays fully offline.
+
+**Any-typed input overlay**: on top of the complete table, some Registry inputs are declared `type = any`, where the type string alone does not describe the shape. The 22 catalog modules with at least one such input additionally get, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (pulled from the module's own `examples/`) plus a list of field names observed in the module source. Every appendix is honestly labeled: an apply-verified example from a named module version, explicitly **not a schema** — for the field's exact nested type/shape beyond the example, consult the module source directly — with a version-skew note when the overlay's source version differs from the doc's pinned version. The default orientation head only gets a lightweight pointer (`any — see sections=["inputs"]`) rather than the full appendix, to keep the head small. The other 41 modules — no `any`-typed input — still get the complete table above; they carry no example/field-name appendix since none of their inputs need one.
+
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
-
-### `grep_module_docs(module_id: str, pattern: str, version: str | None = None, ...)`
-
-Regex-grep the **full, live** documentation of **any** Terraform Registry module (not just the curated AWS catalog), optionally pinned to a specific version. The tool fetches the module's complete docs from the Terraform Registry API, assembles them into one text (README + inputs/outputs/resources rows + every submodule and example), caches them, and returns only the matching lines with surrounding context — the way a `grep` tool works. A single module's docs run to 100k+ tokens, so grep — not a full dump — is how you pinpoint a variable name, default, or example without flooding the context window.
-
-**Parameters**:
-- `module_id` (string): Registry coordinate `namespace/name/provider` (e.g. `"terraform-aws-modules/vpc/aws"`). Comes straight from a `search_modules`/`modules_list` result.
-- `pattern` (string): Regex (Python `re` syntax), e.g. `"enable_nat_gateway"` or `"nat_gateway|subnet"`.
-- `version` (string, optional): Pin a version (e.g. `"6.6.1"`). Omit for `latest`.
-- `case_sensitive` (bool, default `false`), `context_lines` (int, default `2`, 0–20), `scope` (list, optional — restrict to `root`/`inputs`/`outputs`/`resources`/`submodules`/`examples`), `max_matches` (int, default `50`), `refresh` (bool, default `false` — bypass the cache).
-
-**Returns**: `module_id`, `resolved_version`, `source_url`, `total_matches`/`returned_matches`/`truncated`, `cache` info, `available_sections` (all section labels in the assembled doc), and `matches` — each with its `section` label, `line_number`, matched `line`, and `before`/`after` context.
-
-**Caching**: pinned versions are immutable and cached forever; `latest` is cached for `doc_cache_ttl_hours` (default 24h) and re-fetched after that or when `refresh=true`. Cache location: `${TFMODSEARCH_CACHE_DIR:-${XDG_CACHE_HOME:-~/.cache}}/tfmodsearch/registry_docs`, overridable via `config.yaml`.
-
-**Example**:
-```json
-{
-  "module_id": "terraform-aws-modules/vpc/aws",
-  "pattern": "enable_nat_gateway",
-  "version": "6.6.1"
-}
-```
-returns matches like:
-```
-root/readme (line 23):   enable_nat_gateway = true
-root/inputs (line …):  - enable_nat_gateway | bool | false | Should be true if you want to provision NAT Gateways ...
-```
 
 ### Typical Workflow
 
@@ -714,14 +691,14 @@ A coding assistant discovers and uses a module in two steps:
 
 The assistant then writes Terraform using real variable names and current syntax — instead of guessing. `search_modules` returns the top 3 candidates by default (raise `top_k` for broader queries) so the assistant can disambiguate between closely related modules (e.g. `alb` vs `elb`, `rds` vs `rds-aurora`) before committing. `get_module` returns a small orientation head by default so the first call never overflows; scoped `sections=["inputs", "examples"]` pull only what's needed, and `sections=["all"]` returns the complete document when the whole thing is genuinely wanted.
 
-For a **pinpoint lookup** — the exact name/default of one variable, or how a specific feature is wired — or for a module **outside the curated AWS catalog** or at a **specific older version**, reach for `grep_module_docs`. `search_modules`/`modules_list` hand back a ready `module_id`, so the chain is direct:
+For a **pinpoint lookup** — the exact name/default of one variable, or how a specific feature is wired — `get_module(name, sections=["inputs", "outputs"])` renders the module's complete root-scope interface in one offline call:
 
 ```
-grep_module_docs("terraform-aws-modules/eks/aws", "enable_cluster_creator_admin_permissions", version="20.8.5")
-→ the exact input row + its default + the README lines that use it — no full-document dump
+get_module("eks", sections=["inputs", "outputs"])
+→ the exact input row + its default + every other declared input/output — no full-document dump
 ```
 
-**Tool boundaries**: `search_modules` finds the right AWS module; `get_module` returns its curated, compact, offline doc; `grep_module_docs` greps the live registry docs of *any* module, version-pinnable, for surgical lookups.
+**Tool boundaries**: `search_modules` finds the right AWS module; `get_module` returns its curated, compact, offline doc, or the module's complete interface on request. A module **outside the curated AWS catalog** or at a **specific older version** falls outside these three tools' scope — use your other Terraform Registry tooling for those.
 
 ## ⚙️ Configuration
 
@@ -832,16 +809,13 @@ pytest tests/ -v
 pytest tests/integration/test_all_modules_searchable.py -v  # Searchability, all 63 modules (196 tests)
 pytest tests/integration/test_model_comparison.py -v -s     # Model comparison (31 tests)
 pytest tests/integration/test_mcp_server.py -v              # MCP server tools (40 tests)
-pytest tests/integration/test_doc_grep.py -v               # grep engine (6 tests)
-pytest tests/integration/test_registry_docs.py -v          # registry client + cache (6 tests)
-pytest tests/integration/test_grep_module_docs.py -v       # grep_module_docs tool (3 tests)
+pytest tests/integration/test_registry_docs.py -v          # parse_module_id + overlay-build fetch helpers
 pytest tests/integration/test_parse_markdown.py -v          # Markdown parsing (14 tests)
 pytest tests/integration/test_cli_index.py -v               # CLI index building (4 tests)
 pytest tests/integration/test_security_config.py -v         # Security config contract (5 tests)
 
 # Run the opt-in live tests (real calls to the public Terraform Registry)
 RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v -s
-RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_grep_module_docs_live.py -v
 
 # Run with coverage
 pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
@@ -854,7 +828,6 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 - **MCP Server** (65 tests): `search_modules`, `get_module`, and `modules_list` tools, `top_k` and `sections` parameters (orientation-head default, inline submodule inventory, submodule-address scoped head, `all`/`full` escape hatch, combined/submodule interface-key resolution, version-pin hint), `module_id`/`latest_version` fields, security validation, integration workflows
 - **Doc Schema** (441 tests): schema-integrity guards over all 63 curated docs — universal core headings present and unique (incl. the orientation head's own Key Features + Main Use Cases), a recognised interface scheme (split / combined `Main Module:` / submodule-only), `inputs`/`outputs`/`examples` resolving on every doc, a clean orientation head, and every doc's submodule inventory surfaced in the head — so `get_module` section filtering can't silently break
 - **End-to-End** (59 tests): real MCP stdio protocol sessions against a spawned server process, wheel payload and entry-point verification, `uvx` packaged-server smoke test, plugin manifest/skill/agent contracts for Claude Code and Codex, skill-script tests (terraform log prefilter), live plugin install via the `claude` CLI
-- **grep_module_docs** (15 tests): the grep engine (`test_doc_grep.py`, 6), the registry client + document assembly + disk cache (`test_registry_docs.py`, 6), and the tool wiring (`test_grep_module_docs.py`, 3), plus a 2-test opt-in live smoke test (`test_grep_module_docs_live.py`) gated by `RUN_REGISTRY_BENCHMARK=1`
 - **Module ID header** (1 test): every curated doc carries a `Module ID` bullet equal to its root registry `Source`
 - **Markdown Parsing** (14 tests): `## Module Information` parsing (name, keywords, `module_id`, `latest_version`), description extraction, normalization
 - **CLI Index Building** (4 tests): index creation, validation, search integration
@@ -865,7 +838,7 @@ pytest tests/ --cov=src --cov-report=term-missing --cov-report=html
 
 ## 🔒 Security
 
-TFModSearch is a local, CPU-only server that is offline by design except for one module (`tfmod_registry_docs.py`, which fetches public Terraform Registry documentation over HTTPS for `grep_module_docs`). Supply-chain and code hygiene are enforced with GitHub-native tooling:
+TFModSearch is a local, CPU-only server with no networked tools — every response comes from the local pre-built index and committed per-module artifacts. The only network use anywhere in the server is an opt-in daily PyPI update check in HTTP mode (see "Update notifications" above). Supply-chain and code hygiene are enforced with GitHub-native tooling:
 
 - **Vulnerability reporting**: see [`SECURITY.md`](SECURITY.md) — please use GitHub Private Vulnerability Reporting rather than a public issue.
 - **CodeQL** default setup runs static analysis on every pull request and on a weekly schedule.

@@ -26,12 +26,14 @@ log — only your report — so the report must stand entirely on its own.
    that names a module from terraform-aws-modules: call `get_module` (the
    tfmod-search MCP server) and check the failing variable against the
    documented inputs. Quote the documented variable name/type you verified.
-   When the curated doc is not enough — the variable is absent from it, or the
-   log pins an older version — escalate to `grep_module_docs` (grep the exact
-   name, at the log's version when present) and quote the live line. A module
-   outside the catalog is no longer a dead end: grep its live registry docs the
-   same way; fall back to reasoning from the error text alone only when even the
-   grep is inconclusive, clearly marked as unverified.
+   When the compact head is not enough — the variable is absent from it —
+   escalate to `get_module(name, sections=["inputs", "outputs"])`, the
+   module's complete root-scope interface in one offline call, and quote the
+   row. When the log pins an older version than the catalog documents, or the
+   module is outside the catalog, verify against its live docs via your other
+   Terraform Registry tooling and quote the matched line; fall back to
+   reasoning from the error text alone only when that too is inconclusive,
+   clearly marked as unverified.
 4. **Propose the exact fix**: the corrected argument line(s) with current
    variable names, the version to pin, and any migration caveat
    (state moves, `moved` blocks, behavior-changing defaults).

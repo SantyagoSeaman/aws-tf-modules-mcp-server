@@ -1,0 +1,472 @@
+{
+  "all_inputs": {
+    "root": [
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more encryption algorithms that are permitted for the first VPN tunnel for phase 2 IKE negotiations. Valid values are AES128 | AES256 | AES128-GCM-16 | AES256-GCM-16",
+        "name": "tunnel1_phase2_encryption_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more integrity algorithms that are permitted for the second VPN tunnel for phase 2 IKE negotiations. Valid values are SHA1 | SHA2-256 | SHA2-384 | SHA2-512",
+        "name": "tunnel2_phase2_integrity_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 3600) The lifetime for phase 2 of the IKE negotiation for the first VPN tunnel, in seconds. Valid value is between 900 and 3600",
+        "name": "tunnel1_phase2_lifetime_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 3600) The lifetime for phase 2 of the IKE negotiation for the second VPN tunnel, in seconds. Valid value is between 900 and 3600",
+        "name": "tunnel2_phase2_lifetime_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default add) The action to take when the establishing the tunnel for the first VPN connection. By default, your customer gateway device must initiate the IKE negotiation and bring up the tunnel. Specify start for AWS to initiate the IKE negotiation. Valid values are add | start",
+        "name": "tunnel1_startup_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Set to false to prevent the creation of a VPN Connection.",
+        "name": "create_vpn_connection",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more Diffie-Hellman group numbers that are permitted for the first VPN tunnel for phase 1 IKE negotiations. Valid values are 2 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24",
+        "name": "tunnel1_phase1_dh_group_numbers",
+        "required": false,
+        "type": "list(number)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more encryption algorithms that are permitted for the second VPN tunnel for phase 1 IKE negotiations. Valid values are AES128 | AES256 | AES128-GCM-16 | AES256-GCM-16",
+        "name": "tunnel2_phase1_encryption_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 28800) The lifetime for phase 1 of the IKE negotiation for the first VPN tunnel, in seconds. Valid value is between 900 and 28800",
+        "name": "tunnel1_phase1_lifetime_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 30) The number of seconds after which a DPD timeout occurs for the first VPN tunnel. Valid value is equal or higher than 30",
+        "name": "tunnel1_dpd_timeout_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 1024) The number of packets in an IKE replay window for the first VPN tunnel. Valid value is between 64 and 2048.",
+        "name": "tunnel1_replay_window_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 1024) The number of packets in an IKE replay window for the second VPN tunnel. Valid value is between 64 and 2048.",
+        "name": "tunnel2_replay_window_size",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IPv4 CIDR on the AWS side of the VPN connection.",
+        "name": "remote_ipv4_network_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) One or more integrity algorithms that are permitted for the first VPN tunnel for phase 1 IKE negotiations. Valid values are SHA1 | SHA2-256 | SHA2-384 | SHA2-512",
+        "name": "tunnel1_phase1_integrity_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 30) The number of seconds after which a DPD timeout occurs for the second VPN tunnel. Valid value is equal or higher than 30",
+        "name": "tunnel2_dpd_timeout_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more Diffie-Hellman group numbers that are permitted for the first VPN tunnel for phase 2 IKE negotiations. Valid values are 2 | 5 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24",
+        "name": "tunnel1_phase2_dh_group_numbers",
+        "required": false,
+        "type": "list(number)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 100) The percentage of the rekey window for the second VPN tunnel (determined by tunnel1_rekey_margin_time_seconds) during which the rekey time is randomly selected. Valid value is between 0 and 100",
+        "name": "tunnel2_rekey_fuzz_percentage",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 540) The margin time, in seconds, before the phase 2 lifetime expires, during which the AWS side of the second VPN connection performs an IKE rekey. The exact time of the rekey is randomly selected based on the value for tunnel2_rekey_fuzz_percentage. Valid value is between 60 and half of tunnel2_phase2_lifetime_seconds",
+        "name": "tunnel2_rekey_margin_time_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IKE versions that are permitted for the second VPN tunnel. Valid values are ikev1 | ikev2",
+        "name": "tunnel2_ike_versions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IPv4 CIDR on the customer gateway (on-premises) side of the VPN connection.",
+        "name": "local_ipv4_network_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) Turn on or off tunnel endpoint lifecycle control feature for the first VPN tunnel. Valid values are true | false",
+        "name": "tunnel1_enable_tunnel_lifecycle_control",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) One or more integrity algorithms that are permitted for the second VPN tunnel for phase 1 IKE negotiations. Valid values are SHA1 | SHA2-256 | SHA2-384 | SHA2-512",
+        "name": "tunnel2_phase1_integrity_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "",
+        "description": "The id of the Customer Gateway.",
+        "name": "customer_gateway_id",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "default": "[]",
+        "description": "The ids of the VPC subnets for which routes from the VPN Gateway will be propagated.",
+        "name": "vpc_subnet_route_table_ids",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "Set of tags to be added to the VPN Connection resource (only if `create_vpn_connection = true`).",
+        "name": "tags",
+        "required": false,
+        "type": "map(string)"
+      },
+      {
+        "default": "null",
+        "description": "Indicate whether to enable acceleration for the VPN connection. Supports only EC2 Transit Gateway.",
+        "name": "vpn_connection_enable_acceleration",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 100) The percentage of the rekey window for the first VPN tunnel (determined by tunnel1_rekey_margin_time_seconds) during which the rekey time is randomly selected. Valid value is between 0 and 100",
+        "name": "tunnel1_rekey_fuzz_percentage",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "{}",
+        "description": "(Optional) Options for sending VPN tunnel logs to CloudWatch.",
+        "name": "tunnel1_log_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "\"ipv4\"",
+        "description": "(Optional) Indicate whether the VPN tunnels process IPv4 or IPv6 traffic. Valid values are ipv4 | ipv6. ipv6 Supports only EC2 Transit Gateway.",
+        "name": "tunnel_inside_ip_version",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The id of the VPC where the VPN Gateway lives.",
+        "name": "vpc_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) Turn on or off tunnel endpoint lifecycle control feature for the second VPN tunnel. Valid values are true | false",
+        "name": "tunnel2_enable_tunnel_lifecycle_control",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "\"\"",
+        "description": "The CIDR block of the inside IP addresses for the first VPN tunnel.",
+        "name": "tunnel1_inside_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The CIDR block of the inside IP addresses for the second VPN tunnel.",
+        "name": "tunnel2_inside_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The preshared key of the first VPN tunnel.",
+        "name": "tunnel1_preshared_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "The id of the VPN Gateway.",
+        "name": "vpn_gateway_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "false",
+        "description": "Set to true for the created VPN connection to use static routes exclusively (only if `create_vpn_connection = true`). Static routes must be used for devices that don't support BGP.",
+        "name": "vpn_connection_static_routes_only",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default clear) The action to take after DPD timeout occurs for the second VPN tunnel. Specify restart to restart the IKE initiation. Specify clear to end the IKE session. Valid values are clear | none | restart",
+        "name": "tunnel2_dpd_timeout_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more encryption algorithms that are permitted for the second VPN tunnel for phase 2 IKE negotiations. Valid values are AES128 | AES256 | AES128-GCM-16 | AES256-GCM-16",
+        "name": "tunnel2_phase2_encryption_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 540) The margin time, in seconds, before the phase 2 lifetime expires, during which the AWS side of the first VPN connection performs an IKE rekey. The exact time of the rekey is randomly selected based on the value for tunnel1_rekey_fuzz_percentage. Valid value is between 60 and half of tunnel1_phase2_lifetime_seconds",
+        "name": "tunnel1_rekey_margin_time_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "0",
+        "description": "The number of subnet route table ids being passed in via `vpc_subnet_route_table_ids`.",
+        "name": "vpc_subnet_route_table_count",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more Diffie-Hellman group numbers that are permitted for the second VPN tunnel for phase 1 IKE negotiations. Valid values are 2 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24",
+        "name": "tunnel2_phase1_dh_group_numbers",
+        "required": false,
+        "type": "list(number)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default add) The action to take when the establishing the tunnel for the second VPN connection. By default, your customer gateway device must initiate the IKE negotiation and bring up the tunnel. Specify start for AWS to initiate the IKE negotiation. Valid values are add | start",
+        "name": "tunnel2_startup_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IKE versions that are permitted for the first VPN tunnel. Valid values are ikev1 | ikev2",
+        "name": "tunnel1_ike_versions",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IPv6 CIDR on the customer gateway (on-premises) side of the VPN connection.",
+        "name": "local_ipv6_network_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) The IPv6 CIDR on AWS side of the VPN connection.",
+        "name": "remote_ipv6_network_cidr",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more encryption algorithms that are permitted for the first VPN tunnel for phase 1 IKE negotiations. Valid values are AES128 | AES256 | AES128-GCM-16 | AES256-GCM-16",
+        "name": "tunnel1_phase1_encryption_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default 28800) The lifetime for phase 1 of the IKE negotiation for the second VPN tunnel, in seconds. Valid value is between 900 and 28800",
+        "name": "tunnel2_phase1_lifetime_seconds",
+        "required": false,
+        "type": "number"
+      },
+      {
+        "default": "null",
+        "description": "The ID of the Transit Gateway.",
+        "name": "transit_gateway_id",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "\"\"",
+        "description": "The preshared key of the second VPN tunnel.",
+        "name": "tunnel2_preshared_key",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "true",
+        "description": "Set to false to prevent attachment of the VGW to the VPC",
+        "name": "create_vpn_gateway_attachment",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "false",
+        "description": "Set to false to disable attachment of the VPN connection route to the VPN connection (TGW uses another resource for that)",
+        "name": "connect_to_transit_gateway",
+        "required": false,
+        "type": "bool"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more integrity algorithms that are permitted for the first VPN tunnel for phase 2 IKE negotiations. Valid values are SHA1 | SHA2-256 | SHA2-384 | SHA2-512",
+        "name": "tunnel1_phase2_integrity_algorithms",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "{}",
+        "description": "(Optional) Options for sending VPN tunnel logs to CloudWatch.",
+        "name": "tunnel2_log_options",
+        "required": false,
+        "type": "any"
+      },
+      {
+        "default": "[]",
+        "description": "List of CIDRs to be used as destination for static routes (used with `vpn_connection_static_routes_only = true`). Routes to destinations set here will be propagated to the routing tables of the subnets defined in `vpc_subnet_route_table_ids`.",
+        "name": "vpn_connection_static_routes_destinations",
+        "required": false,
+        "type": "list(string)"
+      },
+      {
+        "default": "null",
+        "description": "(Optional, Default clear) The action to take after DPD timeout occurs for the first VPN tunnel. Specify restart to restart the IKE initiation. Specify clear to end the IKE session. Valid values are clear | none | restart",
+        "name": "tunnel1_dpd_timeout_action",
+        "required": false,
+        "type": "string"
+      },
+      {
+        "default": "null",
+        "description": "(Optional) List of one or more Diffie-Hellman group numbers that are permitted for the second VPN tunnel for phase 2 IKE negotiations. Valid values are 2 | 5 | 14 | 15 | 16 | 17 | 18 | 19 | 20 | 21 | 22 | 23 | 24",
+        "name": "tunnel2_phase2_dh_group_numbers",
+        "required": false,
+        "type": "list(number)"
+      }
+    ]
+  },
+  "all_outputs": {
+    "root": [
+      {
+        "description": "A list with the VPN Connection ID if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_id"
+      },
+      {
+        "description": "A list with the the public IP address of the second VPN tunnel if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel2_address"
+      },
+      {
+        "description": "A list with the the RFC 6890 link-local address of the second VPN tunnel (Customer Gateway Side) if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel2_cgw_inside_address"
+      },
+      {
+        "description": "A list with the the RFC 6890 link-local address of the second VPN tunnel (VPN Gateway Side) if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel2_vgw_inside_address"
+      },
+      {
+        "description": "The transit gateway attachment ID that was generated when attaching this VPN connection.",
+        "name": "vpn_connection_transit_gateway_attachment_id"
+      },
+      {
+        "description": "The configuration information for the VPN connection's customer gateway (in the native XML format) if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_customer_gateway_configuration"
+      },
+      {
+        "description": "A list with the the public IP address of the first VPN tunnel if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel1_address"
+      },
+      {
+        "description": "A list with the the RFC 6890 link-local address of the first VPN tunnel (Customer Gateway Side) if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel1_cgw_inside_address"
+      },
+      {
+        "description": "A list with the the RFC 6890 link-local address of the first VPN tunnel (VPN Gateway Side) if `create_vpn_connection = true`, or empty otherwise",
+        "name": "vpn_connection_tunnel1_vgw_inside_address"
+      },
+      {
+        "description": "The preshared key of the first VPN tunnel.",
+        "name": "tunnel1_preshared_key"
+      },
+      {
+        "description": "The preshared key of the second VPN tunnel.",
+        "name": "tunnel2_preshared_key"
+      }
+    ]
+  },
+  "built_from_version": "4.0.0",
+  "module_id": "terraform-aws-modules/vpn-gateway/aws",
+  "vars": {
+    "root::tunnel1_log_options": {
+      "examples": [
+        "tunnel1_log_options = {\n    cloudwatch_log_options = {\n      log_enabled       = true\n      log_group_arn     = aws_cloudwatch_log_group.tunnel1_logs.arn\n      log_output_format = \"text\"\n    }\n  }"
+      ],
+      "field_names": [
+        "log_enabled",
+        "log_group_arn",
+        "log_output_format"
+      ],
+      "provenance": "example"
+    },
+    "root::tunnel2_log_options": {
+      "examples": [
+        "tunnel2_log_options = {\n    cloudwatch_log_options = {\n      log_enabled       = true\n      log_group_arn     = aws_cloudwatch_log_group.tunnel2_logs.arn\n      log_output_format = \"text\"\n    }\n  }"
+      ],
+      "field_names": [
+        "log_enabled",
+        "log_group_arn",
+        "log_output_format"
+      ],
+      "provenance": "example"
+    }
+  }
+}

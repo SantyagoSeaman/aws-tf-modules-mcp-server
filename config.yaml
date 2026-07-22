@@ -30,13 +30,3 @@ search_weights:
 
   # Weight for semantic similarity (cosine similarity of embeddings)
   w_sem: 3.0
-
-# Disk cache directory for grep_module_docs's live Terraform Registry document
-# fetches. Set to null/omit to use the default:
-# ${TFMODSEARCH_CACHE_DIR:-${XDG_CACHE_HOME:-~/.cache}}/tfmodsearch/registry_docs
-doc_cache_dir: null
-
-# TTL (hours) for "latest" (unpinned) grep_module_docs cache entries before a
-# refetch is triggered. Pinned versions are immutable and always cached forever
-# regardless of this value. Default: 24
-doc_cache_ttl_hours: 24

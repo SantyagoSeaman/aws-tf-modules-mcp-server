@@ -6,7 +6,6 @@ Tools exposed:
 - modules_list() -> complete catalog of indexed modules
 - search_modules(query: str) -> top-3 ranked hits
 - get_module(module_identifier: str) -> full module documentation
-- grep_module_docs(module_id: str, pattern: str) -> regex-grepped live registry documentation
 
 The server requires an index file specified via --index_path argument or uses default location.
 Search scoring weights are loaded from config.yaml and can be overridden via CLI arguments.
@@ -14,13 +13,14 @@ Search scoring weights are loaded from config.yaml and can be overridden via CLI
 
 import argparse
 import ipaddress
+import json
 import logging
 import os
 import re
 import sys
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import asdict, dataclass
 from importlib.metadata import PackageNotFoundError
 from importlib.metadata import version as package_version
@@ -40,11 +40,10 @@ from starlette.responses import JSONResponse
 # re-exported here for backward compatibility (tests and external callers).
 from tfmod_server_args import _env_default, parse_arguments  # noqa: E402, F401
 
-import tfmod_registry_docs
-from tfmod_doc_grep import grep_document
-from tfmod_registry_docs import fetch_latest_pypi_version, get_assembled_docs, is_newer_version
+from tfmod_registry_docs import fetch_latest_pypi_version, is_newer_version
 from tfmod_search_lib import (
     _PROJECT_ROOT,
+    ModuleDocumentParser,
     ScoredHit,
     SearchIndex,
     compute_scores,
@@ -69,9 +68,9 @@ app = FastMCP(
     name="tfmod-search",
     version=_SERVER_VERSION,
     instructions="""
-# TFModSearch — Terraform Module Documentation Search & Live Registry Grep
+# TFModSearch — Terraform Module Documentation Search
 
-Two complementary tool families. Module APIs change between major versions;
+Fully offline curated AWS catalog. Module APIs change between major versions;
 memorized variable names are frequently stale. Before writing or modifying
 Terraform, ALWAYS retrieve current documentation rather than relying on
 training data.
@@ -81,7 +80,7 @@ training data.
 1. `search_modules(query, top_k=3)` — find the right module. Returns the
    top-ranked matches (default 3, up to 10) with name, path, keywords,
    description, relevance score, and `module_id`/`latest_version` (registry
-   coordinates for chaining into `grep_module_docs`). Query by functionality
+   coordinates identifying the module). Query by functionality
    ("s3 bucket with encryption and versioning"), technology ("kubernetes
    cluster"), or exact module name ("vpc", "eks").
    Each result also carries a `confidence` verdict: `"high"` means the top
@@ -109,38 +108,22 @@ training data.
    "all" on large modules. A nested/complex leaf shape — a bare bool vs an
    object, a map keyed by a NUMBER vs a name, a plural vs singular field, a
    sub-block that defaults ON — is usually visible only in `examples`: check
-   `get_module(name, sections=["examples"])` (or grep) before writing any
-   nested/complex (`any`/`object(...)`) input. Never leave a required nested
-   block as a prose comment or TODO — write the exact shape the doc shows.
+   `get_module(name, sections=["examples"])` before writing any nested/complex
+   (`any`/`object(...)`) input. Never leave a required nested block as a
+   prose comment or TODO — write the exact shape the doc shows.
 3. Use the exact variable names, defaults, and pinned version shown in the
    retrieved documentation — not values recalled from training data.
 
 `modules_list()` returns the full catalog (names, paths, descriptions,
 keywords, module_id, latest_version) when browsing is preferable to search.
 
-## Live registry grep (any module, any provider ecosystem, version-pinnable)
-
-4. `grep_module_docs(module_id, pattern, version=None, ...)` — fetch the
-   full, current documentation for ANY Terraform Registry module (not just
-   the curated AWS catalog) — optionally pinned to an exact `version` — and
-   regex-grep it, returning only matching lines with a few lines of context
-   (like the Grep tool), not the whole document. Use this when: the module
-   isn't in the curated catalog; you need a specific/older version's exact
-   variable names or defaults; or you want to pinpoint one detail (e.g. "what
-   is the default of the NAT-gateway variable in 6.6.1?") without flooding
-   context with a 10k+ token document. Results are disk-cached: pinned
-   versions forever, `latest` for `doc_cache_ttl_hours` (default 24h, or pass
-   `refresh=true` to bypass). Zero matches still returns `available_sections`
-   so you can refine `pattern`/`scope`.
-
 ## Tool Boundaries
 
 - Curated AWS module, general usage/examples/inputs → `search_modules` +
   `get_module` (fast, offline, hand-curated).
-- Any registry module (AWS or not), a specific/older version, or a pinpoint
-  variable/default lookup → `grep_module_docs` (live, version-aware, regex).
-- Chain them: `search_modules` results carry `module_id`/`latest_version` —
-  feed those straight into `grep_module_docs` without guessing coordinates.
+- A module outside this catalog, a specific/older version, or a pinpoint
+  live lookup → use your other Terraform Registry tooling; this server is
+  a curated, fully offline AWS catalog only.
 
 ## Call economy — spend the fewest calls
 
@@ -148,10 +131,7 @@ keywords, module_id, latest_version) when browsing is preferable to search.
   `get_module("<name>")` DIRECTLY — skip `search_modules`. Search is for when
   the module is NOT obvious from the requirement.
 - ONE `get_module("<name>", sections=["inputs"])` returns the authoritative
-  CURRENT variable table. Do NOT then call `grep_module_docs` to re-verify names you
-  already have — that is a wasted call. `grep_module_docs` is ONLY for modules
-  outside the curated catalog, a specific/older version, or a pinpoint lookup
-  the head/sections don't carry.
+  CURRENT variable table — do not re-verify it elsewhere, that is a wasted call.
 - Budget: a curated-catalog requirement should cost ~1–2 calls total
   (an optional search + one get_module), not 3–4.
 
@@ -369,66 +349,6 @@ class ConfigLoader:
 
         return log_level.upper()
 
-    @staticmethod
-    def load_doc_cache(
-        config_path: Path | None = None,
-        cli_overrides: dict[str, Any] | None = None,
-        logger: logging.Logger | None = None,
-    ) -> tuple[Path, int]:
-        """
-        Load registry-docs cache configuration with precedence: CLI > YAML > defaults.
-
-        Args:
-            config_path: Path to YAML configuration file
-            cli_overrides: Dict with optional 'doc_cache_dir' (str) and
-                'doc_cache_ttl_hours' (int) overrides
-            logger: Logger instance for logging operations
-
-        Returns:
-            Tuple of (cache_dir, ttl_hours) for grep_module_docs's registry-docs cache.
-            Default cache_dir: $TFMODSEARCH_CACHE_DIR or $XDG_CACHE_HOME or ~/.cache,
-            joined with "tfmodsearch/registry_docs". Default ttl_hours: 24.
-        """
-        default_cache_root = Path(
-            os.environ.get("TFMODSEARCH_CACHE_DIR") or os.environ.get("XDG_CACHE_HOME") or (Path.home() / ".cache")
-        )
-        cache_dir = default_cache_root / "tfmodsearch" / "registry_docs"
-        ttl_hours = 24
-
-        # Load from YAML if exists
-        if config_path and config_path.exists():
-            try:
-                with open(config_path) as f:
-                    config = yaml.safe_load(f)
-                    if config:
-                        if config.get("doc_cache_dir"):
-                            cache_dir = Path(config["doc_cache_dir"])
-                            if logger:
-                                logger.info(f"Loaded doc_cache_dir from config: {config_path}")
-                        if config.get("doc_cache_ttl_hours") is not None:
-                            ttl_hours = int(config["doc_cache_ttl_hours"])
-                            if logger:
-                                logger.info(f"Loaded doc_cache_ttl_hours from config: {config_path}")
-            except Exception as e:
-                if logger:
-                    logger.warning(f"Error loading doc cache config from {config_path}: {e}, using defaults")
-        elif config_path:
-            if logger:
-                logger.warning(f"Config file not found at {config_path}, using doc cache defaults")
-
-        # Apply CLI overrides (take precedence)
-        if cli_overrides:
-            if cli_overrides.get("doc_cache_dir"):
-                cache_dir = Path(cli_overrides["doc_cache_dir"])
-                if logger:
-                    logger.info(f"Applied CLI override for doc_cache_dir: {cache_dir}")
-            if cli_overrides.get("doc_cache_ttl_hours") is not None:
-                ttl_hours = int(cli_overrides["doc_cache_ttl_hours"])
-                if logger:
-                    logger.info(f"Applied CLI override for doc_cache_ttl_hours: {ttl_hours}")
-
-        return cache_dir, ttl_hours
-
 
 class ServerState:
     """
@@ -442,8 +362,6 @@ class ServerState:
         _weights: Search scoring weights configuration
         _index_path: Path to the index file
         _query_instruction: Optional query instruction prefix for BGE models
-        _doc_cache_dir: Disk cache directory for grep_module_docs registry documents
-        _doc_cache_ttl_hours: TTL (hours) for "latest" registry doc cache entries
     """
 
     def __init__(
@@ -453,8 +371,6 @@ class ServerState:
         index_path: Path,
         query_instruction: str | None = None,
         logger: logging.Logger | None = None,
-        doc_cache_dir: Path | None = None,
-        doc_cache_ttl_hours: int = 24,
     ):
         """
         Initialize server state.
@@ -465,11 +381,6 @@ class ServerState:
             index_path: Path to index file
             query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
-            doc_cache_dir: Disk cache directory for grep_module_docs registry documents
-                (None until resolved by initialize_server/ConfigLoader.load_doc_cache;
-                grep_module_docs falls back to the default location if still None)
-            doc_cache_ttl_hours: TTL (hours) for "latest" (unpinned) registry doc cache
-                entries; pinned versions are always cached forever regardless
         """
         self._index = index
         self._weights = weights
@@ -477,16 +388,13 @@ class ServerState:
         self._query_instruction = query_instruction
         self._lock = threading.RLock()
         self._logger = logger
-        self._doc_cache_dir = doc_cache_dir
-        self._doc_cache_ttl_hours = doc_cache_ttl_hours
 
         doc_count = len(index.docs) if index is not None else 0
         if self._logger:
             self._logger.info(
                 f"ServerState initialized: index_path={index_path}, "
                 f"docs={doc_count}, weights={weights.to_dict()}, "
-                f"query_instruction={'set' if query_instruction else 'disabled'}, "
-                f"doc_cache_dir={doc_cache_dir}, doc_cache_ttl_hours={doc_cache_ttl_hours}"
+                f"query_instruction={'set' if query_instruction else 'disabled'}"
             )
 
     @property
@@ -515,16 +423,6 @@ class ServerState:
     def query_instruction(self) -> str | None:
         """Get optional query instruction prefix for BGE models."""
         return self._query_instruction
-
-    @property
-    def doc_cache_dir(self) -> Path | None:
-        """Get the disk cache directory for grep_module_docs registry documents."""
-        return self._doc_cache_dir
-
-    @property
-    def doc_cache_ttl_hours(self) -> int:
-        """Get the TTL (hours) for 'latest' (unpinned) registry doc cache entries."""
-        return self._doc_cache_ttl_hours
 
     def reload_index(self, new_index_path: Path | None = None) -> None:
         """
@@ -577,8 +475,6 @@ class ServerStateManager:
         index_path: Path,
         query_instruction: str | None = None,
         logger: logging.Logger | None = None,
-        doc_cache_dir: Path | None = None,
-        doc_cache_ttl_hours: int = 24,
     ) -> ServerState:
         """
         Initialize the server state singleton.
@@ -591,8 +487,6 @@ class ServerStateManager:
             index_path: Path to index file
             query_instruction: Optional query instruction prefix for BGE models
             logger: Logger instance for logging operations
-            doc_cache_dir: Disk cache directory for grep_module_docs registry documents
-            doc_cache_ttl_hours: TTL (hours) for "latest" registry doc cache entries
 
         Returns:
             Initialized ServerState instance
@@ -603,9 +497,7 @@ class ServerStateManager:
         with cls._lock:
             if cls._instance is not None:
                 raise RuntimeError("ServerState already initialized")
-            cls._instance = ServerState(
-                index, weights, index_path, query_instruction, logger, doc_cache_dir, doc_cache_ttl_hours
-            )
+            cls._instance = ServerState(index, weights, index_path, query_instruction, logger)
             if logger:
                 logger.info("ServerStateManager initialized")
             return cls._instance
@@ -655,13 +547,11 @@ class SearchHit(BaseModel):
     module_id: str = Field(
         ...,
         description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
-        "'terraform-aws-modules/vpc/aws'). Pass this to grep_module_docs to grep the "
-        "live, current registry documentation for this module.",
+        "'terraform-aws-modules/vpc/aws') identifying this module in the registry.",
     )
     latest_version: str = Field(
         ...,
-        description="Latest version known at doc-curation time (a hint, not a live guarantee). "
-        "Pass as `version` to grep_module_docs to pin that snapshot, or omit to resolve the true latest.",
+        description="Latest version known at doc-curation time (a hint, not a live guarantee).",
     )
 
     @field_serializer("score")
@@ -776,13 +666,11 @@ class ModuleListItem(BaseModel):
     module_id: str = Field(
         ...,
         description="Terraform Registry coordinates 'namespace/name/provider' (e.g., "
-        "'terraform-aws-modules/vpc/aws'). Pass this to grep_module_docs to grep the "
-        "live, current registry documentation for this module.",
+        "'terraform-aws-modules/vpc/aws') identifying this module in the registry.",
     )
     latest_version: str = Field(
         ...,
-        description="Latest version known at doc-curation time (a hint, not a live guarantee). "
-        "Pass as `version` to grep_module_docs to pin that snapshot, or omit to resolve the true latest.",
+        description="Latest version known at doc-curation time (a hint, not a live guarantee).",
     )
     purpose: str | None = Field(
         None, description="One-line purpose of the module (clipped). Present in the compact default."
@@ -811,51 +699,6 @@ class ModulesListOutput(UpdateNoticeMixin):
         ..., description="List of all available Terraform modules (compact by default, full metadata when detail=full)."
     )
     count: int = Field(..., description="Total number of modules in the catalog.")
-
-
-class GrepMatch(BaseModel):
-    section: str = Field(
-        ...,
-        description="Section label the match was found in, e.g. 'root/readme', 'root/inputs', "
-        "'submodule:flow-log/readme', 'example:complete/readme'.",
-    )
-    line_number: int = Field(..., description="1-based line number within the assembled document.")
-    line: str = Field(..., description="The matching line's text.")
-    before: list[str] = Field(..., description="Up to context_lines lines immediately preceding the match.")
-    after: list[str] = Field(..., description="Up to context_lines lines immediately following the match.")
-    enclosing: str | None = Field(
-        default=None,
-        description="The nearest enclosing '- <name> | ...' list-item row (e.g. an input/output/"
-        "resource header) when the match landed on a continuation line of a multi-line row (a "
-        "type or description that spans multiple lines) -- so the container name/key is never "
-        "lost. None when the matched line is itself a list-item row, or none was found in section.",
-    )
-
-
-class CacheInfo(BaseModel):
-    hit: bool = Field(..., description="Whether the assembled document was served from the on-disk/memory cache.")
-    fetched_at: str = Field(..., description="ISO-8601 timestamp of the underlying registry fetch.")
-    policy: str = Field(
-        ..., description="Cache policy applied: 'pinned' (immutable, cached forever) or 'latest-ttl' (TTL-based)."
-    )
-
-
-class GrepOutput(UpdateNoticeMixin):
-    module_id: str = Field(..., description="Terraform Registry coordinates 'namespace/name/provider' requested.")
-    resolved_version: str = Field(
-        ..., description="Concrete version actually served (never the literal string 'latest')."
-    )
-    source_url: str = Field(..., description="Terraform Registry URL of the resolved module version.")
-    total_matches: int = Field(..., description="Total logical matches found before the max_matches cap.")
-    returned_matches: int = Field(..., description="Number of matches actually returned (<= max_matches).")
-    truncated: bool = Field(..., description="True when total_matches exceeds max_matches.")
-    cache: CacheInfo = Field(..., description="Cache status for the underlying document fetch.")
-    matches: list[GrepMatch] = Field(..., description="Matching lines with section labels and surrounding context.")
-    available_sections: list[str] = Field(
-        ...,
-        description="Full ordered list of section labels present in the assembled document, so pattern/scope "
-        "can be refined — especially useful when total_matches is 0.",
-    )
 
 
 # -----------------------------
@@ -1158,6 +1001,8 @@ def filter_module_sections(
     extra_exact_titles: tuple[str, ...] = (),
     interface_scope: str = "all",
     silent_keys: frozenset[str] = frozenset(),
+    submodule_scope: str | None = None,
+    served_complete_root_interface: bool = False,
 ) -> str:
     """
     Reduce a module document to core sections plus the requested ones.
@@ -1185,6 +1030,25 @@ def filter_module_sections(
             and skips ``## Submodule N:`` bundles.
         silent_keys: Requested keys (lowercased) that should not be reported
             in the "Requested sections not found" footer line when unmatched.
+        submodule_scope: When given (a submodule name, e.g. "karpenter"), the
+            interface-key H3 fallback is restricted to ONLY the combined
+            bundle whose title contains this name — every other bundle (root
+            AND every other submodule) is excluded, regardless of
+            interface_scope. Used by the submodule-address branch of
+            get_module_impl so a single submodule's interface request (e.g.
+            ``get_module("eks//modules/karpenter", sections=["inputs"])``)
+            cannot drag sibling submodules' or root's curated tables in
+            alongside it — that request already gets the addressed
+            submodule's FULL bundle via the exact/substring heading match
+            above; the fallback below is otherwise redundant for it and was
+            the actual source of the over-fetch.
+        served_complete_root_interface: True when the caller has already
+            guaranteed (via the D7 Change A complete-table supersede or its
+            A2 append fallback) that this response carries the module's
+            COMPLETE, current root-scope inputs/outputs interface for every
+            view actually requested. Changes the footer's escalation wording
+            so it does not send the agent back for
+            ``sections=["inputs","outputs"]`` to get what it already has.
 
     Returns:
         Filtered document text; the original text if it has no H2 sections
@@ -1194,6 +1058,7 @@ def filter_module_sections(
     """
     if interface_scope not in _INTERFACE_SCOPES:
         raise ValueError(f"interface_scope must be one of {sorted(_INTERFACE_SCOPES)}, got {interface_scope!r}")
+    submodule_scope_lower = submodule_scope.strip().lower() if submodule_scope else None
     preamble, sections = _split_h2_sections(text)
     if not sections:
         return text
@@ -1241,7 +1106,10 @@ def filter_module_sections(
                 tl = title.lower()
                 if not _matches_combined_interface(tl):
                     continue
-                if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
+                if submodule_scope_lower is not None:
+                    if submodule_scope_lower not in tl:
+                        continue
+                elif (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                     continue
                 combined_titles.append(title)
                 if _extract_interface_h3(block, {key}):
@@ -1267,7 +1135,10 @@ def filter_module_sections(
             continue
         tl = title.lower()
         if fallback_keys and _matches_combined_interface(tl):
-            if (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
+            if submodule_scope_lower is not None:
+                if submodule_scope_lower not in tl:
+                    continue
+            elif (interface_scope == "root" or submodules_requested) and tl.startswith("submodule"):
                 continue
             extracted = _extract_interface_h3(block, fallback_keys)
             if extracted:
@@ -1279,17 +1150,51 @@ def filter_module_sections(
     all_titles = [title for title, _ in sections]
     omitted = [title for title in all_titles if title not in wanted]
 
+    # Compact honest-limits pointer. `_FILTER_FOOTER_MARKER` anchors on the
+    # literal "---\nCurated subset." opening below (used by
+    # `_insert_before_footer` to splice the any-overlay appendix in before
+    # this footer) -- both branches below MUST keep that exact opening so the
+    # anchor stays valid regardless of which wording follows.
+    if served_complete_root_interface:
+        # This response already carries the module's COMPLETE, current
+        # root-scope inputs/outputs (the D7 Change A supersede, or its A2
+        # append fallback, fired for every view actually requested) --
+        # sending the agent back for sections=["inputs","outputs"] would just
+        # hand it the same data again. Point it at what is genuinely still
+        # NOT included instead: a submodule's own interface, or the module
+        # source for out-of-catalog/pinned/nested-shape/creation-condition
+        # detail.
+        disclaimer = (
+            "Curated subset. The inputs/outputs above already ARE the COMPLETE inputs/outputs "
+            "interface for the root scope (Registry-declared) — no need to re-call `get_module` "
+            'with `sections=["inputs","outputs"]` for it. For a submodule\'s own complete interface, '
+            'call `get_module` with the `"<name>//modules/<submodule>"` address. For a module outside '
+            "this catalog, a pinned older version, or a `map(object)`/`any` field's nested TYPE/SHAPE, "
+            "consult the module source. Resource-creation (`count`/`for_each`) conditions live in the "
+            "module source, not here."
+        )
+    else:
+        # SUBSET; completeness AND name-confirmation both resolve with ONE
+        # offline get_module(sections=["inputs","outputs"]) call. (2026-07-21
+        # D7: grep_module_docs -- the tool this footer used to route the
+        # remaining escalation cases to -- was removed outright; this server
+        # is now a fully offline, curated AWS catalog. A module outside the
+        # catalog, a pinned/older version, or a map(object)/any field's
+        # nested TYPE/SHAPE is now punted to the module source / the agent's
+        # other Terraform Registry tooling, not to a tool this server ships.
+        # Resource-creation conditions live in module source. Keeps the
+        # compact→full→source escalation a mechanical decision, not a guess,
+        # without repeating a long paragraph verbatim on every call.
+        disclaimer = (
+            "Curated subset. For the COMPLETE inputs/outputs or to confirm a name exists, "
+            'call `get_module` with `sections=["inputs","outputs"]` — one offline call. '
+            "For a module outside this catalog, a pinned older version, or a "
+            "`map(object)`/`any` field's nested TYPE/SHAPE, consult the module source. "
+            "Resource-creation (`count`/`for_each`) conditions live in the module source, not here."
+        )
     footer_lines = [
         "---",
-        # Compact honest-limits pointer. The curated doc is a hand-picked
-        # SUBSET; anything requiring completeness/exactness escalates one tier to
-        # the live registry, and resource-creation conditions live in module
-        # source. Keeps the compact→full→source escalation a mechanical decision,
-        # not a guess, without repeating a long paragraph verbatim on every call.
-        "Curated subset. For the COMPLETE inputs/outputs (exact types/defaults, nested "
-        "map(object)/any TYPE/SHAPE) or to confirm a name exists, grep the live doc via "
-        "`grep_module_docs` using the Module ID above. Resource-creation (`count`/`for_each`) "
-        "conditions live in the module source, not here.",
+        disclaimer,
         "Available sections (request any via `get_module`'s `sections` parameter — "
         "logical keys: inputs, outputs, examples, submodules, features, use-cases, "
         "best-practices, resources; or a case-insensitive heading substring): " + "; ".join(all_titles),
@@ -1768,7 +1673,7 @@ def search_modules_impl(query: str, state: ServerState, top_k: int = 3, expand_t
         top1_name = state.index.docs[hits[0].doc_index].module_name or "?"
         hint = (
             f"No confident catalog match (top score {hits[0].score:.1f}). Confirm absence with "
-            f"modules_list, or try grep_module_docs on the nearest module '{top1_name}' for the "
+            f"modules_list, or re-check the nearest module '{top1_name}' via get_module for the "
             f"capability keyword."
         )
 
@@ -1931,9 +1836,1264 @@ def _cap_head_input_table(head_text: str) -> str:
     if dropped <= 0:
         return head_text
 
-    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs"]) for the full table)_\n'
+    pointer_line = f'_(+{dropped} more inputs — get_module(sections=["inputs","outputs"]) for the full interface)_\n'
     new_lines = lines[:row_start] + kept_rows + [pointer_line] + lines[row_end:]
     return "".join(new_lines)
+
+
+# --------------------------------------------------------------------------- #
+# any-shape overlay (examples-primary) -- serve the committed per-module
+# any-var overlay (model/any_overlay/<id>.json, built by
+# scripts/build_any_overlay.py) on the EXISTING serve path, without touching
+# the render subsystem (filter_module_sections/_split_h2_sections/the head
+# caps above are all untouched). Design (authoritative for the mechanics
+# below): evals/specs/2026-07-20-consolidated-interface-any-overlay-design.md,
+# "Integration" section.
+#
+# Committed overlay = static build-time data -> a plain file read, never a
+# network call. get_module's network-decoupled contract is preserved by
+# construction: this server (2026-07-21 D7) makes no live Registry reads at
+# all -- the tool that used to (grep_module_docs) was removed outright.
+# --------------------------------------------------------------------------- #
+
+_ANY_OVERLAY_DIR = _PROJECT_ROOT / "model" / "any_overlay"
+
+# Per-var example cap (spec token policy: "smallest-covering example, per-var
+# cap ~2k chars, fuller example -> module source trailer").
+_ANY_OVERLAY_EXAMPLE_CHAR_CAP = 2000
+
+# Cell-substitution-only pointer for the default orientation HEAD (never the
+# example/field-list themselves -- that would blow the head's token budget).
+# No "below" wording: the head has nothing "below" it to point at.
+_ANY_TYPE_HEAD_POINTER = 'any — see sections=["inputs"]'
+
+# Reused for module_id resolution straight from raw doc text (an explicit
+# Module ID bullet, falling back to the root Source bullet) -- the exact same
+# fallback get_module/search_modules already rely on for module_id/
+# latest_version, so any-overlay filename lookup can never disagree with
+# those fields. A logger is required by the constructor, but
+# parse_module_info() itself never logs.
+_ANY_OVERLAY_INFO_PARSER = ModuleDocumentParser(logging.getLogger(__name__))
+
+
+def _resolve_overlay_module_id(text: str) -> str:
+    """Best-effort module_id parsed straight from `text`, for any-overlay
+    filename resolution only. Pure text parsing -- no network, no index/state
+    dependency -- so this works uniformly whether the doc arrived via
+    name/path/submodule-address lookup. Empty string when unparseable."""
+    return _ANY_OVERLAY_INFO_PARSER.parse_module_info(text).module_id
+
+
+def _any_overlay_path(module_id: str) -> Path:
+    return _ANY_OVERLAY_DIR / (module_id.replace("/", "__") + ".json")
+
+
+def _load_any_overlay(module_id: str) -> dict[str, Any] | None:
+    """
+    Read the committed any-overlay JSON for `module_id`, if one exists.
+
+    Static file read only (scripts/build_any_overlay.py's committed output) --
+    never a network call. Fails closed to None on anything unexpected: no
+    module_id, missing file, unreadable, malformed JSON, or the wrong shape --
+    the caller then serves the honest `any` exactly as it did before this
+    feature existed.
+
+    Since the 2026-07-21 all-catalog build, every one of the 63 catalog
+    modules gets a committed overlay carrying `all_inputs`/`all_outputs`; only
+    modules with at least one `type = any` input additionally carry a `vars`
+    key. `vars` is therefore OPTIONAL here -- a missing key is treated as the
+    empty dict `{}` (every `.get("vars", {})`/`.get("vars") or {}` call site
+    already defaults this way), and only a PRESENT-but-wrong-shape `vars` (not
+    a dict) fails the whole overlay closed.
+    """
+    if not module_id:
+        return None
+    path = _any_overlay_path(module_id)
+    try:
+        if not path.is_file():
+            return None
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    vars_field = data.get("vars", {})
+    if not isinstance(vars_field, dict):
+        return None
+    return data
+
+
+def _cap_any_overlay_example(example: str) -> tuple[str, bool]:
+    """Cap one example block to _ANY_OVERLAY_EXAMPLE_CHAR_CAP chars (token
+    policy). Returns (possibly-truncated text, whether it was truncated)."""
+    if len(example) <= _ANY_OVERLAY_EXAMPLE_CHAR_CAP:
+        return example, False
+    return example[:_ANY_OVERLAY_EXAMPLE_CHAR_CAP].rstrip(), True
+
+
+def _render_any_overlay_var_block(scope_var: str, entry: dict[str, Any], built_from_version: str) -> str:
+    """
+    One appendix block for a single overlay var: the verbatim example(s) as
+    fenced HCL, the observed-field-name list, and a provenance tag. Rendered
+    regardless of provenance -- even "honest-any" (no example, no names)
+    still gets a block, carrying its note -- so no overlay var is ever
+    silently dropped.
+
+    The SHARED honesty labels (the example-provenance sentence, the
+    field-name disclaimer, and the version-skew notice -- mandatory per the
+    design's "Honesty labels" section) are identical for every var in one
+    module (same built_from_version, same doc pin), so they are rendered
+    ONCE in the appendix intro instead (see _render_any_overlay_appendix)
+    rather than repeated here -- on a module with ~20 any-vars (e.g.
+    s3-bucket) that repetition was the dominant token cost of the appendix.
+    No honesty loss: every label still appears, just once per appendix
+    instead of once per var.
+    """
+    scope, _, var_name = scope_var.partition("::")
+    scope = scope or "root"
+    provenance = entry.get("provenance")
+    header = f"**any-overlay `{var_name}`** (scope: {scope}; type = `any`"
+    header += f"; provenance: {provenance})" if provenance else ")"
+    lines = [header + ":"]
+
+    examples = entry.get("examples") or []
+    field_names = entry.get("field_names") or []
+
+    for example in examples:
+        capped, truncated = _cap_any_overlay_example(example)
+        lines.append(f"```hcl\n{capped}\n```")
+        if truncated:
+            lines.append(
+                f"_(truncated at {_ANY_OVERLAY_EXAMPLE_CHAR_CAP} chars -- fuller example in "
+                "examples/<dir> in the module's own source)_"
+            )
+
+    if field_names:
+        lines.append("Field names: " + ", ".join(field_names))
+
+    if not examples and not field_names:
+        lines.append(
+            entry.get("note") or "Honest `any` -- no example or observed field names found in the module source."
+        )
+
+    return "\n\n".join(lines)
+
+
+def _render_any_overlay_appendix(overlay: dict[str, Any], doc_version: str | None) -> str:
+    """
+    The full any-overlay appendix for one module: a ONE-TIME intro carrying
+    the mandatory honesty labels (design's "Honesty labels" section), plus
+    one block per overlay var, keyed by var name, appended REGARDLESS of
+    whether a matching table row exists in the served document
+    (appendix-anchored, not row-anchored -- curated docs are a subset and
+    table schemes vary across the corpus). Sorted by var key for
+    deterministic output.
+
+    The example-provenance sentence, the field-name usage note, and the
+    version-skew notice are IDENTICAL for every var in one module (same
+    built_from_version, same doc_version), so they are rendered ONCE here
+    rather than once per var -- on s3-bucket's ~20 any-vars the repeated
+    ~230-char example sentence alone was the dominant cost. No honesty loss:
+    every label still appears, just once instead of per-block.
+
+    2026-07-21 discoverability fix: both labels below were reworded away from
+    "confirm shapes via grep_module_docs" phrasing, which measurably invited
+    the very grep round-trip the overlay exists to remove (an A/B eval worker
+    read a field list this label was attached to and still went to grep
+    "to confirm" it). The field-name label says the names are directly usable
+    input fields. (2026-07-21 D7: grep_module_docs was removed outright, so
+    both labels below now point any remaining escalation -- a field's own
+    nested sub-shape, or an example's uncovered fields -- at the module
+    source directly, not at a live-grep tool this server no longer ships.)
+    """
+    built_from_version = overlay.get("built_from_version", "")
+    vars_obj = overlay.get("vars") or {}
+    if not vars_obj:
+        return ""
+
+    intro_lines = [
+        "**any-typed input overlay** -- committed example HCL / observed field names for this "
+        "module's `any`-typed inputs, appended here regardless of whether the input table above "
+        "has a matching row; each block is keyed by var name and tagged with its provenance."
+    ]
+    if any(entry.get("examples") for entry in vars_obj.values()):
+        intro_lines.append(
+            f"Apply-verified example from `{built_from_version}`; references resources defined in "
+            "that example; shown form is one accepted form -- copy and adapt this; for fields "
+            "beyond this example, consult the module source directly."
+        )
+    if any(entry.get("field_names") for entry in vars_obj.values()):
+        intro_lines.append(
+            f"Field names read by the module source `@{built_from_version}` -- these are the "
+            "accepted input fields; use them directly. For the deep nested sub-shape of a "
+            "specific complex field, consult the module source directly."
+        )
+    if doc_version and built_from_version and doc_version.strip() != built_from_version.strip():
+        intro_lines.append(
+            f"Version skew: example/fields from `{built_from_version}`, doc pins `{doc_version}` -- verify."
+        )
+
+    blocks = [_render_any_overlay_var_block(key, entry, built_from_version) for key, entry in sorted(vars_obj.items())]
+    return "\n\n".join(["\n\n".join(intro_lines), *blocks])
+
+
+# The exact prefix filter_module_sections emits for its own generated footer
+# (see its footer_lines: "---" followed immediately by "Curated subset. For
+# the COMPLETE inputs/outputs ..."). Distinctive on purpose: a bare "\n\n---\n"
+# also matches any decorative horizontal rule a module doc happens to carry
+# in its body (e.g. cloudwatch.md's mid-document "---" ahead of its first
+# numbered submodule section), which used to make the appendix land there
+# instead of at the real footer / the true end of the document.
+_FILTER_FOOTER_MARKER = "\n\n---\nCurated subset."
+
+
+def _insert_before_footer(rendered: str, appendix: str, *, is_filtered: bool) -> str:
+    """
+    Insert `appendix` as the final content block of `rendered`.
+
+    Deliberately appendix-anchored rather than heading-anchored: the corpus's
+    heading scheme varies (split "## Main Input Variables" vs combined
+    "## Root Module:"/"## Submodule N:" bundles), and guessing at a specific
+    H2/H3 boundary would risk exactly the shape-mismatch class
+    _cap_head_input_table's docstring warns about.
+
+    `is_filtered` distinguishes the two shapes get_module_impl passes in:
+    - True: `rendered` is a filter_module_sections(...) result, which always
+      carries its own generated footer. The appendix is inserted immediately
+      before that footer (anchored on _FILTER_FOOTER_MARKER, NOT a bare
+      "\\n\\n---\\n" -- a kept section's own body content could otherwise carry
+      a decorative rule that gets mistaken for the real footer).
+    - False: `rendered` is the RAW, unfiltered full document (the
+      sections=["all"/"full"/"everything"] escape hatch) -- it carries no
+      generated footer at all, and a bare "---" search can misfire on a
+      decorative rule anywhere in the document body (cloudwatch.md's rule
+      ahead of "## Submodule 1: log-group", about 16% through the file, used
+      to pull the appendix there instead of after all 13 real submodules).
+      The appendix is always appended at the strict end instead.
+    """
+    if not appendix:
+        return rendered
+    if not is_filtered:
+        return rendered.rstrip("\n") + "\n\n" + appendix + "\n"
+    idx = rendered.rfind(_FILTER_FOOTER_MARKER)
+    if idx == -1:
+        # Defensive: filter_module_sections always emits this footer today.
+        # On an unforeseen shape change, fail safe to a strict end-append
+        # rather than guessing at a bare "---".
+        return rendered.rstrip("\n") + "\n\n" + appendix + "\n"
+    return rendered[:idx] + "\n\n" + appendix + rendered[idx:]
+
+
+# Logical keys whose presence in a get_module `sections` request means the
+# response includes (or resolves to) the inputs view -- the only view the
+# any-overlay appendix is spliced into (a request for unrelated sections, e.g.
+# sections=["outputs"], must not gain input-var content it never asked for).
+_ANY_OVERLAY_INPUT_KEYS = frozenset({"inputs", "variables"})
+
+
+def _sections_request_inputs(sections: list[str]) -> bool:
+    return any(entry.strip().lower() in _ANY_OVERLAY_INPUT_KEYS for entry in sections)
+
+
+def _with_any_overlay_appendix(served_text: str, content: str, *, is_filtered: bool, scope: str | None = None) -> str:
+    """
+    Splice the any-overlay appendix into `served_text` (a
+    filter_module_sections(...) result, or the raw full document) when
+    `content` (the raw, unfiltered doc -- always used for module_id/version
+    resolution regardless of how `served_text` was produced) resolves to a
+    module with a committed overlay. A pure no-op (byte-identical
+    `served_text` returned unchanged) when the module has no overlay file --
+    the common case.
+
+    `is_filtered` is forwarded to _insert_before_footer verbatim -- callers
+    MUST pass True for a filter_module_sections(...) result and False for the
+    raw full document, so the appendix is anchored correctly in either shape.
+
+    `scope`, when given (a submodule name), restricts the appendix to that
+    submodule's own `<scope>::`-prefixed overlay vars only -- used when
+    serving a submodule-address request, so a submodule's inputs view never
+    gains root-scope or a different submodule's overlay vars. A scope with
+    zero matching vars is treated the same as "no overlay" (served_text
+    returned unchanged).
+    """
+    module_id = _resolve_overlay_module_id(content)
+    overlay = _load_any_overlay(module_id)
+    if not overlay:
+        return served_text
+    if scope is not None:
+        prefix = f"{scope}::"
+        scoped_vars = {key: entry for key, entry in overlay.get("vars", {}).items() if key.startswith(prefix)}
+        if not scoped_vars:
+            return served_text
+        overlay = {**overlay, "vars": scoped_vars}
+    version_match = _LATEST_VERSION_RE.search(content)
+    doc_version = version_match.group(1).strip() if version_match else None
+    appendix = _render_any_overlay_appendix(overlay, doc_version)
+    return _insert_before_footer(served_text, appendix, is_filtered=is_filtered)
+
+
+def _cell_var_name(cell: str) -> str:
+    """The bare variable name inside a Variable-column table cell, stripping
+    the Markdown backticks the corpus always wraps names in (e.g.
+    "`lifecycle_rule`" -> "lifecycle_rule")."""
+    match = re.search(r"`([A-Za-z_][\w-]*)`", cell)
+    return match.group(1) if match else cell.strip()
+
+
+def _root_any_overlay_entries_from_overlay(overlay: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Same extraction as `_root_any_overlay_entries`, but from an
+    already-loaded overlay dict -- used by callers (e.g.
+    `_append_missing_root_complete_tables`) that already have the overlay in
+    hand and have no document text to re-resolve/re-load it from a second
+    time."""
+    return {key.split("::", 1)[1]: entry for key, entry in overlay.get("vars", {}).items() if key.startswith("root::")}
+
+
+def _root_any_overlay_entries(text: str) -> dict[str, dict[str, Any]]:
+    """Root-scope overlay entries (examples/field_names/provenance/note) from
+    `text`'s committed overlay, keyed by the bare var name (the "root::"
+    prefix stripped) -- both the eligibility set AND the content source for
+    the head's pointer-only substitution (_substitute_any_type_head_cells)
+    and the inline field-name hint (_inline_any_overlay_input_cells, Fix 1 of
+    the 2026-07-21 table-discoverability fix). Empty when the module has no
+    overlay."""
+    overlay = _load_any_overlay(_resolve_overlay_module_id(text))
+    if not overlay:
+        return {}
+    return _root_any_overlay_entries_from_overlay(overlay)
+
+
+def _root_any_var_names(text: str) -> frozenset[str]:
+    """Root-scope any-var names from `text`'s committed overlay (if any) --
+    used only to decide which head Type cells are eligible for the
+    sections=["inputs"] pointer substitution. Empty when the module has no
+    overlay."""
+    return frozenset(_root_any_overlay_entries(text))
+
+
+# Field names shown inline in a Type cell before falling back to a "+N more"
+# tail (Fix 1 of the 2026-07-21 table-discoverability fix) -- long enough to
+# be useful at the point of need, short enough to keep one table row one line.
+_ANY_OVERLAY_CELL_FIELD_CAP = 6
+
+
+def _format_any_overlay_cell_hint(entry: dict[str, Any]) -> str | None:
+    """
+    Build the inline Type-cell replacement for one any-typed input row from
+    its root-scope overlay entry (Fix 1 of the 2026-07-21 table-
+    discoverability fix): an A/B eval measured that a worker reading the
+    input TABLE saw a bare `any` Type cell and greped `grep_module_docs` for
+    the field names anyway, never connecting the row to the any-overlay
+    appendix block below it. The field-name signal now lives AT the row,
+    the point of need.
+
+    - field_names present: ``"any -- fields: f1, f2, ..., f6[, +N more]"``,
+      capped at ``_ANY_OVERLAY_CELL_FIELD_CAP`` names, plus ``"; example
+      below"`` ONLY when the entry also carries an example -- never claim an
+      example is "below" when the appendix block will not actually render
+      one for this var.
+    - no field_names but an example exists: ``"any -- see any-overlay
+      example below"``.
+    - honest-any (neither field_names nor an example): ``None`` -- the
+      caller leaves the cell as bare ``any``, exactly as before this fix.
+
+    Always a single line with no literal ``|``; overlay field names are
+    plain identifiers in the corpus today so this holds by construction, but
+    the caller (``_substitute_input_table_cells``) still verifies it before
+    writing the cell rather than trusting this blindly.
+    """
+    field_names = entry.get("field_names") or []
+    has_example = bool(entry.get("examples"))
+    if field_names:
+        shown = field_names[:_ANY_OVERLAY_CELL_FIELD_CAP]
+        hint = "any -- fields: " + ", ".join(shown)
+        remaining = len(field_names) - len(shown)
+        if remaining > 0:
+            hint += f", +{remaining} more"
+        if has_example:
+            hint += "; example below"
+        return hint
+    if has_example:
+        return "any -- see any-overlay example below"
+    return None
+
+
+def _make_any_overlay_cell_for_row(entries: dict[str, dict[str, Any]]) -> Callable[[str, str], str | None]:
+    """
+    Build a ``cell_for_row`` callback (see ``_substitute_table_rows_from_
+    header``/``_substitute_input_table_cells``) that hints a bare ``any``
+    Type cell from `entries` (root-scope overlay entries keyed by var name --
+    see ``_root_any_overlay_entries``/``_root_any_overlay_entries_from_
+    overlay``). Shared by ``_inline_any_overlay_input_cells`` (the curated
+    table's rows) and ``_hint_any_cells_in_table_text`` (NEW-3 fix, 2026-07-22
+    pre-release re-review: the D7 Change A2 appended complete table's rows),
+    so both apply the identical hint logic.
+    """
+
+    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
+        if type_cell.strip().strip("`").strip().lower() != "any":
+            return None
+        entry = entries.get(var_name)
+        if entry is None:
+            return None
+        return _format_any_overlay_cell_hint(entry)
+
+    return _cell_for_row
+
+
+def _substitute_table_rows_from_header(
+    lines: list[str], header_line_idx: int, cell_for_row: Callable[[str, str], str | None]
+) -> bool:
+    """
+    Core per-table cell substitution, given `lines` (a document already
+    split with ``splitlines(keepends=True)``) and the line index of a
+    table's HEADER row -- the row immediately below any heading, already
+    located and validated by the caller. Rewrites each data row's Type cell
+    (via `cell_for_row`) IN PLACE and returns whether anything changed.
+
+    Extracted (NEW-3 fix, 2026-07-22 pre-release re-review) so this same
+    per-row logic can run both heading-anchored (`_substitute_input_table_
+    cells`, which walks every ``### Main Input Variables`` occurrence) and
+    directly on an already-isolated table string whose header sits at line 0
+    with no heading immediately above it (`_hint_any_cells_in_table_text`,
+    used on the D7 Change A2 appended "## Complete Root Inputs" table, which
+    has an explanatory paragraph -- not just the table -- between its own
+    heading and the header row).
+    """
+    header_cells = _split_table_row(lines[header_line_idx])
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return False
+
+    lower_headers = [c.lower() for c in header_cells]
+    if "variable" not in lower_headers or "type" not in lower_headers:
+        return False
+    var_idx = lower_headers.index("variable")
+    type_idx = lower_headers.index("type")
+
+    changed = False
+    row_idx = sep_idx + 1
+    while row_idx < len(lines) and _TABLE_ROW_RE.match(lines[row_idx].rstrip("\n")):
+        row = lines[row_idx]
+        cells = _split_table_row(row)
+        if len(cells) > max(var_idx, type_idx):
+            replacement = cell_for_row(_cell_var_name(cells[var_idx]), cells[type_idx])
+            if replacement is not None and "|" not in replacement and "\n" not in replacement:
+                cells[type_idx] = replacement
+                newline = "\n" if row.endswith("\n") else ""
+                lines[row_idx] = "| " + " | ".join(cells) + " |" + newline
+                changed = True
+        row_idx += 1
+    return changed
+
+
+def _substitute_input_table_cells(text: str, cell_for_row: Callable[[str, str], str | None]) -> str:
+    """
+    Walk EVERY ``### Main Input Variables`` table in `text` -- a document can
+    carry more than one on the combined-scheme corpus (one per "## Root
+    Module:"/"## Submodule N:" bundle, e.g. elasticache) -- and, for each
+    data row, ask ``cell_for_row(var_name, type_cell)`` for a replacement
+    Type-cell string. Returning ``None`` from the callback leaves that row's
+    Type cell untouched.
+
+    Shared by the head's pointer-only substitution
+    (``_substitute_any_type_head_cells``, which only ever sees a single table
+    since the head is scoped to ``interface_scope="root"``) and the inline
+    field-name hint (``_inline_any_overlay_input_cells``, which can see
+    several tables in one call).
+
+    Reuses exactly the heading/header/separator detection
+    ``_cap_head_input_table`` relies on, so whenever that cap correctly
+    identifies a table, this substitution does too -- and on any parse
+    mismatch for one OCCURRENCE (no header row immediately after the
+    heading, no separator, no Variable/Type column) that occurrence is left
+    unchanged rather than guessing, the same fail-safe contract the cap
+    function documents; other occurrences in the same document are still
+    processed independently. A callback replacement containing a literal
+    ``|`` or a newline is rejected (that row left unchanged) so a malformed
+    hint can never corrupt the table shape.
+    """
+    lines = text.splitlines(keepends=True)
+    changed = False
+    for heading_match in _INPUT_TABLE_HEADING_RE.finditer(text):
+        heading_line_idx = text.count("\n", 0, heading_match.start())
+
+        idx = heading_line_idx + 1
+        while idx < len(lines) and lines[idx].strip() == "":
+            idx += 1
+        if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+            continue
+        if _substitute_table_rows_from_header(lines, idx, cell_for_row):
+            changed = True
+
+    return "".join(lines) if changed else text
+
+
+def _hint_any_cells_in_table_text(table_text: str, entries: dict[str, dict[str, Any]]) -> str:
+    """
+    Apply the same any-typed inline field-name/example hint
+    (``_format_any_overlay_cell_hint``) directly to an already-isolated pipe
+    table string whose header row sits at line 0 -- used by
+    ``_append_missing_root_complete_tables`` (NEW-3 fix, 2026-07-22
+    pre-release re-review) so the D7 Change A2 appended "## Complete Root
+    Inputs" table's ``any``-typed rows get the same inline hint the curated
+    table's rows get via ``_inline_any_overlay_input_cells``. That walker is
+    heading-anchored on ``### Main Input Variables`` and cannot see this
+    table -- it uses a different heading, plus carries an explanatory
+    paragraph between the heading and the table that defeats the
+    immediate-next-line header scan -- so this operates on the isolated
+    table string directly instead, where the header row is always line 0 by
+    construction (``_build_all_inputs_table``). A no-op (`table_text`
+    unchanged) when `entries` is empty, or the header/rows do not parse as
+    expected -- fails safe like every other substitution in this module.
+    """
+    if not entries:
+        return table_text
+    lines = table_text.splitlines(keepends=True)
+    if not lines or not _TABLE_ROW_RE.match(lines[0].rstrip("\n")):
+        return table_text
+    changed = _substitute_table_rows_from_header(lines, 0, _make_any_overlay_cell_for_row(entries))
+    return "".join(lines) if changed else table_text
+
+
+def _substitute_any_type_head_cells(head_text: str, any_var_names: frozenset[str]) -> str:
+    """
+    Cell-substitution ONLY, for the default orientation HEAD's inlined
+    ``### Main Input Variables`` table: when a row's Variable name is in
+    `any_var_names` (a module WITH a committed overlay) and its Type cell is
+    exactly ``any``, replace that Type cell with a pointer to
+    ``sections=["inputs"]``. Never inlines the example/field-list themselves
+    (token budget) and never adds "below" wording (nothing is "below" in the
+    head). Emits a pipe-table-compatible cell (same column count, no literal
+    ``|``/newline) and MUST run before ``_cap_head_input_table`` so the cap's
+    own row/column parsing is unaffected.
+
+    Delegates to ``_substitute_input_table_cells`` (the fail-safe multi-table
+    walker also used by ``_inline_any_overlay_input_cells``) -- the head text
+    only ever carries a single ``### Main Input Variables`` table
+    (``interface_scope="root"`` excludes submodule bundles), so walking
+    "every" table here is equivalent to the previous single-table
+    implementation. A module with no overlay (``any_var_names`` empty)
+    short-circuits to a no-op without even attempting to locate the table.
+    """
+    if not any_var_names:
+        return head_text
+
+    def _cell_for_row(var_name: str, type_cell: str) -> str | None:
+        if var_name not in any_var_names or type_cell.strip().strip("`").strip().lower() != "any":
+            return None
+        return _ANY_TYPE_HEAD_POINTER
+
+    return _substitute_input_table_cells(head_text, _cell_for_row)
+
+
+def _inline_any_overlay_input_cells(rendered: str, content: str) -> str:
+    """
+    Fix 1 of the 2026-07-21 table-discoverability fix: for a non-head view
+    (a ``sections=["inputs"]`` response, or the full-document escape hatch),
+    inline the overlay's field-name (or example-only) hint directly into the
+    Type cell of every ``any``-typed input row whose var name has a
+    root-scope overlay entry -- AT the row, across every ``### Main Input
+    Variables`` table `rendered` carries (a combined-scheme doc like
+    elasticache has one such table per submodule bundle plus the root/main
+    one; only the root-scope table's rows are eligible, but matching is by
+    var name so no heading-scoping is needed to find it).
+
+    An A/B eval measured the any-overlay appendix as not landing on its own:
+    a worker read the input table, saw a bare ``any`` Type cell, and grepped
+    ``grep_module_docs`` for the fields anyway rather than connecting the row
+    to the appendix block below it. This closes that gap at the point of
+    need. The appendix (``_with_any_overlay_appendix``) still runs
+    afterward and remains the source of the full example HCL / field list;
+    this substitution is only ever a same-row pointer into it.
+
+    Root-scope only (see ``_root_any_overlay_entries``) and matched purely by
+    var name against every table row in `rendered`, regardless of which H2
+    bundle it lives under -- like the head substitution, this trusts that
+    the corpus's submodule variable namespaces do not collide with the
+    root's. Must run BEFORE ``_with_any_overlay_appendix`` (the appendix is
+    what a row's "below" wording now points at). A no-op when the module has
+    no overlay, or none of its root-scope any-vars have a matching table row
+    (the common case: no overlay).
+    """
+    entries = _root_any_overlay_entries(content)
+    if not entries:
+        return rendered
+    return _substitute_input_table_cells(rendered, _make_any_overlay_cell_for_row(entries))
+
+
+# --------------------------------------------------------------------------- #
+# Complete input table (2026-07-21 "complete interface in one call" fix) --
+# supersede the curated (possibly PARTIAL) "Main Input Variables" table with
+# the module's COMPLETE input list from the committed overlay's `all_inputs`
+# (built by scripts/build_any_overlay.py from the Registry API detail already
+# fetched there). Design: evals/specs/2026-07-21-complete-interface-one-call-
+# design.md. Runs BEFORE _inline_any_overlay_input_cells (so the any-type
+# Type-cell hint still applies to the now-complete rows) and before
+# _with_any_overlay_appendix. A pure no-op when the module has no overlay, the
+# overlay carries no `all_inputs` (the common case today), or a given table's
+# scope cannot be confidently resolved -- never guesses, falls back to the
+# curated table exactly as served before this feature existed.
+# --------------------------------------------------------------------------- #
+
+# D7 Change A safety net: ceiling (in bytes) for ONE rendered complete inputs
+# or outputs table. Root-scoping the default response (see get_module_impl)
+# keeps ordinary modules well under this in the first place -- eks's root
+# scope alone renders to ~24-29K -- but this is the backstop for whatever
+# root interface is unexpectedly large, so no single table can grow large
+# enough to risk tripping the MCP tool output cap. Truncates with an explicit
+# "+N more rows" pointer instead of silently dropping rows or overflowing.
+_COMPLETE_TABLE_BYTE_CAP = 48000
+
+
+def _cap_complete_table_rows(header_and_sep: str, row_texts: list[str], *, cap: int | None = None) -> str:
+    """
+    Append `row_texts` onto `header_and_sep` up to `cap` bytes total (default
+    `_COMPLETE_TABLE_BYTE_CAP`, read at call time so tests can monkeypatch the
+    module constant). When the running total would exceed the cap, stops and
+    appends an explicit pointer line naming how many rows were omitted,
+    rather than emitting a table large enough to risk overflowing the MCP
+    tool output cap. A pure no-op (every row kept, no pointer line) when the
+    full table already fits.
+    """
+    effective_cap = _COMPLETE_TABLE_BYTE_CAP if cap is None else cap
+    total = len(header_and_sep.encode("utf-8"))
+    kept: list[str] = []
+    for i, row in enumerate(row_texts):
+        row_bytes = len(row.encode("utf-8"))
+        if total + row_bytes > effective_cap:
+            remaining = len(row_texts) - i
+            pointer = (
+                f"\n_(+{remaining} more rows omitted at the {effective_cap}-byte safety cap -- "
+                "narrow with a single `sections` entry, or request a submodule complete interface via "
+                '`get_module("<name>//modules/<submodule>", sections=[...])`.)_\n'
+            )
+            return header_and_sep + "".join(kept) + pointer
+        kept.append(row)
+        total += row_bytes
+    return header_and_sep + "".join(kept)
+
+
+_ALL_INPUTS_TABLE_HEADER = "| Variable | Type | Required | Default | Description |\n"
+_ALL_INPUTS_TABLE_SEP = "|----------|------|----------|---------|-------------|\n"
+_ALL_INPUTS_DEFAULT_CHAR_CAP = 80
+_ALL_INPUTS_DESCRIPTION_CHAR_CAP = 200
+
+# Matches the "Main Input Variables" heading at EITHER H2 (the split-scheme
+# corpus: a doc with no submodule deep-dives, the table sits directly under
+# this H2) or H3 (the combined-scheme corpus: nested under a "## Main
+# Module:"/"## Root Module:"/"## Submodule N: <name>" H2 bundle).
+_ANY_LEVEL_INPUT_HEADING_RE = re.compile(r"^#{2,3} Main Input Variables[ \t]*$", re.MULTILINE)
+
+# Same EITHER-H2-or-H3 matching as _ANY_LEVEL_INPUT_HEADING_RE, for the
+# outputs table -- the corpus titles it "Main Outputs" almost everywhere, and
+# "Key Outputs" on a handful of docs (e.g. ecs.md).
+_ANY_LEVEL_OUTPUT_HEADING_RE = re.compile(r"^#{2,3} (?:Main|Key) Outputs[ \t]*$", re.MULTILINE)
+
+_SUBMODULE_H2_TITLE_RE = re.compile(r"(?i)^submodule\s+\d+\s*:\s*(.+)$")
+
+# Split-scheme corpus (48 of 63 catalog docs -- e.g. rds.md): the input/output
+# table sits directly under its OWN top-level H2 ("## Main Input Variables" /
+# "## Main Outputs" / "## Key Outputs"), with no enclosing "Main Module:"/
+# "Root Module:" bundle at all -- there is exactly one scope in such a doc,
+# and it is root. Without this, `_scope_for_h2_title` never resolves these H2
+# titles (they do not start with "main module"/"root module" and do not match
+# the submodule pattern), so the complete-table supersede silently no-ops on
+# the majority of the catalog.
+_SPLIT_SCHEME_ROOT_H2_TITLES = frozenset({"main input variables", "main outputs", "key outputs"})
+
+
+def _scope_for_h2_title(title: str, candidate_scopes: frozenset[str]) -> str | None:
+    """
+    Resolve which `all_inputs`/`all_outputs` scope (if any) an H2 bundle's
+    title carries: "root" for a "Main Module:"/"Root Module:" bundle (when
+    the overlay has a "root" scope), "root" again for a split-scheme doc's
+    own bare "Main Input Variables"/"Main Outputs"/"Key Outputs" H2 (no
+    enclosing bundle -- see `_SPLIT_SCHEME_ROOT_H2_TITLES`), or a submodule
+    scope name for a "Submodule N: <name>" bundle -- matched against
+    `candidate_scopes` by exact name first, then by substring so a decorated
+    heading (e.g. "Submodule 2: flow-log (Recommended)") still resolves.
+    Returns None for anything else -- Description/Key Features/the compact
+    "## Submodules" inventory/etc. -- so those blocks are never touched.
+
+    NEW-1 fix (2026-07-22 pre-release re-review, BLOCKER): the substring
+    fallback used to iterate `candidate_scopes` (a frozenset) in whatever
+    order it happened to hash-iterate in -- PYTHONHASHSEED-dependent, so a
+    title containing more than one scope key as a substring resolved
+    nondeterministically across processes. The catalog's one real instance:
+    iam.md's "## Submodule 8: iam-role-for-service-accounts (IRSA)" contains
+    both "iam-role" and "iam-role-for-service-accounts" as substrings. Fixed
+    two ways, together: (1) candidates are tried longest-key-first (ties
+    broken alphabetically), so the more specific
+    "iam-role-for-service-accounts" is always tried before "iam-role"; (2) a
+    name-boundary guard rejects a match whose next character continues a
+    hyphenated identifier (a "-" or alnum char) -- so "iam-role" can never
+    match inside "iam-role-for-service-accounts" (next char "-") even when a
+    restricted `candidate_scopes` excludes the longer key, while a genuinely
+    decorated heading like "flow-log (Recommended)" still matches "flow-log"
+    (next char is a space). Both together make the match fully deterministic
+    and correct regardless of `candidate_scopes`' iteration order.
+    """
+    tl = title.strip().lower()
+    if tl.startswith(("main module", "root module")):
+        return "root" if "root" in candidate_scopes else None
+    if tl in _SPLIT_SCHEME_ROOT_H2_TITLES:
+        return "root" if "root" in candidate_scopes else None
+    m = _SUBMODULE_H2_TITLE_RE.match(title.strip())
+    if not m:
+        return None
+    name_lower = m.group(1).strip().lower()
+    non_root = [s for s in candidate_scopes if s != "root"]
+    for scope in non_root:
+        if name_lower == scope.lower():
+            return scope
+    for scope in sorted(non_root, key=lambda s: (-len(s), s)):
+        scope_lower = scope.lower()
+        idx = name_lower.find(scope_lower)
+        if idx == -1:
+            continue
+        end = idx + len(scope_lower)
+        if end < len(name_lower) and (name_lower[end].isalnum() or name_lower[end] == "-"):
+            continue
+        return scope
+    return None
+
+
+def _doc_has_resolvable_root_bundle(content: str) -> bool:
+    """
+    True when `content` has an H2 bundle `_scope_for_h2_title` would resolve
+    to "root": a "Main Module:"/"Root Module:" combined bundle, or (split-
+    scheme) a bare top-level "Main Input Variables"/"Main Outputs"/"Key
+    Outputs" heading with no enclosing bundle.
+
+    D7 Change A: this gates whether get_module_impl's default (non-submodule-
+    address) inputs/outputs render scopes to root only. False for a pure
+    submodule-collection doc with no root section at all (cloudwatch, fsx,
+    iam, network-firewall as of this writing) -- for those, the interface-key
+    fallback must stay free to walk every submodule bundle (the BUG-1 fix),
+    since there is no root content to scope to instead.
+    """
+    _, sections = _split_h2_sections(content)
+    root_only = frozenset({"root"})
+    return any(_scope_for_h2_title(title, root_only) == "root" for title, _ in sections)
+
+
+def _reachable_submodule_scope_names(content: str, overlay: dict[str, Any]) -> list[str]:
+    """
+    Non-root overlay scope names (the union of `all_inputs`/`all_outputs`
+    keys) that resolve to an actual "## Submodule N: <name>" bundle in
+    `content` -- i.e. reachable via
+    ``get_module("<name>//modules/<scope>", ...)``. An overlay scope with no
+    matching heading in this doc (e.g. an internal helper scope the doc never
+    surfaces as its own submodule section) is excluded -- pointing an agent
+    at an address with nothing behind it would be a dead end. Returned in
+    document order, first occurrence, for a stable and readable footer.
+    """
+    scope_keys = (set(overlay.get("all_inputs") or {}) | set(overlay.get("all_outputs") or {})) - {"root"}
+    if not scope_keys:
+        return []
+    candidates = frozenset(scope_keys | {"root"})
+    _, sections = _split_h2_sections(content)
+    seen: list[str] = []
+    for title, _ in sections:
+        scope = _scope_for_h2_title(title, candidates)
+        if scope and scope != "root" and scope not in seen:
+            seen.append(scope)
+    return seen
+
+
+def _submodule_interface_menu(content: str, overlay: dict[str, Any] | None) -> str:
+    """
+    Build the "Submodule interfaces available on demand" footer line (D7
+    Change A point 3) for the default root-scoped inputs/outputs render.
+    Empty when there is no overlay, or the overlay has no non-root scope
+    reachable from this doc's own headings (see
+    `_reachable_submodule_scope_names`) -- never advertises a dead-end
+    address.
+    """
+    if not overlay:
+        return ""
+    scopes = _reachable_submodule_scope_names(content, overlay)
+    if not scopes:
+        return ""
+    module_id = _resolve_overlay_module_id(content)
+    parts = [p for p in module_id.split("/") if p]
+    name = parts[1] if len(parts) >= 3 else (parts[-1] if parts else "<name>")
+    return (
+        f"Submodule interfaces available on demand ({len(scopes)}): {', '.join(scopes)} -- call "
+        f'get_module("{name}//modules/<submodule>", sections=[...]) for a submodule complete interface.'
+    )
+
+
+def _locate_input_table(text: str, heading_re: "re.Pattern[str]") -> tuple[int, int, int, int] | None:
+    """
+    Find the first `heading_re` match in `text` and, when it is immediately
+    followed by a recognizable pipe table (mirrors the fail-safe contract
+    _cap_head_input_table/_substitute_input_table_cells already use), return
+    its (header_line_idx, sep_idx, row_start, row_end) line-indices into
+    text.splitlines(keepends=True). Returns None on no heading match, or no
+    table immediately following it -- never guesses.
+    """
+    m = heading_re.search(text)
+    if m is None:
+        return None
+    lines = text.splitlines(keepends=True)
+    heading_line_idx = text.count("\n", 0, m.start())
+
+    idx = heading_line_idx + 1
+    while idx < len(lines) and lines[idx].strip() == "":
+        idx += 1
+    if idx >= len(lines) or not _TABLE_ROW_RE.match(lines[idx].rstrip("\n")):
+        return None
+    header_line_idx = idx
+
+    sep_idx = header_line_idx + 1
+    if sep_idx >= len(lines) or not _TABLE_SEPARATOR_RE.match(lines[sep_idx].rstrip("\n")):
+        return None
+
+    row_start = sep_idx + 1
+    row_end = row_start
+    while row_end < len(lines) and _TABLE_ROW_RE.match(lines[row_end].rstrip("\n")):
+        row_end += 1
+    return header_line_idx, sep_idx, row_start, row_end
+
+
+def _curated_descriptions_from_rows(
+    lines: list[str], row_start: int, row_end: int, header_cells: list[str], *, name_col: str = "variable"
+) -> dict[str, str]:
+    """
+    Map each name in `name_col` (a curated row's name cell can bundle several
+    names via "name_a / name_b") to its curated Description cell text, so the
+    complete-table rebuild can preserve the human-written description for any
+    input/output the curated table already documents. `name_col` is
+    "variable" for an inputs table, "output" for an outputs table. Empty when
+    the table has no recognizable `name_col`/Description columns.
+    """
+    lower_headers = [c.lower() for c in header_cells]
+    if name_col not in lower_headers or "description" not in lower_headers:
+        return {}
+    name_idx = lower_headers.index(name_col)
+    desc_idx = lower_headers.index("description")
+    out: dict[str, str] = {}
+    for i in range(row_start, row_end):
+        cells = _split_table_row(lines[i])
+        if len(cells) <= max(name_idx, desc_idx):
+            continue
+        description = cells[desc_idx].strip()
+        for raw_name in cells[name_idx].split("/"):
+            name = _cell_var_name(raw_name)
+            if name and name not in out:
+                out[name] = description
+    return out
+
+
+def _sanitize_table_cell(text: str) -> str:
+    """Collapse newlines/whitespace and escape literal pipes so free-form
+    registry text (a multi-line type/default, a stray "|" in a description)
+    can never corrupt table-row shape when embedded in a cell."""
+    collapsed = re.sub(r"\s+", " ", text).strip()
+    return collapsed.replace("|", "\\|")
+
+
+def _format_all_inputs_default_cell(item: dict[str, Any]) -> str:
+    if item.get("required"):
+        return "-"
+    default = item.get("default")
+    if default in (None, ""):
+        return "`null`"
+    text = _sanitize_table_cell(str(default))
+    if len(text) > _ALL_INPUTS_DEFAULT_CHAR_CAP:
+        text = text[: _ALL_INPUTS_DEFAULT_CHAR_CAP - 1].rstrip() + "…"
+    return f"`{text}`"
+
+
+def _format_all_inputs_row(item: dict[str, Any], description: str) -> str:
+    name = _sanitize_table_cell(str(item.get("name", "")))
+    itype = _sanitize_table_cell(str(item.get("type", "")))
+    required = "Yes" if item.get("required") else "No"
+    default_cell = _format_all_inputs_default_cell(item)
+    desc = _sanitize_table_cell(description) if description else ""
+    return f"| `{name}` | `{itype}` | {required} | {default_cell} | {desc} |\n"
+
+
+def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
+    row_texts: list[str] = []
+    for item in items:
+        name = item.get("name", "")
+        curated = curated_descriptions.get(name)
+        description = (
+            curated
+            if curated
+            else _clip_blurb(item.get("description") or "", max_length=_ALL_INPUTS_DESCRIPTION_CHAR_CAP)
+        )
+        row_texts.append(_format_all_inputs_row(item, description))
+    return _cap_complete_table_rows(_ALL_INPUTS_TABLE_HEADER + _ALL_INPUTS_TABLE_SEP, row_texts)
+
+
+def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str:
+    """Replace ONE "Main Input Variables" table's header+rows within `block`
+    (a single H2 bundle's text) with the complete table built from `items`.
+    Leaves `block` unchanged (fails safe) when no recognizable table is found,
+    or `items` is empty (nothing to supersede with)."""
+    if not items:
+        return block
+    located = _locate_input_table(block, _ANY_LEVEL_INPUT_HEADING_RE)
+    if located is None:
+        return block
+    header_line_idx, _sep_idx, row_start, row_end = located
+    lines = block.splitlines(keepends=True)
+    header_cells = _split_table_row(lines[header_line_idx])
+    curated = _curated_descriptions_from_rows(lines, row_start, row_end, header_cells)
+    new_table = _build_all_inputs_table(items, curated)
+    return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
+
+
+def _content_with_complete_input_tables_ex(
+    content: str, *, only_scopes: frozenset[str] | None = None
+) -> tuple[str, frozenset[str]]:
+    """
+    Core implementation of `_content_with_complete_input_tables` that also
+    reports WHICH overlay scopes were ACTUALLY superseded (a table was
+    located immediately under the resolved heading and replaced) -- distinct
+    from merely "resolvable" (the heading title matched, e.g. a bare "Main
+    Input Variables" H2, but no single pipe table sits immediately under it,
+    e.g. root inputs grouped under several `### <Category>` H3 subsections
+    instead -- the D7 Change A2 grouped-H3 completeness gap). Used by
+    `get_module_impl` to decide whether the root scope still needs its
+    complete table appended separately when the inline supersede silently
+    could not fire. `_content_with_complete_input_tables` below is a thin
+    wrapper that drops the second value, preserving its existing contract for
+    every other caller.
+
+    Returns `(content, frozenset())` unchanged when the module has no
+    committed overlay, the overlay carries no `all_inputs`, or nothing was
+    actually superseded.
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content, frozenset()
+    all_inputs = overlay.get("all_inputs")
+    if not isinstance(all_inputs, dict) or not all_inputs:
+        return content, frozenset()
+    candidate_scopes = frozenset(all_inputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content, frozenset()
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content, frozenset()
+
+    superseded: set[str] = set()
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        if scope is None:
+            new_blocks.append(block)
+            continue
+        items = all_inputs.get(scope)
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_input_table(block, items)
+        if new_block != block:
+            superseded.add(scope)
+        new_blocks.append(new_block)
+
+    if not superseded:
+        return content, frozenset()
+    return preamble + "".join(new_blocks), frozenset(superseded)
+
+
+def _content_with_complete_input_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
+    """
+    Return `content` with every "Main Input Variables" table -- the H2 split-
+    scheme root table, or an H3 combined-scheme root/submodule bundle table --
+    superseded by the module's COMPLETE input list from the committed
+    overlay's `all_inputs` (see build_any_overlay.py and the complete-
+    interface-in-one-call design). Byte-identical to `content` when the
+    module has no committed overlay, the overlay carries no `all_inputs`, or
+    a given H2 bundle's scope cannot be resolved against `all_inputs`' keys
+    (fails safe to the curated table -- never guesses).
+
+    Args:
+        only_scopes: when given, restricts which overlay scopes may supersede
+            a block's table -- e.g. ``frozenset({"root"})`` for the D7
+            Change A root-scoped-by-default render, or a single submodule
+            scope name for a submodule-address request. ``None`` (default)
+            supersedes every resolvable scope, unchanged -- used by the
+            full-document escape hatch, and by modules with no resolvable
+            root bundle (see ``_doc_has_resolvable_root_bundle``), where the
+            interface-key fallback must still be free to walk every
+            submodule (the BUG-1 fix).
+
+    The default orientation head is NEVER passed through this function -- it
+    stays a cheap, unchanged first look; only an explicit sections=["inputs"]
+    request (or the full-document escape hatch) gets the complete table.
+
+    See `_content_with_complete_input_tables_ex` for a variant that also
+    reports which scopes were actually superseded (vs. merely resolvable).
+    """
+    return _content_with_complete_input_tables_ex(content, only_scopes=only_scopes)[0]
+
+
+# --------------------------------------------------------------------------- #
+# Complete output table (outputs half of the 2026-07-21 "complete interface in
+# one call" fix) -- supersede the curated (possibly PARTIAL) "Main Outputs"
+# table with the module's COMPLETE output list from the committed overlay's
+# `all_outputs` (built by scripts/build_any_overlay.py from the same Registry
+# API detail all_inputs comes from). Mirrors _content_with_complete_input_
+# tables exactly, one column narrower (outputs carry no type/required/default
+# in the Registry API -- name + description only). A pure no-op when the
+# module has no overlay, the overlay carries no `all_outputs`, or a given
+# table's scope cannot be confidently resolved -- never guesses, falls back
+# to the curated table exactly as served before this feature existed.
+# --------------------------------------------------------------------------- #
+
+_ALL_OUTPUTS_TABLE_HEADER = "| Output | Description |\n"
+_ALL_OUTPUTS_TABLE_SEP = "|--------|-------------|\n"
+_ALL_OUTPUTS_DESCRIPTION_CHAR_CAP = 200
+
+
+def _format_all_outputs_row(item: dict[str, Any], description: str) -> str:
+    name = _sanitize_table_cell(str(item.get("name", "")))
+    desc = _sanitize_table_cell(description) if description else ""
+    return f"| `{name}` | {desc} |\n"
+
+
+def _build_all_outputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
+    row_texts: list[str] = []
+    for item in items:
+        name = item.get("name", "")
+        curated = curated_descriptions.get(name)
+        description = (
+            curated
+            if curated
+            else _clip_blurb(item.get("description") or "", max_length=_ALL_OUTPUTS_DESCRIPTION_CHAR_CAP)
+        )
+        row_texts.append(_format_all_outputs_row(item, description))
+    return _cap_complete_table_rows(_ALL_OUTPUTS_TABLE_HEADER + _ALL_OUTPUTS_TABLE_SEP, row_texts)
+
+
+def _supersede_block_output_table(block: str, items: list[dict[str, Any]]) -> str:
+    """Replace ONE "Main Outputs"/"Key Outputs" table's header+rows within
+    `block` (a single H2 bundle's text) with the complete table built from
+    `items`. Leaves `block` unchanged (fails safe) when no recognizable table
+    is found, or `items` is empty (nothing to supersede with)."""
+    if not items:
+        return block
+    located = _locate_input_table(block, _ANY_LEVEL_OUTPUT_HEADING_RE)
+    if located is None:
+        return block
+    header_line_idx, _sep_idx, row_start, row_end = located
+    lines = block.splitlines(keepends=True)
+    header_cells = _split_table_row(lines[header_line_idx])
+    curated = _curated_descriptions_from_rows(lines, row_start, row_end, header_cells, name_col="output")
+    new_table = _build_all_outputs_table(items, curated)
+    return "".join(lines[:header_line_idx]) + new_table + "".join(lines[row_end:])
+
+
+# Logical key(s) whose presence in a get_module `sections` request means the
+# response includes (or resolves to) the outputs view -- gates the complete-
+# output-table supersede the same way _sections_request_inputs gates the
+# complete-input-table one. Only "outputs" maps to the Main Outputs heading
+# in _SECTION_ALIASES (unlike inputs, which also has "variables").
+_OUTPUT_TABLE_SECTION_KEYS = frozenset({"outputs"})
+
+
+def _sections_request_outputs(sections: list[str]) -> bool:
+    return any(entry.strip().lower() in _OUTPUT_TABLE_SECTION_KEYS for entry in sections)
+
+
+def _content_with_complete_output_tables_ex(
+    content: str, *, only_scopes: frozenset[str] | None = None
+) -> tuple[str, frozenset[str]]:
+    """
+    Outputs mirror of `_content_with_complete_input_tables_ex` -- same
+    contract, reports which overlay scopes were ACTUALLY superseded (not just
+    resolvable). `_content_with_complete_output_tables` below is a thin
+    wrapper that drops the second value.
+    """
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    if not overlay:
+        return content, frozenset()
+    all_outputs = overlay.get("all_outputs")
+    if not isinstance(all_outputs, dict) or not all_outputs:
+        return content, frozenset()
+    candidate_scopes = frozenset(all_outputs)
+    if only_scopes is not None:
+        candidate_scopes = candidate_scopes & only_scopes
+        if not candidate_scopes:
+            return content, frozenset()
+
+    preamble, sections = _split_h2_sections(content)
+    if not sections:
+        return content, frozenset()
+
+    superseded: set[str] = set()
+    new_blocks: list[str] = []
+    for title, block in sections:
+        scope = _scope_for_h2_title(title, candidate_scopes)
+        if scope is None:
+            new_blocks.append(block)
+            continue
+        items = all_outputs.get(scope)
+        if not items:
+            new_blocks.append(block)
+            continue
+        new_block = _supersede_block_output_table(block, items)
+        if new_block != block:
+            superseded.add(scope)
+        new_blocks.append(new_block)
+
+    if not superseded:
+        return content, frozenset()
+    return preamble + "".join(new_blocks), frozenset(superseded)
+
+
+def _content_with_complete_output_tables(content: str, *, only_scopes: frozenset[str] | None = None) -> str:
+    """
+    Return `content` with every "Main Outputs"/"Key Outputs" table -- the H2
+    split-scheme root table, or an H3 combined-scheme root/submodule bundle
+    table -- superseded by the module's COMPLETE output list from the
+    committed overlay's `all_outputs` (see build_any_overlay.py and the
+    complete-interface-in-one-call design). Byte-identical to `content` when
+    the module has no committed overlay, the overlay carries no
+    `all_outputs`, or a given H2 bundle's scope cannot be resolved against
+    `all_outputs`' keys (fails safe to the curated table -- never guesses).
+
+    Args:
+        only_scopes: same contract as ``_content_with_complete_input_tables``
+            -- restricts which overlay scopes may supersede a block's table.
+
+    The default orientation head is NEVER passed through this function --
+    outputs are not part of the head at all (only Key Features/Main Use
+    Cases/root inputs are), so this is only reached by an explicit
+    sections=["outputs"] request (or the full-document escape hatch).
+
+    See `_content_with_complete_output_tables_ex` for a variant that also
+    reports which scopes were actually superseded (vs. merely resolvable).
+    """
+    return _content_with_complete_output_tables_ex(content, only_scopes=only_scopes)[0]
+
+
+# D7 Change A2 (2026-07-21 grouped-H3 completeness fix): heading text for the
+# appended complete-root-table fallback -- distinct from the curated
+# "## Main Input Variables"/"## Main Outputs" headings so it is obvious which
+# table is the authoritative complete one when both are present in a
+# response.
+_MISSING_ROOT_INPUTS_HEADING = "## Complete Root Inputs"
+_MISSING_ROOT_OUTPUTS_HEADING = "## Complete Root Outputs"
+
+
+def _append_missing_root_complete_tables(
+    rendered: str,
+    overlay: dict[str, Any] | None,
+    *,
+    requests_inputs: bool,
+    input_superseded: bool,
+    requests_outputs: bool,
+    output_superseded: bool,
+) -> str:
+    """
+    D7 Change A2 (2026-07-21 grouped-H3 completeness fix): guarantee the
+    module's COMPLETE root inputs/outputs list is present in `rendered`
+    whenever the overlay actually has it, even when the inline table-
+    supersede (`_content_with_complete_input_tables_ex`/`_content_with_
+    complete_output_tables_ex`) could not find a single replaceable table
+    under the root heading to swap in place. That gap affects roughly a
+    dozen catalog docs (e.g. datadog-forwarders, autoscaling, eventbridge,
+    eks-pod-identity, emr, appsync, batch, msk-kafka-cluster, atlantis, efs)
+    where root inputs and/or outputs sit under several `### <Category>` H3
+    subsections instead of one table directly beneath the inputs/outputs H2.
+    With `grep_module_docs` removed (D7 Change B), those docs had no
+    fallback left for confirming a variable exists, and were silently
+    serving the curated (possibly PARTIAL) subset under a "COMPLETE
+    inputs/outputs" footer claim -- a false claim.
+
+    Never double-serves: when the inline supersede DID fire for root
+    (`input_superseded`/`output_superseded` True), nothing is appended for
+    that view. Never fabricates completeness either: when the overlay's own
+    root scope is empty or absent (e.g. sso, whose root carries zero inputs
+    and zero outputs -- every field belongs to a submodule), nothing is
+    appended and `rendered` is returned unchanged -- no crash, no empty
+    "complete" table.
+
+    Appended tables reuse `_build_all_inputs_table`/`_build_all_outputs_
+    table`, so they respect the same `_COMPLETE_TABLE_BYTE_CAP` truncation
+    the inline supersede uses. The appended INPUTS table also gets the same
+    any-typed inline field-name/example hint the curated table's rows get
+    (NEW-3 fix, 2026-07-22 pre-release re-review) via
+    `_hint_any_cells_in_table_text` -- `_inline_any_overlay_input_cells`
+    cannot see this table itself (different heading, prose paragraph before
+    the table defeats its header scan).
+    """
+    if not overlay:
+        return rendered
+    pieces: list[str] = []
+    if requests_inputs and not input_superseded:
+        root_inputs = (overlay.get("all_inputs") or {}).get("root")
+        if root_inputs:
+            table = _build_all_inputs_table(root_inputs, {})
+            table = _hint_any_cells_in_table_text(table, _root_any_overlay_entries_from_overlay(overlay))
+            pieces.append(
+                f"{_MISSING_ROOT_INPUTS_HEADING}\n\n"
+                "The curated table above did not carry every root-scope input (inputs are "
+                "grouped under multiple subsections in this doc) -- this is the COMPLETE, "
+                "registry-declared root-scope input list, appended in full:\n\n"
+                f"{table}"
+            )
+    if requests_outputs and not output_superseded:
+        root_outputs = (overlay.get("all_outputs") or {}).get("root")
+        if root_outputs:
+            table = _build_all_outputs_table(root_outputs, {})
+            pieces.append(
+                f"{_MISSING_ROOT_OUTPUTS_HEADING}\n\n"
+                "The curated table above did not carry every root-scope output (outputs are "
+                "grouped under multiple subsections in this doc) -- this is the COMPLETE, "
+                "registry-declared root-scope output list, appended in full:\n\n"
+                f"{table}"
+            )
+    if not pieces:
+        return rendered
+    return _insert_before_footer(rendered, "\n\n".join(pieces), is_filtered=True)
+
+
+def _full_document_view(content: str) -> str:
+    """
+    Build the full-document escape-hatch response (``sections=["all"|"full"|
+    "everything"]``) for `content`: every resolvable input/output table
+    superseded with its overlay-complete data (every scope, not just root --
+    unlike the default root-scoped sections view), any root-scope
+    ``any``-typed cell inline-hinted, the D7 Change A2 fallback guaranteeing
+    root-scope completeness even when the inline supersede could not fire
+    (NEW-2 fix, 2026-07-22 pre-release re-review -- this escape hatch used to
+    rely on the inline supersede alone, which silently stayed partial on the
+    same ~16 grouped-H3 docs the sections=["inputs"|"outputs"] view needed
+    the A2 fallback for), and finally the any-overlay appendix. The A2 table
+    (when it fires) is appended BEFORE the appendix (NEW-5, same re-review)
+    so the authoritative complete table renders above the example/field-name
+    appendix, not below it.
+
+    Shared by both the plain module-identifier branch and the
+    submodule-address branch of ``get_module_impl``, which serve the
+    identical full PARENT document on this escape hatch -- kept as one
+    function so the two call sites cannot drift apart.
+    """
+    full_content, input_superseded_scopes = _content_with_complete_input_tables_ex(content)
+    full_content, output_superseded_scopes = _content_with_complete_output_tables_ex(full_content)
+    served = _inline_any_overlay_input_cells(full_content, content)
+    overlay = _load_any_overlay(_resolve_overlay_module_id(content))
+    served = _append_missing_root_complete_tables(
+        served,
+        overlay,
+        requests_inputs=True,
+        input_superseded="root" in input_superseded_scopes,
+        requests_outputs=True,
+        output_superseded="root" in output_superseded_scopes,
+    )
+    return _with_any_overlay_appendix(served, content, is_filtered=False)
 
 
 def orientation_head(text: str, version_override: str | None = None) -> str:
@@ -1961,6 +3121,12 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
     ``_cap_head_input_table`` (L4) — the full table remains one
     ``sections=["inputs"]`` call away.
 
+    For a module with a committed any-shape overlay (``model/any_overlay/``),
+    any root-scope ``any``-typed row's Type cell is substituted with a
+    pointer to ``sections=["inputs"]`` (cell-substitution only, BEFORE the
+    cap below — never the example/field-list themselves, which would blow the
+    head's token budget; see ``_substitute_any_type_head_cells``).
+
     Args:
         text: The module document body.
         version_override: Forwarded to ``_version_pin_hint`` verbatim (single-
@@ -1974,6 +3140,7 @@ def orientation_head(text: str, version_override: str | None = None) -> str:
         interface_scope="root",
         silent_keys=frozenset({*_ORIENTATION_KEYS, "inputs"}),
     )
+    body = _substitute_any_type_head_cells(body, _root_any_var_names(text))
     body = _cap_head_input_table(body)
     # When a snapshot is threaded in, reconcile the body's own
     # **Latest Version** bullet to it so the inlined head cannot contradict the
@@ -2004,6 +3171,36 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         The compact orientation head by default, a filtered subset when specific
         sections are requested, or the full document when an all/full key is given
 
+    For a module with a committed any-shape overlay (``model/any_overlay/``),
+    a non-head response (an explicit ``sections`` request that resolves to
+    the inputs view, or the full-document escape hatch) gets THREE things:
+    (0) when the overlay also carries ``all_inputs`` (built by
+    ``scripts/build_any_overlay.py`` from the Registry API detail), the
+    curated — possibly PARTIAL — input table is SUPERSEDED with the
+    module's COMPLETE input list (see ``_content_with_complete_input_tables``
+    — the 2026-07-21 complete-interface-in-one-call fix); (1) each root-scope
+    ``any``-typed input row whose var has an overlay entry gets its Type cell
+    inlined with a field-name (or example-only) hint, AT the row (see
+    ``_inline_any_overlay_input_cells`` — Fix 1 of the 2026-07-21
+    table-discoverability fix: the appendix alone measured as not landing,
+    because a worker reads the row, sees bare ``any``, and greps instead of
+    scrolling to the appendix), and (2) an appendix-anchored block per
+    overlay var appended to the end of the response, regardless of whether a
+    matching input-table row exists (see ``_with_any_overlay_appendix``). The
+    default orientation head instead gets only a cell-substitution pointer
+    (see ``orientation_head``) — never the complete table or the example/
+    field-list content. A module with no overlay (or an overlay with no
+    ``all_inputs``) is unaffected.
+
+    A non-head response that resolves to the OUTPUTS view gets the mirrored
+    treatment for ``all_outputs`` (the outputs half of the same fix): the
+    curated — possibly PARTIAL — outputs table is SUPERSEDED with the
+    module's COMPLETE output list (see ``_content_with_complete_output_
+    tables``). Outputs carry no ``any``-typed enrichment (that concept
+    applies only to input variables), so this is table-completeness only —
+    no cell-substitution, no appendix. A module with no overlay (or an
+    overlay with no ``all_outputs``) is unaffected.
+
     See get_module() tool documentation for full details.
     """
     # A submodule address ("iam//modules/iam-role") resolves to the parent doc,
@@ -2013,18 +3210,176 @@ def get_module_impl(module_identifier: str, state: ServerState, sections: list[s
         parent_name, sub = sub_address
         content = get_module_documentation(parent_name, state)
         # Honor the full-doc escape hatch (all/full/everything) the same way the
-        # name/path branch does — return the complete parent document verbatim.
+        # name/path branch does — return the complete parent document verbatim,
+        # with COMPLETE input tables (2026-07-21 fix) and the full (unscoped)
+        # any-overlay appendix, exactly like the non-submodule full-doc branch
+        # below.
         if sections and any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return content
-        body = filter_module_sections(content, [sub, *(sections or [])])
+            return _full_document_view(content)
+        # An explicit inputs/variables (resp. outputs) request supersedes the
+        # curated (possibly PARTIAL) table with the module's COMPLETE input
+        # (resp. output) list BEFORE section filtering (2026-07-21 fix), so the
+        # extracted submodule bundle already carries every input/output — a
+        # no-op when the module has no `all_inputs`/`all_outputs`. D7 Change A:
+        # restricted to THIS submodule's own overlay scope only — a submodule
+        # address must never pull another submodule's (or root's) complete
+        # table in alongside the one actually requested.
+        sub_scope = frozenset({sub})
+        working_content = (
+            _content_with_complete_input_tables(content, only_scopes=sub_scope)
+            if _sections_request_inputs(sections or [])
+            else content
+        )
+        working_content = (
+            _content_with_complete_output_tables(working_content, only_scopes=sub_scope)
+            if _sections_request_outputs(sections or [])
+            else working_content
+        )
+        # submodule_scope=sub restricts the interface-key H3 fallback to
+        # ONLY this submodule's own bundle -- without it, an explicit
+        # inputs/outputs (or examples/usage) request would also walk every
+        # OTHER combined bundle (root and every sibling submodule) and drag
+        # their curated tables in alongside the one actually addressed (the
+        # measured over-fetch: get_module("eks//modules/karpenter",
+        # sections=["inputs"]) returned ~110 rows, only ~48 of them
+        # karpenter's own -- see TestD7ChangeARootScopeDefault /
+        # test_submodule_address_does_not_drag_sibling_curated_tables).
+        body = filter_module_sections(working_content, [sub, *(sections or [])], submodule_scope=sub)
+        # A module WITH a committed any-shape overlay can have submodule-scoped
+        # any-vars (e.g. fsx has all 19 of its any-vars submodule-scoped) — an
+        # explicit inputs/variables request here must get its OWN appendix,
+        # scope-filtered to this submodule's `<sub>::` keys only so a different
+        # submodule's or the root's overlay vars never leak in. The root-scope
+        # inline cell hint (Fix 1) runs unconditionally here too — harmless
+        # no-op unless this submodule body happens to also carry the root's
+        # own inputs table (e.g. sections=["inputs"] on top of the submodule
+        # address).
+        if _sections_request_inputs(sections or []):
+            body = _inline_any_overlay_input_cells(body, content)
+            body = _with_any_overlay_appendix(body, content, is_filtered=True, scope=sub)
         hint = _version_pin_hint(content)
         return f"{hint}\n\n{body}" if hint else body
 
     content = get_module_documentation(module_identifier, state)
     if sections:
         if any(entry.strip().lower() in _FULL_DOC_KEYS for entry in sections):
-            return content
-        return filter_module_sections(content, sections)
+            return _full_document_view(content)
+        # Complete-input-table / complete-output-table supersede (2026-07-21
+        # fix, and its outputs-half follow-up) run BEFORE section filtering so
+        # the extracted inputs/outputs H2/H3 already carries every input/
+        # output — a no-op when the module has no committed
+        # `all_inputs`/`all_outputs`.
+        #
+        # D7 Change A: an ordinary (non-submodule-address) request for the
+        # inputs and/or outputs view is scoped to the module's ROOT overlay
+        # scope only by default — concatenating every submodule scope's
+        # COMPLETE interface alongside root is what overflowed the MCP tool
+        # output cap on wide modules (eks: 456 inputs / 120 outputs across 8
+        # scopes). A submodule's own complete interface is reached on demand
+        # via its address (get_module("<name>//modules/<submodule>", ...)),
+        # and the footer below advertises which submodule scopes exist.
+        #
+        # Root-scoping only applies when this doc actually HAS a resolvable
+        # root bundle (_doc_has_resolvable_root_bundle) — a pure submodule-
+        # collection doc with no root section at all (cloudwatch, fsx, iam,
+        # network-firewall today) has no root content to scope to, so the
+        # interface-key fallback stays free to walk every submodule bundle,
+        # unchanged (the pre-existing BUG-1 fix this must not regress). Of
+        # these four, network-firewall is the one exception with genuine
+        # root-level overlay data despite the doc having no root heading at
+        # all -- the unconditional _append_missing_root_complete_tables call
+        # below (D7 Change A2) covers it too; cloudwatch/fsx/iam have an
+        # empty overlay root scope, so that call is a no-op for them.
+        requests_inputs = _sections_request_inputs(sections)
+        requests_outputs = _sections_request_outputs(sections)
+        restrict_to_root = (requests_inputs or requests_outputs) and _doc_has_resolvable_root_bundle(content)
+        scope_filter = frozenset({"root"}) if restrict_to_root else None
+
+        # Loaded up front (rather than after filter_module_sections, as
+        # before) so the root-availability check below can run BEFORE the
+        # footer is built -- the footer needs to know, ahead of time, whether
+        # the A2 append fallback is about to fire.
+        overlay = (
+            _load_any_overlay(_resolve_overlay_module_id(content)) if (requests_inputs or requests_outputs) else None
+        )
+
+        input_superseded_scopes: frozenset[str] = frozenset()
+        output_superseded_scopes: frozenset[str] = frozenset()
+        working_content = content
+        if requests_inputs:
+            working_content, input_superseded_scopes = _content_with_complete_input_tables_ex(
+                working_content, only_scopes=scope_filter
+            )
+        if requests_outputs:
+            working_content, output_superseded_scopes = _content_with_complete_output_tables_ex(
+                working_content, only_scopes=scope_filter
+            )
+
+        # #5 (independent review, 2026-07-21): whether this response will end
+        # up carrying the module's COMPLETE root-scope inputs/outputs --
+        # either the inline supersede above fired for "root", or the A2
+        # append fallback below will fire because the overlay genuinely has
+        # root data the inline supersede could not locate a table for.
+        # Computed BEFORE filter_module_sections so its footer can be worded
+        # honestly instead of sending the agent back for data it will
+        # already have. Only asserted for the dimension(s) actually
+        # requested -- e.g. sections=["inputs"] alone never claims
+        # completeness for outputs it was never asked to serve.
+        root_inputs_available = bool((overlay.get("all_inputs") or {}).get("root")) if overlay else False
+        root_outputs_available = bool((overlay.get("all_outputs") or {}).get("root")) if overlay else False
+        served_complete_inputs = requests_inputs and (("root" in input_superseded_scopes) or root_inputs_available)
+        served_complete_outputs = requests_outputs and (("root" in output_superseded_scopes) or root_outputs_available)
+        served_complete_root_interface = (
+            (requests_inputs or requests_outputs)
+            and (not requests_inputs or served_complete_inputs)
+            and (not requests_outputs or served_complete_outputs)
+        )
+
+        interface_scope = "root" if restrict_to_root else "all"
+        rendered = filter_module_sections(
+            working_content,
+            sections,
+            interface_scope=interface_scope,
+            served_complete_root_interface=served_complete_root_interface,
+        )
+        if requests_inputs:
+            rendered = _inline_any_overlay_input_cells(rendered, content)
+        if requests_inputs or requests_outputs:
+            # D7 Change A2 (2026-07-21 grouped-H3 completeness fix): the
+            # inline supersede above only replaces a table it can actually
+            # locate immediately under a resolved root heading. On docs where
+            # root inputs/outputs are grouped under multiple
+            # `### <Category>` H3 subsections instead of one table (or --
+            # network-firewall -- there is no resolvable root heading at all
+            # even though the module genuinely has root-level inputs), that
+            # inline supersede silently no-ops. Guarantee completeness by
+            # appending the complete root table whenever the overlay HAS root
+            # data but the inline supersede did not fire for root -- checked
+            # unconditionally, not just under `restrict_to_root`, so a
+            # rootless-by-heading-shape doc with real root overlay data (only
+            # network-firewall today) is covered too. A pure no-op for a
+            # genuinely rootless module (cloudwatch, fsx, iam), whose overlay
+            # root scope is empty.
+            #
+            # Runs BEFORE the any-overlay appendix is spliced in (NEW-5,
+            # 2026-07-22 pre-release re-review) so the authoritative complete
+            # table lands ABOVE the appendix in the response, not below it.
+            rendered = _append_missing_root_complete_tables(
+                rendered,
+                overlay,
+                requests_inputs=requests_inputs,
+                input_superseded="root" in input_superseded_scopes,
+                requests_outputs=requests_outputs,
+                output_superseded="root" in output_superseded_scopes,
+            )
+        if requests_inputs:
+            rendered = _with_any_overlay_appendix(rendered, content, is_filtered=True)
+        if requests_inputs or requests_outputs:
+            if restrict_to_root:
+                menu = _submodule_interface_menu(content, overlay)
+                if menu:
+                    rendered = _insert_before_footer(rendered, menu, is_filtered=True)
+        return rendered
     return orientation_head(content)
 
 
@@ -2087,96 +3442,6 @@ def modules_list_impl(state: ServerState, detail: str = "compact") -> ModulesLis
     return ModulesListOutput(modules=modules, count=len(modules))
 
 
-def grep_module_docs_impl(
-    module_id: str,
-    pattern: str,
-    *,
-    version: str | None = None,
-    case_sensitive: bool = False,
-    context_lines: int = 2,
-    scope: list[str] | None = None,
-    max_matches: int = 50,
-    refresh: bool = False,
-    cache_dir: Path,
-    ttl_hours: int = 24,
-) -> GrepOutput:
-    """
-    Helper function to fetch, cache, and grep live Terraform Registry module documentation.
-
-    This function is testable (not decorated) and can be called directly with an
-    explicit cache_dir, independent of ServerState/ServerStateManager.
-
-    Args:
-        module_id: Terraform Registry coordinates "namespace/name/provider".
-        pattern: Python regex to search for.
-        version: Exact version to pin, or None to resolve the current latest.
-        case_sensitive: Case-sensitive match (default False).
-        context_lines: Lines of context before/after each match, clamped to 0..20.
-        scope: Optional list restricting the grep to specific document parts
-            (root, inputs, outputs, resources, submodules, examples).
-        max_matches: Cap on returned matches, clamped to >= 1.
-        refresh: Bypass the cache and refetch from the registry.
-        cache_dir: Disk cache directory for assembled registry documents.
-        ttl_hours: TTL (hours) for "latest" (unpinned) cache entries.
-
-    Returns:
-        GrepOutput with matches, cache status, and available section labels.
-
-    Raises:
-        ValueError: If module_id is malformed (propagated from parse_module_id
-            via get_assembled_docs) or pattern is not a valid regex.
-
-    See grep_module_docs() tool documentation for full details.
-    """
-    context_lines = max(0, min(int(context_lines), 20))
-    max_matches = max(1, int(max_matches))
-
-    # Look up tfmod_registry_docs._http_fetch on the module at call time (rather than
-    # relying on get_assembled_docs's bound default) so tests that monkeypatch
-    # tfmod_registry_docs._http_fetch are honored without any real network access.
-    assembled_text, resolved_version, source_url, cache_hit, fetched_at = get_assembled_docs(
-        module_id,
-        version,
-        cache_dir=cache_dir,
-        ttl_hours=ttl_hours,
-        refresh=refresh,
-        fetch=tfmod_registry_docs._http_fetch,
-    )
-
-    doc_matches, total, available_sections = grep_document(
-        assembled_text,
-        pattern,
-        case_sensitive=case_sensitive,
-        context_lines=context_lines,
-        scope=scope,
-        max_matches=max_matches,
-    )
-
-    matches = [
-        GrepMatch(
-            section=m.section,
-            line_number=m.line_number,
-            line=m.line,
-            before=m.before,
-            after=m.after,
-            enclosing=m.enclosing,
-        )
-        for m in doc_matches
-    ]
-
-    return GrepOutput(
-        module_id=module_id,
-        resolved_version=resolved_version,
-        source_url=source_url,
-        total_matches=total,
-        returned_matches=len(matches),
-        truncated=total > max_matches,
-        cache=CacheInfo(hit=cache_hit, fetched_at=fetched_at, policy="pinned" if version else "latest-ttl"),
-        matches=matches,
-        available_sections=available_sections,
-    )
-
-
 # -----------------------------
 # MCP Tools
 # -----------------------------
@@ -2200,10 +3465,9 @@ def modules_list(detail: str = "compact") -> ModulesListOutput:
 
     Returns the catalog of all indexed Terraform modules. By default (detail=
     "compact") each entry carries only the module name, a one-line purpose, and
-    the registry coordinates (module_id, latest_version) needed to chain into
-    grep_module_docs - the whole catalog stays small enough to read on every
-    call. Pass detail="full" to also get each module's path, full description,
-    and keyword arrays.
+    the registry coordinates (module_id, latest_version) - the whole catalog
+    stays small enough to read on every call. Pass detail="full" to also get
+    each module's path, full description, and keyword arrays.
 
     Args:
         detail: "compact" (default) or "full".
@@ -2245,6 +3509,7 @@ def modules_list(detail: str = "compact") -> ModulesListOutput:
     state = ServerStateManager.get()
     result = modules_list_impl(state, detail=detail)
     result.update_notice = _update_notice()
+    _log_response_bytes(state.logger, "modules_list", result)
     return result
 
 
@@ -2353,6 +3618,7 @@ def search_modules(
     state = ServerStateManager.get()
     result = search_modules_impl(query, state, top_k=top_k, expand_top=expand_top)
     result.update_notice = _update_notice()
+    _log_response_bytes(state.logger, "search_modules", result)
     return result
 
 
@@ -2367,11 +3633,12 @@ def search_modules(
         "Pass `sections` to fetch specific parts you need, or `sections=['all']` "
         "for the complete document (prefer scoped sections on large modules — they run to "
         "10k+ tokens in full). "
+        "`sections=['inputs']`, `['outputs']`, or `['inputs','outputs']` serve the module's "
+        "COMPLETE, current interface (root scope by default) — not just the curated subset — "
+        "entirely offline. A submodule's own complete interface is reached the same way via "
+        "the '<name>//modules/<submodule>' address (e.g. 'eks//modules/karpenter'). "
         "The variable names, defaults, and version in the head and in `sections` are the "
-        "authoritative values from the curated catalog — use them directly; you do not need to "
-        "re-confirm them with grep_module_docs. "
-        "To get original documentation including full lists of inputs/outputs for each sub-module, "
-        "use direct links to registry.terraform.io from documentation."
+        "authoritative values from the curated catalog — use them directly."
     ),
     tags={"documentation", "terraform", "aws", "modules"},
     annotations=ToolAnnotations(title="Get compacted documentation for a Terraform module"),
@@ -2476,139 +3743,8 @@ def get_module(
                (or get_module("<name>//modules/<sub>") for a submodule)
     """
     state = ServerStateManager.get()
-    return get_module_impl(module_identifier, state, sections=sections)
-
-
-@app.tool(
-    description=(
-        "Grep the full, current documentation for ANY Terraform Registry module (not limited to the "
-        "curated AWS catalog), optionally pinned to a specific version. Fetches root readme/inputs/"
-        "outputs/resources plus submodules and examples, assembles them into one document, caches it on "
-        "disk, and returns only matching lines with a few lines of context — like the Grep tool, not a "
-        "document dump. Use search_modules/get_module for curated AWS modules; use this tool for any "
-        "registry module, live/version-pinned lookups, or to pinpoint an exact current variable name or "
-        "default without guessing from training data. "
-        "The assembled doc renders inputs as markdown LIST items — "
-        "`- <name> | <type> | <default> | <description>` — NOT pipe-table rows. Match the bare "
-        "identifier (e.g. `enable_nat_gateway`); do NOT anchor with `^` or assume a leading `|`, or "
-        "you will get zero matches on a name that is present."
-    ),
-    tags={"grep", "registry", "terraform", "live", "documentation"},
-    annotations=ToolAnnotations(title="Grep live Terraform Registry module documentation"),
-)
-def grep_module_docs(
-    module_id: Annotated[
-        str,
-        Field(
-            description="Terraform Registry module coordinates 'namespace/name/provider', e.g. "
-            "'terraform-aws-modules/vpc/aws'. Get this from search_modules/modules_list results "
-            "(module_id field) or from a registry.terraform.io URL."
-        ),
-    ],
-    pattern: Annotated[
-        str,
-        Field(description="Python regex to search for, e.g. 'enable_nat_gateway' or 'nat.*gateway'."),
-    ],
-    version: Annotated[
-        str | None,
-        Field(
-            description="Exact version to pin (e.g. '6.6.1'), cached forever once fetched. Omit to "
-            "resolve and use the true current latest, which is refetched once the cache entry is "
-            "older than doc_cache_ttl_hours (default 24h)."
-        ),
-    ] = None,
-    case_sensitive: Annotated[
-        bool, Field(description="Case-sensitive match. Default False (case-insensitive).")
-    ] = False,
-    context_lines: Annotated[
-        int,
-        Field(
-            ge=0,
-            le=20,
-            description="Lines of context before AND after each match (0-20, like grep -C). Default 2.",
-        ),
-    ] = 2,
-    scope: Annotated[
-        list[str] | None,
-        Field(
-            description="Restrict the grep to specific parts of the assembled document: 'root', "
-            "'inputs', 'outputs', 'resources', 'submodules', 'examples'. Default: search everything."
-        ),
-    ] = None,
-    max_matches: Annotated[
-        int, Field(ge=1, description="Cap on returned matches, to manage token budget. Default 50.")
-    ] = 50,
-    refresh: Annotated[
-        bool, Field(description="Bypass the cache and refetch from the registry. Default False.")
-    ] = False,
-) -> GrepOutput:
-    """
-    Grep the live, current documentation for any Terraform Registry module.
-
-    Fetches the module's full detail from the Terraform Registry API (root readme,
-    inputs, outputs, resources, submodules, examples), assembles it into one
-    deterministic, section-marked text, caches it on disk, and runs a regex grep
-    over it — returning only matching lines with surrounding context rather than
-    the whole (often 10k+ token) document.
-
-    Use this not only to confirm resource/variable NAMES but to verify the exact
-    TYPE/SHAPE of a `map(object)`/`any`-typed input (its nested field structure)
-    before writing it — the curated doc's table often abbreviates these.
-
-    Args:
-        module_id: Terraform Registry coordinates "namespace/name/provider".
-        pattern: Python regex to search for.
-        version: Exact version to pin, or None to resolve the current latest.
-        case_sensitive: Case-sensitive match (default False).
-        context_lines: Lines of context before/after each match (0-20, default 2).
-        scope: Optional list restricting the grep to specific document parts.
-        max_matches: Cap on returned matches (default 50).
-        refresh: Bypass the cache and refetch from the registry.
-
-    Returns:
-        GrepOutput: matches (with section label, line number, context, and an
-            `enclosing` breadcrumb naming the nearest '- <name> | ...' row when
-            the match landed on a continuation line of a multi-line row --
-            e.g. a nested object/map type -- so the container name is never
-            lost), total_matches/returned_matches/truncated, resolved_version,
-            source_url, cache status, and available_sections (useful to refine
-            pattern/scope, especially when total_matches is 0).
-
-    Raises:
-        ValueError: If module_id is not exactly "namespace/name/provider", or
-            pattern is not a valid regex.
-        RuntimeError: If server state is not initialized.
-
-    Examples:
-        Pin an exact version and find a variable's default:
-            Input: module_id="terraform-aws-modules/vpc/aws", pattern="enable_nat_gateway", version="6.6.1"
-            Output: matching input row(s) from root/inputs with context
-
-        Look up a module not in the curated catalog:
-            Input: module_id="hashicorp/consul/aws", pattern="cluster_size"
-
-    Typical Workflow:
-        1. search_modules("s3 bucket") → note the module_id/latest_version of the hit
-        2. grep_module_docs(module_id, "encryption", version=latest_version) → pinpoint details
-    """
-    state = ServerStateManager.get()
-    cache_dir = state.doc_cache_dir
-    ttl_hours = state.doc_cache_ttl_hours
-    if cache_dir is None:
-        cache_dir, ttl_hours = ConfigLoader.load_doc_cache()
-    result = grep_module_docs_impl(
-        module_id,
-        pattern,
-        version=version,
-        case_sensitive=case_sensitive,
-        context_lines=context_lines,
-        scope=scope,
-        max_matches=max_matches,
-        refresh=refresh,
-        cache_dir=cache_dir,
-        ttl_hours=ttl_hours,
-    )
-    result.update_notice = _update_notice()
+    result = get_module_impl(module_identifier, state, sections=sections)
+    _log_response_bytes(state.logger, "get_module", result)
     return result
 
 
@@ -2665,6 +3801,46 @@ def _update_notice() -> str | None:
     if state["update_available"]:
         return _UPDATE_NOTICE_TEMPLATE.format(latest=state["latest_version"], current=_SERVER_VERSION)
     return None
+
+
+# D2: opt-in per-tool-call response-size metering (observability only -- see
+# evals/specs/2026-07-21-d1-d2-signage-bytes-design.md). Gated on
+# TFMODSEARCH_LOG_RESPONSE_BYTES so the default (unset/falsy) stays
+# byte-identical to pre-D2 behavior: no env lookup result changes control
+# flow, nothing is serialized twice, nothing is logged. Reuses the same
+# falsy-value set as TFMODSEARCH_UPDATE_CHECK for a consistent env-flag
+# convention across the server.
+_RESPONSE_BYTES_ENV = "TFMODSEARCH_LOG_RESPONSE_BYTES"
+
+
+def _response_bytes_logging_enabled(env: Mapping[str, str]) -> bool:
+    """Whether D2 response-byte metering is on. Unset/falsy = OFF (default)."""
+    return env.get(_RESPONSE_BYTES_ENV, "").strip().lower() not in _UPDATE_CHECK_FALSY
+
+
+def _log_response_bytes(logger: logging.Logger | None, tool_name: str, response: Any) -> None:
+    """Log one INFO line 'response_bytes tool=<name> bytes=<N>', N being the
+    UTF-8 byte length of `response` serialized the way it goes on the wire:
+    pydantic response models (SearchOutput/ModulesListOutput) via
+    `model_dump_json()` (which already applies UpdateNoticeMixin's
+    None-field-dropping serializer, matching what FastMCP actually sends);
+    get_module's plain string response is measured directly.
+
+    True no-op when TFMODSEARCH_LOG_RESPONSE_BYTES is unset/falsy: returns
+    before any serialization or logging happens, so response content,
+    ordering, and timing are unaffected.
+    """
+    if not _response_bytes_logging_enabled(os.environ):
+        return
+    if logger is None:
+        return
+    if isinstance(response, str):
+        serialized = response
+    elif isinstance(response, BaseModel):
+        serialized = response.model_dump_json()
+    else:
+        serialized = json.dumps(response)
+    logger.info(f"response_bytes tool={tool_name} bytes={len(serialized.encode('utf-8'))}")
 
 
 def _start_update_checker_thread() -> threading.Thread:
@@ -2754,14 +3930,6 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
 
         logger.info(f"Query instruction: {'enabled' if query_instruction else 'disabled'}")
 
-        # Resolve registry-docs cache config (grep_module_docs) with precedence: YAML > defaults
-        doc_cache_dir, doc_cache_ttl_hours = ConfigLoader.load_doc_cache(
-            config_path=config_path,
-            logger=logger,
-        )
-
-        logger.info(f"Doc cache: dir={doc_cache_dir}, ttl_hours={doc_cache_ttl_hours}")
-
         # Resolve index path using shared logic from tfmod_search_lib
         index_path = resolve_index_path(args.index_path)
 
@@ -2786,8 +3954,6 @@ def initialize_server(args: argparse.Namespace, logger: logging.Logger) -> Serve
             index_path=index_path,
             query_instruction=query_instruction,
             logger=logger,
-            doc_cache_dir=doc_cache_dir,
-            doc_cache_ttl_hours=doc_cache_ttl_hours,
         )
 
         logger.info(f"Server initialized successfully: {state}")

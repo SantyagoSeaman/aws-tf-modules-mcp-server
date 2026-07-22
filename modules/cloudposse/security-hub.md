@@ -168,7 +168,7 @@ resource "awsutils_security_hub_control_disablement" "global" {
 ### Standards Subscription
 
 1. **Understand Default vs. Explicit**: `enable_default_standards = true` (the default) subscribes only to AWS Foundational Security Best Practices; add `enabled_standards` entries to also (or, with `enable_default_standards = false`, instead) subscribe to CIS AWS Foundations Benchmark v1.2 or PCI DSS.
-2. **Verify Standard ARN Strings**: `enabled_standards` entries are exact ARN-suffix strings (e.g. `ruleset/cis-aws-foundations-benchmark/v/1.2.0`) — confirm current values via `grep_module_docs` or the AWS Security Hub standards reference rather than guessing versions.
+2. **Verify Standard ARN Strings**: `enabled_standards` entries are exact ARN-suffix strings (e.g. `ruleset/cis-aws-foundations-benchmark/v/1.2.0`) — confirm current values via the AWS Security Hub standards reference rather than guessing versions.
 3. **Account Enablement Precedes Standards Subscription**: the module's `aws_securityhub_account` resource must exist before `aws_securityhub_standards_subscription` can apply; this ordering is handled automatically inside the module, but if Security Hub was enabled outside Terraform, check `terraform plan` for drift before applying.
 
 ### Multi-Region Aggregation
