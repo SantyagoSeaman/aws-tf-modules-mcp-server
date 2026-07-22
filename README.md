@@ -666,17 +666,6 @@ Get documentation for a specific Terraform module. **By default returns a compac
 
 **Any-typed input overlay**: on top of the complete table, some Registry inputs are declared `type = any`, where the type string alone does not describe the shape. The 22 catalog modules with at least one such input additionally get, per `any`-typed variable, the module maintainers' own apply-verified example HCL for that variable (pulled from the module's own `examples/`) plus a list of field names observed in the module source. Every appendix is honestly labeled: an apply-verified example from a named module version, explicitly **not a schema** — for the field's exact nested type/shape beyond the example, consult the module source directly — with a version-skew note when the overlay's source version differs from the doc's pinned version. The default orientation head only gets a lightweight pointer (`any — see sections=["inputs"]`) rather than the full appendix, to keep the head small. The other 41 modules — no `any`-typed input — still get the complete table above; they carry no example/field-name appendix since none of their inputs need one.
 
-#### Measured impact (complete-interface release)
-
-<!-- EVAL-NUMBERS: filled after the A/B run -->
-
-| Substrate | Condition | Tool calls | Tokens | Wall-clock | Cost | Validate pass rate |
-|---|---|---:|---:|---:|---:|---:|
-| TBD | TFModSearch | TBD | TBD | TBD | TBD | TBD |
-| TBD | Raw HashiCorp MCP | TBD | TBD | TBD | TBD | TBD |
-
-*Placeholder — numbers pending the A/B comparison run; do not treat the TBD rows as measured.*
-
 **Security**: Only files under the `modules/` directory are accessible. Absolute paths and path traversal attempts are rejected.
 
 ### Typical Workflow
