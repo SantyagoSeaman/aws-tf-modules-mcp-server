@@ -2695,6 +2695,213 @@ def _sanitize_table_cell(text: str) -> str:
     return collapsed.replace("|", "\\|")
 
 
+# --------------------------------------------------------------------------- #
+# Type-signature collapse for COMPLETE inputs tables (fatrun5, 0.26.0
+# candidate) -- a handful of Registry-declared HCL object types run to
+# 10-25K characters (eks's self_managed_node_groups: 18,561; ecs's services:
+# 25,426) and alone were enough to blow a complete inputs table past
+# _COMPLETE_TABLE_BYTE_CAP, forcing the "+N more rows" truncation on wide
+# modules. Collapsing these monster types down to their first-level
+# attribute keys (the shape an agent needs to decide whether to wire a
+# field, not the full nested schema) keeps the table complete instead of
+# truncated. Serve-time presentation only -- the overlay JSON's `type` field
+# is never modified. See evals/specs/2026-07-22-type-collapse-and-interface-
+# contract-design.md, Change 1.
+# --------------------------------------------------------------------------- #
+
+_TYPE_COLLAPSE_KEY_CAP = 12
+_TYPE_COLLAPSE_WRAPPER_RE = re.compile(r"^\s*(list|set|map)\s*\(\s*object\s*\(\s*\{", re.IGNORECASE)
+_TYPE_COLLAPSE_BARE_OBJECT_RE = re.compile(r"^\s*object\s*\(\s*\{", re.IGNORECASE)
+_TYPE_COLLAPSE_IDENT_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-")
+
+
+def _extract_outer_object_keys(type_str: str) -> tuple[list[str], str | None] | None:
+    """
+    Depth-scan `type_str` for an `object({...})` type expression, optionally
+    wrapped in `list(`/`set(`/`map(`. Returns `(first_level_keys, wrapper)`
+    on a well-formed, brace-balanced match -- `wrapper` is `"list"`/`"set"`/
+    `"map"` (lowercased) or `None` for a bare `object({...})` -- and `None`
+    when `type_str` does not start with one of those recognized shapes, or
+    the braces/parens/brackets it opens never balance back out (malformed
+    input) -- the caller falls back to hard-truncate in either case.
+
+    A DEPTH SCAN, not indentation: walks every character of `type_str`
+    tracking combined `{}()[]` nesting depth relative to the outer object's
+    own opening `{` (which sets the depth-1 baseline), quoted-string state
+    (so a quoted default like `"none"` or a list literal like `["GET",
+    "HEAD"]` never perturbs the bracket count), and single-line (`#`, `//`)
+    / block (`/* */`) comment state -- real Registry type strings carry
+    inline comments (e.g. eks's `self_managed_node_groups`: `name =
+    optional(string) # Will fall back to map key`); without skipping
+    comment text entirely, stray comment words would otherwise fuse into a
+    neighboring attribute name. Registry type strings are not consistently
+    indented, so a per-line/indentation heuristic would silently miss or
+    misattribute keys; this scan does not depend on formatting at all.
+
+    An identifier is recorded as a first-level key only when it is the
+    token IMMEDIATELY preceding a top-level `=` (never `==`/`!=`/`<=`/`>=`)
+    while the running depth is exactly 1 -- i.e. directly inside the outer
+    object's own `{}`, not inside a nested object/list/map type or a
+    function-call argument list (`optional(...)`) one level down. This is
+    what keeps a nested object's own attribute names (e.g. `forwarded_
+    values = optional(object({ cookies = object({ forward = ... }) }))`)
+    from leaking into the outer key list -- only `forwarded_values` sits at
+    depth 1; `cookies`/`forward` are deeper and never recorded.
+    """
+    wrapper: str | None = None
+    m = _TYPE_COLLAPSE_WRAPPER_RE.match(type_str)
+    if m:
+        wrapper = m.group(1).lower()
+        brace_idx = m.end() - 1
+    else:
+        m2 = _TYPE_COLLAPSE_BARE_OBJECT_RE.match(type_str)
+        if not m2:
+            return None
+        brace_idx = m2.end() - 1
+
+    n = len(type_str)
+    depth = 0
+    in_string = False
+    escape = False
+    identifier = ""
+    building = False
+    keys: list[str] = []
+    seen: set[str] = set()
+    balanced = False
+
+    i = brace_idx
+    while i < n:
+        ch = type_str[i]
+
+        if in_string:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_string = False
+            i += 1
+            continue
+
+        if ch == '"':
+            in_string = True
+            identifier, building = "", False
+            i += 1
+            continue
+
+        if ch == "#":
+            nl = type_str.find("\n", i)
+            i = n if nl == -1 else nl + 1
+            identifier, building = "", False
+            continue
+
+        if ch == "/" and i + 1 < n and type_str[i + 1] == "/":
+            nl = type_str.find("\n", i)
+            i = n if nl == -1 else nl + 1
+            identifier, building = "", False
+            continue
+
+        if ch == "/" and i + 1 < n and type_str[i + 1] == "*":
+            end = type_str.find("*/", i + 2)
+            i = n if end == -1 else end + 2
+            identifier, building = "", False
+            continue
+
+        if ch in "{([":
+            depth += 1
+            identifier, building = "", False
+            i += 1
+            continue
+
+        if ch in "})]":
+            depth -= 1
+            identifier, building = "", False
+            i += 1
+            if depth == 0:
+                balanced = True
+                break
+            continue
+
+        if ch == "=" and (i + 1 >= n or type_str[i + 1] != "=") and (i == 0 or type_str[i - 1] not in "!<>="):
+            if depth == 1 and identifier and identifier not in seen:
+                seen.add(identifier)
+                keys.append(identifier)
+            identifier, building = "", False
+            i += 1
+            continue
+
+        if ch in _TYPE_COLLAPSE_IDENT_CHARS:
+            identifier = ch if not building else identifier + ch
+            building = True
+        elif ch.isspace():
+            building = False
+        else:
+            identifier, building = "", False
+        i += 1
+
+    if not balanced:
+        return None
+    return keys, wrapper
+
+
+def _collapse_type_expression(type_str: str, threshold: int = 200) -> tuple[str, bool]:
+    """
+    Render a Registry-declared HCL type expression for a COMPLETE-interface
+    table cell, collapsing genuinely oversized object types down to their
+    first-level attribute keys so a handful of monster types cannot alone
+    blow a complete inputs table past its byte cap.
+
+    - `len(type_str) <= threshold`: returned verbatim, `False` -- most
+      types stay exact; only genuine monsters (threshold 200, not a tight
+      40) collapse.
+    - Longer, and recognizably `object({...})` (optionally wrapped in
+      `list(`/`set(`/`map(` -- see `_extract_outer_object_keys`): collapsed
+      to `object{k1, ..., k12, ... N keys}` (or `wrapper(object{...})` when
+      wrapped), showing at most `_TYPE_COLLAPSE_KEY_CAP` first-level keys
+      of the OUTERMOST object literal, with an explicit true-count elision
+      marker past that cap.
+    - Longer and not a recognizable/well-formed object literal (a rare
+      non-object monster type, or a malformed/unbalanced one): hard-
+      truncated to `threshold` characters with a trailing `...` marker.
+
+    Pure and deterministic -- no randomness, no I/O, no exception ever
+    escapes (a pathological input still falls back to hard-truncate rather
+    than raising).
+    """
+    if not isinstance(type_str, str):
+        type_str = str(type_str)  # type: ignore[unreachable]  # defensive: a caller can violate the annotation at runtime
+    if len(type_str) <= threshold:
+        return type_str, False
+
+    try:
+        extracted = _extract_outer_object_keys(type_str)
+    except Exception:
+        extracted = None
+
+    if extracted is not None:
+        keys, wrapper = extracted
+        if len(keys) > _TYPE_COLLAPSE_KEY_CAP:
+            shown = keys[:_TYPE_COLLAPSE_KEY_CAP]
+            key_text = ", ".join(shown) + f", ... {len(keys)} keys"
+        else:
+            key_text = ", ".join(keys)
+        body = f"object{{{key_text}}}"
+        return (f"{wrapper}({body})" if wrapper else body), True
+
+    return type_str[:threshold].rstrip() + "...", True
+
+
+# Signage (honest-limits, one line): appended once to a complete inputs
+# table's rendered text whenever >=1 of its Type cells was collapsed by
+# _collapse_type_expression above -- so an agent reading a collapsed
+# `object{...}` cell knows the full nested shape lives elsewhere, not that
+# the field only has those first-level attributes.
+_TYPE_COLLAPSE_FOOTER = (
+    "Collapsed object types show first-level keys only; full nested shape -> "
+    'sections=["examples"] or the module source.'
+)
+
+
 def _format_all_inputs_default_cell(item: dict[str, Any]) -> str:
     if item.get("required"):
         return "-"
@@ -2707,17 +2914,26 @@ def _format_all_inputs_default_cell(item: dict[str, Any]) -> str:
     return f"`{text}`"
 
 
-def _format_all_inputs_row(item: dict[str, Any], description: str) -> str:
+def _format_all_inputs_row(item: dict[str, Any], description: str) -> tuple[str, bool]:
+    """Render one COMPLETE-inputs-table row. Returns `(row_text, was_
+    collapsed)` -- the Type cell is collapsed via `_collapse_type_expression`
+    BEFORE sanitization, so `_build_all_inputs_table` can decide whether the
+    table needs the collapsed-type footer line, and every caller of this
+    single row renderer (the sections supersede path, the A2 append path,
+    and a submodule scope's own complete table) picks up the collapse for
+    free."""
     name = _sanitize_table_cell(str(item.get("name", "")))
-    itype = _sanitize_table_cell(str(item.get("type", "")))
+    collapsed_type, was_collapsed = _collapse_type_expression(str(item.get("type", "")))
+    itype = _sanitize_table_cell(collapsed_type)
     required = "Yes" if item.get("required") else "No"
     default_cell = _format_all_inputs_default_cell(item)
     desc = _sanitize_table_cell(description) if description else ""
-    return f"| `{name}` | `{itype}` | {required} | {default_cell} | {desc} |\n"
+    return f"| `{name}` | `{itype}` | {required} | {default_cell} | {desc} |\n", was_collapsed
 
 
 def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: dict[str, str]) -> str:
     row_texts: list[str] = []
+    any_collapsed = False
     for item in items:
         name = item.get("name", "")
         curated = curated_descriptions.get(name)
@@ -2726,8 +2942,13 @@ def _build_all_inputs_table(items: list[dict[str, Any]], curated_descriptions: d
             if curated
             else _clip_blurb(item.get("description") or "", max_length=_ALL_INPUTS_DESCRIPTION_CHAR_CAP)
         )
-        row_texts.append(_format_all_inputs_row(item, description))
-    return _cap_complete_table_rows(_ALL_INPUTS_TABLE_HEADER + _ALL_INPUTS_TABLE_SEP, row_texts)
+        row_text, was_collapsed = _format_all_inputs_row(item, description)
+        any_collapsed = any_collapsed or was_collapsed
+        row_texts.append(row_text)
+    table = _cap_complete_table_rows(_ALL_INPUTS_TABLE_HEADER + _ALL_INPUTS_TABLE_SEP, row_texts)
+    if any_collapsed:
+        table += f"\n_{_TYPE_COLLAPSE_FOOTER}_\n"
+    return table
 
 
 def _supersede_block_input_table(block: str, items: list[dict[str, Any]]) -> str:
