@@ -8,7 +8,100 @@
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> ## 📦 Archived
+>
+> **This project is archived.** It set out to be a better Terraform-module lookup surface for AI coding
+> agents than the alternatives — faster discovery, and a compact response format carrying just enough
+> detail to keep an agent cheap and accurate. So we did the honest thing and **built a real testing
+> environment to check whether it actually worked**: machine-graded A/B eval harnesses that pit this
+> server head-to-head against HashiCorp's official Terraform MCP server, with `terraform validate` and
+> a module-agnostic capability rubric as the oracle.
+>
+> **The verdict: parity.** Across three independent task families (capability reconstruction,
+> refactor-in-place, and greenfield-from-requirements), a capable agent using this server and one using
+> the official HashiCorp MCP reach the same outcomes — both produce valid, correctly-scoped Terraform.
+> And the headline bet — a compact, curated response format to cut token cost — **de-facto failed**:
+> the token optimizations were real engineering against the tool's own older self, but they
+> produced no cost or quality edge over the baseline MCP, and on the greenfield task the richer
+> responses made this server *measurably more expensive*.
+>
+> That is a genuinely great outcome — for the experiment, not the product. **The real value here was
+> building a valid way to test the hypothesis instead of trusting that "compact + smarter search must
+> help."** It did not, and only a machine-graded A/B harness could show that. Blind faith would have
+> shipped a story; the harness shipped the truth.
+>
+> So that's it. The server works and is honest about what it does — but it does not beat the free,
+> official tool it was meant to beat, so it goes into the archive. Thanks for reading. 🙏
+>
+> The full experiment history is below.
+
 A **Model Context Protocol (MCP)** server that provides intelligent search capabilities for Terraform AWS module documentation using hybrid search (keyword matching, BM25, and semantic embeddings).
+
+## 🧪 The experiment: what we tried, and what testing showed
+
+The project ran as a long series of attempts to make an AI agent write *better* Terraform by
+improving the doc-lookup tool it uses. The improvements were real and shipped; the surprise was that
+none of them beat the baseline once we measured properly.
+
+**What we tried, to change quality and cost:**
+
+- **Retrieval quality** — swapped the embedding model twice (`gte-small` → `bge-base-en-v1.5` →
+  `intfloat/e5-small-v2`), tuned the 4-signal hybrid score (keyword-IDF / exact-name / BM25 /
+  semantic), and closed keyword gaps so every module is findable by intent, exact name, and natural
+  language. A frozen golden set guarded against regressions.
+- **Response shaping (the token bet)** — added a compact **orientation head** for `get_module` (core
+  sections + key features + a version-pin hint + an honest "here is what is omitted, escalate with one
+  call" footer) instead of dumping 10k+ token documents; a `sections` filter; submodule reachability
+  so a search lands directly on the right submodule; and a search-confidence verdict. The thesis:
+  *find fast, return just enough, spend fewer expensive model cycles.*
+- **Interface completeness** — served every module's COMPLETE Registry-declared inputs/outputs (not a
+  hand-picked subset that often hid most of the real interface), added apply-verified example HCL for
+  `type = any` inputs, **collapsed oversized `object({...})` type expressions** to their first-level
+  keys to keep the payload small, and shipped curated **gotchas** (e.g. the two EKS cluster
+  security-group outputs that are named alike but are not interchangeable).
+- **Infrastructure / footprint** — an opt-in shared **HTTP daemon** so N agents share one warm model
+  instead of each paying a ~600 MB load; a torch-free **proxy mode**; an **ONNX** encode backend that
+  cut the Docker image from ~1.7 GB to ~560 MB and daemon RSS from ~1 GB to ~300 MB. A live-registry
+  `grep` tool was added and later removed as a measured cost sink.
+
+**How we tested it (the part that mattered):**
+
+Rather than trusting that these helped, we built machine-graded A/B evaluation harnesses. A worker
+agent (fixed model, both arms) is given a real task and ONE documentation tool — either this server or
+HashiCorp's official Terraform MCP — and must produce Terraform that passes `terraform validate`. We
+scored the result, not the process: does it validate, does it deliver the required capabilities
+(checked module-agnostically, so any vendor's module or raw resources count), and does it cost. Three
+task families, matched fleets, several workers per cell:
+
+- **Reconstruction** — given a capability, pick and configure the right registry module.
+- **Refactor-in-place** — convert a real raw-`aws_*` production directory into modules and rewire it.
+- **Greenfield-from-requirements** — author a whole stack from capability requirements with no module
+  names given, including a few requirements whose module is deliberately *not* obvious from the text.
+
+**What the testing showed:**
+
+- **Parity on outcomes, every time.** With a validation loop (or result-only grading), both tools reach
+  valid, correctly-covered Terraform. The gap the tool appeared to have in naive one-shot tests
+  evaporated the moment the agent could self-correct — which is how agents actually work.
+- **The token bet did not pay off.** The compact head and type-collapse are real, but the dominant cost
+  is the agent re-reading its own working context, not the tool's response — so the savings were noise
+  where a large substrate dominated, and on greenfield (no substrate to hide behind) this server's
+  heavier responses made it the *more* expensive of the two.
+- **Smarter search bought nothing on outcomes.** Even on requirements whose module was non-obvious, a
+  competent agent infers the AWS service from the description and reaches the same module the semantic
+  search found — so the discovery advantage never became an outcome advantage.
+- **The tool's remaining edges are friction-level, not outcome-level** (it introspects submodule
+  interfaces and serves very large modules where the baseline errors out) — real, but a capable agent
+  routes around the baseline's gaps, and those gaps are the kind a competitor closes in a release.
+- **Running it found real bugs.** The first greenfield run surfaced two grading bugs (a block parser
+  that mis-split HCL with braces inside strings; a duplicate-provider composition error) that clean
+  fixtures never triggered — the clearest possible proof that you cannot know a thing works until you
+  test it on real output.
+
+**The lesson.** The valuable artifact was not the server — it was the discipline of building a valid,
+machine-graded environment to test the hypothesis instead of believing it. The hypothesis ("compact,
+curated, smarter search makes agents cheaper and better") was intuitive, plausible, and wrong, and
+only the harness could tell us so. That is the whole point of testing.
 
 **Ready to Use**: Includes a pre-built search index with embeddings for 63 curated Terraform AWS modules. Install and run the MCP server immediately—no index building required!
 
@@ -1057,35 +1150,6 @@ RUN_REGISTRY_BENCHMARK=1 pytest tests/integration/test_registry_comparison.py -v
 ```
 
 The comparison is committed as `tests/integration/test_registry_comparison.py`. It stays hermetic in normal CI (live tests skip unless `RUN_REGISTRY_BENCHMARK=1`, and skip gracefully if the registry is unreachable); a network-free guard test pins the "100% top-3" figure on our side.
-
-### Agentic Selection Comparison (the tool inside a real agent loop)
-
-The table above measures the **search engine in isolation** — one query, one answer. This measures what happens when a full agent *uses* it: reformulating, chaining calls, and reasoning across turns to select a module and orient on its inputs. **These are two different tests** — an agent can reformulate its way past a weak single-shot search, so a gap in one need not appear in the other; neither is evidence for the other.
-
-**Setup.** 23 infrastructure requirements phrased purely as capabilities, with the module name and its obvious keyword *withheld* (the query describes the outcome, never the AWS service name) — plus distractors, two genuinely ambiguous pairs, and three honesty checks where the correct answer is *"no module fits, fall back to a raw resource."* Condition **A** may use only TFModSearch; condition **B** only the official [`hashicorp/terraform-mcp-server`](https://github.com/hashicorp/terraform-mcp-server) — mutually exclusive, tool isolation verified with zero cross-tool contamination. The same task is run across three consumer-model tiers; 3 workers per condition. Selection is scored mechanically against a pre-registered golden; orientation (are the generated skeleton's variable names real and current?) is graded by independent, blinded judges, with one fixed judge model across all fleets.
-
-**Selection accuracy** — correct module chosen (n=69 = 3 workers × 23 requirements):
-
-| Consumer model | TFModSearch | HashiCorp MCP |
-|---|---:|---:|
-| Opus (frontier) | **69/69** | ~65/69 |
-| Sonnet (mid) | **69/69** | 66/69 |
-| Haiku (small / cheap) | **64/69** | 35/69 |
-
-**Orientation fidelity** — real, current variable names in the skeleton (blinded judges, n=69):
-
-| Consumer model | TFModSearch | HashiCorp MCP | Gap |
-|---|---:|---:|---:|
-| Opus (frontier) | 66/69 | 63/69 | +3 |
-| Sonnet (mid) | 68/69 | 56/69 | **+12** |
-| Haiku (small / cheap) | **53/69** | 23/69 | **+30** |
-
-**Takeaways:**
-
-- **The advantage grows as the consumer model weakens: +3 → +12 → +30.** A strong model routes *around* a weak search — it reformulates and self-corrects — so accuracy ties at the frontier and the tool's value there is cost, not correctness. A cheap model *cannot* route around it: on the raw registry, Haiku picks download-ranked third-party forks over the official module, marks modules that exist as "not found," and hallucinates variable names wholesale (two baseline runs scored 6/23 and 7/23 on orientation — mostly invented fields). On the curated catalog the same model reaches 64/69 selection and 53/69 orientation.
-- **Cost: the same answers at ~2× fewer documentation calls** (26 vs 53 on average at the frontier), and cheaper in dollars on every run — e.g. a Sonnet fleet at **$22.89 vs $40.54** — a gap that held for 13 consecutive runs. A cheap model on TFModSearch *approached* the orientation quality of a frontier model on the raw baseline at a small fraction of the spend.
-- **Reported straight:** at frontier reasoning, selection ties at ceiling and orientation is within noise (+3). *"Fewer calls to the right module"* is the always-true claim; *"catches selections a weaker agent would get wrong"* is true and large for cheap models, and invisible at the frontier.
-- **Caveats:** small N (3 per condition per tier — a demonstration of the mechanism, not a powered statistical estimate); selections and skeletons are graded statically against current docs, with no `terraform apply`; the cheap model's selection misses are query-formulation *upstream* of the tool, not the tool returning a wrong result; and automated workers do not invoke the interactive workflow skills, so a human session is likely better than these numbers, not worse.
 
 ## 🤝 Contributing
 
