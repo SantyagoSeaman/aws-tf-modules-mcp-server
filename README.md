@@ -20,8 +20,8 @@
 > **The verdict: parity.** Across three independent task families (capability reconstruction,
 > refactor-in-place, and greenfield-from-requirements), a capable agent using this server and one using
 > the official HashiCorp MCP reach the same outcomes — both produce valid, correctly-scoped Terraform.
-> And the headline bet — that a compact, curated response format would cut token cost — **de-facto
-> failed**: the token optimizations were real engineering against the tool's own older self, but they
+> And the headline bet — a compact, curated response format to cut token cost — **de-facto failed**:
+> the token optimizations were real engineering against the tool's own older self, but they
 > produced no cost or quality edge over the baseline MCP, and on the greenfield task the richer
 > responses made this server *measurably more expensive*.
 >
